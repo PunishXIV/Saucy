@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net6.0-windows7.0": {
+      "DalamudPackager": {
+        "type": "Direct",
+        "requested": "[2.1.8, )",
+        "resolved": "2.1.8",
+        "contentHash": "YqagNXs9InxmqkXzq7kLveImxnodkBEicAhydMXVp7dFjC7xb76U6zGgAax4/BWIWfZeWzr5DJyQSev31kj81A=="
+      },
+      "ECommons": {
+        "type": "Direct",
+        "requested": "[1.0.0.1, )",
+        "resolved": "1.0.0.1",
+        "contentHash": "qrI+znopYLTTDsGelqh0nxN5wXxIZLznoAj+itvktk8YEq4ssMQEt7HXfQ2pq9YN/W2L/r2uDTP0EO96SOSIAg=="
+      },
+      "PunishLib": {
+        "type": "Direct",
+        "requested": "[1.0.0.1, )",
+        "resolved": "1.0.0.1",
+        "contentHash": "5lOZD5Z9hlL2ZlekePtdRio0MIX7g+8BrjkM4mEhKHsdbI6TYQ3SZXrYAET2vDNlZK5dJwx5ycFMh67Re1giaw==",
+        "dependencies": {
+          "ECommons": "1.0.0.1"
+        }
+      }
+    }
+  }
+}

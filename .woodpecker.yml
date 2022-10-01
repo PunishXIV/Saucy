@@ -1,0 +1,9 @@
+pipeline:
+  build:
+    image: kawaii/dalamud:latest
+    pull: true
+    commands:
+      - dotnet build ExamplePlugin/ExamplePlugin.csproj
+    when:
+      branch: master
+      event: push

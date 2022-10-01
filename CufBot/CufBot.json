@@ -1,0 +1,13 @@
+{
+    "Author": "Puni.sh",
+    "Name": "CufBot",
+    "Punchline": "What a fool you are.",
+    "Description": "This is a long-form description to tell people about your plugin.\nDoes it support markdown? Who knows!",
+    "InternalName": "CufBot",
+    "ApplicableVersion": "any",
+    "Tags": [
+        "example",
+        "plugin",
+        "development"
+    ]
+}
