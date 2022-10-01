@@ -2,7 +2,7 @@ using ImGuiNET;
 using System;
 using System.Numerics;
 
-namespace CufBot
+namespace Saucy
 {
     // It is good to have this be disposable in general, in case you ever need it
     // to do any cleanup
@@ -39,6 +39,8 @@ namespace CufBot
             this.demoImage.Dispose();
         }
 
+        public bool Enabled { get; set; } = false;
+
         public void Draw()
         {
             // This is our only draw handler attached to UIBuilder, so it needs to be
@@ -49,7 +51,6 @@ namespace CufBot
             // draw delegates as low as possible.
 
             DrawMainWindow();
-            DrawSettingsWindow();
         }
 
         public void DrawMainWindow()
@@ -61,43 +62,16 @@ namespace CufBot
 
             ImGui.SetNextWindowSize(new Vector2(375, 330), ImGuiCond.FirstUseEver);
             ImGui.SetNextWindowSizeConstraints(new Vector2(375, 330), new Vector2(float.MaxValue, float.MaxValue));
-            if (ImGui.Begin("My Amazing Window", ref this.visible, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
+            if (ImGui.Begin("Saucy Config", ref this.visible, ImGuiWindowFlags.AlwaysAutoResize))
             {
-                ImGui.Text($"The random config bool is {this.configuration.SomePropertyToBeSavedAndWithADefault}");
+                bool enabled = Enabled;
 
-                if (ImGui.Button("Show Settings"))
+                ImGui.TextWrapped(@"How to use: Click ""Enable Saucy"" then walk up to a Cuff-a-cur machine.");
+                ImGui.Separator();
+
+                if (ImGui.Checkbox("Enable Saucy", ref enabled))
                 {
-                    SettingsVisible = true;
-                }
-
-                ImGui.Spacing();
-
-                ImGui.Text("Have an image:");
-                ImGui.Indent(55);
-                ImGui.Image(this.demoImage.ImGuiHandle, new Vector2(this.demoImage.Width, this.demoImage.Height));
-                ImGui.Unindent(55);
-            }
-            ImGui.End();
-        }
-
-        public void DrawSettingsWindow()
-        {
-            if (!SettingsVisible)
-            {
-                return;
-            }
-
-            ImGui.SetNextWindowSize(new Vector2(232, 75), ImGuiCond.Always);
-            if (ImGui.Begin("A Wonderful Configuration Window", ref this.settingsVisible,
-                ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
-            {
-                // can't ref a property, so use a local copy
-                var configValue = this.configuration.SomePropertyToBeSavedAndWithADefault;
-                if (ImGui.Checkbox("Random Config Bool", ref configValue))
-                {
-                    this.configuration.SomePropertyToBeSavedAndWithADefault = configValue;
-                    // can save immediately on change, if you don't want to provide a "Save and Close" button
-                    this.configuration.Save();
+                    Enabled = enabled;
                 }
             }
             ImGui.End();

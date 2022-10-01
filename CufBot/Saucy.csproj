@@ -6,17 +6,17 @@
         <Copyright>Puni.sh</Copyright>
         <Version>0.0.0.1</Version>
         <Description>Puni.sh template plugin for development bootstrapping.</Description>
-        <PackageProjectUrl>https://src.puni.sh/puni.sh/CufBot</PackageProjectUrl>
+        <PackageProjectUrl>https://src.puni.sh/puni.sh/Saucy</PackageProjectUrl>
     </PropertyGroup>
 
     <PropertyGroup>
         <DalamudLibPath>$(appdata)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
-        <DalamudPluginPath>$(appdata)\XIVLauncher\installedPlugins\CufBot\$(version)</DalamudPluginPath>
-        <DalamudDevPlugins>$(appdata)\XIVLauncher\devPlugins\CufBot\</DalamudDevPlugins>
-        <AssemblyName>CufBot</AssemblyName>
-        <RootNamespace>CufBot</RootNamespace>
-        <PackageId>CufBot</PackageId>
-        <Product>CufBot</Product>
+        <DalamudPluginPath>$(appdata)\XIVLauncher\installedPlugins\Saucy\$(version)</DalamudPluginPath>
+        <DalamudDevPlugins>$(appdata)\XIVLauncher\devPlugins\Saucy\</DalamudDevPlugins>
+        <AssemblyName>Saucy</AssemblyName>
+        <RootNamespace>Saucy</RootNamespace>
+        <PackageId>Saucy</PackageId>
+        <Product>Saucy</Product>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Release'">
@@ -66,6 +66,7 @@
         <PackageReference Include="DalamudPackager" Version="2.1.8" />
         <PackageReference Include="ECommons" Version="1.0.0.1" />
         <PackageReference Include="PunishLib" Version="1.0.0.1" />
+        <ProjectReference Include="..\ClickLib\ClickLib\ClickLib.csproj" />
         <Reference Include="FFXIVClientStructs">
             <HintPath>$(DalamudLibPath)FFXIVClientStructs.dll</HintPath>
             <Private>false</Private>

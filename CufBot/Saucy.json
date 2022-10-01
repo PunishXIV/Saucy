@@ -1,0 +1,13 @@
+{
+    "Author": "Puni.sh",
+    "Name": "Saucy",
+    "Punchline": "When working for MGP is too much effort.",
+    "Description": "Automates certain Gold Saucer mini-games. Currently supports Cuf-a-cuf",
+    "InternalName": "Saucy",
+    "ApplicableVersion": "any",
+    "Tags": [
+        "example",
+        "plugin",
+        "development"
+    ]
+}

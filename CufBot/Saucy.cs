@@ -1,31 +1,36 @@
+using ClickLib;
+using ClickLib.Clicks;
+using Dalamud.Game;
 using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
-using System.IO;
-using System.Reflection;
-using ECommons;
-using PunishLib;
 using ECommons.DalamudServices;
-using Dalamud.Game;
-using System;
+using FFXIVClientStructs.FFXIV.Client.Game.Control;
+using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.UI;
-using static ECommons.GenericHelpers;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using System;
+using System.IO;
+using System.Linq;
+using static ECommons.GenericHelpers;
 
-namespace CufBot
+namespace Saucy
 {
-    public sealed class Plugin : IDalamudPlugin
+    public sealed class Saucy : IDalamudPlugin
     {
-        public string Name => "CufBot";
+        public string Name => "Saucy";
 
-        private const string commandName = "/cufabot";
+        private const string commandName = "/saucy";
 
         private DalamudPluginInterface PluginInterface { get; init; }
         private CommandManager CommandManager { get; init; }
         private Configuration Configuration { get; init; }
         private PluginUI PluginUi { get; init; }
 
-        public Plugin(
+        private Inputs Inputs { get; set; }
+
+
+        public Saucy(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
             [RequiredVersion("1.0")] CommandManager commandManager)
         {
@@ -49,24 +54,59 @@ namespace CufBot
             this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
             ECommons.ECommons.Init(pluginInterface, this);
             Svc.Framework.Update += RunBot;
+            Click.Initialize();
+            Inputs = new Inputs();
+
         }
+
 
         private unsafe void RunBot(Framework framework)
         {
-            var addon = Svc.GameGui.GetAddonByName("PunchingMachine", 1);
-            if (addon == IntPtr.Zero) return;
-
-            var ui = (AtkUnitBase*)addon;
-
-            if (ui->IsVisible)
+            if (!PluginUi.Enabled)
             {
-                var slidingNode = ui->UldManager.NodeList[18];
+                Inputs.ForceRelease(Dalamud.Game.ClientState.Keys.VirtualKey.NUMPAD0);
+                return;
+            }
 
-                if (slidingNode->Width >= 180 && slidingNode->Width <= 220)
+            var prizeMenu = Svc.GameGui.GetAddonByName("GoldSaucerReward", 1);
+            var addon = Svc.GameGui.GetAddonByName("PunchingMachine", 1);
+
+            if (TryGetAddonByName<AddonSelectString>("SelectString", out var startMenu) && startMenu->AtkUnitBase.IsVisible)
+            {
+                try
                 {
-                    
+                    ClickSelectString.Using((IntPtr)startMenu).SelectItem1();
+                }
+                catch
+                {
+
                 }
             }
+
+            if (addon != IntPtr.Zero)
+            {
+                var ui = (AtkUnitBase*)addon;
+
+                if (ui->IsVisible)
+                {
+                    var slidingNode = ui->UldManager.NodeList[18];
+                    var button = (IntPtr)ui->UldManager.NodeList[10];
+
+                    if (slidingNode->Width >= 210 && slidingNode->Width <= 240)
+                    {
+                        Inputs.SimulatePress(Dalamud.Game.ClientState.Keys.VirtualKey.NUMPAD0);
+                    }
+
+                }
+            }
+
+            GameObject* cuf = (GameObject*)Svc.Objects.Where(x => x.DataId == 2005029).OrderBy(x => x.YalmDistanceX).FirstOrDefault()?.Address;
+            if ((IntPtr)cuf == IntPtr.Zero)
+                return;
+
+            TargetSystem* tg = TargetSystem.Instance();
+            tg->InteractWithObject(cuf);
+
         }
 
         public void Dispose()
@@ -81,7 +121,6 @@ namespace CufBot
 
         private void OnCommand(string command, string args)
         {
-            // in response to the slash command, just display our main ui
             this.PluginUi.Visible = true;
         }
 
@@ -92,7 +131,9 @@ namespace CufBot
 
         private void DrawConfigUI()
         {
-            this.PluginUi.SettingsVisible = true;
+            this.PluginUi.Visible = true;
         }
     }
+
+
 }

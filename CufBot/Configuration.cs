@@ -2,7 +2,7 @@ using Dalamud.Configuration;
 using Dalamud.Plugin;
 using System;
 
-namespace CufBot
+namespace Saucy
 {
     [Serializable]
     public class Configuration : IPluginConfiguration
