@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    "net6.0-windows7.0": {
+    "net7.0-windows7.0": {
       "DalamudPackager": {
         "type": "Direct",
         "requested": "[2.1.8, )",
@@ -36,8 +36,8 @@
       "clicklib": {
         "type": "Project",
         "dependencies": {
-          "ILRepack": "2.0.18",
-          "Reloaded.Memory": "7.1.0"
+          "ILRepack": "[2.0.18, )",
+          "Reloaded.Memory": "[7.1.0, )"
         }
       }
     }

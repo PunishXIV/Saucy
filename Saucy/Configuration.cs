@@ -9,7 +9,9 @@ namespace Saucy
     {
         public int Version { get; set; } = 0;
 
-        public bool SomePropertyToBeSavedAndWithADefault { get; set; } = true;
+        public bool UseRecommendedDeck { get; set; } = false;
+
+        public int SelectedDeckIndex { get; set; } = -1;
 
         // the below exist just to make saving less cumbersome
 

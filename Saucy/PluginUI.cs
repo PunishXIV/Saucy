@@ -1,6 +1,11 @@
+using ECommons.DalamudServices;
 using ImGuiNET;
+using Saucy.CuffACur;
+using Saucy.TripleTriad;
 using System;
+using System.Linq;
 using System.Numerics;
+using TriadBuddyPlugin;
 
 namespace Saucy
 {
@@ -64,17 +69,81 @@ namespace Saucy
             ImGui.SetNextWindowSizeConstraints(new Vector2(375, 330), new Vector2(float.MaxValue, float.MaxValue));
             if (ImGui.Begin("Saucy Config", ref this.visible, ImGuiWindowFlags.AlwaysAutoResize))
             {
-                bool enabled = Enabled;
-
-                ImGui.TextWrapped(@"How to use: Click ""Enable Saucy"" then walk up to a Cuff-a-cur machine.");
-                ImGui.Separator();
-
-                if (ImGui.Checkbox("Enable Saucy", ref enabled))
+                if (ImGui.BeginTabBar("Games"))
                 {
-                    Enabled = enabled;
+                    if (ImGui.BeginTabItem("Cuff-a-Cur"))
+                    {
+                        DrawCufTab();
+                        ImGui.EndTabItem();
+                    }
+
+                    if (ImGui.BeginTabItem("Triple Triad"))
+                    {
+                        DrawTriadTab();
+                        ImGui.EndTabItem();
+                    }
+
+                    ImGui.EndTabBar();
                 }
             }
             ImGui.End();
+        }
+
+        public void DrawTriadTab()
+        {
+            bool enabled = TriadAutomater.ModuleEnabled;
+
+            ImGui.TextWrapped(@"How to use: Park yourself in front of an NPC that you want to play cards with. Set your settings below, then click ""Enable Triad Module"".");
+            ImGui.Separator();
+
+            if (ImGui.Checkbox("Enable Triad Module", ref enabled))
+            {
+                TriadAutomater.ModuleEnabled = enabled;
+            }
+
+            bool recommended = configuration.UseRecommendedDeck;
+            if (ImGui.Checkbox("Use Recommended Deck option", ref recommended))
+            {
+                configuration.UseRecommendedDeck = recommended;
+                configuration.Save();
+            }
+
+            int selectedDeck = configuration.SelectedDeckIndex;
+
+            if (Saucy.TTSolver.preGameDecks.Count > 0)
+            {
+                string preview = selectedDeck >= 0 ? Saucy.TTSolver.preGameDecks[selectedDeck].name : string.Empty;
+                if (ImGui.BeginCombo("Select Deck", preview))
+                {
+                    if (ImGui.Selectable(""))
+                    {
+                        configuration.SelectedDeckIndex = -1;
+                    }
+
+                    foreach (var deck in Saucy.TTSolver.preGameDecks.Values)
+                    {
+                        var index = Saucy.TTSolver.preGameDecks.Where(x => x.Value == deck).First().Key;
+                        if (ImGui.Selectable(deck.name, index == selectedDeck))
+                        {
+                            configuration.SelectedDeckIndex = index;
+                            configuration.Save();
+                        }
+                    }
+                }
+            }
+
+        }
+        public void DrawCufTab()
+        {
+            bool enabled = CufModule.ModuleEnabled;
+
+            ImGui.TextWrapped(@"How to use: Click ""Enable Cuff Module"" then walk up to a Cuff-a-cur machine.");
+            ImGui.Separator();
+
+            if (ImGui.Checkbox("Enable Cuff Module", ref enabled))
+            {
+                CufModule.ModuleEnabled = enabled;
+            }
         }
     }
 }

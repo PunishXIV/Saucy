@@ -1,7 +1,9 @@
 using ClickLib;
 using ClickLib.Clicks;
+using Dalamud.Data;
 using Dalamud.Game;
 using Dalamud.Game.Command;
+using Dalamud.Game.Gui;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using ECommons.DalamudServices;
@@ -9,9 +11,14 @@ using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using FFXIVClientStructs.Interop;
+using MgAl2O4.Utils;
+using Saucy.CuffACur;
+using Saucy.TripleTriad;
 using System;
 using System.IO;
 using System.Linq;
+using TriadBuddyPlugin;
 using static ECommons.GenericHelpers;
 
 namespace Saucy
@@ -21,29 +28,38 @@ namespace Saucy
         public string Name => "Saucy";
 
         private const string commandName = "/saucy";
-
         private DalamudPluginInterface PluginInterface { get; init; }
         private CommandManager CommandManager { get; init; }
-        private Configuration Configuration { get; init; }
+        public static Configuration Configuration { get; set; }
         private PluginUI PluginUi { get; init; }
 
-        private Inputs Inputs { get; set; }
+        public static Solver TTSolver = new();
+
+        public readonly UIReaderTriadGame uiReaderGame;
+        public readonly UIReaderTriadPrep uiReaderPrep;
+        public readonly UIReaderTriadCardList uiReaderCardList;
+        public readonly UIReaderTriadDeckEdit uiReaderDeckEdit;
+        public readonly UIReaderScheduler uiReaderScheduler;
+        public readonly StatTracker statTracker;
+        public readonly GameDataLoader dataLoader;
 
 
         public Saucy(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
-            [RequiredVersion("1.0")] CommandManager commandManager)
+            [RequiredVersion("1.0")] CommandManager commandManager,
+            GameGui gameGui,
+            DataManager dataManager)
         {
             this.PluginInterface = pluginInterface;
             this.CommandManager = commandManager;
 
-            this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-            this.Configuration.Initialize(this.PluginInterface);
+            Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            Configuration.Initialize(this.PluginInterface);
 
             // you might normally want to embed resources and load them from the manifest stream
             var imagePath = Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "punish.png");
             var demoImage = this.PluginInterface.UiBuilder.LoadImage(imagePath);
-            this.PluginUi = new PluginUI(this.Configuration, demoImage);
+            this.PluginUi = new PluginUI(Configuration, demoImage);
 
             this.CommandManager.AddHandler(commandName, new CommandInfo(OnCommand)
             {
@@ -53,60 +69,72 @@ namespace Saucy
             this.PluginInterface.UiBuilder.Draw += DrawUI;
             this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
             ECommons.ECommons.Init(pluginInterface, this);
+
+            dataLoader = new GameDataLoader();
+            dataLoader.StartAsyncWork(dataManager);
+
+            TTSolver.profileGS = new UnsafeReaderProfileGS(gameGui);
+
+            uiReaderGame = new UIReaderTriadGame(gameGui);
+            uiReaderGame.OnUIStateChanged += TTSolver.UpdateGame;
+
+            uiReaderPrep = new UIReaderTriadPrep(gameGui);
+            uiReaderPrep.shouldScanDeckData = (TTSolver.profileGS == null) || TTSolver.profileGS.HasErrors;
+            uiReaderPrep.OnUIStateChanged += TTSolver.UpdateDecks;
+
+            uiReaderCardList = new UIReaderTriadCardList(gameGui);
+
+            var uiReaderMatchResults = new UIReaderTriadResults(gameGui);
+            uiReaderScheduler = new UIReaderScheduler(gameGui);
+            uiReaderScheduler.AddObservedAddon(uiReaderGame);
+            uiReaderScheduler.AddObservedAddon(uiReaderPrep.uiReaderMatchRequest);
+            uiReaderScheduler.AddObservedAddon(uiReaderPrep.uiReaderDeckSelect);
+            uiReaderScheduler.AddObservedAddon(uiReaderMatchResults);
+
             Svc.Framework.Update += RunBot;
             Click.Initialize();
-            Inputs = new Inputs();
-
         }
 
 
         private unsafe void RunBot(Framework framework)
         {
-            if (!PluginUi.Enabled)
+            try
             {
-                Inputs.ForceRelease(Dalamud.Game.ClientState.Keys.VirtualKey.NUMPAD0);
+                if (dataLoader.IsDataReady)
+                {
+                    float deltaSeconds = (float)framework.UpdateDelta.TotalSeconds;
+                    uiReaderScheduler.Update(deltaSeconds);
+                }
+            }
+            catch (Exception ex)
+            {
+                Dalamud.Logging.PluginLog.Error(ex, "state update failed");
+            }
+
+            if (CufModule.ModuleEnabled)
+            {
+                CufModule.RunModule();
                 return;
             }
-
-            var prizeMenu = Svc.GameGui.GetAddonByName("GoldSaucerReward", 1);
-            var addon = Svc.GameGui.GetAddonByName("PunchingMachine", 1);
-
-            if (TryGetAddonByName<AddonSelectString>("SelectString", out var startMenu) && startMenu->AtkUnitBase.IsVisible)
+            else
             {
-                try
+                if (CufModule.DisableInput)
                 {
-                    ClickSelectString.Using((IntPtr)startMenu).SelectItem1();
-                }
-                catch
-                {
-
+                    CufModule.Inputs.ForceRelease(Dalamud.Game.ClientState.Keys.VirtualKey.NUMPAD0);
+                    CufModule.DisableInput = false;
                 }
             }
 
-            if (addon != IntPtr.Zero)
+            if (TriadAutomater.ModuleEnabled)
             {
-                var ui = (AtkUnitBase*)addon;
-
-                if (ui->IsVisible)
-                {
-                    var slidingNode = ui->UldManager.NodeList[18];
-                    var button = (IntPtr)ui->UldManager.NodeList[10];
-
-                    if (slidingNode->Width >= 210 && slidingNode->Width <= 240)
-                    {
-                        Inputs.SimulatePress(Dalamud.Game.ClientState.Keys.VirtualKey.NUMPAD0);
-                    }
-
-                }
-            }
-
-            GameObject* cuf = (GameObject*)Svc.Objects.Where(x => x.DataId == 2005029).OrderBy(x => x.YalmDistanceX).FirstOrDefault()?.Address;
-            if ((IntPtr)cuf == IntPtr.Zero)
+                TriadAutomater.RunModule();
                 return;
+            }
+            else
+            {
 
-            TargetSystem* tg = TargetSystem.Instance();
-            tg->InteractWithObject(cuf);
-
+            }
+            
         }
 
         public void Dispose()
