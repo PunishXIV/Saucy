@@ -2,23 +2,19 @@ using ClickLib;
 using ClickLib.Clicks;
 using Dalamud.Data;
 using Dalamud.Game;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using ECommons;
 using ECommons.DalamudServices;
-using FFXIVClientStructs.FFXIV.Client.Game.Control;
-using FFXIVClientStructs.FFXIV.Client.Game.Object;
-using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using FFXIVClientStructs.Interop;
 using MgAl2O4.Utils;
 using Saucy.CuffACur;
 using Saucy.TripleTriad;
 using System;
 using System.IO;
-using System.Linq;
 using TriadBuddyPlugin;
 using static ECommons.GenericHelpers;
 
@@ -49,6 +45,7 @@ namespace Saucy
         public static int GamesLost { get; set; }
         public static int GamesDrawn { get; set; }
         public static int CardsDropped { get; set; }
+        public static bool GameFinished => TTSolver.cachedScreenState == null;
 
         public Saucy(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
@@ -76,7 +73,7 @@ namespace Saucy
 
             this.PluginInterface.UiBuilder.Draw += DrawUI;
             this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
-            
+
             dataLoader = new GameDataLoader();
             dataLoader.StartAsyncWork(dataManager);
 
@@ -105,14 +102,20 @@ namespace Saucy
             Click.Initialize();
         }
 
-        private void CheckResults(UIStateTriadResults obj)
+        private unsafe void CheckResults(UIStateTriadResults obj)
         {
             GamesPlayed++;
+            if (TriadAutomater.PlayXTimes)
+                TriadAutomater.NumberOfTimes--;
+
             if (obj.isWin)
             {
                 GamesWon++;
                 if (obj.cardItemId > 0)
                 {
+                    if (TriadAutomater.PlayUntilCardDrops)
+                        TriadAutomater.NumberOfTimes--;
+
                     CardsDropped++;
                 }
             }
@@ -123,6 +126,30 @@ namespace Saucy
             if (obj.isDraw)
             {
                 GamesDrawn++;
+            }
+
+            {
+                if (TryGetAddonByName<AtkUnitBase>("TripleTriadResult", out var addon) && TriadAutomater.ModuleEnabled)
+                {
+                    if ((TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops) && TriadAutomater.NumberOfTimes == 0)
+                    {
+                        addon->Hide(true);
+                        return;
+                    }
+
+                    var values = stackalloc AtkValue[2];
+                    values[0] = new()
+                    {
+                        Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
+                        Int = 0,
+                    };
+                    values[1] = new()
+                    {
+                        Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.UInt,
+                        UInt = 1,
+                    };
+                    addon->FireCallback(2, values);
+                }
             }
         }
 
@@ -157,6 +184,36 @@ namespace Saucy
 
             if (TriadAutomater.ModuleEnabled)
             {
+                if ((TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops) && TriadAutomater.NumberOfTimes == 0)
+                {
+                    if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent] ||
+                        Svc.Condition[ConditionFlag.Occupied33] ||
+                        Svc.Condition[ConditionFlag.OccupiedInEvent] ||
+                        Svc.Condition[ConditionFlag.Occupied30] ||
+                        Svc.Condition[ConditionFlag.Occupied38] ||
+                        Svc.Condition[ConditionFlag.Occupied39] ||
+                        Svc.Condition[ConditionFlag.OccupiedSummoningBell] ||
+                        Svc.Condition[ConditionFlag.WatchingCutscene] ||
+                        Svc.Condition[ConditionFlag.Mounting71] ||
+                        Svc.Condition[ConditionFlag.CarryingObject])
+                    {
+                        var talk = Svc.GameGui.GetAddonByName("Talk", 1);
+                        if (talk == IntPtr.Zero) return;
+                        var talkAddon = (AtkUnitBase*)talk;
+                        if (!IsAddonReady(talkAddon)) return;
+                        ClickTalk.Using(talk).Click();
+
+                    }
+                    else
+                    {
+                        TriadAutomater.PlayXTimes = false;
+                        TriadAutomater.PlayUntilCardDrops= false;
+                        TriadAutomater.ModuleEnabled = false;
+                    }
+
+                    return;
+                }
+
                 TriadAutomater.RunModule();
                 return;
             }
@@ -164,7 +221,7 @@ namespace Saucy
             {
 
             }
-            
+
         }
 
         public void Dispose()

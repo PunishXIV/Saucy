@@ -16,6 +16,10 @@ namespace Saucy.TripleTriad
         public static Hook<PlaceCardDelegate> PlaceCardHook;
         public static bool ModuleEnabled = false;
 
+        public static bool PlayXTimes = false;
+        public static bool PlayUntilCardDrops = false;
+        public static int NumberOfTimes = 1;
+
         public static int PlaceCardDetour(IntPtr a1)
         {
             return PlaceCardHook.Original(a1);
@@ -97,6 +101,7 @@ namespace Saucy.TripleTriad
 
         public static void RunModule()
         {
+
             if (Saucy.TTSolver.preGameDecks.Count > 0)
             {
                 var selectedDeck = Saucy.Configuration.SelectedDeckIndex;
@@ -109,25 +114,6 @@ namespace Saucy.TripleTriad
             if (Saucy.TTSolver.hasMove)
             {
                 PlaceCard(Saucy.TTSolver.moveCardIdx, Saucy.TTSolver.moveBoardIdx);
-            }
-
-            //Rematch Screen
-            {
-                if (TryGetAddonByName<AtkUnitBase>("TripleTriadResult", out var addon))
-                {
-                    var values = stackalloc AtkValue[2];
-                    values[0] = new()
-                    {
-                        Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
-                        Int = 0,
-                    };
-                    values[1] = new()
-                    {
-                        Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.UInt,
-                        UInt = 1,
-                    };
-                    addon->FireCallback(2, values);
-                }
             }
 
             //Challenge Screen

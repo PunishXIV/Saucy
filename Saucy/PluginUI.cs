@@ -101,13 +101,6 @@ namespace Saucy
                 TriadAutomater.ModuleEnabled = enabled;
             }
 
-            bool recommended = configuration.UseRecommendedDeck;
-            if (ImGui.Checkbox("Use Recommended Deck option", ref recommended))
-            {
-                configuration.UseRecommendedDeck = recommended;
-                configuration.Save();
-            }
-
             int selectedDeck = configuration.SelectedDeckIndex;
 
             if (Saucy.TTSolver.preGameDecks.Count > 0)
@@ -138,9 +131,28 @@ namespace Saucy
                 ImGui.TextWrapped("Please initiate a challenge with an NPC to populate your deck list.");
             }
 
-            ImGui.Text($"Games Played: {Saucy.GamesPlayed}");
-            ImGui.Text($"W: {Saucy.GamesWon}, L: {Saucy.GamesLost}, D: {Saucy.GamesDrawn}");
-            ImGui.Text($"Cards Dropped: {Saucy.CardsDropped}");
+            if (ImGui.Checkbox("Play X Amount of Times", ref TriadAutomater.PlayXTimes) && (TriadAutomater.NumberOfTimes <= 0 || TriadAutomater.PlayUntilCardDrops))
+            {
+                TriadAutomater.NumberOfTimes = 1;
+                TriadAutomater.PlayUntilCardDrops = false;
+            }
+
+            if (ImGui.Checkbox("Play Until Cards Drop", ref TriadAutomater.PlayUntilCardDrops) && (TriadAutomater.NumberOfTimes <= 0 || TriadAutomater.PlayXTimes))
+            {
+                TriadAutomater.NumberOfTimes = 1;
+                TriadAutomater.PlayXTimes = false;
+            }
+
+            if (TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops)
+            {
+                ImGui.Text("How many times:");
+                ImGui.SameLine();
+                if (ImGui.InputInt("", ref TriadAutomater.NumberOfTimes))
+                {
+                    if (TriadAutomater.NumberOfTimes <= 0)
+                        TriadAutomater.NumberOfTimes = 1;
+                }
+            }
 
         }
         public void DrawCufTab()
