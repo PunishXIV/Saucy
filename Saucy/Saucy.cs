@@ -68,8 +68,7 @@ namespace Saucy
 
             this.PluginInterface.UiBuilder.Draw += DrawUI;
             this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
-            ECommons.ECommons.Init(pluginInterface, this);
-
+            
             dataLoader = new GameDataLoader();
             dataLoader.StartAsyncWork(dataManager);
 
@@ -141,8 +140,6 @@ namespace Saucy
         {
             this.PluginUi.Dispose();
             this.CommandManager.RemoveHandler(commandName);
-            ECommons.ECommons.Dispose();
-
             Svc.Framework.Update -= RunBot;
 
         }

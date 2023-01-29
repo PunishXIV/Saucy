@@ -1,15 +1,10 @@
-﻿using ClickLib.Clicks;
-using ClickLib.Enums;
+﻿using ClickLib.Enums;
 using ClickLib.Structures;
 using Dalamud.Hooking;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using static ECommons.GenericHelpers;
 
 namespace Saucy.TripleTriad
