@@ -6,6 +6,7 @@ using Dalamud.Game.Command;
 using Dalamud.Game.Gui;
 using Dalamud.IoC;
 using Dalamud.Plugin;
+using ECommons;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
@@ -43,6 +44,11 @@ namespace Saucy
         public readonly StatTracker statTracker;
         public readonly GameDataLoader dataLoader;
 
+        public static int GamesPlayed { get; set; }
+        public static int GamesWon { get; set; }
+        public static int GamesLost { get; set; }
+        public static int GamesDrawn { get; set; }
+        public static int CardsDropped { get; set; }
 
         public Saucy(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
@@ -55,6 +61,8 @@ namespace Saucy
 
             Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             Configuration.Initialize(this.PluginInterface);
+
+            ECommonsMain.Init(pluginInterface, this);
 
             // you might normally want to embed resources and load them from the manifest stream
             var imagePath = Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "punish.png");
@@ -84,16 +92,39 @@ namespace Saucy
             uiReaderCardList = new UIReaderTriadCardList(gameGui);
 
             var uiReaderMatchResults = new UIReaderTriadResults(gameGui);
+            uiReaderMatchResults.OnUpdated += CheckResults;
+
             uiReaderScheduler = new UIReaderScheduler(gameGui);
             uiReaderScheduler.AddObservedAddon(uiReaderGame);
             uiReaderScheduler.AddObservedAddon(uiReaderPrep.uiReaderMatchRequest);
             uiReaderScheduler.AddObservedAddon(uiReaderPrep.uiReaderDeckSelect);
             uiReaderScheduler.AddObservedAddon(uiReaderMatchResults);
 
+
             Svc.Framework.Update += RunBot;
             Click.Initialize();
         }
 
+        private void CheckResults(UIStateTriadResults obj)
+        {
+            GamesPlayed++;
+            if (obj.isWin)
+            {
+                GamesWon++;
+                if (obj.cardItemId > 0)
+                {
+                    CardsDropped++;
+                }
+            }
+            if (obj.isLose)
+            {
+                GamesLost++;
+            }
+            if (obj.isDraw)
+            {
+                GamesDrawn++;
+            }
+        }
 
         private unsafe void RunBot(Framework framework)
         {

@@ -93,7 +93,7 @@ namespace Saucy
         {
             bool enabled = TriadAutomater.ModuleEnabled;
 
-            ImGui.TextWrapped(@"How to use: Park yourself in front of an NPC that you want to play cards with. Set your settings below, then click ""Enable Triad Module"".");
+            ImGui.TextWrapped(@"How to use: Challenge an NPC you wish to play cards with. Once you have initiated the challenge, click ""Enable Triad Module"".");
             ImGui.Separator();
 
             if (ImGui.Checkbox("Enable Triad Module", ref enabled))
@@ -129,8 +129,18 @@ namespace Saucy
                             configuration.Save();
                         }
                     }
+
+                    ImGui.EndCombo();
                 }
             }
+            else
+            {
+                ImGui.TextWrapped("Please initiate a challenge with an NPC to populate your deck list.");
+            }
+
+            ImGui.Text($"Games Played: {Saucy.GamesPlayed}");
+            ImGui.Text($"W: {Saucy.GamesWon}, L: {Saucy.GamesLost}, D: {Saucy.GamesDrawn}");
+            ImGui.Text($"Cards Dropped: {Saucy.CardsDropped}");
 
         }
         public void DrawCufTab()

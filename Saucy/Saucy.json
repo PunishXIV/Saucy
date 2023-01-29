@@ -2,13 +2,14 @@
   "Author": "Puni.sh",
   "Name": "Saucy",
   "Punchline": "When working for MGP is too much effort.",
-  "Description": "Automates certain Gold Saucer mini-games. Currently supports Cuff-a-cur",
+  "Description": "Automates certain Gold Saucer mini-games.",
   "InternalName": "Saucy",
   "DalamudApiLevel": 8,
   "ApplicableVersion": "any",
+  "IconUrl": "https://love.puni.sh/resources/saucy.png",
   "Tags": [
-    "example",
-    "plugin",
-    "development"
+    "gold saucer",
+    "mgp",
+    "automation"
   ]
 }
