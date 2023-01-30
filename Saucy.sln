@@ -12,6 +12,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ECommons", "ECommons", "{0C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ECommons", "ECommons\ECommons\ECommons.csproj", "{821AD179-FD8B-440E-9B74-575ABD2A3132}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ClickLib", "ClickLib", "{C80D6EC8-E39E-43DC-9510-B592D9BC4F2D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClickLib", "ClickLib\ClickLib\ClickLib.csproj", "{B9F85AA9-A4EB-41B1-9C91-CB38E47759F6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -30,6 +34,10 @@ Global
 		{821AD179-FD8B-440E-9B74-575ABD2A3132}.Debug|x64.Build.0 = Debug|x64
 		{821AD179-FD8B-440E-9B74-575ABD2A3132}.Release|x64.ActiveCfg = Release|x64
 		{821AD179-FD8B-440E-9B74-575ABD2A3132}.Release|x64.Build.0 = Release|x64
+		{B9F85AA9-A4EB-41B1-9C91-CB38E47759F6}.Debug|x64.ActiveCfg = Debug|x64
+		{B9F85AA9-A4EB-41B1-9C91-CB38E47759F6}.Debug|x64.Build.0 = Debug|x64
+		{B9F85AA9-A4EB-41B1-9C91-CB38E47759F6}.Release|x64.ActiveCfg = Release|x64
+		{B9F85AA9-A4EB-41B1-9C91-CB38E47759F6}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -40,5 +48,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{4F97BB15-6461-4C27-89B2-012E7ADF5344} = {05EBC25D-8DF2-4BFB-B5E5-6269B399657D}
 		{821AD179-FD8B-440E-9B74-575ABD2A3132} = {0C2676CB-651B-42DA-A8A5-1DB560F0B067}
+		{B9F85AA9-A4EB-41B1-9C91-CB38E47759F6} = {C80D6EC8-E39E-43DC-9510-B592D9BC4F2D}
 	EndGlobalSection
 EndGlobal
