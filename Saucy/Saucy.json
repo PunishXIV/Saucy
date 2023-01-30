@@ -1,11 +1,9 @@
 {
-  "Author": "Puni.sh",
+  "Author": "Puni.sh (Taurenkey)",
   "Name": "Saucy",
   "Punchline": "When working for MGP is too much effort.",
   "Description": "Automates certain Gold Saucer mini-games.",
   "InternalName": "Saucy",
-  "DalamudApiLevel": 8,
-  "ApplicableVersion": "any",
   "IconUrl": "https://love.puni.sh/resources/saucy.png",
   "Tags": [
     "gold saucer",
