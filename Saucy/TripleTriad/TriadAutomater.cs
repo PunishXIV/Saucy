@@ -1,11 +1,17 @@
 ﻿using ClickLib.Enums;
 using ClickLib.Structures;
 using Dalamud.Hooking;
+using Dalamud.Memory;
+using Dalamud.Utility;
+using ECommons.Automation;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Lumina.Excel.GeneratedSheets;
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using static ECommons.GenericHelpers;
+using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 
 namespace Saucy.TripleTriad
 {
@@ -19,6 +25,7 @@ namespace Saucy.TripleTriad
         public static bool PlayXTimes = false;
         public static bool PlayUntilCardDrops = false;
         public static int NumberOfTimes = 1;
+        public static bool LogOutAfterCompletion = false;
 
         public static int PlaceCardDetour(IntPtr a1)
         {
@@ -149,6 +156,123 @@ namespace Saucy.TripleTriad
                     }
                 }
             }
+        }
+
+        public static bool Logout()
+        {
+            var isLoggedIn = Svc.Condition.Any();
+            if (!isLoggedIn) return true;
+
+            Chat.Instance.SendMessage("/logout");
+            return true;
+        }
+
+        public static bool SelectYesLogout()
+        {
+            var addon = GetSpecificYesno(Svc.Data.GetExcelSheet<Addon>()?.GetRow(115)?.Text.ToDalamudString().ExtractText());
+            if (addon == null) return false;
+            GenerateCallback(addon, 0);
+            addon->Hide(true);
+            return true;
+        }
+
+        internal static AtkUnitBase* GetSpecificYesno(params string[] s)
+        {
+            for (int i = 1; i < 100; i++)
+            {
+                try
+                {
+                    var addon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("SelectYesno", i);
+                    if (addon == null) return null;
+                    if (IsAddonReady(addon))
+                    {
+                        var textNode = addon->UldManager.NodeList[15]->GetAsAtkTextNode();
+                        var text = MemoryHelper.ReadSeString(&textNode->NodeText).ExtractText();
+                        if (text.EqualsAny(s))
+                        {
+                            Dalamud.Logging.PluginLog.Verbose($"SelectYesno {s} addon {i}");
+                            return addon;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    e.Log();
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        public static void GenerateCallback(AtkUnitBase* unitBase, params object[] values)
+        {
+            var atkValues = CreateAtkValueArray(values);
+            if (atkValues == null) return;
+            try
+            {
+                unitBase->FireCallback(values.Length, atkValues);
+            }
+            finally
+            {
+                for (var i = 0; i < values.Length; i++)
+                {
+                    if (atkValues[i].Type == FFXIVClientStructs.FFXIV.Component.GUI.ValueType.String)
+                    {
+                        Marshal.FreeHGlobal(new IntPtr(atkValues[i].String));
+                    }
+                }
+                Marshal.FreeHGlobal(new IntPtr(atkValues));
+            }
+        }
+
+        public static AtkValue* CreateAtkValueArray(params object[] values)
+        {
+            var atkValues = (AtkValue*)Marshal.AllocHGlobal(values.Length * sizeof(AtkValue));
+            if (atkValues == null) return null;
+            try
+            {
+                for (var i = 0; i < values.Length; i++)
+                {
+                    var v = values[i];
+                    switch (v)
+                    {
+                        case uint uintValue:
+                            atkValues[i].Type = ValueType.UInt;
+                            atkValues[i].UInt = uintValue;
+                            break;
+                        case int intValue:
+                            atkValues[i].Type = ValueType.Int;
+                            atkValues[i].Int = intValue;
+                            break;
+                        case float floatValue:
+                            atkValues[i].Type = ValueType.Float;
+                            atkValues[i].Float = floatValue;
+                            break;
+                        case bool boolValue:
+                            atkValues[i].Type = ValueType.Bool;
+                            atkValues[i].Byte = (byte)(boolValue ? 1 : 0);
+                            break;
+                        case string stringValue:
+                            {
+                                atkValues[i].Type = ValueType.String;
+                                var stringBytes = Encoding.UTF8.GetBytes(stringValue);
+                                var stringAlloc = Marshal.AllocHGlobal(stringBytes.Length + 1);
+                                Marshal.Copy(stringBytes, 0, stringAlloc, stringBytes.Length);
+                                Marshal.WriteByte(stringAlloc, stringBytes.Length, 0);
+                                atkValues[i].String = (byte*)stringAlloc;
+                                break;
+                            }
+                        default:
+                            throw new ArgumentException($"Unable to convert type {v.GetType()} to AtkValue");
+                    }
+                }
+            }
+            catch
+            {
+                return null;
+            }
+
+            return atkValues;
         }
     }
 }

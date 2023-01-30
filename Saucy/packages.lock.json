@@ -2,33 +2,11 @@
   "version": 1,
   "dependencies": {
     "net7.0-windows7.0": {
-      "ClickLib": {
-        "type": "Direct",
-        "requested": "[1.2.0.1, )",
-        "resolved": "1.2.0.1",
-        "contentHash": "4/bQhZ4y/4MT7381g2UlhltLFme4uOxKNeaSLBR2k6JipVtoqc3cWxM42rSQXxbTC4c5HgWXPFf8nfNPGODyAA==",
-        "dependencies": {
-          "ILRepack": "2.0.18",
-          "Reloaded.Memory": "7.1.0"
-        }
-      },
       "DalamudPackager": {
         "type": "Direct",
         "requested": "[2.1.10, )",
         "resolved": "2.1.10",
         "contentHash": "S6NrvvOnLgT4GDdgwuKVJjbFo+8ZEj+JsEYk9ojjOR/MMfv1dIFpT8aRJQfI24rtDcw1uF+GnSSMN4WW1yt7fw=="
-      },
-      "ECommons": {
-        "type": "Direct",
-        "requested": "[2.0.0.2, )",
-        "resolved": "2.0.0.2",
-        "contentHash": "3FGc3val0R2qHIZEm1nXf0S9v96vQ/kuIhhkpt5XHloGe3Vf4dITbX2lrZi0go3Tdi/nMMyafdIoDpjUgk033w=="
-      },
-      "PunishLib": {
-        "type": "Direct",
-        "requested": "[1.0.1.2, )",
-        "resolved": "1.0.1.2",
-        "contentHash": "DFI01CIl7kkqtNapvd+5HLHuNg0AjE+vAs3paaGuzi44p2Mzi1peHhl6tdTxufyst2810RVBktfIpyBbMP39zA=="
       },
       "ILRepack": {
         "type": "Transitive",
@@ -39,6 +17,19 @@
         "type": "Transitive",
         "resolved": "7.1.0",
         "contentHash": "4Y5tCsRWdW/shj9W7RqJq37LStuW1VVtjxsBp4LKZilPcjudeQg9k+u+6fnDgacCEJiG3S2EtcaiNtVMTdaSnQ=="
+      },
+      "clicklib": {
+        "type": "Project",
+        "dependencies": {
+          "ILRepack": "[2.0.18, )",
+          "Reloaded.Memory": "[7.1.0, )"
+        }
+      },
+      "ecommons": {
+        "type": "Project"
+      },
+      "punishlib": {
+        "type": "Project"
       }
     }
   }

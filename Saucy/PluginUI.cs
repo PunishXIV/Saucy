@@ -1,5 +1,6 @@
 using ECommons.DalamudServices;
 using ImGuiNET;
+using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
 using Saucy.TripleTriad;
 using System;
@@ -14,8 +15,6 @@ namespace Saucy
     class PluginUI : IDisposable
     {
         private Configuration configuration;
-
-        private ImGuiScene.TextureWrap demoImage;
 
         // this extra bool exists for ImGui, since you can't ref a property
         private bool visible = false;
@@ -32,16 +31,13 @@ namespace Saucy
             set { this.settingsVisible = value; }
         }
 
-        // passing in the image here just for simplicity
-        public PluginUI(Configuration configuration, ImGuiScene.TextureWrap demoImage)
+        public PluginUI(Configuration configuration)
         {
             this.configuration = configuration;
-            this.demoImage = demoImage;
         }
 
         public void Dispose()
         {
-            this.demoImage.Dispose();
         }
 
         public bool Enabled { get; set; } = false;
@@ -65,8 +61,8 @@ namespace Saucy
                 return;
             }
 
-            ImGui.SetNextWindowSize(new Vector2(375, 330), ImGuiCond.FirstUseEver);
-            ImGui.SetNextWindowSizeConstraints(new Vector2(375, 330), new Vector2(float.MaxValue, float.MaxValue));
+            ImGui.SetNextWindowSize(new Vector2(520, 420), ImGuiCond.FirstUseEver);
+            ImGui.SetNextWindowSizeConstraints(new Vector2(520, 420), new Vector2(float.MaxValue, float.MaxValue));
             if (ImGui.Begin("Saucy Config", ref this.visible, ImGuiWindowFlags.AlwaysAutoResize))
             {
                 if (ImGui.BeginTabBar("Games"))
@@ -80,6 +76,12 @@ namespace Saucy
                     if (ImGui.BeginTabItem("Triple Triad"))
                     {
                         DrawTriadTab();
+                        ImGui.EndTabItem();
+                    }
+
+                    if (ImGui.BeginTabItem("About"))
+                    {
+                        AboutTab.Draw(Saucy.P);
                         ImGui.EndTabItem();
                     }
 
@@ -143,6 +145,7 @@ namespace Saucy
                 TriadAutomater.PlayXTimes = false;
             }
 
+
             if (TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops)
             {
                 ImGui.Text("How many times:");
@@ -152,7 +155,11 @@ namespace Saucy
                     if (TriadAutomater.NumberOfTimes <= 0)
                         TriadAutomater.NumberOfTimes = 1;
                 }
+
+                ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
             }
+
+
 
         }
         public void DrawCufTab()
