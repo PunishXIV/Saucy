@@ -145,6 +145,7 @@ namespace Saucy
                 TriadAutomater.PlayXTimes = false;
             }
 
+
             if (TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops)
             {
                 ImGui.Text("How many times:");
@@ -154,7 +155,11 @@ namespace Saucy
                     if (TriadAutomater.NumberOfTimes <= 0)
                         TriadAutomater.NumberOfTimes = 1;
                 }
+
+                ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
             }
+
+
 
         }
         public void DrawCufTab()

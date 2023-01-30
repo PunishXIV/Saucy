@@ -17,6 +17,7 @@ using Saucy.CuffACur;
 using Saucy.TripleTriad;
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using TriadBuddyPlugin;
 using static ECommons.GenericHelpers;
 
@@ -205,13 +206,18 @@ namespace Saucy
                         var talkAddon = (AtkUnitBase*)talk;
                         if (!IsAddonReady(talkAddon)) return;
                         ClickTalk.Using(talk).Click();
-
                     }
                     else
                     {
                         TriadAutomater.PlayXTimes = false;
                         TriadAutomater.PlayUntilCardDrops= false;
                         TriadAutomater.ModuleEnabled = false;
+
+                        if (TriadAutomater.LogOutAfterCompletion)
+                        {
+                            Svc.Framework.RunOnTick(() => TriadAutomater.Logout(), TimeSpan.FromMilliseconds(2000));
+                            Svc.Framework.RunOnTick(() => TriadAutomater.SelectYesLogout(), TimeSpan.FromMilliseconds(2500));
+                        }
                     }
 
                     return;
