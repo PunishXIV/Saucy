@@ -61,8 +61,8 @@ namespace Saucy
                 return;
             }
 
-            ImGui.SetNextWindowSize(new Vector2(375, 330), ImGuiCond.FirstUseEver);
-            ImGui.SetNextWindowSizeConstraints(new Vector2(375, 330), new Vector2(float.MaxValue, float.MaxValue));
+            ImGui.SetNextWindowSize(new Vector2(520, 420), ImGuiCond.FirstUseEver);
+            ImGui.SetNextWindowSizeConstraints(new Vector2(520, 420), new Vector2(float.MaxValue, float.MaxValue));
             if (ImGui.Begin("Saucy Config", ref this.visible, ImGuiWindowFlags.AlwaysAutoResize))
             {
                 if (ImGui.BeginTabBar("Games"))
