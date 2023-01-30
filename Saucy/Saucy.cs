@@ -11,6 +11,8 @@ using ECommons;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
+using PunishLib;
+using PunishLib.Sponsor;
 using Saucy.CuffACur;
 using Saucy.TripleTriad;
 using System;
@@ -23,6 +25,7 @@ namespace Saucy
     public sealed class Saucy : IDalamudPlugin
     {
         public string Name => "Saucy";
+        internal static Saucy P;
 
         private const string commandName = "/saucy";
         private DalamudPluginInterface PluginInterface { get; init; }
@@ -60,11 +63,14 @@ namespace Saucy
             Configuration.Initialize(this.PluginInterface);
 
             ECommonsMain.Init(pluginInterface, this);
+            PunishLibMain.Init(pluginInterface, this);
+            SponsorManager.SetSponsorInfo("https://ko-fi.com/taurenkey");
+            P = this;
 
             // you might normally want to embed resources and load them from the manifest stream
             var imagePath = Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "punish.png");
             var demoImage = this.PluginInterface.UiBuilder.LoadImage(imagePath);
-            this.PluginUi = new PluginUI(Configuration, demoImage);
+            this.PluginUi = new PluginUI(Configuration);
 
             this.CommandManager.AddHandler(commandName, new CommandInfo(OnCommand)
             {

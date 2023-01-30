@@ -1,5 +1,6 @@
 using ECommons.DalamudServices;
 using ImGuiNET;
+using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
 using Saucy.TripleTriad;
 using System;
@@ -14,8 +15,6 @@ namespace Saucy
     class PluginUI : IDisposable
     {
         private Configuration configuration;
-
-        private ImGuiScene.TextureWrap demoImage;
 
         // this extra bool exists for ImGui, since you can't ref a property
         private bool visible = false;
@@ -32,16 +31,13 @@ namespace Saucy
             set { this.settingsVisible = value; }
         }
 
-        // passing in the image here just for simplicity
-        public PluginUI(Configuration configuration, ImGuiScene.TextureWrap demoImage)
+        public PluginUI(Configuration configuration)
         {
             this.configuration = configuration;
-            this.demoImage = demoImage;
         }
 
         public void Dispose()
         {
-            this.demoImage.Dispose();
         }
 
         public bool Enabled { get; set; } = false;
@@ -80,6 +76,12 @@ namespace Saucy
                     if (ImGui.BeginTabItem("Triple Triad"))
                     {
                         DrawTriadTab();
+                        ImGui.EndTabItem();
+                    }
+
+                    if (ImGui.BeginTabItem("About"))
+                    {
+                        AboutTab.Draw(Saucy.P);
                         ImGui.EndTabItem();
                     }
 
