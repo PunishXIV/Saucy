@@ -67,9 +67,6 @@ namespace Saucy
             SponsorManager.SetSponsorInfo("https://ko-fi.com/taurenkey");
             P = this;
 
-            // you might normally want to embed resources and load them from the manifest stream
-            var imagePath = Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "punish.png");
-            var demoImage = this.PluginInterface.UiBuilder.LoadImage(imagePath);
             this.PluginUi = new PluginUI(Configuration);
 
             this.CommandManager.AddHandler(commandName, new CommandInfo(OnCommand)
