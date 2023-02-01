@@ -111,10 +111,10 @@ namespace Saucy.TripleTriad
 
             if (Saucy.TTSolver.preGameDecks.Count > 0)
             {
-                var selectedDeck = Saucy.Configuration.SelectedDeckIndex;
+                var selectedDeck = Service.Configuration.SelectedDeckIndex;
                 if (selectedDeck >= 0 && !Saucy.TTSolver.preGameDecks.ContainsKey(selectedDeck))
                 {
-                    Saucy.Configuration.SelectedDeckIndex = -1;
+                    Service.Configuration.SelectedDeckIndex = -1;
                 }
             }
 
@@ -137,7 +137,7 @@ namespace Saucy.TripleTriad
                 if (TryGetAddonByName<AtkUnitBase>("TripleTriadSelDeck", out var addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
                 {
 
-                    if (Saucy.Configuration.UseRecommendedDeck || Saucy.Configuration.SelectedDeckIndex == -1)
+                    if (Service.Configuration.UseRecommendedDeck || Service.Configuration.SelectedDeckIndex == -1)
                     {
                         var button = (AtkComponentButton*)addon->UldManager.NodeList[3];
                         ClickButton(addon, button, 2);
@@ -149,7 +149,7 @@ namespace Saucy.TripleTriad
                         values[0] = new()
                         {
                             Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
-                            Int = Saucy.Configuration.SelectedDeckIndex,
+                            Int = Service.Configuration.SelectedDeckIndex,
                         };
                         addon->FireCallback(1, values);
                         addon->Hide(true);
@@ -171,8 +171,9 @@ namespace Saucy.TripleTriad
         {
             var addon = GetSpecificYesno(Svc.Data.GetExcelSheet<Addon>()?.GetRow(115)?.Text.ToDalamudString().ExtractText());
             if (addon == null) return false;
-            GenerateCallback(addon, 0);
-            addon->Hide(true);
+            ClickLib.Clicks.ClickSelectYesNo.Using((nint)addon).Yes();
+            //GenerateCallback(addon, 0);
+            //addon->Hide(true);
             return true;
         }
 

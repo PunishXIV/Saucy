@@ -13,6 +13,8 @@ namespace Saucy
 
         public int SelectedDeckIndex { get; set; } = -1;
 
+        public Stats Stats { get; set; } = new Stats();
+
         // the below exist just to make saving less cumbersome
 
         [NonSerialized]

@@ -16,8 +16,6 @@ using PunishLib.Sponsor;
 using Saucy.CuffACur;
 using Saucy.TripleTriad;
 using System;
-using System.IO;
-using System.Threading.Tasks;
 using TriadBuddyPlugin;
 using static ECommons.GenericHelpers;
 
@@ -29,9 +27,6 @@ namespace Saucy
         internal static Saucy P;
 
         private const string commandName = "/saucy";
-        private DalamudPluginInterface PluginInterface { get; init; }
-        private CommandManager CommandManager { get; init; }
-        public static Configuration Configuration { get; set; }
         private PluginUI PluginUi { get; init; }
 
         public static Solver TTSolver = new();
@@ -51,32 +46,30 @@ namespace Saucy
         public static int CardsDropped { get; set; }
         public static bool GameFinished => TTSolver.cachedScreenState == null;
 
-        public Saucy(
-            [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
-            [RequiredVersion("1.0")] CommandManager commandManager,
-            GameGui gameGui,
-            DataManager dataManager)
+        public Saucy([RequiredVersion("1.0")] DalamudPluginInterface pluginInterface, [RequiredVersion("1.0")] CommandManager commandManager, GameGui gameGui, DataManager dataManager)
         {
-            this.PluginInterface = pluginInterface;
-            this.CommandManager = commandManager;
+            pluginInterface.Create<Service>();
+            Service.Plugin = this;
 
-            Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-            Configuration.Initialize(this.PluginInterface);
+            Service.Configuration = Service.Interface.GetPluginConfig() as Configuration ?? new Configuration();
+            Service.Configuration.Initialize(Service.Interface);
 
-            ECommonsMain.Init(pluginInterface, this);
-            PunishLibMain.Init(pluginInterface, this);
+            Dalamud.Logging.PluginLog.Debug($"{Service.Configuration.UseRecommendedDeck}");
+
+            ECommonsMain.Init(Service.Interface, this);
+            PunishLibMain.Init(Service.Interface, this);
             SponsorManager.SetSponsorInfo("https://ko-fi.com/taurenkey");
             P = this;
 
-            this.PluginUi = new PluginUI(Configuration);
+            this.PluginUi = new PluginUI(Service.Configuration);
 
-            this.CommandManager.AddHandler(commandName, new CommandInfo(OnCommand)
+            Service.CommandManager.AddHandler(commandName, new CommandInfo(OnCommand)
             {
-                HelpMessage = "A useful message to display in /xlhelp"
+                HelpMessage = "Opens the Saucy menu."
             });
 
-            this.PluginInterface.UiBuilder.Draw += DrawUI;
-            this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
+            Service.Interface.UiBuilder.Draw += DrawUI;
+            Service.Interface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
             dataLoader = new GameDataLoader();
             dataLoader.StartAsyncWork(dataManager);
@@ -101,36 +94,40 @@ namespace Saucy
             uiReaderScheduler.AddObservedAddon(uiReaderPrep.uiReaderDeckSelect);
             uiReaderScheduler.AddObservedAddon(uiReaderMatchResults);
 
-
             Svc.Framework.Update += RunBot;
             Click.Initialize();
         }
 
         private unsafe void CheckResults(UIStateTriadResults obj)
         {
-            GamesPlayed++;
-            if (TriadAutomater.PlayXTimes)
-                TriadAutomater.NumberOfTimes--;
-
-            if (obj.isWin)
+            if (TriadAutomater.ModuleEnabled)
             {
-                GamesWon++;
-                if (obj.cardItemId > 0)
-                {
-                    if (TriadAutomater.PlayUntilCardDrops)
-                        TriadAutomater.NumberOfTimes--;
+                Service.Configuration.Stats.GamesPlayedWithSaucy++;
 
-                    CardsDropped++;
+                if (TriadAutomater.PlayXTimes)
+                    TriadAutomater.NumberOfTimes--;
+
+                if (obj.isWin)
+                {
+                    Service.Configuration.Stats.GamesWonWithSaucy++;
+                    if (obj.cardItemId > 0)
+                    {
+                        if (TriadAutomater.PlayUntilCardDrops)
+                            TriadAutomater.NumberOfTimes--;
+
+                        Service.Configuration.Stats.CardsDroppedWithSaucy++;
+                    }
+                }
+                if (obj.isLose)
+                {
+                    Service.Configuration.Stats.GamesLostWithSaucy++;
+                }
+                if (obj.isDraw)
+                {
+                    Service.Configuration.Stats.GamesDrawnWithSaucy++;
                 }
             }
-            if (obj.isLose)
-            {
-                GamesLost++;
-            }
-            if (obj.isDraw)
-            {
-                GamesDrawn++;
-            }
+            Service.Configuration.Save();
 
             {
                 if (TryGetAddonByName<AtkUnitBase>("TripleTriadResult", out var addon) && TriadAutomater.ModuleEnabled)
@@ -210,13 +207,13 @@ namespace Saucy
                     else
                     {
                         TriadAutomater.PlayXTimes = false;
-                        TriadAutomater.PlayUntilCardDrops= false;
+                        TriadAutomater.PlayUntilCardDrops = false;
                         TriadAutomater.ModuleEnabled = false;
 
                         if (TriadAutomater.LogOutAfterCompletion)
                         {
                             Svc.Framework.RunOnTick(() => TriadAutomater.Logout(), TimeSpan.FromMilliseconds(2000));
-                            Svc.Framework.RunOnTick(() => TriadAutomater.SelectYesLogout(), TimeSpan.FromMilliseconds(2500));
+                            Svc.Framework.RunOnTick(() => TriadAutomater.SelectYesLogout(), TimeSpan.FromMilliseconds(3500));
                         }
                     }
 
@@ -236,7 +233,7 @@ namespace Saucy
         public void Dispose()
         {
             this.PluginUi.Dispose();
-            this.CommandManager.RemoveHandler(commandName);
+            Service.CommandManager.RemoveHandler(commandName);
             Svc.Framework.Update -= RunBot;
 
         }

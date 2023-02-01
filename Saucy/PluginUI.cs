@@ -1,4 +1,7 @@
+using Dalamud.Interface.Colors;
+using ECommons;
 using ECommons.DalamudServices;
+using ECommons.ImGuiMethods;
 using ImGuiNET;
 using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
@@ -33,7 +36,7 @@ namespace Saucy
 
         public PluginUI(Configuration configuration)
         {
-            this.configuration = configuration;
+            this.configuration = Service.Configuration;
         }
 
         public void Dispose()
@@ -79,6 +82,12 @@ namespace Saucy
                         ImGui.EndTabItem();
                     }
 
+                    if (ImGui.BeginTabItem("Stats"))
+                    {
+                        DrawStatsTab();
+                        ImGui.EndTabItem();
+                    }
+
                     if (ImGui.BeginTabItem("About"))
                     {
                         AboutTab.Draw(Saucy.P);
@@ -89,6 +98,44 @@ namespace Saucy
                 }
             }
             ImGui.End();
+        }
+
+        private void DrawStatsTab()
+        {
+            ImGuiEx.ImGuiLineCentered("Header", delegate
+            {
+                ImGuiEx.TextUnderlined(ImGuiColors.ParsedGold, "SAUCY STATS");
+            });
+            ImGui.Columns(2);
+            ImGuiEx.TextUnderlined("Triple Triad Games Played With Saucy:");
+            ImGui.NextColumn();
+            ImGui.Text($"{Service.Configuration.Stats.GamesPlayedWithSaucy}");
+            ImGui.NextColumn();
+            ImGuiEx.TextUnderlined("Triple Triad Games Won With Saucy:");
+            ImGui.NextColumn();
+            ImGui.Text($"{Service.Configuration.Stats.GamesWonWithSaucy}");
+            ImGui.NextColumn();
+            ImGuiEx.TextUnderlined("Triple Triad Games Lost With Saucy:");
+            ImGui.NextColumn();
+            ImGui.Text($"{Service.Configuration.Stats.GamesLostWithSaucy}");
+            ImGui.NextColumn();
+            ImGuiEx.TextUnderlined("Triple Triad Games Drawn With Saucy:");
+            ImGui.NextColumn();
+            ImGui.Text($"{Service.Configuration.Stats.GamesDrawnWithSaucy}");
+            ImGui.NextColumn();
+            ImGuiEx.TextUnderlined("Triple Triad Cards Won With Saucy:");
+            ImGui.NextColumn();
+            ImGui.Text($"{Service.Configuration.Stats.CardsDroppedWithSaucy}");
+            ImGui.NextColumn();
+
+            if (Service.Configuration.Stats.NPCsPlayed.Count > 0)
+            {
+                ImGuiEx.TextUnderlined("Most Played NPC:");
+                ImGui.NextColumn();
+                ImGui.Text($"{Service.Configuration.Stats.NPCsPlayed.OrderByDescending(x => x.Value).Select(x => x.Key)}");
+                ImGui.NextColumn();
+            }
+
         }
 
         public void DrawTriadTab()
