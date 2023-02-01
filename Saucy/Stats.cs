@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FFTriadBuddy;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,6 +18,8 @@ namespace Saucy
         public int GamesDrawnWithSaucy = 0;
 
         public int CardsDroppedWithSaucy = 0;
+
+        public int MGPWon = 0;
 
         public Dictionary<string, int> NPCsPlayed = new Dictionary<string, int>();
     }

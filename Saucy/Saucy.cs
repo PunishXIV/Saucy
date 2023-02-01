@@ -103,9 +103,21 @@ namespace Saucy
             if (TriadAutomater.ModuleEnabled)
             {
                 Service.Configuration.Stats.GamesPlayedWithSaucy++;
+                Service.Configuration.Stats.MGPWon += obj.numMGP;
 
                 if (TriadAutomater.PlayXTimes)
                     TriadAutomater.NumberOfTimes--;
+
+                if (Service.Configuration.Stats.NPCsPlayed.TryGetValue(TTSolver.lastGameNpc.Name.GetLocalized(), out int plays))
+                {
+                    Service.Configuration.Stats.NPCsPlayed[TTSolver.lastGameNpc.Name.GetLocalized()] += 1;
+                    Service.Configuration.Save();
+                }
+                else
+                {
+                    Service.Configuration.Stats.NPCsPlayed.TryAdd(TTSolver.lastGameNpc.Name.GetLocalized(), 1);
+                    Service.Configuration.Save();
+                }
 
                 if (obj.isWin)
                 {

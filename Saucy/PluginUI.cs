@@ -1,7 +1,7 @@
+using Dalamud.Interface;
 using Dalamud.Interface.Colors;
-using ECommons;
-using ECommons.DalamudServices;
 using ECommons.ImGuiMethods;
+using FFTriadBuddy;
 using ImGuiNET;
 using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
@@ -9,7 +9,6 @@ using Saucy.TripleTriad;
 using System;
 using System.Linq;
 using System.Numerics;
-using TriadBuddyPlugin;
 
 namespace Saucy
 {
@@ -66,7 +65,7 @@ namespace Saucy
 
             ImGui.SetNextWindowSize(new Vector2(520, 420), ImGuiCond.FirstUseEver);
             ImGui.SetNextWindowSizeConstraints(new Vector2(520, 420), new Vector2(float.MaxValue, float.MaxValue));
-            if (ImGui.Begin("Saucy Config", ref this.visible, ImGuiWindowFlags.AlwaysAutoResize))
+            if (ImGui.Begin("Saucy Config", ref this.visible))
             {
                 if (ImGui.BeginTabBar("Games"))
                 {
@@ -102,40 +101,87 @@ namespace Saucy
 
         private void DrawStatsTab()
         {
-            ImGuiEx.ImGuiLineCentered("Header", delegate
+            ImGui.Columns(3, "stats", false);
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText(ImGuiColors.ParsedGold, "SAUCY STATS", true);
+            ImGui.Columns(1);
+            ImGui.BeginChild("TT Stats", new Vector2(0, ImGui.GetContentRegionAvail().Y - 30f), true);
+            ImGui.Columns(3, null, false);
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText(ImGuiColors.DalamudRed, "Triple Triad", true);
+            ImGuiHelpers.ScaledDummy(10f);
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText("Games Played", true);
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesPlayedWithSaucy}");
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGui.Spacing();
+            ImGuiEx.CenterColumnText("Wins", true);
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText("Losses", true);
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText("Draws", true);
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesWonWithSaucy}");
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesLostWithSaucy}");
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesDrawnWithSaucy}");
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText("Win Rate", true);
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText("Cards Won", true);
+            ImGui.NextColumn();
+            if (Service.Configuration.Stats.NPCsPlayed.Count > 0)
             {
-                ImGuiEx.TextUnderlined(ImGuiColors.ParsedGold, "SAUCY STATS");
-            });
-            ImGui.Columns(2);
-            ImGuiEx.TextUnderlined("Triple Triad Games Played With Saucy:");
+                ImGuiEx.CenterColumnText("Most Played NPC", true);
+                ImGui.NextColumn();
+            }
+            else
+            {
+                ImGui.NextColumn();
+            }
+
+            if (Service.Configuration.Stats.GamesPlayedWithSaucy > 0)
+            {
+                ImGuiEx.CenterColumnText($"{Math.Round(((double)Service.Configuration.Stats.GamesWonWithSaucy / (double)Service.Configuration.Stats.GamesPlayedWithSaucy) * 100, 0)}%");
+            }
+            else
+            {
+                ImGuiEx.CenterColumnText("");
+            }
             ImGui.NextColumn();
-            ImGui.Text($"{Service.Configuration.Stats.GamesPlayedWithSaucy}");
-            ImGui.NextColumn();
-            ImGuiEx.TextUnderlined("Triple Triad Games Won With Saucy:");
-            ImGui.NextColumn();
-            ImGui.Text($"{Service.Configuration.Stats.GamesWonWithSaucy}");
-            ImGui.NextColumn();
-            ImGuiEx.TextUnderlined("Triple Triad Games Lost With Saucy:");
-            ImGui.NextColumn();
-            ImGui.Text($"{Service.Configuration.Stats.GamesLostWithSaucy}");
-            ImGui.NextColumn();
-            ImGuiEx.TextUnderlined("Triple Triad Games Drawn With Saucy:");
-            ImGui.NextColumn();
-            ImGui.Text($"{Service.Configuration.Stats.GamesDrawnWithSaucy}");
-            ImGui.NextColumn();
-            ImGuiEx.TextUnderlined("Triple Triad Cards Won With Saucy:");
-            ImGui.NextColumn();
-            ImGui.Text($"{Service.Configuration.Stats.CardsDroppedWithSaucy}");
+            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.CardsDroppedWithSaucy}");
             ImGui.NextColumn();
 
             if (Service.Configuration.Stats.NPCsPlayed.Count > 0)
             {
-                ImGuiEx.TextUnderlined("Most Played NPC:");
+                ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.NPCsPlayed.OrderByDescending(x => x.Value).First().Key}");
+                ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.NPCsPlayed.OrderByDescending(x => x.Value).First().Value} times");
                 ImGui.NextColumn();
-                ImGui.Text($"{Service.Configuration.Stats.NPCsPlayed.OrderByDescending(x => x.Value).Select(x => x.Key)}");
+                ImGui.NextColumn();
                 ImGui.NextColumn();
             }
 
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText("MGP Won", true);
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.MGPWon} MGP");
+            ImGui.Columns(1);
+            ImGui.EndChild();
+            ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
+            if (ImGui.Button("RESET STATS (Hold Ctrl)", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y)) && ImGui.GetIO().KeyCtrl)
+            {
+                Service.Configuration.Stats = new();
+                Service.Configuration.Save();
+            }
         }
 
         public void DrawTriadTab()

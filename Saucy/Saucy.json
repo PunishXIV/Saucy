@@ -5,6 +5,7 @@
   "Description": "Automates certain Gold Saucer mini-games.",
   "InternalName": "Saucy",
   "IconUrl": "https://love.puni.sh/resources/saucy.png",
+  "DalamudApiLevel": 8,
   "Tags": [
     "gold saucer",
     "mgp",

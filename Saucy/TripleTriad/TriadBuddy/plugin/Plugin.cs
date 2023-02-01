@@ -47,8 +47,8 @@ namespace TriadBuddyPlugin
             this.dataManager = dataManager;
             this.framework = framework;
 
-            configuration = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-            configuration.Initialize(pluginInterface);
+            //configuration = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            //configuration.Initialize(pluginInterface);
 
             // prep utils
             var myAssemblyName = GetType().Assembly.GetName().Name;
