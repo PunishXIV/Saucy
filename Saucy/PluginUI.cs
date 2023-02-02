@@ -149,7 +149,7 @@ namespace Saucy
 
             if (Service.Configuration.Stats.GamesPlayedWithSaucy > 0)
             {
-                ImGuiEx.CenterColumnText($"{Math.Round(((double)Service.Configuration.Stats.GamesWonWithSaucy / (double)Service.Configuration.Stats.GamesPlayedWithSaucy) * 100, 0)}%");
+                ImGuiEx.CenterColumnText($"{Math.Round(((double)Service.Configuration.Stats.GamesWonWithSaucy / (double)Service.Configuration.Stats.GamesPlayedWithSaucy) * 100, 2)}%");
             }
             else
             {
