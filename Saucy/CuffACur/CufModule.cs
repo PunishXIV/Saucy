@@ -39,29 +39,36 @@ namespace Saucy.CuffACur
                 }
             }
 
-            if (addon != IntPtr.Zero)
+            try
             {
-                var ui = (AtkUnitBase*)addon;
-
-                if (ui->IsVisible)
+                if (addon != IntPtr.Zero)
                 {
-                    var slidingNode = ui->UldManager.NodeList[18];
-                    var button = (IntPtr)ui->UldManager.NodeList[10];
+                    var ui = (AtkUnitBase*)addon;
 
-                    if (slidingNode->Width >= 210 && slidingNode->Width <= 240)
+                    if (ui->IsVisible)
                     {
-                        Inputs.SimulatePress(Dalamud.Game.ClientState.Keys.VirtualKey.NUMPAD0);
+                        var slidingNode = ui->UldManager.NodeList[18];
+                        var button = (IntPtr)ui->UldManager.NodeList[10];
+
+                        if (slidingNode->Width >= 210 && slidingNode->Width <= 240)
+                        {
+                            Inputs.SimulatePress(Dalamud.Game.ClientState.Keys.VirtualKey.NUMPAD0);
+                        }
+
                     }
-
                 }
+
+                GameObject* cuf = (GameObject*)Svc.Objects.Where(x => x.DataId == 2005029 || x.DataId == 197370).OrderBy(x => x.YalmDistanceX).FirstOrDefault()?.Address;
+                if ((IntPtr)cuf == IntPtr.Zero)
+                    return;
+
+                TargetSystem* tg = TargetSystem.Instance();
+                tg->InteractWithObject(cuf);
             }
-
-            GameObject* cuf = (GameObject*)Svc.Objects.Where(x => x.DataId == 2005029 || x.DataId == 197370).OrderBy(x => x.YalmDistanceX).FirstOrDefault()?.Address;
-            if ((IntPtr)cuf == IntPtr.Zero)
-                return;
-
-            TargetSystem* tg = TargetSystem.Instance();
-            tg->InteractWithObject(cuf);
+            catch(Exception e) 
+            { 
+            
+            }
         }
 
         private static bool TryGetAddonByName<T>(string v, out object startMenu)

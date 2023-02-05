@@ -8,6 +8,7 @@ using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel.GeneratedSheets;
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using static ECommons.GenericHelpers;
@@ -21,11 +22,13 @@ namespace Saucy.TripleTriad
         public delegate int PlaceCardDelegate(IntPtr addon);
         public static Hook<PlaceCardDelegate> PlaceCardHook;
         public static bool ModuleEnabled = false;
+        public static Dictionary<uint, int> TempCardsWonList = new Dictionary<uint, int>();
 
         public static bool PlayXTimes = false;
         public static bool PlayUntilCardDrops = false;
         public static int NumberOfTimes = 1;
         public static bool LogOutAfterCompletion = false;
+        public static bool PlayUntilAllCardsDropOnce = false;
 
         public static int PlaceCardDetour(IntPtr a1)
         {
@@ -33,23 +36,30 @@ namespace Saucy.TripleTriad
         }
         public static void PlaceCard(int which, int slot)
         {
-            if (TryGetAddonByName<AtkUnitBase>("TripleTriad", out var addon))
+            try
             {
-                var values = stackalloc AtkValue[2];
-                values[0] = new()
+                if (TryGetAddonByName<AtkUnitBase>("TripleTriad", out var addon))
                 {
-                    Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
-                    Int = 14,
-                };
-                values[1] = new()
-                {
-                    Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.UInt,
-                    UInt = (uint)slot + ((uint)which << 16),
-                };
-                addon->FireCallback(2, values);
+                    var values = stackalloc AtkValue[2];
+                    values[0] = new()
+                    {
+                        Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
+                        Int = 14,
+                    };
+                    values[1] = new()
+                    {
+                        Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.UInt,
+                        UInt = (uint)slot + ((uint)which << 16),
+                    };
+                    addon->FireCallback(2, values);
 
-                PlaceCardHook ??= Hook<PlaceCardDelegate>.FromAddress(Svc.SigScanner.ScanText("40 56 48 83 EC 20 48 8B F1 E8 ?? ?? ?? ?? 83 BE"), PlaceCardDetour);
-                PlaceCardHook.Original((IntPtr)addon);
+                    PlaceCardHook ??= Hook<PlaceCardDelegate>.FromAddress(Svc.SigScanner.ScanText("40 56 48 83 EC 20 48 8B F1 E8 ?? ?? ?? ?? 83 BE"), PlaceCardDetour);
+                    PlaceCardHook.Original((IntPtr)addon);
+                }
+            }
+            catch
+            {
+
             }
         }
 
@@ -108,7 +118,6 @@ namespace Saucy.TripleTriad
 
         public static void RunModule()
         {
-
             if (Saucy.TTSolver.preGameDecks.Count > 0)
             {
                 var selectedDeck = Service.Configuration.SelectedDeckIndex;
@@ -125,35 +134,47 @@ namespace Saucy.TripleTriad
 
             //Challenge Screen
             {
-                if (TryGetAddonByName<AtkUnitBase>("TripleTriadRequest", out var addon))
+                try
                 {
-                    var button = (AtkComponentButton*)addon->UldManager.NodeList[4];
-                    ClickButton(addon, button, 1);
+                    if (TryGetAddonByName<AtkUnitBase>("TripleTriadRequest", out var addon))
+                    {
+                        var button = (AtkComponentButton*)addon->UldManager.NodeList[4];
+                        ClickButton(addon, button, 1);
+                    }
+                
                 }
+                catch { }
             }
 
             //Deck Select
             {
-                if (TryGetAddonByName<AtkUnitBase>("TripleTriadSelDeck", out var addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
+                try
+                {
+                    if (TryGetAddonByName<AtkUnitBase>("TripleTriadSelDeck", out var addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
+                    {
+
+                        if (Service.Configuration.UseRecommendedDeck || Service.Configuration.SelectedDeckIndex == -1)
+                        {
+                            var button = (AtkComponentButton*)addon->UldManager.NodeList[3];
+                            ClickButton(addon, button, 2);
+                        }
+                        else
+                        {
+                            var values = stackalloc AtkValue[1];
+                            //Deck Index
+                            values[0] = new()
+                            {
+                                Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
+                                Int = Service.Configuration.SelectedDeckIndex,
+                            };
+                            addon->FireCallback(1, values);
+                            addon->Hide(true);
+                        }
+                    }
+                }
+                catch
                 {
 
-                    if (Service.Configuration.UseRecommendedDeck || Service.Configuration.SelectedDeckIndex == -1)
-                    {
-                        var button = (AtkComponentButton*)addon->UldManager.NodeList[3];
-                        ClickButton(addon, button, 2);
-                    }
-                    else
-                    {
-                        var values = stackalloc AtkValue[1];
-                        //Deck Index
-                        values[0] = new()
-                        {
-                            Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
-                            Int = Service.Configuration.SelectedDeckIndex,
-                        };
-                        addon->FireCallback(1, values);
-                        addon->Hide(true);
-                    }
                 }
             }
         }

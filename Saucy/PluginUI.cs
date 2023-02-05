@@ -1,14 +1,20 @@
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
+using Dalamud.Interface.Components;
+using ECommons;
 using ECommons.ImGuiMethods;
 using FFTriadBuddy;
 using ImGuiNET;
+using NAudio.Lame;
 using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
 using Saucy.TripleTriad;
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Numerics;
+using TriadBuddyPlugin;
 
 namespace Saucy
 {
@@ -22,15 +28,30 @@ namespace Saucy
         private bool visible = false;
         public bool Visible
         {
-            get { return this.visible; }
-            set { this.visible = value; }
+            get { return visible; }
+            set { visible = value; }
         }
 
         private bool settingsVisible = false;
+        private GameNpcInfo currentNPC;
+
         public bool SettingsVisible
         {
-            get { return this.settingsVisible; }
-            set { this.settingsVisible = value; }
+            get { return settingsVisible; }
+            set { settingsVisible = value; }
+        }
+
+        public GameNpcInfo CurrentNPC
+        {
+            get => currentNPC;
+            set
+            {
+                if (currentNPC != value)
+                {
+                    TriadAutomater.TempCardsWonList.Clear();
+                    currentNPC = value;
+                }
+            }
         }
 
         public PluginUI(Configuration configuration)
@@ -64,8 +85,8 @@ namespace Saucy
             }
 
             ImGui.SetNextWindowSize(new Vector2(520, 420), ImGuiCond.FirstUseEver);
-            ImGui.SetNextWindowSizeConstraints(new Vector2(520, 420), new Vector2(float.MaxValue, float.MaxValue));
-            if (ImGui.Begin("Saucy Config", ref this.visible))
+            //ImGui.SetNextWindowSizeConstraints(new Vector2(520, 420), new Vector2(float.MaxValue, float.MaxValue));
+            if (ImGui.Begin("Saucy Config", ref visible))
             {
                 if (ImGui.BeginTabBar("Games"))
                 {
@@ -171,9 +192,26 @@ namespace Saucy
             ImGui.NextColumn();
             ImGuiEx.CenterColumnText("MGP Won", true);
             ImGui.NextColumn();
+            ImGuiEx.CenterColumnText("Total Card Drop Value", true);
             ImGui.NextColumn();
+            if (Service.Configuration.Stats.CardsWon.Count > 0)
+            {
+                ImGuiEx.CenterColumnText("Most Won Card", true);
+            }
             ImGui.NextColumn();
             ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.MGPWon} MGP");
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText($"{GetDroppedCardValues()} MGP");
+            ImGui.NextColumn();
+            if (Service.Configuration.Stats.CardsWon.Count > 0)
+            {
+                ImGuiEx.CenterColumnText($"{TriadCardDB.Get().FindById((int)Service.Configuration.Stats.CardsWon.OrderByDescending(x => x.Value).First().Key).Name.GetLocalized()}");
+                ImGui.NextColumn();
+                ImGui.NextColumn();
+                ImGui.NextColumn();
+                ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.CardsWon.OrderByDescending(x => x.Value).First().Value} times");
+            }
+
             ImGui.Columns(1);
             ImGui.EndChild();
             ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
@@ -182,6 +220,17 @@ namespace Saucy
                 Service.Configuration.Stats = new();
                 Service.Configuration.Save();
             }
+        }
+
+        private int GetDroppedCardValues()
+        {
+            int output = 0;
+            foreach (var card in Service.Configuration.Stats.CardsWon)
+            {
+                output += GameCardDB.Get().FindById((int)card.Key).SaleValue * Service.Configuration.Stats.CardsWon[card.Key];
+            }
+
+            return output;
         }
 
         public void DrawTriadTab()
@@ -226,21 +275,50 @@ namespace Saucy
                 ImGui.TextWrapped("Please initiate a challenge with an NPC to populate your deck list.");
             }
 
-            if (ImGui.Checkbox("Play X Amount of Times", ref TriadAutomater.PlayXTimes) && (TriadAutomater.NumberOfTimes <= 0 || TriadAutomater.PlayUntilCardDrops))
+            if (ImGui.Checkbox("Play X Amount of Times", ref TriadAutomater.PlayXTimes) && (TriadAutomater.NumberOfTimes <= 0 || TriadAutomater.PlayUntilCardDrops || TriadAutomater.PlayUntilAllCardsDropOnce))
             {
                 TriadAutomater.NumberOfTimes = 1;
                 TriadAutomater.PlayUntilCardDrops = false;
+                TriadAutomater.PlayUntilAllCardsDropOnce = false;
             }
 
-            if (ImGui.Checkbox("Play Until Cards Drop", ref TriadAutomater.PlayUntilCardDrops) && (TriadAutomater.NumberOfTimes <= 0 || TriadAutomater.PlayXTimes))
+            if (ImGui.Checkbox("Play Until Any Cards Drop", ref TriadAutomater.PlayUntilCardDrops) && (TriadAutomater.NumberOfTimes <= 0 || TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilAllCardsDropOnce))
             {
                 TriadAutomater.NumberOfTimes = 1;
                 TriadAutomater.PlayXTimes = false;
+                TriadAutomater.PlayUntilAllCardsDropOnce = false;
             }
 
-
-            if (TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops)
+            if (Saucy.TTSolver.preGameNpc is not null)
             {
+                if (GameNpcDB.Get().mapNpcs.TryGetValue(Saucy.TTSolver.preGameNpc?.Id ?? -1, out var npcInfo))
+                {
+                    CurrentNPC = npcInfo;
+
+                    if (ImGui.Checkbox($"Play Until All Cards Drop from NPC at Least X Times", ref TriadAutomater.PlayUntilAllCardsDropOnce))
+                    {
+                        TriadAutomater.PlayUntilCardDrops = false;
+                        TriadAutomater.PlayXTimes = false;
+                        TriadAutomater.NumberOfTimes = 1;
+                    }
+
+                    if (TriadAutomater.PlayUntilAllCardsDropOnce)
+                    {
+                        foreach (var card in CurrentNPC.rewardCards)
+                        {
+                            TriadAutomater.TempCardsWonList.TryAdd((uint)card, 0);
+                        }
+                    }
+                }
+                else
+                {
+                    CurrentNPC = null;
+                }
+            }
+
+            if (TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops || TriadAutomater.PlayUntilAllCardsDropOnce)
+            {
+                ImGui.PushItemWidth(150f);
                 ImGui.Text("How many times:");
                 ImGui.SameLine();
                 if (ImGui.InputInt("", ref TriadAutomater.NumberOfTimes))
@@ -250,11 +328,46 @@ namespace Saucy
                 }
 
                 ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
+
+                bool playSound = Service.Configuration.PlaySound;
+
+                ImGui.Columns(2, null, false);
+                if (ImGui.Checkbox("Play sound upon completion", ref playSound))
+                {
+                    Service.Configuration.PlaySound = playSound;
+                    Service.Configuration.Save();
+                }
+
+                if (playSound)
+                {
+                    ImGui.NextColumn();
+                    ImGui.Text("Select Sound");
+                    if (ImGui.BeginCombo("###SelectSound", Service.Configuration.SelectedSound))
+                    {
+                        string path = Path.Combine(Service.Interface.AssemblyLocation.Directory.FullName, "Sounds");
+                        foreach (var file in new DirectoryInfo(path).GetFiles())
+                        {
+                            if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", Service.Configuration.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
+                            {
+                                Service.Configuration.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
+                                Service.Configuration.Save();
+                            }
+                        }
+
+                        ImGui.EndCombo();
+                    }
+
+                    if (ImGui.Button("Open Sound Folder"))
+                    {
+                        Process.Start("explorer.exe", @$"{Path.Combine(Service.Interface.AssemblyLocation.Directory.FullName, "Sounds")}");
+                    }
+                    ImGuiComponents.HelpMarker("Drop any MP3 files into the sound folder to add your own custom sounds.");
+                }
+                ImGui.Columns(1);
             }
-
-
-
         }
+
+
         public void DrawCufTab()
         {
             bool enabled = CufModule.ModuleEnabled;

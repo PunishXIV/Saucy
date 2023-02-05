@@ -80,7 +80,7 @@ namespace FFTriadBuddy
 
         public virtual TriadGameModifier Clone()
         {
-            return (TriadGameModifier)this.MemberwiseClone();
+            return (TriadGameModifier)MemberwiseClone();
         }
 
         public override bool Equals(object obj)

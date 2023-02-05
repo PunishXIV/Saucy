@@ -15,6 +15,9 @@ namespace Saucy
 
         public Stats Stats { get; set; } = new Stats();
 
+        public bool PlaySound { get; set; } = false;
+        public string SelectedSound { get; set; } = "Moogle";
+
         // the below exist just to make saving less cumbersome
 
         [NonSerialized]
@@ -27,7 +30,7 @@ namespace Saucy
 
         public void Save()
         {
-            this.pluginInterface!.SavePluginConfig(this);
+            pluginInterface!.SavePluginConfig(this);
         }
     }
 }

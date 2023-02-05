@@ -35,7 +35,7 @@
 
 	<ItemGroup Condition="'$(Configuration)' == 'Release'">
 		<PackageReference Include="PunishLib" Version="1.0.1.2" />
-		<PackageReference Include="ECommons" Version="2.0.0.2" />
+		<PackageReference Include="ECommons" Version="2.0.0.4" />
                 <PackageReference Include="ClickLib" Version="1.2.0.1" />
 	</ItemGroup>
 
@@ -52,6 +52,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="DalamudPackager" Version="2.1.10" />
+		<PackageReference Include="NAudio" Version="2.1.0" />
+		<PackageReference Include="NAudio.Lame" Version="2.0.1" />
 		<Reference Include="Newtonsoft.Json">
 			<HintPath>$(DalamudLibPath)Newtonsoft.Json.dll</HintPath>
 			<Private>False</Private>
@@ -85,6 +87,15 @@
 	<ItemGroup>
 	  <None Update="Saucy.json">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Sounds\Game Over.mp3">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Sounds\Moogle.mp3">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Sounds\Time Up.mp3">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	</ItemGroup>
 </Project>

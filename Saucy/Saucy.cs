@@ -9,13 +9,20 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using ECommons;
 using ECommons.DalamudServices;
+using FFTriadBuddy;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
+using NAudio.Wave;
 using PunishLib;
 using PunishLib.Sponsor;
 using Saucy.CuffACur;
 using Saucy.TripleTriad;
 using System;
+using System.Data;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Threading.Tasks;
 using TriadBuddyPlugin;
 using static ECommons.GenericHelpers;
 
@@ -61,7 +68,7 @@ namespace Saucy
             SponsorManager.SetSponsorInfo("https://ko-fi.com/taurenkey");
             P = this;
 
-            this.PluginUi = new PluginUI(Service.Configuration);
+            PluginUi = new PluginUI(Service.Configuration);
 
             Service.CommandManager.AddHandler(commandName, new CommandInfo(OnCommand)
             {
@@ -98,12 +105,12 @@ namespace Saucy
             Click.Initialize();
         }
 
-        private unsafe void CheckResults(UIStateTriadResults obj)
+        private void CheckResults(UIStateTriadResults obj)
         {
             if (TriadAutomater.ModuleEnabled)
             {
                 Service.Configuration.Stats.GamesPlayedWithSaucy++;
-                Service.Configuration.Stats.MGPWon += obj.numMGP;
+                Service.Configuration.Stats.MGPWon += GetBonusMGP(obj.numMGP);
 
                 if (TriadAutomater.PlayXTimes)
                     TriadAutomater.NumberOfTimes--;
@@ -128,6 +135,29 @@ namespace Saucy
                             TriadAutomater.NumberOfTimes--;
 
                         Service.Configuration.Stats.CardsDroppedWithSaucy++;
+
+                        var cardDB = GameCardDB.Get();
+                        foreach (var kvp in cardDB.mapCards)
+                        {
+                            if (kvp.Value.ItemId == obj.cardItemId)
+                            {
+                                if (Service.Configuration.Stats.CardsWon.ContainsKey((uint)kvp.Value.CardId))
+                                {
+                                    Service.Configuration.Stats.CardsWon[(uint)kvp.Value.CardId] += 1;
+                                }
+                                else
+                                {
+                                    Service.Configuration.Stats.CardsWon[(uint)kvp.Value.CardId] = 1;
+                                }
+
+                                if (TriadAutomater.TempCardsWonList.ContainsKey((uint)kvp.Value.CardId))
+                                {
+                                    TriadAutomater.TempCardsWonList[(uint)kvp.Value.CardId] += 1;
+                                }
+                            }
+                        }
+
+
                     }
                 }
                 if (obj.isLose)
@@ -138,13 +168,38 @@ namespace Saucy
                 {
                     Service.Configuration.Stats.GamesDrawnWithSaucy++;
                 }
+
+                Rematch();
             }
             Service.Configuration.Save();
 
+
+        }
+
+        private int GetBonusMGP(int numMGP)
+        {
+            double multiplier = 1;
+            //Jackpot
+            if (Service.ClientState.LocalPlayer.StatusList.Any(x => x.StatusId == 902))
+            {
+                multiplier += (double)Service.ClientState.LocalPlayer.StatusList.First(x => x.StatusId == 902).Param / 100;
+            }
+            if (Service.ClientState.LocalPlayer.StatusList.Any(x => x.StatusId == 1079))
+            {
+                multiplier += 0.15;
+            }
+
+            var bonusMGP = Math.Round(numMGP * multiplier, 0);
+            return (int)bonusMGP;
+        }
+
+        private unsafe void Rematch()
+        {
+            try
             {
                 if (TryGetAddonByName<AtkUnitBase>("TripleTriadResult", out var addon) && TriadAutomater.ModuleEnabled)
                 {
-                    if ((TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops) && TriadAutomater.NumberOfTimes == 0)
+                    if (((TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops) && TriadAutomater.NumberOfTimes == 0) || (TriadAutomater.TempCardsWonList.Count > 0 && TriadAutomater.TempCardsWonList.All(x => x.Value >= TriadAutomater.NumberOfTimes)))
                     {
                         addon->Hide(true);
                         return;
@@ -164,9 +219,10 @@ namespace Saucy
                     addon->FireCallback(2, values);
                 }
             }
+            catch { }
         }
 
-        private unsafe void RunBot(Framework framework)
+        private async void RunBot(Framework framework)
         {
             try
             {
@@ -197,7 +253,7 @@ namespace Saucy
 
             if (TriadAutomater.ModuleEnabled)
             {
-                if ((TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops) && TriadAutomater.NumberOfTimes == 0)
+                if (((TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops) && TriadAutomater.NumberOfTimes == 0) || (TriadAutomater.TempCardsWonList.Count > 0 && TriadAutomater.TempCardsWonList.All(x => x.Value >= TriadAutomater.NumberOfTimes)))
                 {
                     if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent] ||
                         Svc.Condition[ConditionFlag.Occupied33] ||
@@ -210,22 +266,26 @@ namespace Saucy
                         Svc.Condition[ConditionFlag.Mounting71] ||
                         Svc.Condition[ConditionFlag.CarryingObject])
                     {
-                        var talk = Svc.GameGui.GetAddonByName("Talk", 1);
-                        if (talk == IntPtr.Zero) return;
-                        var talkAddon = (AtkUnitBase*)talk;
-                        if (!IsAddonReady(talkAddon)) return;
-                        ClickTalk.Using(talk).Click();
+                        SkipDialogue();
                     }
                     else
                     {
+                        if (Service.Configuration.PlaySound)
+                        {
+                            await Task.Run(() => PlaySound());
+                        }
+
                         TriadAutomater.PlayXTimes = false;
                         TriadAutomater.PlayUntilCardDrops = false;
+                        TriadAutomater.PlayUntilAllCardsDropOnce= false;
                         TriadAutomater.ModuleEnabled = false;
+                        TriadAutomater.TempCardsWonList.Clear();
+
 
                         if (TriadAutomater.LogOutAfterCompletion)
                         {
-                            Svc.Framework.RunOnTick(() => TriadAutomater.Logout(), TimeSpan.FromMilliseconds(2000));
-                            Svc.Framework.RunOnTick(() => TriadAutomater.SelectYesLogout(), TimeSpan.FromMilliseconds(3500));
+                            await Svc.Framework.RunOnTick(() => TriadAutomater.Logout(), TimeSpan.FromMilliseconds(2000));
+                            await Svc.Framework.RunOnTick(() => TriadAutomater.SelectYesLogout(), TimeSpan.FromMilliseconds(3500));
                         }
                     }
 
@@ -242,9 +302,34 @@ namespace Saucy
 
         }
 
+        private unsafe void SkipDialogue()
+        {
+            try
+            {
+                var talk = Svc.GameGui.GetAddonByName("Talk", 1);
+                if (talk == IntPtr.Zero) return;
+                var talkAddon = (AtkUnitBase*)talk;
+                if (!IsAddonReady(talkAddon)) return;
+                ClickTalk.Using(talk).Click();
+            }
+            catch { }
+        }
+
+        private void PlaySound()
+        {
+            string sound = Service.Configuration.SelectedSound;
+            string path = Path.Combine(Service.Interface.AssemblyLocation.Directory.FullName, "Sounds", $"{sound}.mp3");
+            if (!File.Exists(path)) return;
+            var reader = new Mp3FileReader(path);
+            var waveOut = new WaveOutEvent();
+            
+            waveOut.Init(reader);
+            waveOut.Play();
+        }
+
         public void Dispose()
         {
-            this.PluginUi.Dispose();
+            PluginUi.Dispose();
             Service.CommandManager.RemoveHandler(commandName);
             Svc.Framework.Update -= RunBot;
 
@@ -252,17 +337,17 @@ namespace Saucy
 
         private void OnCommand(string command, string args)
         {
-            this.PluginUi.Visible = true;
+            PluginUi.Visible = !PluginUi.Visible;
         }
 
         private void DrawUI()
         {
-            this.PluginUi.Draw();
+            PluginUi.Draw();
         }
 
         private void DrawConfigUI()
         {
-            this.PluginUi.Visible = true;
+            PluginUi.Visible = true;
         }
     }
 

@@ -22,5 +22,7 @@ namespace Saucy
         public int MGPWon = 0;
 
         public Dictionary<string, int> NPCsPlayed = new Dictionary<string, int>();
+
+        public Dictionary<uint, int> CardsWon = new Dictionary<uint, int>();
     }
 }
