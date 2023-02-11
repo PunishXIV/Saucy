@@ -1,11 +1,9 @@
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
-using ECommons;
 using ECommons.ImGuiMethods;
 using FFTriadBuddy;
 using ImGuiNET;
-using NAudio.Lame;
 using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
 using Saucy.TripleTriad;
@@ -67,13 +65,6 @@ namespace Saucy
 
         public void Draw()
         {
-            // This is our only draw handler attached to UIBuilder, so it needs to be
-            // able to draw any windows we might have open.
-            // Each method checks its own visibility/state to ensure it only draws when
-            // it actually makes sense.
-            // There are other ways to do this, but it is generally best to keep the number of
-            // draw delegates as low as possible.
-
             DrawMainWindow();
         }
 
@@ -138,7 +129,7 @@ namespace Saucy
             ImGui.NextColumn();
             ImGui.NextColumn();
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesPlayedWithSaucy}");
+            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesPlayedWithSaucy.ToString("N0")}");
             ImGui.NextColumn();
             ImGui.NextColumn();
             ImGui.Spacing();
@@ -148,11 +139,11 @@ namespace Saucy
             ImGui.NextColumn();
             ImGuiEx.CenterColumnText("Draws", true);
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesWonWithSaucy}");
+            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesWonWithSaucy.ToString("N0")}");
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesLostWithSaucy}");
+            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesLostWithSaucy.ToString("N0")}");
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesDrawnWithSaucy}");
+            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesDrawnWithSaucy.ToString("N0")}");
             ImGui.NextColumn();
             ImGuiEx.CenterColumnText("Win Rate", true);
             ImGui.NextColumn();
@@ -177,13 +168,13 @@ namespace Saucy
                 ImGuiEx.CenterColumnText("");
             }
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.CardsDroppedWithSaucy}");
+            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.CardsDroppedWithSaucy.ToString("N0")}");
             ImGui.NextColumn();
 
             if (Service.Configuration.Stats.NPCsPlayed.Count > 0)
             {
                 ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.NPCsPlayed.OrderByDescending(x => x.Value).First().Key}");
-                ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.NPCsPlayed.OrderByDescending(x => x.Value).First().Value} times");
+                ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.NPCsPlayed.OrderByDescending(x => x.Value).First().Value.ToString("N0")} times");
                 ImGui.NextColumn();
                 ImGui.NextColumn();
                 ImGui.NextColumn();
@@ -199,9 +190,9 @@ namespace Saucy
                 ImGuiEx.CenterColumnText("Most Won Card", true);
             }
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.MGPWon} MGP");
+            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.MGPWon.ToString("N0")} MGP");
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{GetDroppedCardValues()} MGP");
+            ImGuiEx.CenterColumnText($"{GetDroppedCardValues().ToString("N0")} MGP");
             ImGui.NextColumn();
             if (Service.Configuration.Stats.CardsWon.Count > 0)
             {
@@ -209,7 +200,7 @@ namespace Saucy
                 ImGui.NextColumn();
                 ImGui.NextColumn();
                 ImGui.NextColumn();
-                ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.CardsWon.OrderByDescending(x => x.Value).First().Value} times");
+                ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.CardsWon.OrderByDescending(x => x.Value).First().Value.ToString("N0")} times");
             }
 
             ImGui.Columns(1);
@@ -321,7 +312,8 @@ namespace Saucy
                 ImGui.PushItemWidth(150f);
                 ImGui.Text("How many times:");
                 ImGui.SameLine();
-                if (ImGui.InputInt("", ref TriadAutomater.NumberOfTimes))
+
+                if (ImGui.InputInt("###NumberOfTimes", ref TriadAutomater.NumberOfTimes))
                 {
                     if (TriadAutomater.NumberOfTimes <= 0)
                         TriadAutomater.NumberOfTimes = 1;

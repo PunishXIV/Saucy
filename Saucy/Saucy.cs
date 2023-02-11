@@ -38,19 +38,14 @@ namespace Saucy
 
         public static Solver TTSolver = new();
 
-        public readonly UIReaderTriadGame uiReaderGame;
-        public readonly UIReaderTriadPrep uiReaderPrep;
-        public readonly UIReaderTriadCardList uiReaderCardList;
-        public readonly UIReaderTriadDeckEdit uiReaderDeckEdit;
-        public readonly UIReaderScheduler uiReaderScheduler;
-        public readonly StatTracker statTracker;
-        public readonly GameDataLoader dataLoader;
+        public static UIReaderTriadGame uiReaderGame;
+        public static UIReaderTriadPrep uiReaderPrep;
+        public static UIReaderTriadCardList uiReaderCardList;
+        public static UIReaderTriadDeckEdit uiReaderDeckEdit;
+        public static UIReaderScheduler uiReaderScheduler;
+        public static StatTracker statTracker;
+        public static GameDataLoader dataLoader;
 
-        public static int GamesPlayed { get; set; }
-        public static int GamesWon { get; set; }
-        public static int GamesLost { get; set; }
-        public static int GamesDrawn { get; set; }
-        public static int CardsDropped { get; set; }
         public static bool GameFinished => TTSolver.cachedScreenState == null;
 
         public Saucy([RequiredVersion("1.0")] DalamudPluginInterface pluginInterface, [RequiredVersion("1.0")] CommandManager commandManager, GameGui gameGui, DataManager dataManager)

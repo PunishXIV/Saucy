@@ -130,53 +130,73 @@ namespace Saucy.TripleTriad
             if (Saucy.TTSolver.hasMove)
             {
                 PlaceCard(Saucy.TTSolver.moveCardIdx, Saucy.TTSolver.moveBoardIdx);
+                return;
             }
 
-            //Challenge Screen
+            if (Saucy.uiReaderPrep.HasMatchRequestUI)
             {
-                try
-                {
-                    if (TryGetAddonByName<AtkUnitBase>("TripleTriadRequest", out var addon))
-                    {
-                        var button = (AtkComponentButton*)addon->UldManager.NodeList[4];
-                        ClickButton(addon, button, 1);
-                    }
-                
-                }
-                catch { }
+                AcceptTriadMatch();
             }
 
-            //Deck Select
+            if (Saucy.uiReaderPrep.HasDeckSelectionUI)
             {
-                try
+                DeckSelect();
+
+            }
+
+        }
+
+        private unsafe static void DeckSelect()
+        {
+
+            try
+            {
+                if (TryGetAddonByName<AtkUnitBase>("TripleTriadSelDeck", out var addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
                 {
-                    if (TryGetAddonByName<AtkUnitBase>("TripleTriadSelDeck", out var addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
+                    if (Service.Configuration.UseRecommendedDeck || Service.Configuration.SelectedDeckIndex == -1)
                     {
-
-                        if (Service.Configuration.UseRecommendedDeck || Service.Configuration.SelectedDeckIndex == -1)
-                        {
-                            var button = (AtkComponentButton*)addon->UldManager.NodeList[3];
-                            ClickButton(addon, button, 2);
-                        }
-                        else
-                        {
-                            var values = stackalloc AtkValue[1];
-                            //Deck Index
-                            values[0] = new()
-                            {
-                                Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
-                                Int = Service.Configuration.SelectedDeckIndex,
-                            };
-                            addon->FireCallback(1, values);
-                            addon->Hide(true);
-                        }
+                        var button = (AtkComponentButton*)addon->UldManager.NodeList[3];
+                        ClickButton(addon, button, 2);
+                        return;
                     }
-                }
-                catch
-                {
+                    else
+                    {
+                        var values = stackalloc AtkValue[1];
+                        //Deck Index
+                        values[0] = new()
+                        {
+                            Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
+                            Int = Service.Configuration.SelectedDeckIndex,
+                        };
+                        addon->FireCallback(1, values);
+                        addon->Hide(true);
+                        return;
+                    }
 
+                }
+
+
+            }
+            catch
+            {
+
+            }
+
+
+        }
+
+        private unsafe static void AcceptTriadMatch()
+        {
+            try
+            {
+                if (TryGetAddonByName<AtkUnitBase>("TripleTriadRequest", out var addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
+                {
+                    var button = (AtkComponentButton*)addon->UldManager.NodeList[4];
+                    ClickButton(addon, button, 1);
                 }
             }
+            catch { }
+
         }
 
         public static bool Logout()
