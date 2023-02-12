@@ -100,5 +100,10 @@ namespace FFTriadBuddy
             string nameLower = Name.ToLower();
             return npcs.Find(x => (x != null) && x.IsMatchingNameStart(nameLower));
         }
+
+        public TriadNpc FindByID(int id)
+        {
+            return npcs.Find(x => x.Id == id);
+        }
     }
 }

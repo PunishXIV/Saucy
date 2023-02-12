@@ -9,7 +9,6 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using ECommons;
 using ECommons.DalamudServices;
-using FFTriadBuddy;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
 using NAudio.Wave;
@@ -18,11 +17,8 @@ using PunishLib.Sponsor;
 using Saucy.CuffACur;
 using Saucy.TripleTriad;
 using System;
-using System.Data;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Threading.Tasks;
 using TriadBuddyPlugin;
 using static ECommons.GenericHelpers;
 
@@ -34,7 +30,7 @@ namespace Saucy
         internal static Saucy P;
 
         private const string commandName = "/saucy";
-        private PluginUI PluginUi { get; init; }
+        public static PluginUI PluginUi { get; set; }
 
         public static Solver TTSolver = new();
 
@@ -55,8 +51,6 @@ namespace Saucy
 
             Service.Configuration = Service.Interface.GetPluginConfig() as Configuration ?? new Configuration();
             Service.Configuration.Initialize(Service.Interface);
-
-            Dalamud.Logging.PluginLog.Debug($"{Service.Configuration.UseRecommendedDeck}");
 
             ECommonsMain.Init(Service.Interface, this);
             PunishLibMain.Init(Service.Interface, this);
@@ -95,6 +89,10 @@ namespace Saucy
             uiReaderScheduler.AddObservedAddon(uiReaderPrep.uiReaderMatchRequest);
             uiReaderScheduler.AddObservedAddon(uiReaderPrep.uiReaderDeckSelect);
             uiReaderScheduler.AddObservedAddon(uiReaderMatchResults);
+
+            var memReaderTriadFunc = new UnsafeReaderTriadCards(Service.SigScanner);
+            GameCardDB.Get().memReader = memReaderTriadFunc;
+            GameNpcDB.Get().memReader = memReaderTriadFunc;
 
             Svc.Framework.Update += RunBot;
             Click.Initialize();
@@ -232,6 +230,11 @@ namespace Saucy
                 Dalamud.Logging.PluginLog.Error(ex, "state update failed");
             }
 
+            if (Service.Configuration.OpenAutomatically && uiReaderPrep.HasMatchRequestUI && !TriadAutomater.ModuleEnabled)
+            {
+                Saucy.PluginUi.Visible = true;
+            }
+
             if (CufModule.ModuleEnabled)
             {
                 CufModule.RunModule();
@@ -267,12 +270,12 @@ namespace Saucy
                     {
                         if (Service.Configuration.PlaySound)
                         {
-                            await Task.Run(() => PlaySound());
+                            PlaySound();
                         }
 
                         TriadAutomater.PlayXTimes = false;
                         TriadAutomater.PlayUntilCardDrops = false;
-                        TriadAutomater.PlayUntilAllCardsDropOnce= false;
+                        TriadAutomater.PlayUntilAllCardsDropOnce = false;
                         TriadAutomater.ModuleEnabled = false;
                         TriadAutomater.TempCardsWonList.Clear();
 
@@ -310,16 +313,21 @@ namespace Saucy
             catch { }
         }
 
+        private readonly object _lockObj = new();
+
         private void PlaySound()
         {
-            string sound = Service.Configuration.SelectedSound;
-            string path = Path.Combine(Service.Interface.AssemblyLocation.Directory.FullName, "Sounds", $"{sound}.mp3");
-            if (!File.Exists(path)) return;
-            var reader = new Mp3FileReader(path);
-            var waveOut = new WaveOutEvent();
-            
-            waveOut.Init(reader);
-            waveOut.Play();
+            lock (_lockObj)
+            {
+                string sound = Service.Configuration.SelectedSound;
+                string path = Path.Combine(Service.Interface.AssemblyLocation.Directory.FullName, "Sounds", $"{sound}.mp3");
+                if (!File.Exists(path)) return;
+                var reader = new Mp3FileReader(path);
+                var waveOut = new WaveOutEvent();
+
+                waveOut.Init(reader);
+                waveOut.Play();
+            }
         }
 
         public void Dispose()
@@ -330,9 +338,64 @@ namespace Saucy
 
         }
 
-        private void OnCommand(string command, string args)
+        private void OnCommand(string command, string arguments)
         {
-            PluginUi.Visible = !PluginUi.Visible;
+            if (arguments.Length == 0)
+                PluginUi.Visible = !PluginUi.Visible;
+
+            var args = arguments.Split();
+            if (args.Length > 0)
+            {
+                if (args[0].ToLower() == "tt")
+                {
+                    if (args[1].ToLower() == "go")
+                    {
+                        TriadAutomater.ModuleEnabled = true;
+                        Svc.Chat.Print("[Saucy] Triad Module Enabled!");
+                        return;
+                    }
+
+                    if (args[1].ToLower() == "play")
+                    {
+                        TriadAutomater.PlayXTimes = true;
+                        Svc.Chat.Print("[Saucy] Play X Amount of Times Enabled!");
+
+                        if (int.TryParse(args[2], out int val))
+                        {
+                            TriadAutomater.NumberOfTimes = val;
+                            return;
+                        }
+                        else
+                        {
+                            return;
+                        }
+                    }
+
+                    if (args[1].ToLower() == "cards")
+                    {
+                        if (args[2].ToLower() == "any")
+                        {
+                            TriadAutomater.PlayUntilCardDrops = true;
+                            Svc.Chat.Print("[Saucy] Play Until Any Cards Drop Enabled!");
+                        }
+                        if (args[2].ToLower() == "all")
+                        {
+                            TriadAutomater.PlayUntilAllCardsDropOnce = true;
+                            Svc.Chat.Print("[Saucy] Play Until All Cards Drop from NPC at Least X Times Enabled!");
+                        }
+
+                        if (int.TryParse(args[3], out int val))
+                        {
+                            TriadAutomater.NumberOfTimes = val;
+                            return;
+                        }
+                        else
+                        {
+                            return;
+                        }
+                    }
+                }
+            }
         }
 
         private void DrawUI()

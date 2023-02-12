@@ -9,6 +9,7 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel.GeneratedSheets;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using static ECommons.GenericHelpers;
@@ -153,7 +154,8 @@ namespace Saucy.TripleTriad
             {
                 if (TryGetAddonByName<AtkUnitBase>("TripleTriadSelDeck", out var addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
                 {
-                    if (Service.Configuration.UseRecommendedDeck || Service.Configuration.SelectedDeckIndex == -1)
+
+                    if (Service.Configuration.SelectedDeckIndex == -1)
                     {
                         var button = (AtkComponentButton*)addon->UldManager.NodeList[3];
                         ClickButton(addon, button, 2);
@@ -161,12 +163,13 @@ namespace Saucy.TripleTriad
                     }
                     else
                     {
+                        var deck = Service.Configuration.UseRecommendedDeck ? Saucy.TTSolver.preGameBestId : Service.Configuration.SelectedDeckIndex;
                         var values = stackalloc AtkValue[1];
                         //Deck Index
                         values[0] = new()
                         {
                             Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
-                            Int = Service.Configuration.SelectedDeckIndex,
+                            Int = deck,
                         };
                         addon->FireCallback(1, values);
                         addon->Hide(true);

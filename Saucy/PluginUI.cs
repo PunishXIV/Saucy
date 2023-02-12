@@ -18,7 +18,7 @@ namespace Saucy
 {
     // It is good to have this be disposable in general, in case you ever need it
     // to do any cleanup
-    class PluginUI : IDisposable
+    public class PluginUI : IDisposable
     {
         private Configuration configuration;
 
@@ -236,29 +236,50 @@ namespace Saucy
                 TriadAutomater.ModuleEnabled = enabled;
             }
 
+            bool autoOpen = configuration.OpenAutomatically;
+
+            if (ImGui.Checkbox("Open Saucy When Challenging an NPC", ref autoOpen))
+            {
+                configuration.OpenAutomatically= autoOpen;
+                configuration.Save();
+            }
+
             int selectedDeck = configuration.SelectedDeckIndex;
 
-            if (Saucy.TTSolver.preGameDecks.Count > 0)
+            if (Saucy.TTSolver.profileGS.GetPlayerDecks().Count() > 0)
             {
-                string preview = selectedDeck >= 0 ? Saucy.TTSolver.preGameDecks[selectedDeck].name : string.Empty;
-                if (ImGui.BeginCombo("Select Deck", preview))
+                if (!Service.Configuration.UseRecommendedDeck)
                 {
-                    if (ImGui.Selectable(""))
+                    ImGui.PushItemWidth(200);
+                    string preview = selectedDeck >= 0 ? Saucy.TTSolver.profileGS.GetPlayerDecks()[selectedDeck].name : string.Empty;
+                    if (ImGui.BeginCombo("Select Deck", preview))
                     {
-                        configuration.SelectedDeckIndex = -1;
-                    }
-
-                    foreach (var deck in Saucy.TTSolver.preGameDecks.Values)
-                    {
-                        var index = Saucy.TTSolver.preGameDecks.Where(x => x.Value == deck).First().Key;
-                        if (ImGui.Selectable(deck.name, index == selectedDeck))
+                        if (ImGui.Selectable(""))
                         {
-                            configuration.SelectedDeckIndex = index;
-                            configuration.Save();
+                            configuration.SelectedDeckIndex = -1;
                         }
+
+                        foreach (var deck in Saucy.TTSolver.profileGS.GetPlayerDecks())
+                        {
+                            var index = deck.id;
+                            //var index = Saucy.TTSolver.preGameDecks.Where(x => x.Value == deck).First().Key;
+                            if (ImGui.Selectable(deck.name, index == selectedDeck))
+                            {
+                                configuration.SelectedDeckIndex = index;
+                                configuration.Save();
+                            }
+                        }
+
+                        ImGui.EndCombo();
                     }
 
-                    ImGui.EndCombo();
+                    ImGui.SameLine();
+                }
+                bool useAutoDeck = Service.Configuration.UseRecommendedDeck;
+                if (ImGui.Checkbox("Automatically choose your deck with the best win chance", ref useAutoDeck))
+                {
+                    Service.Configuration.UseRecommendedDeck = useAutoDeck;
+                    Service.Configuration.Save();
                 }
             }
             else
@@ -280,32 +301,60 @@ namespace Saucy
                 TriadAutomater.PlayUntilAllCardsDropOnce = false;
             }
 
-            if (Saucy.TTSolver.preGameNpc is not null)
+
+            if (GameNpcDB.Get().mapNpcs.TryGetValue(Saucy.TTSolver.preGameNpc?.Id ?? -1, out var npcInfo))
             {
-                if (GameNpcDB.Get().mapNpcs.TryGetValue(Saucy.TTSolver.preGameNpc?.Id ?? -1, out var npcInfo))
-                {
-                    CurrentNPC = npcInfo;
+                CurrentNPC = npcInfo;
+            }
+            else
+            {
+                CurrentNPC = null;
+            }
 
-                    if (ImGui.Checkbox($"Play Until All Cards Drop from NPC at Least X Times", ref TriadAutomater.PlayUntilAllCardsDropOnce))
-                    {
-                        TriadAutomater.PlayUntilCardDrops = false;
-                        TriadAutomater.PlayXTimes = false;
-                        TriadAutomater.NumberOfTimes = 1;
-                    }
+            if (ImGui.Checkbox($"Play Until All Cards Drop from NPC at Least X Times {(CurrentNPC is null ? "" : $"({TriadNpcDB.Get().FindByID(CurrentNPC.npcId).Name.GetLocalized()})")}", ref TriadAutomater.PlayUntilAllCardsDropOnce))
+            {
+                TriadAutomater.TempCardsWonList.Clear();
+                TriadAutomater.PlayUntilCardDrops = false;
+                TriadAutomater.PlayXTimes = false;
+                TriadAutomater.NumberOfTimes = 1;
+            }
 
-                    if (TriadAutomater.PlayUntilAllCardsDropOnce)
-                    {
-                        foreach (var card in CurrentNPC.rewardCards)
-                        {
-                            TriadAutomater.TempCardsWonList.TryAdd((uint)card, 0);
-                        }
-                    }
-                }
-                else
+            bool onlyUnobtained = Service.Configuration.OnlyUnobtainedCards;
+
+            if (TriadAutomater.PlayUntilAllCardsDropOnce)
+            {
+                ImGui.SameLine();
+                if (ImGui.Checkbox("Only Unobtained Cards", ref onlyUnobtained))
                 {
-                    CurrentNPC = null;
+                    TriadAutomater.TempCardsWonList.Clear();
+                    Service.Configuration.OnlyUnobtainedCards = onlyUnobtained;
+                    Service.Configuration.Save();
                 }
             }
+
+            if (TriadAutomater.PlayUntilAllCardsDropOnce && CurrentNPC != null)
+            {
+                ImGui.Indent();
+                GameCardDB.Get().Refresh();
+                foreach (var card in CurrentNPC.rewardCards)
+                {
+                    if ((Service.Configuration.OnlyUnobtainedCards && !GameCardDB.Get().FindById(card).IsOwned) || !Service.Configuration.OnlyUnobtainedCards)
+                    {
+                        TriadAutomater.TempCardsWonList.TryAdd((uint)card, 0);
+                        ImGui.Text($"- {TriadCardDB.Get().FindById((int)GameCardDB.Get().FindById(card).CardId).Name.GetLocalized()} {TriadAutomater.TempCardsWonList[(uint)card]}/{TriadAutomater.NumberOfTimes}");
+                    }
+
+                }
+
+                if (Service.Configuration.OnlyUnobtainedCards && TriadAutomater.TempCardsWonList.Count == 0)
+                {
+                    ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
+                    ImGui.TextWrapped($@"You already have all cards from this NPC. This feature will not work until you untick ""Only Unobtained Cards"" or choose a different NPC.");
+                    ImGui.PopStyleColor();
+                }
+                ImGui.Unindent();
+            }
+
 
             if (TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops || TriadAutomater.PlayUntilAllCardsDropOnce)
             {
