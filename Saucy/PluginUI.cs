@@ -113,6 +113,34 @@ namespace Saucy
 
         private void DrawStatsTab()
         {
+            if (ImGui.BeginTabBar("Stats"))
+            {
+                if (ImGui.BeginTabItem("Lifetime"))
+                {
+                    this.DrawStatsTab(Service.Configuration.Stats, out bool reset);
+
+                    if (reset)
+                    {
+                        Service.Configuration.Stats = new();
+                        Service.Configuration.Save();
+                    }
+
+                    ImGui.EndTabItem();
+                }
+                if (ImGui.BeginTabItem("Session"))
+                {
+                    this.DrawStatsTab(Service.Configuration.SessionStats, out bool reset);
+                    if (reset)
+                        Service.Configuration.SessionStats = new();
+                    ImGui.EndTabItem();
+                }
+
+                ImGui.EndTabBar();
+            }
+        }
+
+        private void DrawStatsTab(Stats stat, out bool reset)
+        {
             ImGui.Columns(3, "stats", false);
             ImGui.NextColumn();
             ImGuiEx.CenterColumnText(ImGuiColors.ParsedGold, "SAUCY STATS", true);
@@ -129,7 +157,7 @@ namespace Saucy
             ImGui.NextColumn();
             ImGui.NextColumn();
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesPlayedWithSaucy.ToString("N0")}");
+            ImGuiEx.CenterColumnText($"{stat.GamesPlayedWithSaucy.ToString("N0")}");
             ImGui.NextColumn();
             ImGui.NextColumn();
             ImGui.Spacing();
@@ -139,17 +167,17 @@ namespace Saucy
             ImGui.NextColumn();
             ImGuiEx.CenterColumnText("Draws", true);
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesWonWithSaucy.ToString("N0")}");
+            ImGuiEx.CenterColumnText($"{stat.GamesWonWithSaucy.ToString("N0")}");
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesLostWithSaucy.ToString("N0")}");
+            ImGuiEx.CenterColumnText($"{stat.GamesLostWithSaucy.ToString("N0")}");
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.GamesDrawnWithSaucy.ToString("N0")}");
+            ImGuiEx.CenterColumnText($"{stat.GamesDrawnWithSaucy.ToString("N0")}");
             ImGui.NextColumn();
             ImGuiEx.CenterColumnText("Win Rate", true);
             ImGui.NextColumn();
             ImGuiEx.CenterColumnText("Cards Won", true);
             ImGui.NextColumn();
-            if (Service.Configuration.Stats.NPCsPlayed.Count > 0)
+            if (stat.NPCsPlayed.Count > 0)
             {
                 ImGuiEx.CenterColumnText("Most Played NPC", true);
                 ImGui.NextColumn();
@@ -159,22 +187,22 @@ namespace Saucy
                 ImGui.NextColumn();
             }
 
-            if (Service.Configuration.Stats.GamesPlayedWithSaucy > 0)
+            if (stat.GamesPlayedWithSaucy > 0)
             {
-                ImGuiEx.CenterColumnText($"{Math.Round(((double)Service.Configuration.Stats.GamesWonWithSaucy / (double)Service.Configuration.Stats.GamesPlayedWithSaucy) * 100, 2)}%");
+                ImGuiEx.CenterColumnText($"{Math.Round(((double)stat.GamesWonWithSaucy / (double)stat.GamesPlayedWithSaucy) * 100, 2)}%");
             }
             else
             {
                 ImGuiEx.CenterColumnText("");
             }
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.CardsDroppedWithSaucy.ToString("N0")}");
+            ImGuiEx.CenterColumnText($"{stat.CardsDroppedWithSaucy.ToString("N0")}");
             ImGui.NextColumn();
 
-            if (Service.Configuration.Stats.NPCsPlayed.Count > 0)
+            if (stat.NPCsPlayed.Count > 0)
             {
-                ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.NPCsPlayed.OrderByDescending(x => x.Value).First().Key}");
-                ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.NPCsPlayed.OrderByDescending(x => x.Value).First().Value.ToString("N0")} times");
+                ImGuiEx.CenterColumnText($"{stat.NPCsPlayed.OrderByDescending(x => x.Value).First().Key}");
+                ImGuiEx.CenterColumnText($"{stat.NPCsPlayed.OrderByDescending(x => x.Value).First().Value.ToString("N0")} times");
                 ImGui.NextColumn();
                 ImGui.NextColumn();
                 ImGui.NextColumn();
@@ -185,41 +213,35 @@ namespace Saucy
             ImGui.NextColumn();
             ImGuiEx.CenterColumnText("Total Card Drop Value", true);
             ImGui.NextColumn();
-            if (Service.Configuration.Stats.CardsWon.Count > 0)
+            if (stat.CardsWon.Count > 0)
             {
                 ImGuiEx.CenterColumnText("Most Won Card", true);
             }
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.MGPWon.ToString("N0")} MGP");
+            ImGuiEx.CenterColumnText($"{stat.MGPWon.ToString("N0")} MGP");
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{GetDroppedCardValues().ToString("N0")} MGP");
+            ImGuiEx.CenterColumnText($"{GetDroppedCardValues(stat).ToString("N0")} MGP");
             ImGui.NextColumn();
-            if (Service.Configuration.Stats.CardsWon.Count > 0)
+            if (stat.CardsWon.Count > 0)
             {
-                ImGuiEx.CenterColumnText($"{TriadCardDB.Get().FindById((int)Service.Configuration.Stats.CardsWon.OrderByDescending(x => x.Value).First().Key).Name.GetLocalized()}");
+                ImGuiEx.CenterColumnText($"{TriadCardDB.Get().FindById((int)stat.CardsWon.OrderByDescending(x => x.Value).First().Key).Name.GetLocalized()}");
                 ImGui.NextColumn();
                 ImGui.NextColumn();
                 ImGui.NextColumn();
-                ImGuiEx.CenterColumnText($"{Service.Configuration.Stats.CardsWon.OrderByDescending(x => x.Value).First().Value.ToString("N0")} times");
+                ImGuiEx.CenterColumnText($"{stat.CardsWon.OrderByDescending(x => x.Value).First().Value.ToString("N0")} times");
             }
 
             ImGui.Columns(1);
             ImGui.EndChild();
             ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
-            if (ImGui.Button("RESET STATS (Hold Ctrl)", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y)) && ImGui.GetIO().KeyCtrl)
-            {
-                Service.Configuration.Stats = new();
-                Service.Configuration.Save();
-            }
+            reset = ImGui.Button("RESET STATS (Hold Ctrl)", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y)) && ImGui.GetIO().KeyCtrl;
         }
 
-        private int GetDroppedCardValues()
+        private int GetDroppedCardValues(Stats stat)
         {
             int output = 0;
-            foreach (var card in Service.Configuration.Stats.CardsWon)
-            {
-                output += GameCardDB.Get().FindById((int)card.Key).SaleValue * Service.Configuration.Stats.CardsWon[card.Key];
-            }
+            foreach (var card in stat.CardsWon)
+                output += GameCardDB.Get().FindById((int)card.Key).SaleValue * stat.CardsWon[card.Key];
 
             return output;
         }

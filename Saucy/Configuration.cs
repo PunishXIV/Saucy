@@ -4,6 +4,8 @@ using System;
 
 namespace Saucy
 {
+    using Newtonsoft.Json;
+
     [Serializable]
     public class Configuration : IPluginConfiguration
     {
@@ -15,6 +17,9 @@ namespace Saucy
 
         public Stats Stats { get; set; } = new Stats();
 
+        [JsonIgnore]
+        public Stats SessionStats { get; set; } = new Stats();
+
         public bool PlaySound { get; set; } = false;
         public string SelectedSound { get; set; } = "Moogle";
         public bool OnlyUnobtainedCards { get; set; } = false;
@@ -24,6 +29,12 @@ namespace Saucy
 
         [NonSerialized]
         private DalamudPluginInterface? pluginInterface;
+
+        public void UpdateStats(Action<Stats> updateAction)
+        {
+            updateAction(Stats);
+            updateAction(SessionStats);
+        }
 
         public void Initialize(DalamudPluginInterface pluginInterface)
         {

@@ -102,67 +102,57 @@ namespace Saucy
         {
             if (TriadAutomater.ModuleEnabled)
             {
-                Service.Configuration.Stats.GamesPlayedWithSaucy++;
-                Service.Configuration.Stats.MGPWon += GetBonusMGP(obj.numMGP);
+                Service.Configuration.UpdateStats(stats =>
+                                                  {
+                                                      stats.GamesPlayedWithSaucy++;
+                                                      stats.MGPWon += this.GetBonusMGP(obj.numMGP);
+
+                                                      if (stats.NPCsPlayed.TryGetValue(TTSolver.lastGameNpc.Name.GetLocalized(), out int plays))
+                                                          stats.NPCsPlayed[TTSolver.lastGameNpc.Name.GetLocalized()] += 1;
+                                                      else
+                                                          stats.NPCsPlayed.TryAdd(TTSolver.lastGameNpc.Name.GetLocalized(), 1);
+
+                                                      if (obj.isLose)
+                                                          stats.GamesLostWithSaucy++;
+                                                      if (obj.isDraw)
+                                                          stats.GamesDrawnWithSaucy++;
+                                                  });
 
                 if (TriadAutomater.PlayXTimes)
                     TriadAutomater.NumberOfTimes--;
 
-                if (Service.Configuration.Stats.NPCsPlayed.TryGetValue(TTSolver.lastGameNpc.Name.GetLocalized(), out int plays))
-                {
-                    Service.Configuration.Stats.NPCsPlayed[TTSolver.lastGameNpc.Name.GetLocalized()] += 1;
-                    Service.Configuration.Save();
-                }
-                else
-                {
-                    Service.Configuration.Stats.NPCsPlayed.TryAdd(TTSolver.lastGameNpc.Name.GetLocalized(), 1);
-                    Service.Configuration.Save();
-                }
-
                 if (obj.isWin)
                 {
-                    Service.Configuration.Stats.GamesWonWithSaucy++;
+                    Service.Configuration.UpdateStats(stats => stats.GamesWonWithSaucy++);
                     if (obj.cardItemId > 0)
                     {
                         if (TriadAutomater.PlayUntilCardDrops)
                             TriadAutomater.NumberOfTimes--;
 
-                        Service.Configuration.Stats.CardsDroppedWithSaucy++;
+                        Service.Configuration.UpdateStats(stats => stats.CardsDroppedWithSaucy++);
 
                         var cardDB = GameCardDB.Get();
-                        foreach (var kvp in cardDB.mapCards)
-                        {
-                            if (kvp.Value.ItemId == obj.cardItemId)
-                            {
-                                if (Service.Configuration.Stats.CardsWon.ContainsKey((uint)kvp.Value.CardId))
-                                {
-                                    Service.Configuration.Stats.CardsWon[(uint)kvp.Value.CardId] += 1;
-                                }
-                                else
-                                {
-                                    Service.Configuration.Stats.CardsWon[(uint)kvp.Value.CardId] = 1;
-                                }
 
-                                if (TriadAutomater.TempCardsWonList.ContainsKey((uint)kvp.Value.CardId))
-                                {
-                                    TriadAutomater.TempCardsWonList[(uint)kvp.Value.CardId] += 1;
-                                }
+                        foreach ((int _, GameCardInfo cardInfo) in cardDB.mapCards)
+                        {
+                            if (cardInfo.ItemId == obj.cardItemId)
+                            {
+                                Service.Configuration.UpdateStats(stats =>
+                                                                  {
+                                                                      if (stats.CardsWon.ContainsKey((uint)cardInfo.CardId))
+                                                                          stats.CardsWon[(uint)cardInfo.CardId] += 1;
+                                                                      else
+                                                                          stats.CardsWon[(uint)cardInfo.CardId] = 1;
+                                                                  });
+
+                                if (TriadAutomater.TempCardsWonList.ContainsKey((uint)cardInfo.CardId))
+                                    TriadAutomater.TempCardsWonList[(uint)cardInfo.CardId] += 1;
                             }
                         }
-
-
                     }
                 }
-                if (obj.isLose)
-                {
-                    Service.Configuration.Stats.GamesLostWithSaucy++;
-                }
-                if (obj.isDraw)
-                {
-                    Service.Configuration.Stats.GamesDrawnWithSaucy++;
-                }
 
-                Rematch();
+                this.Rematch();
             }
             Service.Configuration.Save();
 
