@@ -1,11 +1,15 @@
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
+using Dalamud.Utility.Signatures;
+using ECommons;
 using ECommons.ImGuiMethods;
 using FFTriadBuddy;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
+using Saucy.OtherGames;
 using Saucy.TripleTriad;
 using System;
 using System.Diagnostics;
@@ -13,15 +17,17 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using TriadBuddyPlugin;
+using static System.Windows.Forms.AxHost;
+
 
 namespace Saucy
 {
     // It is good to have this be disposable in general, in case you ever need it
     // to do any cleanup
-    public class PluginUI : IDisposable
+    public unsafe class PluginUI : IDisposable
     {
         private Configuration configuration;
-
+        
         // this extra bool exists for ImGui, since you can't ref a property
         private bool visible = false;
         public bool Visible
@@ -79,7 +85,7 @@ namespace Saucy
             //ImGui.SetNextWindowSizeConstraints(new Vector2(520, 420), new Vector2(float.MaxValue, float.MaxValue));
             if (ImGui.Begin("Saucy Config", ref visible))
             {
-                if (ImGui.BeginTabBar("Games"))
+                if (ImGui.BeginTabBar("###Games", ImGuiTabBarFlags.Reorderable))
                 {
                     if (ImGui.BeginTabItem("Cuff-a-Cur"))
                     {
@@ -87,12 +93,32 @@ namespace Saucy
                         ImGui.EndTabItem();
                     }
 
-                    if (ImGui.BeginTabItem("Triple Triad"))
+                    if (Saucy.openTT)
                     {
-                        DrawTriadTab();
+                        Saucy.openTT = false;
+                        if (ImGuiEx.BeginTabItem("Triple Triad", ImGuiTabItemFlags.SetSelected))
+                        {
+                            DrawTriadTab();
+                            ImGui.EndTabItem();
+                        }
+                    }
+                    else
+                    {
+                        if (ImGui.BeginTabItem("Triple Triad"))
+                        {
+                            DrawTriadTab();
+                            ImGui.EndTabItem();
+                        }
+                    }
+
+#if DEBUG
+                    if (ImGui.BeginTabItem("Other Games"))
+                    {
+                        DrawOtherGamesTab();
                         ImGui.EndTabItem();
                     }
 
+#endif
                     if (ImGui.BeginTabItem("Stats"))
                     {
                         DrawStatsTab();
@@ -111,10 +137,22 @@ namespace Saucy
             ImGui.End();
         }
 
+        private void DrawOtherGamesTab()
+        {
+            ImGui.Checkbox("Enable Air Force One Module", ref AirForceOneModule.ModuleEnabled);
+
+
+        }
+
         private void DrawStatsTab()
         {
             if (ImGui.BeginTabBar("Stats"))
             {
+                ImGui.Columns(3, "stats", false);
+                ImGui.NextColumn();
+                ImGuiEx.CenterColumnText(ImGuiColors.ParsedGold, "SAUCY STATS", true);
+                ImGui.Columns(1);
+
                 if (ImGui.BeginTabItem("Lifetime"))
                 {
                     this.DrawStatsTab(Service.Configuration.Stats, out bool reset);
@@ -141,10 +179,69 @@ namespace Saucy
 
         private void DrawStatsTab(Stats stat, out bool reset)
         {
-            ImGui.Columns(3, "stats", false);
+            if (ImGui.BeginTabBar("Games"))
+            {
+                if (ImGui.BeginTabItem("Cuff-a-Cur"))
+                {
+                    DrawCuffStats(stat);
+                    ImGui.EndTabItem();
+                }
+
+                if (ImGui.BeginTabItem("Triple Triad"))
+                {
+                    DrawTTStats(stat);
+                    ImGui.EndTabItem();
+                }
+
+                ImGui.EndTabBar();
+            }
+            
+            ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
+            reset = ImGui.Button("RESET STATS (Hold Ctrl)", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y)) && ImGui.GetIO().KeyCtrl;
+        }
+
+        private void DrawCuffStats(Stats stat)
+        {
+            ImGui.BeginChild("Cuff Stats", new Vector2(0, ImGui.GetContentRegionAvail().Y - 30f), true);
+            ImGui.Columns(3, null, false);
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText(ImGuiColors.ParsedGold, "SAUCY STATS", true);
-            ImGui.Columns(1);
+            ImGuiEx.CenterColumnText(ImGuiColors.DalamudRed, "Cuff-a-cur", true);
+            ImGuiHelpers.ScaledDummy(10f);
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText("Games Played", true);
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText($"{stat.CuffGamesPlayed.ToString("N0")}");
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGui.Spacing();
+            ImGuiEx.CenterColumnText("BRUISING!", true);
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText("PUNISHING!!", true);
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText("BRUTAL!!!!", true);
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText($"{stat.CuffBruisings.ToString("N0")}");
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText($"{stat.CuffPunishings.ToString("N0")}");
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText($"{stat.CuffBrutals.ToString("N0")}");
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText("MGP Won", true);
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText($"{stat.CuffMGP.ToString("N0")}");
+
+            ImGui.EndChild();
+        }
+
+        private void DrawTTStats(Stats stat)
+        {
             ImGui.BeginChild("TT Stats", new Vector2(0, ImGui.GetContentRegionAvail().Y - 30f), true);
             ImGui.Columns(3, null, false);
             ImGui.NextColumn();
@@ -233,8 +330,6 @@ namespace Saucy
 
             ImGui.Columns(1);
             ImGui.EndChild();
-            ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
-            reset = ImGui.Button("RESET STATS (Hold Ctrl)", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y)) && ImGui.GetIO().KeyCtrl;
         }
 
         private int GetDroppedCardValues(Stats stat)
@@ -430,8 +525,7 @@ namespace Saucy
             }
         }
 
-
-        public void DrawCufTab()
+        public unsafe void DrawCufTab()
         {
             bool enabled = CufModule.ModuleEnabled;
 
@@ -441,6 +535,64 @@ namespace Saucy
             if (ImGui.Checkbox("Enable Cuff Module", ref enabled))
             {
                 CufModule.ModuleEnabled = enabled;
+                if (enabled && TriadAutomater.ModuleEnabled)
+                    TriadAutomater.ModuleEnabled = false;
+            }
+
+            if (ImGui.Checkbox("Play X Amount of Times", ref TriadAutomater.PlayXTimes) && TriadAutomater.NumberOfTimes <= 0)
+            {
+                TriadAutomater.NumberOfTimes = 1;
+            }
+
+            if (TriadAutomater.PlayXTimes)
+            {
+                ImGui.PushItemWidth(150f);
+                ImGui.Text("How many times:");
+                ImGui.SameLine();
+
+                if (ImGui.InputInt("###NumberOfTimes", ref TriadAutomater.NumberOfTimes))
+                {
+                    if (TriadAutomater.NumberOfTimes <= 0)
+                        TriadAutomater.NumberOfTimes = 1;
+                }
+
+                ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
+
+                bool playSound = Service.Configuration.PlaySound;
+
+                ImGui.Columns(2, null, false);
+                if (ImGui.Checkbox("Play sound upon completion", ref playSound))
+                {
+                    Service.Configuration.PlaySound = playSound;
+                    Service.Configuration.Save();
+                }
+
+                if (playSound)
+                {
+                    ImGui.NextColumn();
+                    ImGui.Text("Select Sound");
+                    if (ImGui.BeginCombo("###SelectSound", Service.Configuration.SelectedSound))
+                    {
+                        string path = Path.Combine(Service.Interface.AssemblyLocation.Directory.FullName, "Sounds");
+                        foreach (var file in new DirectoryInfo(path).GetFiles())
+                        {
+                            if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", Service.Configuration.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
+                            {
+                                Service.Configuration.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
+                                Service.Configuration.Save();
+                            }
+                        }
+
+                        ImGui.EndCombo();
+                    }
+
+                    if (ImGui.Button("Open Sound Folder"))
+                    {
+                        Process.Start("explorer.exe", @$"{Path.Combine(Service.Interface.AssemblyLocation.Directory.FullName, "Sounds")}");
+                    }
+                    ImGuiComponents.HelpMarker("Drop any MP3 files into the sound folder to add your own custom sounds.");
+                }
+                ImGui.Columns(1);
             }
         }
     }

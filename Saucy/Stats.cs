@@ -24,5 +24,15 @@ namespace Saucy
         public Dictionary<string, int> NPCsPlayed = new Dictionary<string, int>();
 
         public Dictionary<uint, int> CardsWon = new Dictionary<uint, int>();
+
+        public int CuffMGP = 0;
+
+        public int CuffBrutals = 0;
+
+        public int CuffPunishings = 0;
+
+        public int CuffBruisings = 0;
+
+        public int CuffGamesPlayed = 0;
     }
 }

@@ -172,7 +172,7 @@ namespace Saucy.TripleTriad
                             Int = deck,
                         };
                         addon->FireCallback(1, values);
-                        addon->Hide(true);
+                        addon->Close(true);
                         return;
                     }
 
