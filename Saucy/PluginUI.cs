@@ -111,14 +111,13 @@ namespace Saucy
                         }
                     }
 
-#if DEBUG
                     if (ImGui.BeginTabItem("Other Games"))
                     {
                         DrawOtherGamesTab();
                         ImGui.EndTabItem();
                     }
 
-#endif
+
                     if (ImGui.BeginTabItem("Stats"))
                     {
                         DrawStatsTab();
@@ -139,7 +138,7 @@ namespace Saucy
 
         private void DrawOtherGamesTab()
         {
-            ImGui.Checkbox("Enable Air Force One Module", ref AirForceOneModule.ModuleEnabled);
+           //ImGui.Checkbox("Enable Air Force One Module", ref AirForceOneModule.ModuleEnabled);
             
             var sliceIsRightEnabled = SliceIsRightModule.ModuleEnabled;
             if (ImGui.Checkbox("Enable Slice is Right Module", ref sliceIsRightEnabled))

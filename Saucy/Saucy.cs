@@ -282,31 +282,6 @@ namespace Saucy
                 openTT = true;
             }
 
-            if (AirForceOneModule.ModuleEnabled)
-            {
-                try
-                {
-                    if (AirForceOneTask.Count == 0)
-                    {
-                        AirForceOneToken = new();
-                        AirForceOneTask.Add(Task.Run(AirForceOneModule.RunModule, AirForceOneToken.Token));
-                    }
-
-                }
-                catch (Exception ex)
-                {
-                    Dalamud.Logging.PluginLog.Error(ex, "AF1 Update Failed");
-                }
-                return;
-            }
-            else
-            {
-                if (AirForceOneToken.Token.CanBeCanceled)
-                    AirForceOneToken.Cancel();
-
-                AirForceOneTask.Clear();
-            }
-
             if (CufModule.ModuleEnabled)
             {
                 CufModule.RunModule();
@@ -411,10 +386,6 @@ namespace Saucy
             var args = arguments.Split();
             if (args.Length > 0)
             {
-                if (args[0].ToLower() == "af")
-                {
-                    AirForceOneModule.ModuleEnabled = false;
-                }
                 
                 if (args[0].ToLower() == "sr")
                 {
