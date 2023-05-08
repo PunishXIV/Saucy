@@ -140,8 +140,13 @@ namespace Saucy
         private void DrawOtherGamesTab()
         {
             ImGui.Checkbox("Enable Air Force One Module", ref AirForceOneModule.ModuleEnabled);
-
-
+            
+            var sliceIsRightEnabled = SliceIsRightModule.ModuleEnabled;
+            if (ImGui.Checkbox("Enable Slice is Right Module", ref sliceIsRightEnabled))
+            {
+                SliceIsRightModule.ModuleEnabled = sliceIsRightEnabled;
+                Service.Configuration.Save();
+            }
         }
 
         private void DrawStatsTab()
