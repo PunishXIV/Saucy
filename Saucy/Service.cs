@@ -75,5 +75,7 @@ namespace Saucy
         [PluginService]
         internal static ToastGui ToastGui { get; private set; } = null!;
 
+        [PluginService]
+        internal static ObjectTable ObjectTable { get; private set; } = null!;
     }
 }

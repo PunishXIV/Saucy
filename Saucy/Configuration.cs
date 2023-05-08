@@ -23,7 +23,9 @@ namespace Saucy
         public bool PlaySound { get; set; } = false;
         public string SelectedSound { get; set; } = "Moogle";
         public bool OnlyUnobtainedCards { get; set; } = false;
-        public bool OpenAutomatically { get; set; } = false;    
+        public bool OpenAutomatically { get; set; } = false;
+
+        public bool SliceIsRightModuleEnabled { get; set; }
 
         // the below exist just to make saving less cumbersome
 

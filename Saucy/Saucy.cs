@@ -106,6 +106,8 @@ namespace Saucy
             var memReaderTriadFunc = new UnsafeReaderTriadCards(Service.SigScanner);
             GameCardDB.Get().memReader = memReaderTriadFunc;
             GameNpcDB.Get().memReader = memReaderTriadFunc;
+            
+            SliceIsRightModule.Initialize();
 
             Svc.Framework.Update += RunBot;
             Click.Initialize();
@@ -397,6 +399,7 @@ namespace Saucy
             PluginUi.Dispose();
             Service.CommandManager.RemoveHandler(commandName);
             Svc.Framework.Update -= RunBot;
+            SliceIsRightModule.ModuleEnabled = false;
 
         }
 
@@ -411,6 +414,11 @@ namespace Saucy
                 if (args[0].ToLower() == "af")
                 {
                     AirForceOneModule.ModuleEnabled = false;
+                }
+                
+                if (args[0].ToLower() == "sr")
+                {
+                    SliceIsRightModule.ModuleEnabled = false;
                 }
 
                 if (args[0].ToLower() == "tt")
