@@ -1,20 +1,15 @@
-﻿Microsoft Visual Studio Solution File, Format Version 12.00
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32616.157
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Saucy", "Saucy\Saucy.csproj", "{13C812E9-0D42-4B95-8646-40EEBF30636F}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PunishLib", "PunishLib", "{05EBC25D-8DF2-4BFB-B5E5-6269B399657D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClickLib", "ClickLib\ClickLib\ClickLib.csproj", "{20A12289-F798-48A6-9C01-A879E74F9074}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PunishLib", "PunishLib\PunishLib\PunishLib.csproj", "{4F97BB15-6461-4C27-89B2-012E7ADF5344}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ECommons", "ECommons\ECommons\ECommons.csproj", "{435B8F5B-7C56-4E5C-9039-CE9BFC798385}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ECommons", "ECommons", "{0C2676CB-651B-42DA-A8A5-1DB560F0B067}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ECommons", "ECommons\ECommons\ECommons.csproj", "{821AD179-FD8B-440E-9B74-575ABD2A3132}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ClickLib", "ClickLib", "{C80D6EC8-E39E-43DC-9510-B592D9BC4F2D}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClickLib", "ClickLib\ClickLib\ClickLib.csproj", "{B9F85AA9-A4EB-41B1-9C91-CB38E47759F6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PunishLib", "PunishLib\PunishLib\PunishLib.csproj", "{09B496AA-F76E-4765-AC28-6ECF927B6CF5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,28 +21,23 @@ Global
 		{13C812E9-0D42-4B95-8646-40EEBF30636F}.Debug|x64.Build.0 = Debug|x64
 		{13C812E9-0D42-4B95-8646-40EEBF30636F}.Release|x64.ActiveCfg = Release|x64
 		{13C812E9-0D42-4B95-8646-40EEBF30636F}.Release|x64.Build.0 = Release|x64
-		{4F97BB15-6461-4C27-89B2-012E7ADF5344}.Debug|x64.ActiveCfg = Debug|x64
-		{4F97BB15-6461-4C27-89B2-012E7ADF5344}.Debug|x64.Build.0 = Debug|x64
-		{4F97BB15-6461-4C27-89B2-012E7ADF5344}.Release|x64.ActiveCfg = Release|x64
-		{4F97BB15-6461-4C27-89B2-012E7ADF5344}.Release|x64.Build.0 = Release|x64
-		{821AD179-FD8B-440E-9B74-575ABD2A3132}.Debug|x64.ActiveCfg = Debug|x64
-		{821AD179-FD8B-440E-9B74-575ABD2A3132}.Debug|x64.Build.0 = Debug|x64
-		{821AD179-FD8B-440E-9B74-575ABD2A3132}.Release|x64.ActiveCfg = Release|x64
-		{821AD179-FD8B-440E-9B74-575ABD2A3132}.Release|x64.Build.0 = Release|x64
-		{B9F85AA9-A4EB-41B1-9C91-CB38E47759F6}.Debug|x64.ActiveCfg = Debug|x64
-		{B9F85AA9-A4EB-41B1-9C91-CB38E47759F6}.Debug|x64.Build.0 = Debug|x64
-		{B9F85AA9-A4EB-41B1-9C91-CB38E47759F6}.Release|x64.ActiveCfg = Release|x64
-		{B9F85AA9-A4EB-41B1-9C91-CB38E47759F6}.Release|x64.Build.0 = Release|x64
+		{20A12289-F798-48A6-9C01-A879E74F9074}.Debug|x64.ActiveCfg = Debug|x64
+		{20A12289-F798-48A6-9C01-A879E74F9074}.Debug|x64.Build.0 = Debug|x64
+		{20A12289-F798-48A6-9C01-A879E74F9074}.Release|x64.ActiveCfg = Release|x64
+		{20A12289-F798-48A6-9C01-A879E74F9074}.Release|x64.Build.0 = Release|x64
+		{435B8F5B-7C56-4E5C-9039-CE9BFC798385}.Debug|x64.ActiveCfg = Debug|x64
+		{435B8F5B-7C56-4E5C-9039-CE9BFC798385}.Debug|x64.Build.0 = Debug|x64
+		{435B8F5B-7C56-4E5C-9039-CE9BFC798385}.Release|x64.ActiveCfg = Release|x64
+		{435B8F5B-7C56-4E5C-9039-CE9BFC798385}.Release|x64.Build.0 = Release|x64
+		{09B496AA-F76E-4765-AC28-6ECF927B6CF5}.Debug|x64.ActiveCfg = Debug|x64
+		{09B496AA-F76E-4765-AC28-6ECF927B6CF5}.Debug|x64.Build.0 = Debug|x64
+		{09B496AA-F76E-4765-AC28-6ECF927B6CF5}.Release|x64.ActiveCfg = Release|x64
+		{09B496AA-F76E-4765-AC28-6ECF927B6CF5}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B17E85B1-5F60-4440-9F9A-3DDE877E8CDF}
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{4F97BB15-6461-4C27-89B2-012E7ADF5344} = {05EBC25D-8DF2-4BFB-B5E5-6269B399657D}
-		{821AD179-FD8B-440E-9B74-575ABD2A3132} = {0C2676CB-651B-42DA-A8A5-1DB560F0B067}
-		{B9F85AA9-A4EB-41B1-9C91-CB38E47759F6} = {C80D6EC8-E39E-43DC-9510-B592D9BC4F2D}
 	EndGlobalSection
 EndGlobal

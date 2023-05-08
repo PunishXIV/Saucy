@@ -33,18 +33,6 @@
 		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 	</PropertyGroup>
 
-	<ItemGroup Condition="'$(Configuration)' == 'Release'">
-		<PackageReference Include="PunishLib" Version="1.0.1.2" />
-		<PackageReference Include="ECommons" Version="2.0.0.4" />
-                <PackageReference Include="ClickLib" Version="1.2.0.1" />
-	</ItemGroup>
-
-	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<ProjectReference Include="..\PunishLib\PunishLib\PunishLib.csproj" />
-		<ProjectReference Include="..\ECommons\ECommons\ECommons.csproj" />
-		<ProjectReference Include="..\ClickLib\ClickLib\ClickLib.csproj" />
-	</ItemGroup>
-
 	<PropertyGroup Condition="'$(OS)' != 'Windows_NT' OR '$(CI)' == 'true'">
 		<DalamudLibPath>$(DALAMUD_HOME)/</DalamudLibPath>
 		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -54,6 +42,9 @@
 		<PackageReference Include="DalamudPackager" Version="2.1.10" />
 		<PackageReference Include="NAudio" Version="2.1.0" />
 		<PackageReference Include="NAudio.Lame" Version="2.0.1" />
+		<ProjectReference Include="..\ClickLib\ClickLib\ClickLib.csproj" />
+		<ProjectReference Include="..\ECommons\ECommons\ECommons.csproj" />
+		<ProjectReference Include="..\PunishLib\PunishLib\PunishLib.csproj" />
 		<Reference Include="Newtonsoft.Json">
 			<HintPath>$(DalamudLibPath)Newtonsoft.Json.dll</HintPath>
 			<Private>False</Private>
