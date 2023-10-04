@@ -355,6 +355,9 @@ namespace Saucy
             if (ImGui.Checkbox("Enable Triad Module", ref enabled))
             {
                 TriadAutomater.ModuleEnabled = enabled;
+
+                if (enabled)
+                    CufModule.ModuleEnabled = false;
             }
 
             bool autoOpen = configuration.OpenAutomatically;
@@ -372,7 +375,17 @@ namespace Saucy
                 if (!Service.Configuration.UseRecommendedDeck)
                 {
                     ImGui.PushItemWidth(200);
-                    string preview = selectedDeck >= 0 ? Saucy.TTSolver.profileGS.GetPlayerDecks()[selectedDeck].name : string.Empty;
+                    string preview = "";
+
+                    if (selectedDeck == -1 || Saucy.TTSolver.profileGS.GetPlayerDecks()[selectedDeck] is null)
+                    {
+                        preview = "";
+                    }
+                    else
+                    {
+                        preview = selectedDeck >= 0 ? Saucy.TTSolver.profileGS.GetPlayerDecks()[selectedDeck].name : string.Empty;
+                    }
+                   
                     if (ImGui.BeginCombo("Select Deck", preview))
                     {
                         if (ImGui.Selectable(""))
@@ -382,6 +395,7 @@ namespace Saucy
 
                         foreach (var deck in Saucy.TTSolver.profileGS.GetPlayerDecks())
                         {
+                            if (deck is null) continue;
                             var index = deck.id;
                             //var index = Saucy.TTSolver.preGameDecks.Where(x => x.Value == deck).First().Key;
                             if (ImGui.Selectable(deck.name, index == selectedDeck))

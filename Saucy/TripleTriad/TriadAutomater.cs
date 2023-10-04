@@ -155,7 +155,7 @@ namespace Saucy.TripleTriad
                 if (TryGetAddonByName<AtkUnitBase>("TripleTriadSelDeck", out var addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
                 {
 
-                    if (Service.Configuration.SelectedDeckIndex == -1)
+                    if (Service.Configuration.SelectedDeckIndex == -1 && !Service.Configuration.UseRecommendedDeck)
                     {
                         var button = (AtkComponentButton*)addon->UldManager.NodeList[3];
                         ClickButton(addon, button, 2);
