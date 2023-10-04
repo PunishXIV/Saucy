@@ -22,11 +22,11 @@ namespace TriadBuddyPlugin
         public UIReaderTriadPrepMatchRequest uiReaderMatchRequest = new();
         public UIReaderTriadPrepDeckSelect uiReaderDeckSelect = new();
 
-        private GameGui gameGui;
+        private IGameGui gameGui;
         private bool hasRequestUI;
         private bool hasDeckSelectionUI;
 
-        public UIReaderTriadPrep(GameGui gameGui)
+        public UIReaderTriadPrep(IGameGui gameGui)
         {
             this.gameGui = gameGui;
 

@@ -14,13 +14,13 @@ namespace TriadBuddyPlugin
             [FieldOffset(0x1c8)] public uint rewardItemId;
         }
 
-        private readonly GameGui gameGui;
+        private readonly IGameGui gameGui;
         private UIStateTriadResults cachedState = new();
         public Action<UIStateTriadResults> OnUpdated;
 
         private bool needsNotify = false;
 
-        public UIReaderTriadResults(GameGui gameGui)
+        public UIReaderTriadResults(IGameGui gameGui)
         {
             this.gameGui = gameGui;
         }

@@ -14,14 +14,14 @@ namespace TriadBuddyPlugin
         private const float WindowContentWidth = 270.0f;
 
         private readonly UIReaderTriadDeckEdit uiReaderDeckEdit;
-        private readonly GameGui gameGui;
+        private readonly IGameGui gameGui;
 
         private List<Tuple<TriadCard, GameCardInfo>> listCards = new();
 
         private int selectedCardIdx;
         private ImGuiTextFilterPtr searchFilter;
 
-        public PluginWindowDeckSearch(UIReaderTriadDeckEdit uiReaderDeckEdit, GameGui gameGui) : base("Deck Search")
+        public PluginWindowDeckSearch(UIReaderTriadDeckEdit uiReaderDeckEdit, IGameGui gameGui) : base("Deck Search")
         {
             this.uiReaderDeckEdit = uiReaderDeckEdit;
             this.gameGui = gameGui;

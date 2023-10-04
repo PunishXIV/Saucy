@@ -16,7 +16,7 @@ namespace TriadBuddyPlugin
         private readonly IsNpcBeatenDelegate IsNpcBeatenFunc;
         private readonly IntPtr UIStatePtr;
 
-        public UnsafeReaderTriadCards(SigScanner sigScanner)
+        public UnsafeReaderTriadCards(ISigScanner sigScanner)
         {
             IntPtr IsCardOwnedPtr = IntPtr.Zero;
             IntPtr IsNpcBeatenPtr = IntPtr.Zero;

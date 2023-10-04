@@ -34,7 +34,7 @@ namespace Saucy.CuffACur
             var addon = Svc.GameGui.GetAddonByName("PunchingMachine", 1);
             try
             {
-                if (Service.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.OccupiedInQuestEvent])
+                if (Svc.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.OccupiedInQuestEvent])
                 {
                     if (ECommons.GenericHelpers.TryGetAddonByName<AddonSelectString>("SelectString", out var startMenu) && startMenu->AtkUnitBase.IsVisible)
                     {
@@ -106,7 +106,7 @@ namespace Saucy.CuffACur
                                     }
                                 };
 
-                                FuncHook ??= Hook<UnknownFunction>.FromAddress(Svc.SigScanner.ScanText("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 30 0F B7 FA"), FuncDetour);
+                                FuncHook ??= Svc.Hook.HookFromAddress<UnknownFunction>(Svc.SigScanner.ScanText("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 30 0F B7 FA"), FuncDetour);
                                 FuncHook.Original((nint)addon, 0x17, 0, evt);
                                 Saucy.uiReaderCuffResults.SetIsResultsUI(true);
 
@@ -115,7 +115,7 @@ namespace Saucy.CuffACur
                     }
                 }
 
-                if (!Service.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.OccupiedInQuestEvent] && !Saucy.uiReaderCuffResults.HasResultsUI)
+                if (!Svc.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.OccupiedInQuestEvent] && !Saucy.uiReaderCuffResults.HasResultsUI)
                 {
                     GameObject* cuf = (GameObject*)Svc.Objects.Where(x => (x.DataId == 2005029 && GetTargetDistance(x) <= 1f) || (x.DataId == 197370 && GetTargetDistance(x) <= 4f)).OrderByDescending(x => GetTargetDistance(x)).FirstOrDefault()?.Address;
                     if ((IntPtr)cuf == IntPtr.Zero)

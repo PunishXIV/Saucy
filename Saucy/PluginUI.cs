@@ -3,6 +3,7 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Utility.Signatures;
 using ECommons;
+using ECommons.DalamudServices;
 using ECommons.ImGuiMethods;
 using FFTriadBuddy;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -60,7 +61,7 @@ namespace Saucy
 
         public PluginUI(Configuration configuration)
         {
-            this.configuration = Service.Configuration;
+            this.configuration = Saucy.Config;
         }
 
         public void Dispose()
@@ -126,7 +127,7 @@ namespace Saucy
 
                     if (ImGui.BeginTabItem("About"))
                     {
-                        AboutTab.Draw(Saucy.P);
+                        AboutTab.Draw("Saucy");
                         ImGui.EndTabItem();
                     }
 
@@ -144,7 +145,7 @@ namespace Saucy
             if (ImGui.Checkbox("Enable Slice is Right Module", ref sliceIsRightEnabled))
             {
                 SliceIsRightModule.ModuleEnabled = sliceIsRightEnabled;
-                Service.Configuration.Save();
+                Saucy.Config.Save();
             }
         }
 
@@ -159,21 +160,21 @@ namespace Saucy
 
                 if (ImGui.BeginTabItem("Lifetime"))
                 {
-                    this.DrawStatsTab(Service.Configuration.Stats, out bool reset);
+                    this.DrawStatsTab(Saucy.Config.Stats, out bool reset);
 
                     if (reset)
                     {
-                        Service.Configuration.Stats = new();
-                        Service.Configuration.Save();
+                        Saucy.Config.Stats = new();
+                        Saucy.Config.Save();
                     }
 
                     ImGui.EndTabItem();
                 }
                 if (ImGui.BeginTabItem("Session"))
                 {
-                    this.DrawStatsTab(Service.Configuration.SessionStats, out bool reset);
+                    this.DrawStatsTab(Saucy.Config.SessionStats, out bool reset);
                     if (reset)
-                        Service.Configuration.SessionStats = new();
+                        Saucy.Config.SessionStats = new();
                     ImGui.EndTabItem();
                 }
 
@@ -372,7 +373,7 @@ namespace Saucy
 
             if (Saucy.TTSolver.profileGS.GetPlayerDecks().Count() > 0)
             {
-                if (!Service.Configuration.UseRecommendedDeck)
+                if (!Saucy.Config.UseRecommendedDeck)
                 {
                     ImGui.PushItemWidth(200);
                     string preview = "";
@@ -410,11 +411,11 @@ namespace Saucy
 
                     ImGui.SameLine();
                 }
-                bool useAutoDeck = Service.Configuration.UseRecommendedDeck;
+                bool useAutoDeck = Saucy.Config.UseRecommendedDeck;
                 if (ImGui.Checkbox("Automatically choose your deck with the best win chance", ref useAutoDeck))
                 {
-                    Service.Configuration.UseRecommendedDeck = useAutoDeck;
-                    Service.Configuration.Save();
+                    Saucy.Config.UseRecommendedDeck = useAutoDeck;
+                    Saucy.Config.Save();
                 }
             }
             else
@@ -454,7 +455,7 @@ namespace Saucy
                 TriadAutomater.NumberOfTimes = 1;
             }
 
-            bool onlyUnobtained = Service.Configuration.OnlyUnobtainedCards;
+            bool onlyUnobtained = Saucy.Config.OnlyUnobtainedCards;
 
             if (TriadAutomater.PlayUntilAllCardsDropOnce)
             {
@@ -462,8 +463,8 @@ namespace Saucy
                 if (ImGui.Checkbox("Only Unobtained Cards", ref onlyUnobtained))
                 {
                     TriadAutomater.TempCardsWonList.Clear();
-                    Service.Configuration.OnlyUnobtainedCards = onlyUnobtained;
-                    Service.Configuration.Save();
+                    Saucy.Config.OnlyUnobtainedCards = onlyUnobtained;
+                    Saucy.Config.Save();
                 }
             }
 
@@ -473,7 +474,7 @@ namespace Saucy
                 GameCardDB.Get().Refresh();
                 foreach (var card in CurrentNPC.rewardCards)
                 {
-                    if ((Service.Configuration.OnlyUnobtainedCards && !GameCardDB.Get().FindById(card).IsOwned) || !Service.Configuration.OnlyUnobtainedCards)
+                    if ((Saucy.Config.OnlyUnobtainedCards && !GameCardDB.Get().FindById(card).IsOwned) || !Saucy.Config.OnlyUnobtainedCards)
                     {
                         TriadAutomater.TempCardsWonList.TryAdd((uint)card, 0);
                         ImGui.Text($"- {TriadCardDB.Get().FindById((int)GameCardDB.Get().FindById(card).CardId).Name.GetLocalized()} {TriadAutomater.TempCardsWonList[(uint)card]}/{TriadAutomater.NumberOfTimes}");
@@ -481,7 +482,7 @@ namespace Saucy
 
                 }
 
-                if (Service.Configuration.OnlyUnobtainedCards && TriadAutomater.TempCardsWonList.Count == 0)
+                if (Saucy.Config.OnlyUnobtainedCards && TriadAutomater.TempCardsWonList.Count == 0)
                 {
                     ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
                     ImGui.TextWrapped($@"You already have all cards from this NPC. This feature will not work until you untick ""Only Unobtained Cards"" or choose a different NPC.");
@@ -505,28 +506,28 @@ namespace Saucy
 
                 ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
 
-                bool playSound = Service.Configuration.PlaySound;
+                bool playSound = Saucy.Config.PlaySound;
 
                 ImGui.Columns(2, null, false);
                 if (ImGui.Checkbox("Play sound upon completion", ref playSound))
                 {
-                    Service.Configuration.PlaySound = playSound;
-                    Service.Configuration.Save();
+                    Saucy.Config.PlaySound = playSound;
+                    Saucy.Config.Save();
                 }
 
                 if (playSound)
                 {
                     ImGui.NextColumn();
                     ImGui.Text("Select Sound");
-                    if (ImGui.BeginCombo("###SelectSound", Service.Configuration.SelectedSound))
+                    if (ImGui.BeginCombo("###SelectSound", Saucy.Config.SelectedSound))
                     {
-                        string path = Path.Combine(Service.Interface.AssemblyLocation.Directory.FullName, "Sounds");
+                        string path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory.FullName, "Sounds");
                         foreach (var file in new DirectoryInfo(path).GetFiles())
                         {
-                            if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", Service.Configuration.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
+                            if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", Saucy.Config.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
                             {
-                                Service.Configuration.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
-                                Service.Configuration.Save();
+                                Saucy.Config.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
+                                Saucy.Config.Save();
                             }
                         }
 
@@ -535,7 +536,7 @@ namespace Saucy
 
                     if (ImGui.Button("Open Sound Folder"))
                     {
-                        Process.Start("explorer.exe", @$"{Path.Combine(Service.Interface.AssemblyLocation.Directory.FullName, "Sounds")}");
+                        Process.Start("explorer.exe", @$"{Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory.FullName, "Sounds")}");
                     }
                     ImGuiComponents.HelpMarker("Drop any MP3 files into the sound folder to add your own custom sounds.");
                 }
@@ -576,28 +577,28 @@ namespace Saucy
 
                 ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
 
-                bool playSound = Service.Configuration.PlaySound;
+                bool playSound = Saucy.Config.PlaySound;
 
                 ImGui.Columns(2, null, false);
                 if (ImGui.Checkbox("Play sound upon completion", ref playSound))
                 {
-                    Service.Configuration.PlaySound = playSound;
-                    Service.Configuration.Save();
+                    Saucy.Config.PlaySound = playSound;
+                    Saucy.Config.Save();
                 }
 
                 if (playSound)
                 {
                     ImGui.NextColumn();
                     ImGui.Text("Select Sound");
-                    if (ImGui.BeginCombo("###SelectSound", Service.Configuration.SelectedSound))
+                    if (ImGui.BeginCombo("###SelectSound", Saucy.Config.SelectedSound))
                     {
-                        string path = Path.Combine(Service.Interface.AssemblyLocation.Directory.FullName, "Sounds");
+                        string path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory.FullName, "Sounds");
                         foreach (var file in new DirectoryInfo(path).GetFiles())
                         {
-                            if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", Service.Configuration.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
+                            if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", Saucy.Config.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
                             {
-                                Service.Configuration.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
-                                Service.Configuration.Save();
+                                Saucy.Config.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
+                                Saucy.Config.Save();
                             }
                         }
 
@@ -606,7 +607,7 @@ namespace Saucy
 
                     if (ImGui.Button("Open Sound Folder"))
                     {
-                        Process.Start("explorer.exe", @$"{Path.Combine(Service.Interface.AssemblyLocation.Directory.FullName, "Sounds")}");
+                        Process.Start("explorer.exe", @$"{Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory.FullName, "Sounds")}");
                     }
                     ImGuiComponents.HelpMarker("Drop any MP3 files into the sound folder to add your own custom sounds.");
                 }

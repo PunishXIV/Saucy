@@ -29,9 +29,9 @@ namespace TriadBuddyPlugin
         private bool isOptimizerActive;
 
         private List<string> highlightTexPaths = new();
-        private readonly GameGui gameGui;
+        private readonly IGameGui gameGui;
 
-        public UIReaderTriadDeckEdit(GameGui gameGui)
+        public UIReaderTriadDeckEdit(IGameGui gameGui)
         {
             this.gameGui = gameGui;
             blinkAlpha = 0.0f;

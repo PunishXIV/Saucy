@@ -24,14 +24,14 @@ namespace MgAl2O4.Utils
             public IntPtr addonPtr;
         }
 
-        private readonly GameGui gameGui;
+        private readonly IGameGui gameGui;
         private readonly List<AddonInfo> addons = new();
 
         private const float slowCheckInterval = 0.5f;
         private float slowCheckRemaining = 0.0f;
         private bool hasActiveAddons = false;
 
-        public UIReaderScheduler(GameGui gameGui)
+        public UIReaderScheduler(IGameGui gameGui)
         {
             this.gameGui = gameGui;
         }

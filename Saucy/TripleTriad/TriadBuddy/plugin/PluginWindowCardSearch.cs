@@ -16,7 +16,7 @@ namespace TriadBuddyPlugin
         private const float WindowContentWidth = 270.0f;
 
         private readonly UIReaderTriadCardList uiReaderCardList;
-        private readonly GameGui gameGui;
+        private readonly IGameGui gameGui;
         private readonly Configuration config;
         private readonly PluginWindowNpcStats statsWindow;
 
@@ -49,7 +49,7 @@ namespace TriadBuddyPlugin
         private string locNpcStats;
         private string locEstMGP;
 
-        public PluginWindowCardSearch(UIReaderTriadCardList uiReaderCardList, GameGui gameGui, Configuration config, PluginWindowNpcStats statsWindow) : base("Card Search")
+        public PluginWindowCardSearch(UIReaderTriadCardList uiReaderCardList, IGameGui gameGui, Configuration config, PluginWindowNpcStats statsWindow) : base("Card Search")
         {
             this.uiReaderCardList = uiReaderCardList;
             this.gameGui = gameGui;

@@ -54,7 +54,7 @@ namespace Saucy.TripleTriad
                     };
                     addon->FireCallback(2, values);
 
-                    PlaceCardHook ??= Hook<PlaceCardDelegate>.FromAddress(Svc.SigScanner.ScanText("40 56 48 83 EC 20 48 8B F1 E8 ?? ?? ?? ?? 83 BE"), PlaceCardDetour);
+                    PlaceCardHook ??= Svc.Hook.HookFromAddress<PlaceCardDelegate>(Svc.SigScanner.ScanText("40 56 48 83 EC 20 48 8B F1 E8 ?? ?? ?? ?? 83 BE"), PlaceCardDetour);
                     PlaceCardHook.Original((IntPtr)addon);
                 }
             }
@@ -121,10 +121,10 @@ namespace Saucy.TripleTriad
         {
             if (Saucy.TTSolver.preGameDecks.Count > 0)
             {
-                var selectedDeck = Service.Configuration.SelectedDeckIndex;
+                var selectedDeck = Saucy.Config.SelectedDeckIndex;
                 if (selectedDeck >= 0 && !Saucy.TTSolver.preGameDecks.ContainsKey(selectedDeck))
                 {
-                    Service.Configuration.SelectedDeckIndex = -1;
+                    Saucy.Config.SelectedDeckIndex = -1;
                 }
             }
 
@@ -155,7 +155,7 @@ namespace Saucy.TripleTriad
                 if (TryGetAddonByName<AtkUnitBase>("TripleTriadSelDeck", out var addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
                 {
 
-                    if (Service.Configuration.SelectedDeckIndex == -1 && !Service.Configuration.UseRecommendedDeck)
+                    if (Saucy.Config.SelectedDeckIndex == -1 && !Saucy.Config.UseRecommendedDeck)
                     {
                         var button = (AtkComponentButton*)addon->UldManager.NodeList[3];
                         ClickButton(addon, button, 2);
@@ -163,7 +163,7 @@ namespace Saucy.TripleTriad
                     }
                     else
                     {
-                        var deck = Service.Configuration.UseRecommendedDeck ? Saucy.TTSolver.preGameBestId : Service.Configuration.SelectedDeckIndex;
+                        var deck = Saucy.Config.UseRecommendedDeck ? Saucy.TTSolver.preGameBestId : Saucy.Config.SelectedDeckIndex;
                         var values = stackalloc AtkValue[1];
                         //Deck Index
                         values[0] = new()

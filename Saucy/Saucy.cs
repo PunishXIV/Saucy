@@ -14,7 +14,6 @@ using ImGuiNET;
 using MgAl2O4.Utils;
 using NAudio.Wave;
 using PunishLib;
-using PunishLib.Sponsor;
 using Saucy.CuffACur;
 using Saucy.OtherGames;
 using Saucy.TripleTriad;
@@ -49,61 +48,57 @@ namespace Saucy
         public static GameDataLoader dataLoader;
         public static List<Task> AirForceOneTask = new List<Task>();
         public static CancellationTokenSource AirForceOneToken = new();
+        public static Configuration Config;
 
         public static bool GameFinished => TTSolver.cachedScreenState == null;
         internal static bool openTT = false;
 
-        public Saucy([RequiredVersion("1.0")] DalamudPluginInterface pluginInterface, [RequiredVersion("1.0")] CommandManager commandManager, GameGui gameGui, DataManager dataManager)
+        public Saucy([RequiredVersion("1.0")] DalamudPluginInterface pluginInterface)
         {
-            pluginInterface.Create<Service>();
-            Service.Plugin = this;
+            ECommonsMain.Init(pluginInterface, this);
+            PunishLibMain.Init(pluginInterface, "Saucy", new AboutPlugin() { Sponsor = "https://ko-fi.com/taurenkey" });
 
-            Service.Configuration = Service.Interface.GetPluginConfig() as Configuration ?? new Configuration();
-            Service.Configuration.Initialize(Service.Interface);
-
-            ECommonsMain.Init(Service.Interface, this);
-            PunishLibMain.Init(Service.Interface, this);
-            SponsorManager.SetSponsorInfo("https://ko-fi.com/taurenkey");
+            Config = Svc.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             P = this;
 
-            PluginUi = new PluginUI(Service.Configuration);
+            PluginUi = new PluginUI(Config);
 
-            Service.CommandManager.AddHandler(commandName, new CommandInfo(OnCommand)
+            Svc.Commands.AddHandler(commandName, new CommandInfo(OnCommand)
             {
                 HelpMessage = "Opens the Saucy menu."
             });
 
-            Service.Interface.UiBuilder.Draw += DrawUI;
-            Service.Interface.UiBuilder.OpenConfigUi += DrawConfigUI;
+            Svc.PluginInterface.UiBuilder.Draw += DrawUI;
+            Svc.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
             dataLoader = new GameDataLoader();
-            dataLoader.StartAsyncWork(dataManager);
+            dataLoader.StartAsyncWork(Svc.Data);
 
-            TTSolver.profileGS = new UnsafeReaderProfileGS(gameGui);
+            TTSolver.profileGS = new UnsafeReaderProfileGS(Svc.GameGui);
 
-            uiReaderGame = new UIReaderTriadGame(gameGui);
+            uiReaderGame = new UIReaderTriadGame(Svc.GameGui);
             uiReaderGame.OnUIStateChanged += TTSolver.UpdateGame;
 
-            uiReaderPrep = new UIReaderTriadPrep(gameGui);
+            uiReaderPrep = new UIReaderTriadPrep(Svc.GameGui);
             uiReaderPrep.shouldScanDeckData = (TTSolver.profileGS == null) || TTSolver.profileGS.HasErrors;
             uiReaderPrep.OnUIStateChanged += TTSolver.UpdateDecks;
 
-            uiReaderCardList = new UIReaderTriadCardList(gameGui);
+            uiReaderCardList = new UIReaderTriadCardList(Svc.GameGui);
 
-            var uiReaderMatchResults = new UIReaderTriadResults(gameGui);
+            var uiReaderMatchResults = new UIReaderTriadResults(Svc.GameGui);
             uiReaderMatchResults.OnUpdated += CheckResults;
 
-            uiReaderCuffResults = new UIReaderCuffResults(gameGui);
+            uiReaderCuffResults = new UIReaderCuffResults(Svc.GameGui);
             uiReaderCuffResults.OnUpdated += CheckCuffResults;
 
-            uiReaderScheduler = new UIReaderScheduler(gameGui);
+            uiReaderScheduler = new UIReaderScheduler(Svc.GameGui);
             uiReaderScheduler.AddObservedAddon(uiReaderGame);
             uiReaderScheduler.AddObservedAddon(uiReaderPrep.uiReaderMatchRequest);
             uiReaderScheduler.AddObservedAddon(uiReaderPrep.uiReaderDeckSelect);
             uiReaderScheduler.AddObservedAddon(uiReaderMatchResults);
             uiReaderScheduler.AddObservedAddon(uiReaderCuffResults);
 
-            var memReaderTriadFunc = new UnsafeReaderTriadCards(Service.SigScanner);
+            var memReaderTriadFunc = new UnsafeReaderTriadCards(Svc.SigScanner);
             GameCardDB.Get().memReader = memReaderTriadFunc;
             GameNpcDB.Get().memReader = memReaderTriadFunc;
             
@@ -117,7 +112,7 @@ namespace Saucy
         {
             if (CufModule.ModuleEnabled)
             {
-                Service.Configuration.UpdateStats(stats =>
+                Saucy.Config.UpdateStats(stats =>
                 {
                     stats.CuffMGP += GetBonusMGP(obj.numMGP);
                     if (obj.isPunishing) stats.CuffPunishings += 1;
@@ -134,7 +129,7 @@ namespace Saucy
                 {
                     TriadAutomater.NumberOfTimes = 1;
                     CufModule.ModuleEnabled = false;
-                    if (Service.Configuration.PlaySound)
+                    if (Saucy.Config.PlaySound)
                     {
                         PlaySound();
                     }
@@ -147,7 +142,7 @@ namespace Saucy
                 }
 
                 uiReaderCuffResults.SetIsResultsUI(false);
-                Service.Configuration.Save();
+                Saucy.Config.Save();
             }
         }
 
@@ -155,7 +150,7 @@ namespace Saucy
         {
             if (TriadAutomater.ModuleEnabled)
             {
-                Service.Configuration.UpdateStats(stats =>
+                Saucy.Config.UpdateStats(stats =>
                 {
                     stats.GamesPlayedWithSaucy++;
                     stats.MGPWon += this.GetBonusMGP(obj.numMGP);
@@ -176,13 +171,13 @@ namespace Saucy
 
                 if (obj.isWin)
                 {
-                    Service.Configuration.UpdateStats(stats => stats.GamesWonWithSaucy++);
+                    Saucy.Config.UpdateStats(stats => stats.GamesWonWithSaucy++);
                     if (obj.cardItemId > 0)
                     {
                         if (TriadAutomater.PlayUntilCardDrops)
                             TriadAutomater.NumberOfTimes--;
 
-                        Service.Configuration.UpdateStats(stats => stats.CardsDroppedWithSaucy++);
+                        Saucy.Config.UpdateStats(stats => stats.CardsDroppedWithSaucy++);
 
                         var cardDB = GameCardDB.Get();
 
@@ -190,7 +185,7 @@ namespace Saucy
                         {
                             if (cardInfo.ItemId == obj.cardItemId)
                             {
-                                Service.Configuration.UpdateStats(stats =>
+                                Saucy.Config.UpdateStats(stats =>
                                 {
                                     if (stats.CardsWon.ContainsKey((uint)cardInfo.CardId))
                                         stats.CardsWon[(uint)cardInfo.CardId] += 1;
@@ -207,7 +202,7 @@ namespace Saucy
 
                 this.Rematch();
             }
-            Service.Configuration.Save();
+            Saucy.Config.Save();
 
 
         }
@@ -216,13 +211,13 @@ namespace Saucy
         {
             double multiplier = 1;
             //Jackpot
-            if (Service.ClientState.LocalPlayer.StatusList.Any(x => x.StatusId == 902))
+            if (Svc.ClientState.LocalPlayer.StatusList.Any(x => x.StatusId == 902))
             {
-                multiplier += (double)Service.ClientState.LocalPlayer.StatusList.First(x => x.StatusId == 902).Param / 100;
+                multiplier += (double)Svc.ClientState.LocalPlayer.StatusList.First(x => x.StatusId == 902).Param / 100;
             }
 
             //MGP Card
-            if (Service.ClientState.LocalPlayer.StatusList.Any(x => x.StatusId == 1079))
+            if (Svc.ClientState.LocalPlayer.StatusList.Any(x => x.StatusId == 1079))
             {
                 multiplier += 0.15;
             }
@@ -260,7 +255,7 @@ namespace Saucy
             catch { }
         }
 
-        private async void RunBot(Framework framework)
+        private async void RunBot(IFramework framework)
         {
             try
             {
@@ -276,7 +271,7 @@ namespace Saucy
             }
 
           
-            if (Service.Configuration.OpenAutomatically && uiReaderPrep.HasMatchRequestUI && !TriadAutomater.ModuleEnabled)
+            if (Saucy.Config.OpenAutomatically && uiReaderPrep.HasMatchRequestUI && !TriadAutomater.ModuleEnabled)
             {
                 PluginUi.Visible = true;
                 openTT = true;
@@ -307,7 +302,7 @@ namespace Saucy
                     }
                     else
                     {
-                        if (Service.Configuration.PlaySound)
+                        if (Saucy.Config.PlaySound)
                         {
                             PlaySound();
                         }
@@ -358,8 +353,8 @@ namespace Saucy
         {
             lock (_lockObj)
             {
-                string sound = Service.Configuration.SelectedSound;
-                string path = Path.Combine(Service.Interface.AssemblyLocation.Directory.FullName, "Sounds", $"{sound}.mp3");
+                string sound = Saucy.Config.SelectedSound;
+                string path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory.FullName, "Sounds", $"{sound}.mp3");
                 if (!File.Exists(path)) return;
                 var reader = new Mp3FileReader(path);
                 var waveOut = new WaveOutEvent();
@@ -372,7 +367,7 @@ namespace Saucy
         public void Dispose()
         {
             PluginUi.Dispose();
-            Service.CommandManager.RemoveHandler(commandName);
+            Svc.Commands.RemoveHandler(commandName);
             Svc.Framework.Update -= RunBot;
             SliceIsRightModule.ModuleEnabled = false;
 

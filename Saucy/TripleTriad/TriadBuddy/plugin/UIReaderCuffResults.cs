@@ -8,7 +8,7 @@ namespace TriadBuddyPlugin
 {
     public class UIReaderCuffResults : IUIReader
     {
-        private readonly GameGui gameGui;
+        private readonly IGameGui gameGui;
         private UIStateCuffResults cachedState = new();
         public Action<UIStateCuffResults> OnUpdated;
         public Action<bool> OnResultsUIChanged;
@@ -18,7 +18,7 @@ namespace TriadBuddyPlugin
         public bool HasResultsUI => hasResultsUI;
         private bool hasResultsUI;
 
-        public UIReaderCuffResults(GameGui gameGui)
+        public UIReaderCuffResults(IGameGui gameGui)
         {
             this.gameGui = gameGui;
         }

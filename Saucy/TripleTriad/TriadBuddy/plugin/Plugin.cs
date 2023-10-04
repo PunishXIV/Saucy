@@ -16,9 +16,9 @@ namespace TriadBuddyPlugin
         public string Name => "Triad Buddy";
 
         public readonly DalamudPluginInterface pluginInterface;
-        public readonly CommandManager commandManager;
-        public readonly Framework framework;
-        public readonly DataManager dataManager;
+        public readonly ICommandManager commandManager;
+        public readonly IFramework framework;
+        public readonly IDataManager dataManager;
         public readonly WindowSystem windowSystem = new("TriadBuddy");
 
         public readonly PluginWindowStatus statusWindow;
@@ -40,7 +40,7 @@ namespace TriadBuddyPlugin
 
         private Configuration configuration { get; init; }
 
-        public Plugin(DalamudPluginInterface pluginInterface, Framework framework, CommandManager commandManager, GameGui gameGui, DataManager dataManager, SigScanner sigScanner)
+        public Plugin(DalamudPluginInterface pluginInterface, IFramework framework, ICommandManager commandManager, IGameGui gameGui, IDataManager dataManager, SigScanner sigScanner)
         {
             this.pluginInterface = pluginInterface;
             this.commandManager = commandManager;
@@ -164,7 +164,7 @@ namespace TriadBuddyPlugin
             statusWindow.IsOpen = true;
         }
 
-        private void Framework_OnUpdateEvent(Framework framework)
+        private void Framework_OnUpdateEvent(IFramework framework)
         {
             try
             {

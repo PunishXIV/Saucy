@@ -85,10 +85,10 @@ namespace TriadBuddyPlugin
 
         public event Action<UIStateTriadGame> OnUIStateChanged;
 
-        private GameGui gameGui;
+        private IGameGui gameGui;
         private IntPtr addonPtr;
 
-        public UIReaderTriadGame(GameGui gameGui)
+        public UIReaderTriadGame(IGameGui gameGui)
         {
             this.gameGui = gameGui;
         }
@@ -220,7 +220,7 @@ namespace TriadBuddyPlugin
             {
                 foreach (var testNode in nodeArrNameL2)
                 {
-                    var isVisible = (testNode != null) ? (testNode->Flags & 0x10) == 0x10 : false;
+                    var isVisible = (testNode != null) ? ((short)testNode->NodeFlags & 0x10) == 0x10 : false;
                     if (isVisible)
                     {
                         numParsed++;

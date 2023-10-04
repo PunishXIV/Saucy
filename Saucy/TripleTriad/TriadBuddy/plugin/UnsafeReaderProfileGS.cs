@@ -48,10 +48,10 @@ namespace TriadBuddyPlugin
             public ushort[] cardIds = new ushort[5];
         }
 
-        private readonly GameGui gameGui;
+        private readonly IGameGui gameGui;
         public bool HasErrors { get; private set; }
 
-        public UnsafeReaderProfileGS(GameGui gameGui)
+        public UnsafeReaderProfileGS(IGameGui gameGui)
         {
             this.gameGui = gameGui;
         }

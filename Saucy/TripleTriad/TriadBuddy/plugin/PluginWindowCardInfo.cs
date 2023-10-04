@@ -13,7 +13,7 @@ namespace TriadBuddyPlugin
     public class PluginWindowCardInfo : Window, IDisposable
     {
         private readonly UIReaderTriadCardList uiReaderCardList;
-        private readonly GameGui gameGui;
+        private readonly IGameGui gameGui;
 
         private TriadCard selectedCard;
         private GameCardInfo selectedCardInfo;
@@ -27,7 +27,7 @@ namespace TriadBuddyPlugin
         private string locShowOnMap;
         private string locNoAvail;
 
-        public PluginWindowCardInfo(UIReaderTriadCardList uiReaderCardList, GameGui gameGui) : base("Card Info")
+        public PluginWindowCardInfo(UIReaderTriadCardList uiReaderCardList, IGameGui gameGui) : base("Card Info")
         {
             this.uiReaderCardList = uiReaderCardList;
             this.gameGui = gameGui;

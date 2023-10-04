@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Interface;
+using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using ImGuiNET;
 
@@ -27,12 +28,12 @@ internal static class SliceIsRightModule
                 _moduleEnabled = value;
             }
 
-            Service.Configuration.SliceIsRightModuleEnabled = _moduleEnabled;
+            Saucy.Config.SliceIsRightModuleEnabled = _moduleEnabled;
         }
     }
     private static bool _moduleEnabled;
     
-    private static bool IsInGoldSaucer => Service.ClientState.TerritoryType == 144;
+    private static bool IsInGoldSaucer => Svc.ClientState.TerritoryType == 144;
     
     private const float HalfPi = 1.57079637f;
     private const float MaxDistance = 30f;
@@ -44,27 +45,27 @@ internal static class SliceIsRightModule
 
     public static void Initialize()
     {
-        ModuleEnabled = Service.Configuration.SliceIsRightModuleEnabled;
+        ModuleEnabled = Saucy.Config.SliceIsRightModuleEnabled;
     }
     
     private static void RunModule()
     {
         if (_moduleEnabled)
         {
-            Service.Interface.UiBuilder.Draw += DrawUI;
+            Svc.PluginInterface.UiBuilder.Draw += DrawUI;
         }
         else
         {
-            Service.Interface.UiBuilder.Draw -= DrawUI;
+            Svc.PluginInterface.UiBuilder.Draw -= DrawUI;
         }
         
     }
 
     private static void DrawUI()
     {
-        if (!Service.ClientState.IsLoggedIn || !IsInGoldSaucer) return;
+        if (!Svc.ClientState.IsLoggedIn || !IsInGoldSaucer) return;
 
-        foreach (var gameObject in Service.ObjectTable)
+        foreach (var gameObject in Svc.Objects)
         {
             if (!(DistanceToPlayer(gameObject.Position) <= MaxDistance)) continue;
 
@@ -78,7 +79,7 @@ internal static class SliceIsRightModule
     
     private static float DistanceToPlayer(Vector3 center)
     {
-        var localPlayer = Service.ClientState.LocalPlayer;
+        var localPlayer = Svc.ClientState.LocalPlayer;
         return Vector3.Distance(localPlayer != null ? localPlayer.Position : Vector3.Zero, center);
     }
 
@@ -144,7 +145,7 @@ internal static class SliceIsRightModule
             };
             foreach (var vector37 in vector3Array)
             {
-                flag |= Service.GameGui.WorldToScreen(vector37, out var vector22);
+                flag |= Svc.GameGui.WorldToScreen(vector37, out var vector22);
                 if (vector22.X > 0.0 & (double)vector22.X < vector21.X || vector22.Y > 0.0 & (double)vector22.Y < vector21.Y)
                 {
                     windowDrawList.PathLineTo(vector22);
@@ -176,7 +177,7 @@ internal static class SliceIsRightModule
         var flag = false;
         for (var index = 0; index <= 2 * num; ++index)
         {
-            flag |= Service.GameGui.WorldToScreen(new Vector3(position.X + radius * (float)Math.Sin(Math.PI / num * index), position.Y, position.Z + radius * (float)Math.Cos(Math.PI / num * index)), out var vector2);
+            flag |= Svc.GameGui.WorldToScreen(new Vector3(position.X + radius * (float)Math.Sin(Math.PI / num * index), position.Y, position.Z + radius * (float)Math.Cos(Math.PI / num * index)), out var vector2);
             var windowDrawList = ImGui.GetWindowDrawList();
             windowDrawList.PathLineTo(vector2);
         }

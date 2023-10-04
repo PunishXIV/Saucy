@@ -62,10 +62,10 @@ namespace TriadBuddyPlugin
         public bool IsVisible => (status != Status.AddonNotFound) && (status != Status.AddonNotVisible);
         public bool HasErrors => false;
 
-        private GameGui gameGui;
+        private IGameGui gameGui;
         private IntPtr cachedAddonAgentPtr;
 
-        public UIReaderTriadCardList(GameGui gameGui)
+        public UIReaderTriadCardList(IGameGui gameGui)
         {
             this.gameGui = gameGui;
         }
@@ -141,7 +141,7 @@ namespace TriadBuddyPlugin
             SetStatus(Status.NoErrors);
         }
 
-        public static unsafe IntPtr LoadFailsafeAgent(GameGui gameGui)
+        public static unsafe IntPtr LoadFailsafeAgent(IGameGui gameGui)
         {
             var uiModule = (UIModule*)gameGui.GetUIModule();
             if (uiModule != null)

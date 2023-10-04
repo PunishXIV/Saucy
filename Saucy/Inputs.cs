@@ -27,7 +27,7 @@ namespace Saucy
             // note: it would be better to hook this instead of PeekMessage, but I didn't figure it out yet...
             var kbprocAddress = Svc.SigScanner.ScanText("48 89 5C 24 08 55 56 57 41 56 41 57 48 8D 6C 24 B0 48 81 EC 50 01 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 40 4D 8B F9 49 8B D8 81 FA 00 01 00 00"); // note: look for callers of GetKeyboardState
 
-            _kbprocHook = Hook<KbprocDelegate>.FromAddress(kbprocAddress, KbprocDetour);
+            _kbprocHook = Svc.Hook.HookFromAddress<KbprocDelegate>(kbprocAddress, KbprocDetour);
             _kbprocHook.Enable();
 
             //_peekMessageHook = Hook<PeekMessageDelegate>.FromSymbol("user32.dll", "PeekMessageW", PeekMessageDetour);

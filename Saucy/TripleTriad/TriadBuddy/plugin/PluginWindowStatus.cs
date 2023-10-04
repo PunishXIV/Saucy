@@ -2,7 +2,9 @@
 using Dalamud.Data;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
+using Dalamud.Interface.Internal;
 using Dalamud.Interface.Windowing;
+using ECommons.DalamudServices;
 using FFTriadBuddy;
 using ImGuiNET;
 using ImGuiScene;
@@ -17,13 +19,13 @@ namespace TriadBuddyPlugin
         private readonly UIReaderTriadGame uiReaderGame;
         private readonly UIReaderTriadPrep uiReaderPrep;
         private readonly Solver solver;
-        private readonly DataManager dataManager;
+        private readonly IDataManager dataManager;
         private readonly Configuration config;
 
         public bool showConfigs = false;
         private bool showDebugDetails;
         private float orgDrawPosX;
-        private Dictionary<int, TextureWrap> mapCardImages = new();
+        private Dictionary<int, IDalamudTextureWrap> mapCardImages = new();
         private const float debugCellSize = 30.0f;
         private const float debugCellPading = 4.0f;
 
@@ -56,7 +58,7 @@ namespace TriadBuddyPlugin
         private string locConfigOptimizerCPU;
         private string locConfigOptimizerCPUHint;
 
-        public PluginWindowStatus(DataManager dataManager, Solver solver, UIReaderTriadGame uiReaderGame, UIReaderTriadPrep uiReaderPrep, Configuration config) : base("Triad Buddy")
+        public PluginWindowStatus(IDataManager dataManager, Solver solver, UIReaderTriadGame uiReaderGame, UIReaderTriadPrep uiReaderPrep, Configuration config) : base("Triad Buddy")
         {
             this.dataManager = dataManager;
             this.solver = solver;
@@ -486,7 +488,7 @@ namespace TriadBuddyPlugin
             pos.Y += debugCellSize + debugCellPading * 2;
         }
 
-        private TextureWrap GetCardTexture(int cardId)
+        private IDalamudTextureWrap GetCardTexture(int cardId)
         {
             if (mapCardImages.TryGetValue(cardId, out var texWrap))
             {
@@ -494,7 +496,7 @@ namespace TriadBuddyPlugin
             }
 
             uint iconId = TriadCardDB.GetCardIconTextureId(cardId);
-            var newTexWrap = dataManager.GetImGuiTextureIcon(iconId);
+            var newTexWrap = Svc.Texture.GetIcon(iconId);
             mapCardImages.Add(cardId, newTexWrap);
 
             return newTexWrap;

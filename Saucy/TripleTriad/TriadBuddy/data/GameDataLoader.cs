@@ -35,13 +35,13 @@ namespace TriadBuddyPlugin
         private Dictionary<uint, ENpcCachedData> mapENpcCache = new();
         private Dictionary<uint, int> mapNpcAchievementId = new();
 
-        public void StartAsyncWork(DataManager dataManager)
+        public void StartAsyncWork(IDataManager dataManager)
         {
             Task.Run(async () =>
             {
                 // there are some rare and weird concurrency issues reported on plugin reinstall
                 //      at Lumina.Excel.ExcelSheet`1.GetEnumerator()+MoveNext()
-                //      at TriadBuddyPlugin.GameDataLoader.ParseNpcLocations(DataManager dataManager) in 
+                //      at TriadBuddyPlugin.GameDataLoader.ParseNpcLocations(IDataManager dataManager) in 
                 //
                 // add wait & retry mechanic, maybe it can work around whatever happened?
                 // lumina doesn't expose any sync/locking so can't really solve the issue
@@ -72,7 +72,7 @@ namespace TriadBuddyPlugin
             });
         }
 
-        private void ParseGameData(DataManager dataManager)
+        private void ParseGameData(IDataManager dataManager)
         {
             var cardInfoDB = GameCardDB.Get();
             var cardDB = TriadCardDB.Get();
@@ -116,7 +116,7 @@ namespace TriadBuddyPlugin
             mapNpcAchievementId.Clear();
         }
 
-        private bool ParseRules(DataManager dataManager)
+        private bool ParseRules(IDataManager dataManager)
         {
             // update rule names to match current client language
             // hardcoded mapping, good for now, it's almost never changes anyway
@@ -142,7 +142,7 @@ namespace TriadBuddyPlugin
             return true;
         }
 
-        private bool ParseCardTypes(DataManager dataManager)
+        private bool ParseCardTypes(IDataManager dataManager)
         {
             var locDB = LocalizationDB.Get();
 
@@ -162,7 +162,7 @@ namespace TriadBuddyPlugin
             return true;
         }
 
-        private bool ParseCards(DataManager dataManager)
+        private bool ParseCards(IDataManager dataManager)
         {
             var cardDB = TriadCardDB.Get();
             var cardInfoDB = GameCardDB.Get();
@@ -239,7 +239,7 @@ namespace TriadBuddyPlugin
             public string Name;
         }
 
-        private bool ParseNpcs(DataManager dataManager)
+        private bool ParseNpcs(IDataManager dataManager)
         {
             var npcDB = TriadNpcDB.Get();
 
@@ -416,7 +416,7 @@ namespace TriadBuddyPlugin
             return true;
         }
 
-        private bool ParseNpcAchievements(DataManager dataManager)
+        private bool ParseNpcAchievements(IDataManager dataManager)
         {
             var npcDataSheet = dataManager.GetExcelSheet<Lumina.Excel.GeneratedSheets.TripleTriadResident>();
             if (npcDataSheet != null)
@@ -431,7 +431,7 @@ namespace TriadBuddyPlugin
             return true;
         }
 
-        private bool ParseNpcLocations(DataManager dataManager)
+        private bool ParseNpcLocations(IDataManager dataManager)
         {
             var sheetLevel = dataManager.GetExcelSheet<Lumina.Excel.GeneratedSheets.Level>();
             if (sheetLevel != null)
@@ -476,7 +476,7 @@ namespace TriadBuddyPlugin
             return true;
         }
 
-        private bool ParseCardRewards(DataManager dataManager)
+        private bool ParseCardRewards(IDataManager dataManager)
         {
             var sheetItems = dataManager.GetExcelSheet<Lumina.Excel.GeneratedSheets.Item>();
             if (sheetItems != null)
