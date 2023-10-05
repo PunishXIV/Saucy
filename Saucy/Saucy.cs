@@ -59,6 +59,7 @@ namespace Saucy
             PunishLibMain.Init(pluginInterface, "Saucy", new AboutPlugin() { Sponsor = "https://ko-fi.com/taurenkey" });
 
             Config = Svc.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            Config.Initialize(Svc.PluginInterface);
             P = this;
 
             PluginUi = new PluginUI(Config);
