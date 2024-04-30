@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 namespace Saucy.OutOnALimb;
 
 [Serializable]
-[Obfuscation(Exclude =true)]
-public class Config : IEzConfig
+[Obfuscation(Exclude = true)]
+public class LimbConfig : IEzConfig
 {
 		public bool EnableLimb = false;
 		public int Tolerance = 2;

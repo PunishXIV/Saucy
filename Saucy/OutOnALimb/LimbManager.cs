@@ -1,27 +1,26 @@
 ﻿using ClickLib.Clicks;
 using Dalamud;
-using Dalamud.Game.ClientState.Objects;
-using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Memory;
 using ECommons.DalamudServices;
 using ECommons.EzEventManager;
 using ECommons.GameHelpers;
-using ECommons.MathHelpers;
+using ECommons.ImGuiMethods;
+using ECommons.Logging;
 using ECommons.Throttlers;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.UI;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using ImGuiNET;
 using Lumina.Excel.GeneratedSheets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.NetworkInformation;
-using System.Text;
+using System.Numerics;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using static ECommons.GenericHelpers;
 
 namespace Saucy.OutOnALimb;
 public unsafe class LimbManager : IDisposable
@@ -37,9 +36,11 @@ public unsafe class LimbManager : IDisposable
 		int MinIndex = 0;
 		bool RecordMinIndex = false;
 		public int GamesToPlay = 0;
+		private LimbConfig C;
 
-		public LimbManager()
+		public LimbManager(LimbConfig conf)
 		{
+				C = conf;
 				new EzFrameworkUpdate(Tick);
 				Svc.Chat.ChatMessage += this.Chat_ChatMessage;
 		}
@@ -221,10 +222,10 @@ public unsafe class LimbManager : IDisposable
 				{
 						if (TryGetAddonByName<AtkUnitBase>("MiniGameAimg", out var addon) && IsAddonReady(addon))
 						{
-								if(TryGetAddonByName<AddonSelectString>("SelectString", out var ss) && IsAddonReady(&ss->AtkUnitBase))
+								if (TryGetAddonByName<AddonSelectString>("SelectString", out var ss) && IsAddonReady(&ss->AtkUnitBase))
 								{
 										var text = MemoryHelper.ReadSeString(&ss->AtkUnitBase.GetTextNodeById(2)->NodeText).ExtractText();
-										if(text.Contains(Svc.Data.GetExcelSheet<Addon>().GetRow(9994).Text.ExtractText(), StringComparison.OrdinalIgnoreCase))
+										if (text.Contains(Svc.Data.GetExcelSheet<Addon>().GetRow(9994).Text.ExtractText(), StringComparison.OrdinalIgnoreCase))
 										{
 												if (EzThrottler.Throttle("ConfirmPlay"))
 												{
@@ -303,7 +304,7 @@ public unsafe class LimbManager : IDisposable
 						if (TryGetAddonByName<AddonSelectYesno>("SelectYesno", out var ss) && IsAddonReady(&ss->AtkUnitBase))
 						{
 								var text = MemoryHelper.ReadSeString(&ss->PromptText->NodeText).ExtractText();
-								var matches = new Regex(Svc.ClientState.ClientLanguage switch 
+								var matches = new Regex(Svc.ClientState.ClientLanguage switch
 								{
 										ClientLanguage.English => @"Current payout: ([0-9]+)",
 										ClientLanguage.French => @"Gain de PGS en cas de réussite: ([0-9]+)",
