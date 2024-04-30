@@ -3,7 +3,7 @@
 	url = https://github.com/PunishXIV/PunishLib
 [submodule "ECommons"]
 	path = ECommons
-	url = https://github.com/Taurenkey/ECommons
+	url = https://github.com/NightmareXIV/ECommons
 [submodule "ClickLib"]
 	path = ClickLib
 	url = https://github.com/Limiana/ClickLib.git
