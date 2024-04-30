@@ -25,16 +25,15 @@ using static ECommons.GenericHelpers;
 namespace Saucy.OutOnALimb;
 public unsafe class LimbManager : IDisposable
 {
-		uint OldState = 0;
-		static readonly int[] StartingPoints = [20, 50, 80];
-		int RequestInput = 0;
-		int? Request = null;
-		bool OnlyRequest = false;
-
-		List<HitResult> Results = [];
-		int? Next = null;
-		int MinIndex = 0;
-		bool RecordMinIndex = false;
+		private uint OldState = 0;
+		private static readonly int[] StartingPoints = [20, 50, 80];
+		private int RequestInput = 0;
+		private int? Request = null;
+		private bool OnlyRequest = false;
+		private List<HitResult> Results = [];
+		private int? Next = null;
+		private int MinIndex = 0;
+		private bool RecordMinIndex = false;
 		public int GamesToPlay = 0;
 		private LimbConfig C;
 
@@ -50,7 +49,7 @@ public unsafe class LimbManager : IDisposable
 				Svc.Chat.ChatMessage -= this.Chat_ChatMessage;
 		}
 
-		void InteractWithClosestLimb()
+		private void InteractWithClosestLimb()
 		{
 				if (Svc.Condition[ConditionFlag.WaitingForDutyFinder])
 				{
@@ -102,7 +101,7 @@ public unsafe class LimbManager : IDisposable
 				}
 		}
 
-		void Reset()
+		private void Reset()
 		{
 				Results.Clear();
 				for (int i = 0; i <= 100; i += C.Step)
@@ -114,7 +113,7 @@ public unsafe class LimbManager : IDisposable
 				RecordMinIndex = false;
 		}
 
-		public int GetCursor()
+		private int GetCursor()
 		{
 				const float Min = -0.733f;
 				const float Max = 0.733f;
@@ -129,50 +128,7 @@ public unsafe class LimbManager : IDisposable
 				return 0;
 		}
 
-		public void DrawDebug()
-		{
-				{
-						if (TryGetAddonByName<AtkUnitBase>("MiniGameAimg", out var addon) && IsAddonReady(addon))
-						{
-								var reference = addon->GetNodeById(41);
-								var cursor = addon->GetNodeById(39);
-								var iCursor = 400 - cursor->Height;
-								if (iCursor > reference->Y && iCursor < reference->Y + 20) ImGuiEx.Text($"Yes");
-								ImGuiEx.Text($"Reference: {reference->Y}");
-								ImGuiEx.Text($"Cursor: {cursor->Height}");
-						}
-				}
-				{
-						if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
-						{
-								var reader = new ReaderMiniGameBotanist(addon);
-								var button = addon->GetButtonNodeById(24);
-								var cursor = GetCursor();
-								ImGuiEx.Text($"Cursor: {cursor}");
-								ImGui.Checkbox("Only request", ref OnlyRequest);
-								ImGui.SetNextItemWidth(100f);
-								ImGui.InputInt("Request input", ref RequestInput);
-								ImGui.SameLine();
-								if (ImGui.Button("Request")) Request = RequestInput;
-								ImGui.SameLine();
-								if (ImGui.Button("Reset")) Request = null;
-								ImGuiEx.Text($"Button enabled: {button->IsEnabled}");
-								ImGuiEx.Text($"Seconds remaining: {reader.SecondsRemaining}");
-								if (ImGui.Button("Click"))
-								{
-										if (button->IsEnabled)
-										{
-												button->ClickAddonButton(addon);
-										}
-								}
-								ImGuiEx.Text($"Next: {Next}, MinIndex: {MinIndex}, rec={RecordMinIndex}");
-								ImGuiEx.Text($"Starting points:\n{StartingPoints.Print(", ")}");
-								ImGuiEx.Text($"Results:\n{Results.Select(x => $"{x.Position}={x.Power}").Print("\n")}");
-						}
-				}
-		}
-
-		bool SafeClickButtonAimg()
+		private bool SafeClickButtonAimg()
 		{
 				var ret = false;
 				if (TryGetAddonByName<AtkUnitBase>("MiniGameAimg", out var addon) && IsAddonReady(addon))
@@ -191,7 +147,7 @@ public unsafe class LimbManager : IDisposable
 				return ret;
 		}
 
-		bool SafeClickButtonBotanist()
+		private bool SafeClickButtonBotanist()
 		{
 				var ret = false;
 				if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
@@ -296,7 +252,7 @@ public unsafe class LimbManager : IDisposable
 				}
 		}
 
-		void HandleYesno()
+		private void HandleYesno()
 		{
 				if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
 				{
@@ -349,7 +305,7 @@ public unsafe class LimbManager : IDisposable
 				}
 		}
 
-		List<HitResult> GetNext(int index, uint num)
+		private List<HitResult> GetNext(int index, uint num)
 		{
 				var ret = new List<HitResult>();
 				for (int i = 0; i < num; i++)
@@ -360,7 +316,7 @@ public unsafe class LimbManager : IDisposable
 				return ret;
 		}
 
-		List<HitResult> GetPrev(int index, uint num)
+		private List<HitResult> GetPrev(int index, uint num)
 		{
 				var ret = new List<HitResult>();
 				for (int i = 0; i < num; i++)
@@ -371,7 +327,7 @@ public unsafe class LimbManager : IDisposable
 				return ret;
 		}
 
-		int GetNextTargetCursorPos()
+		private int GetNextTargetCursorPos()
 		{
 				for (int i = MinIndex; i < Results.Count; i++)
 				{
@@ -417,23 +373,23 @@ public unsafe class LimbManager : IDisposable
 				return res;
 		}
 
-		HitResult GetClosestResultPoint(int point)
+		private HitResult GetClosestResultPoint(int point)
 		{
 				return Results.OrderBy(x => Math.Abs(point - x.Position)).First();
 		}
 
-		bool isStartingPointChecked(int position)
+		private bool isStartingPointChecked(int position)
 		{
 				var item = GetClosestResultPoint(position);
 				return item.Power != HitPower.Unobserved;
 		}
 
-		bool ApproximatelyEquals(int f1, int f2)
+		private bool ApproximatelyEquals(int f1, int f2)
 		{
 				return Math.Abs(f1 - f2) <= C.Tolerance;
 		}
 
-		void Record(HitPower result)
+		private void Record(HitPower result)
 		{
 				if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
 				{
@@ -452,6 +408,69 @@ public unsafe class LimbManager : IDisposable
 						}
 						item.Power = result;
 						PluginLog.Debug($"{result}");
+				}
+		}
+
+		public void DrawSettings()
+		{
+				ImGui.Checkbox($"Enable", ref C.EnableLimb);
+				ImGui.SetNextItemWidth(100f);
+				ImGui.InputInt("Games to play", ref GamesToPlay.ValidateRange(0, 9999));
+				ImGui.SetNextItemWidth(100f);
+				ImGui.DragInt($"Tolerance", ref C.Tolerance, 0.05f);
+				ImGui.SameLine();
+				if (ImGui.Button("Default##1")) C.Tolerance = new LimbConfig().Tolerance;
+				ImGuiEx.TextWrapped(EColor.Red, $"Warning! Tolerance of 1 requires 240 fps, 2 - 120 fps, 3 - 90 fps, 4 - 60 fps. Lesser tolerance means less errors.");
+				ImGui.SetNextItemWidth(100f);
+				ImGui.DragInt($"Step", ref C.Step, 0.05f);
+				ImGui.SameLine();
+				if (ImGui.Button("Default##2")) C.Step = new LimbConfig().Step;
+				ImGui.SetNextItemWidth(100f);
+				ImGui.DragInt($"Stop at remaining time with big win", ref C.StopAt, 0.5f);
+				ImGui.SetNextItemWidth(100f);
+				ImGui.DragInt($"Stop at remaining time with little win", ref C.HardStopAt, 0.5f);
+		}
+
+		public void DrawDebug()
+		{
+				{
+						if (TryGetAddonByName<AtkUnitBase>("MiniGameAimg", out var addon) && IsAddonReady(addon))
+						{
+								var reference = addon->GetNodeById(41);
+								var cursor = addon->GetNodeById(39);
+								var iCursor = 400 - cursor->Height;
+								if (iCursor > reference->Y && iCursor < reference->Y + 20) ImGuiEx.Text($"Yes");
+								ImGuiEx.Text($"Reference: {reference->Y}");
+								ImGuiEx.Text($"Cursor: {cursor->Height}");
+						}
+				}
+				{
+						if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
+						{
+								var reader = new ReaderMiniGameBotanist(addon);
+								var button = addon->GetButtonNodeById(24);
+								var cursor = GetCursor();
+								ImGuiEx.Text($"Cursor: {cursor}");
+								ImGui.Checkbox("Only request", ref OnlyRequest);
+								ImGui.SetNextItemWidth(100f);
+								ImGui.InputInt("Request input", ref RequestInput);
+								ImGui.SameLine();
+								if (ImGui.Button("Request")) Request = RequestInput;
+								ImGui.SameLine();
+								if (ImGui.Button("Reset")) Request = null;
+								ImGuiEx.Text($"Button enabled: {button->IsEnabled}");
+								ImGuiEx.Text($"Seconds remaining: {reader.SecondsRemaining}");
+								if (ImGui.Button("Click"))
+								{
+										if (button->IsEnabled)
+										{
+												button->ClickAddonButton(addon);
+										}
+								}
+								ImGuiEx.Text($"Next: {Next}, MinIndex: {MinIndex}, rec={RecordMinIndex}");
+								ImGuiEx.Text($"Starting points:\n{StartingPoints.Print(", ")}");
+								ImGuiEx.Text($"Results:\n{Results.Select(x => $"{x.Position}={x.Power}").Print("\n")}");
+						}
 				}
 		}
 }
