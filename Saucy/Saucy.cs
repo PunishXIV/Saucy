@@ -16,6 +16,7 @@ using NAudio.Wave;
 using PunishLib;
 using Saucy.CuffACur;
 using Saucy.OtherGames;
+using Saucy.OutOnALimb;
 using Saucy.TripleTriad;
 using System;
 using System.Collections.Generic;
@@ -52,6 +53,8 @@ namespace Saucy
 
         public static bool GameFinished => TTSolver.cachedScreenState == null;
         internal static bool openTT = false;
+
+        public LimbManager LimbManager;
 
         public Saucy([RequiredVersion("1.0")] DalamudPluginInterface pluginInterface)
         {
@@ -107,7 +110,10 @@ namespace Saucy
 
             Svc.Framework.Update += RunBot;
             Click.Initialize();
-        }
+
+            LimbManager = new(Config.LimbConfig);
+
+				}
 
         private async void CheckCuffResults(UIStateCuffResults obj)
         {
@@ -371,7 +377,9 @@ namespace Saucy
             Svc.Commands.RemoveHandler(commandName);
             Svc.Framework.Update -= RunBot;
             SliceIsRightModule.ModuleEnabled = false;
-
+            LimbManager.Dispose();
+            ECommonsMain.Dispose(); //Don't forget!
+            P = null; //necessary to free the reference for GC
         }
 
         private void OnCommand(string command, string arguments)

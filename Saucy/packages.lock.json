@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    "net7.0-windows7.0": {
+    "net8.0-windows7.0": {
       "DalamudPackager": {
         "type": "Direct",
         "requested": "[2.1.10, )",
@@ -127,10 +127,7 @@
         "type": "Project"
       },
       "punishlib": {
-        "type": "Project",
-        "dependencies": {
-          "ECommons": "[2.0.0.7, )"
-        }
+        "type": "Project"
       }
     }
   }

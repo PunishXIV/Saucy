@@ -4,9 +4,10 @@ using System;
 
 namespace Saucy
 {
-    using Newtonsoft.Json;
+		using global::Saucy.OutOnALimb;
+		using Newtonsoft.Json;
 
-    [Serializable]
+		[Serializable]
     public class Configuration : IPluginConfiguration
     {
         public int Version { get; set; } = 0;
@@ -26,6 +27,8 @@ namespace Saucy
         public bool OpenAutomatically { get; set; } = false;
 
         public bool SliceIsRightModuleEnabled { get; set; }
+
+        public LimbConfig LimbConfig { get; set; } = new();
 
         // the below exist just to make saving less cumbersome
 

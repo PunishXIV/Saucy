@@ -110,9 +110,15 @@ namespace Saucy
                             DrawTriadTab();
                             ImGui.EndTabItem();
                         }
-                    }
+										}
 
-                    if (ImGui.BeginTabItem("Other Games"))
+										if (ImGui.BeginTabItem("Out on a Limb"))
+										{
+												Saucy.P.LimbManager.DrawSettings();
+												ImGui.EndTabItem();
+										}
+
+										if (ImGui.BeginTabItem("Other Games"))
                     {
                         DrawOtherGamesTab();
                         ImGui.EndTabItem();
