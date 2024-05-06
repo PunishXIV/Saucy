@@ -17,4 +17,5 @@ public class LimbConfig : IEzConfig
 		public int Step = 10;
 		public int StopAt = 18;
 		public int HardStopAt = 12;
+		public LimbDifficulty LimbDifficulty = LimbDifficulty.Titan;
 }

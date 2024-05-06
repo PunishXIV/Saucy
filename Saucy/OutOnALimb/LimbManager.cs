@@ -36,6 +36,7 @@ public unsafe class LimbManager : IDisposable
 		private bool RecordMinIndex = false;
 		public int GamesToPlay = 0;
 		private LimbConfig C;
+		private bool Exit = false;
 
 		public LimbManager(LimbConfig conf)
 		{
@@ -52,6 +53,10 @@ public unsafe class LimbManager : IDisposable
 		private void InteractWithClosestLimb()
 		{
 				if (Svc.Condition[ConditionFlag.WaitingForDutyFinder])
+				{
+						Exit = true;
+				}
+				if (Exit)
 				{
 						GamesToPlay = 0;
 				}
@@ -190,10 +195,10 @@ public unsafe class LimbManager : IDisposable
 										}
 								}
 
-								var reference = addon->GetNodeById(41);
+								var reference = addon->GetNodeById(NodeIDs[C.LimbDifficulty]);
 								var cursor = addon->GetNodeById(39);
 								var iCursor = 400 - cursor->Height;
-								if (iCursor > reference->Y && iCursor < reference->Y + 20)
+								if (iCursor > reference->Y && iCursor < reference->Y + Heights[C.LimbDifficulty])
 								{
 										SafeClickButtonAimg();
 								}
@@ -249,6 +254,10 @@ public unsafe class LimbManager : IDisposable
 								}
 								OldState = reader.State;
 						}
+						else
+						{
+								Exit = false;
+						}
 				}
 		}
 
@@ -271,7 +280,7 @@ public unsafe class LimbManager : IDisposable
 								if (matches.Success)
 								{
 										var mgp = int.Parse(matches.Groups[1].Value);
-										if (Svc.Condition[ConditionFlag.WaitingForDutyFinder])
+										if (Exit)
 										{
 												if (EzThrottler.Throttle("Yesno", 2000)) ClickSelectYesNo.Using((nint)ss).No();
 										}
@@ -413,33 +422,59 @@ public unsafe class LimbManager : IDisposable
 
 		public void DrawSettings()
 		{
-				ImGui.Checkbox($"Enable", ref C.EnableLimb);
+				var save = false;
+				ImGuiEx.TextWrapped($"How to use: enable module, walk up to the Out on a Limb machine in Gold Saucer, input number of games you want to play to play automatically or access the machine manually to play one game.");
+
+				ImGui.Separator();
+				save |= ImGui.Checkbox($"Enable", ref C.EnableLimb);
 				ImGui.SetNextItemWidth(100f);
 				ImGui.InputInt("Games to play", ref GamesToPlay.ValidateRange(0, 9999));
+				ImGui.SameLine();
+				if (ImGui.Button("Max")) GamesToPlay = 9999;
+				ImGui.Checkbox($"Stop at next double down", ref Exit);
+
+				ImGui.Separator();
 				ImGui.SetNextItemWidth(100f);
-				ImGui.DragInt($"Tolerance", ref C.Tolerance, 0.05f);
+				save |= ImGuiEx.EnumCombo("Difficulty", ref C.LimbDifficulty);
+				ImGui.SetNextItemWidth(100f);
+				save |= ImGui.DragInt($"Tolerance", ref C.Tolerance, 0.05f);
 				ImGui.SameLine();
 				if (ImGui.Button("Default##1")) C.Tolerance = new LimbConfig().Tolerance;
-				ImGuiEx.TextWrapped(EColor.Red, $"Warning! Tolerance of 1 requires 240 fps, 2 - 120 fps, 3 - 90 fps, 4 - 60 fps. Lesser tolerance means less errors.");
+				ImGuiEx.TextWrapped(EColor.Red, $"Warning! Tolerance of 1 requires 240 fps, 2 - 120 fps, 3 - 90 fps, 4 - 60 fps. Lesser tolerance means less errors. Lesser difficulty requires less fps.");
 				ImGui.SetNextItemWidth(100f);
-				ImGui.DragInt($"Step", ref C.Step, 0.05f);
+				save |= ImGui.DragInt($"Step", ref C.Step, 0.05f);
 				ImGui.SameLine();
 				if (ImGui.Button("Default##2")) C.Step = new LimbConfig().Step;
 				ImGui.SetNextItemWidth(100f);
-				ImGui.DragInt($"Stop at remaining time with big win", ref C.StopAt, 0.5f);
+				save |= ImGui.DragInt($"Stop at remaining time with big win", ref C.StopAt, 0.5f);
 				ImGui.SetNextItemWidth(100f);
-				ImGui.DragInt($"Stop at remaining time with little win", ref C.HardStopAt, 0.5f);
+				save |= ImGui.DragInt($"Stop at remaining time with little win", ref C.HardStopAt, 0.5f);
+
+				if (save) Saucy.Config.Save();
 		}
 
+		private static Dictionary<LimbDifficulty, int> Heights = new()
+		{
+				[LimbDifficulty.Titan] = 20,
+				[LimbDifficulty.Morbol] = 40,
+				[LimbDifficulty.Cactuar] = 340,
+		};
+		private static Dictionary<LimbDifficulty, uint> NodeIDs = new()
+		{
+				[LimbDifficulty.Titan] = 41,
+				[LimbDifficulty.Morbol] = 44,
+				[LimbDifficulty.Cactuar] = 47,
+		};
 		public void DrawDebug()
 		{
 				{
 						if (TryGetAddonByName<AtkUnitBase>("MiniGameAimg", out var addon) && IsAddonReady(addon))
 						{
-								var reference = addon->GetNodeById(41);
+								//41 titan, 44 morbol, 47 cactuar
+								var reference = addon->GetNodeById(NodeIDs[C.LimbDifficulty]);
 								var cursor = addon->GetNodeById(39);
 								var iCursor = 400 - cursor->Height;
-								if (iCursor > reference->Y && iCursor < reference->Y + 20) ImGuiEx.Text($"Yes");
+								if (iCursor > reference->Y && iCursor < reference->Y + Heights[C.LimbDifficulty]) ImGuiEx.Text($"Yes");
 								ImGuiEx.Text($"Reference: {reference->Y}");
 								ImGuiEx.Text($"Cursor: {cursor->Height}");
 						}

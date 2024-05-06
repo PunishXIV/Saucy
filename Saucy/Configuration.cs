@@ -29,6 +29,7 @@ namespace Saucy
         public bool SliceIsRightModuleEnabled { get; set; }
 
         public LimbConfig LimbConfig { get; set; } = new();
+        public bool EnableAutoMiniCactpot = false;
 
         // the below exist just to make saving less cumbersome
 

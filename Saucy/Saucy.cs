@@ -55,6 +55,7 @@ namespace Saucy
         internal static bool openTT = false;
 
         public LimbManager LimbManager;
+        public MiniCactpotManager MiniCactpotManager;
 
         public Saucy([RequiredVersion("1.0")] DalamudPluginInterface pluginInterface)
         {
@@ -112,7 +113,7 @@ namespace Saucy
             Click.Initialize();
 
             LimbManager = new(Config.LimbConfig);
-
+            MiniCactpotManager = new();
 				}
 
         private async void CheckCuffResults(UIStateCuffResults obj)
@@ -378,7 +379,8 @@ namespace Saucy
             Svc.Framework.Update -= RunBot;
             SliceIsRightModule.ModuleEnabled = false;
             LimbManager.Dispose();
-            ECommonsMain.Dispose(); //Don't forget!
+            MiniCactpotManager.Dispose();
+						ECommonsMain.Dispose(); //Don't forget!
             P = null; //necessary to free the reference for GC
         }
 
