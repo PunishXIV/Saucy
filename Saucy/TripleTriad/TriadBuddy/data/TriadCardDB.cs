@@ -13,7 +13,7 @@ namespace FFTriadBuddy
 
         public TriadCardDB()
         {
-            hiddenCard = new TriadCard(0, null, ETriadCardRarity.Common, ETriadCardType.None, 0, 0, 0, 0, 0, 0);
+            hiddenCard = new TriadCard(0, ETriadCardRarity.Common, ETriadCardType.None, 0, 0, 0, 0, 0, 0);
             hiddenCard.Name.Text = "(hidden)"; // debug only, ignore localization
         }
 
@@ -67,15 +67,15 @@ namespace FFTriadBuddy
 
         public TriadCard FindByTexture(string texPath)
         {
-            // map image ids: 082100+ directly to card id: 0+
-            // map image ids: 082500+ directly to card id: 0+
-            // path example: ui/icon/082000/082145.tex
-            // 4K UI example: ui/icon/082000/082183_hr1.tex
-
-            string pathPattern = "082000/082";
+            // map image ids: 082100+ directly to card id: 0+ (legacy support? TODO: kill me)
+            // map image ids: 082500+ directly to card id: 0+ (legacy support? TODO: kill me)
+            // path example: ui/icon/088000/088145.tex
+            // 4K UI example: ui/icon/088000/088183_hr1.tex
 
             if (texPath != null && texPath.EndsWith(".tex"))
             {
+                string pathPattern = "082000/082";
+
                 int patternPos = texPath.IndexOf(pathPattern);
                 if (patternPos > 0)
                 {
@@ -92,6 +92,27 @@ namespace FFTriadBuddy
                         }
                     }
                 }
+
+                string pathPatternBig = "087000/087";
+                string pathPatternSmall = "088000/088";
+
+                patternPos = texPath.IndexOf(pathPatternSmall);
+                if (patternPos < 0)
+                {
+                    patternPos = texPath.IndexOf(pathPatternBig);
+                }
+
+                if (patternPos > 0)
+                {
+                    string idStr = texPath.Substring(patternPos + pathPattern.Length, 3);
+                    if (int.TryParse(idStr, out int cardId))
+                    {
+                        if (cardId >= 0 && cardId < cards.Count)
+                        {
+                            return FindById(cardId);
+                        }
+                    }
+                }
             }
 
             return null;
@@ -99,12 +120,12 @@ namespace FFTriadBuddy
 
         public static uint GetCardTextureId(int cardId)
         {
-            return (cardId < 0 || cardId > 400) ? 82100 : (uint)cardId + 82100;
+            return (cardId < 0 || cardId >= 1000) ? 87000 : (uint)cardId + 87000;
         }
 
         public static uint GetCardIconTextureId(int cardId)
         {
-            return (cardId < 0 || cardId > 400) ? 82500 : (uint)cardId + 82500;
+            return (cardId < 0 || cardId >= 1000) ? 88000 : (uint)cardId + 88000;
         }
 
         public void ProcessSameSideLists()

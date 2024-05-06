@@ -198,7 +198,7 @@ namespace TriadBuddyPlugin
                         var cardRarity = (rowRarityId < cardRarityMap.Length) ? cardRarityMap[rowRarityId] : ETriadCardRarity.Common;
 
                         // i got left & right mixed up at some point...
-                        var cardOb = new TriadCard((int)idx, null, cardRarity, cardType, rowData.Top, rowData.Bottom, rowData.Right, rowData.Left, rowData.Order, rowData.UIPriority);
+                        var cardOb = new TriadCard((int)idx, cardRarity, cardType, rowData.Top, rowData.Bottom, rowData.Right, rowData.Left, rowData.Order, rowData.UIPriority);
                         cardOb.Name.Text = rowName.Name.RawString;
 
                         // shared logic code maps card by their ids directly: cards[id]=card
