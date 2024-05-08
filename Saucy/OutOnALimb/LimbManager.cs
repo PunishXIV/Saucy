@@ -97,16 +97,25 @@ public unsafe class LimbManager : IDisposable
 				}
 		}
 
+		private Dictionary<string, HitPower> HitPowerText = new()
+		{
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9706).Text.ExtractText()] = HitPower.Nothing,
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9707).Text.ExtractText()] = HitPower.Weak,
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9708).Text.ExtractText()] = HitPower.Strong,
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9709).Text.ExtractText()] = HitPower.Maximum,
+		};
+
 		private void Chat_ChatMessage(XivChatType type, uint senderId, ref SeString sender, ref SeString message, ref bool isHandled)
 		{
 				if (!C.EnableLimb) return;
+				if (!Svc.Condition[ConditionFlag.OccupiedInQuestEvent]) return;
 				if ((int)type == 2105)
 				{
 						var s = message.ExtractText();
-						if (s == Svc.Data.GetExcelSheet<Addon>().GetRow(9706).Text.ExtractText()) Record(HitPower.Nothing);
-						if (s == Svc.Data.GetExcelSheet<Addon>().GetRow(9707).Text.ExtractText()) Record(HitPower.Weak);
-						if (s == Svc.Data.GetExcelSheet<Addon>().GetRow(9708).Text.ExtractText()) Record(HitPower.Strong);
-						if (s == Svc.Data.GetExcelSheet<Addon>().GetRow(9709).Text.ExtractText()) Record(HitPower.Maximum);
+						if(HitPowerText.TryGetValue(s, out var hitPower))
+						{
+								Record(hitPower);
+						}
 				}
 		}
 
@@ -184,83 +193,86 @@ public unsafe class LimbManager : IDisposable
 				{
 						InteractWithClosestLimb();
 				}
+				if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent])
 				{
-						if (TryGetAddonByName<AtkUnitBase>("MiniGameAimg", out var addon) && IsAddonReady(addon))
 						{
-								if (TryGetAddonByName<AddonSelectString>("SelectString", out var ss) && IsAddonReady(&ss->AtkUnitBase))
+								if (TryGetAddonByName<AtkUnitBase>("MiniGameAimg", out var addon) && IsAddonReady(addon))
 								{
-										var text = MemoryHelper.ReadSeString(&ss->AtkUnitBase.GetTextNodeById(2)->NodeText).ExtractText();
-										if (text.Contains(Svc.Data.GetExcelSheet<Addon>().GetRow(9994).Text.ExtractText(), StringComparison.OrdinalIgnoreCase))
+										if (TryGetAddonByName<AddonSelectString>("SelectString", out var ss) && IsAddonReady(&ss->AtkUnitBase))
 										{
-												if (EzThrottler.Throttle("ConfirmPlay"))
+												var text = MemoryHelper.ReadSeString(&ss->AtkUnitBase.GetTextNodeById(2)->NodeText).ExtractText();
+												if (text.Contains(Svc.Data.GetExcelSheet<Addon>().GetRow(9994).Text.ExtractText(), StringComparison.OrdinalIgnoreCase))
 												{
-														ClickSelectString.Using((nint)ss).SelectItem1();
+														if (EzThrottler.Throttle("ConfirmPlay"))
+														{
+																ClickSelectString.Using((nint)ss).SelectItem1();
+														}
 												}
 										}
-								}
 
-								var reference = addon->GetNodeById(NodeIDs[C.LimbDifficulty]);
-								var cursor = addon->GetNodeById(39);
-								var iCursor = 400 - cursor->Height;
-								if (iCursor > reference->Y && iCursor < reference->Y + Heights[C.LimbDifficulty])
-								{
-										SafeClickButtonAimg();
+										var reference = addon->GetNodeById(NodeIDs[C.LimbDifficulty]);
+										var cursor = addon->GetNodeById(39);
+										var iCursor = 400 - cursor->Height;
+										if (iCursor > reference->Y && iCursor < reference->Y + Heights[C.LimbDifficulty])
+										{
+												SafeClickButtonAimg();
+										}
 								}
 						}
-				}
-				HandleYesno();
-				{
-						if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
+						HandleYesno();
 						{
-								var reader = new ReaderMiniGameBotanist(addon);
-								var button = addon->GetButtonNodeById(24);
-								var cursor = GetCursor();
-
-								if (reader.State == 3)
+								if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
 								{
-										if (OldState != 3)
+										var reader = new ReaderMiniGameBotanist(addon);
+										var button = addon->GetButtonNodeById(24);
+										var cursor = GetCursor();
+
+										if (reader.State == 3)
 										{
-												if (reader.SwingsLeft == 10)
+												if (OldState != 3)
 												{
-														PluginLog.Debug($"Out on a limb - GAME RESET");
-														Reset();
-												}
-												PluginLog.Debug($"Out on a limb - turn start event");
-												Next = GetNextTargetCursorPos();
-										}
-										if (OnlyRequest)
-										{
-												if (Request != null)
-												{
-														if (Math.Abs(cursor - Request.Value) < C.Tolerance)
+														if (reader.SwingsLeft == 10)
 														{
-																if (SafeClickButtonBotanist()) Request = null;
+																PluginLog.Debug($"Out on a limb - GAME RESET");
+																Reset();
+														}
+														PluginLog.Debug($"Out on a limb - turn start event");
+														Next = GetNextTargetCursorPos();
+												}
+												if (OnlyRequest)
+												{
+														if (Request != null)
+														{
+																if (Math.Abs(cursor - Request.Value) < C.Tolerance)
+																{
+																		if (SafeClickButtonBotanist()) Request = null;
+																}
+														}
+												}
+												else
+												{
+														if (Next != null)
+														{
+																if (Math.Abs(cursor - Next.Value) < C.Tolerance)
+																{
+																		if (SafeClickButtonBotanist()) Next = null;
+																}
 														}
 												}
 										}
 										else
 										{
-												if (Next != null)
+												if (OldState == 3)
 												{
-														if (Math.Abs(cursor - Next.Value) < C.Tolerance)
-														{
-																if (SafeClickButtonBotanist()) Next = null;
-														}
+														PluginLog.Debug($"Out on a limb - turn finish event");
 												}
 										}
+										OldState = reader.State;
 								}
 								else
 								{
-										if (OldState == 3)
-										{
-												PluginLog.Debug($"Out on a limb - turn finish event");
-										}
+										Exit = false;
 								}
-								OldState = reader.State;
-						}
-						else
-						{
-								Exit = false;
 						}
 				}
 		}
