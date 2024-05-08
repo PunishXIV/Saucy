@@ -1,8 +1,10 @@
 ﻿using ClickLib.Clicks;
 using Dalamud;
 using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Interface.Colors;
 using Dalamud.Memory;
 using ECommons.DalamudServices;
 using ECommons.EzEventManager;
@@ -69,7 +71,9 @@ public unsafe class LimbManager : IDisposable
 				foreach (var x in Svc.Objects)
 				{
 						//2005423	Out on a Limb	0	Out on a Limb machines	0	1	1	0	0
-						if (x.Name.ExtractText().EqualsIgnoreCase(Svc.Data.GetExcelSheet<EObjName>().GetRow(2005423).Singular.ExtractText()) && x.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.EventObj && Vector3.Distance(Player.Object.Position, x.Position) < 4)
+						//30425	Out on a Limb machine	0	Out on a Limb machines	0	1	1	0	0	Experience the heart-exploding excitement of the Gold Saucer in your own home with this authentic Out on a Limb machine.	Out on a Limb Machine	ui/icon/052000/052680.tex	1	1	14	Out on a Limb Machine	Furnishing		EquipSlotCategory#0	125	18740	1	False	True	False	False	2	0	False	False	False	ItemAction#0	2	0	adventurer	ItemRepairResource#0		0	False	False	0	1	0	0		None		0	0, 0, 0, 0	0, 0, 0, 0	adventurer	0	0	0	0	0	0	0	0	0		0		0		0		0		0		0		0		0		0		0		0		0		0	0	0	False	False	0	False
+
+						if (x.Name.ExtractText().EqualsIgnoreCaseAny(Svc.Data.GetExcelSheet<EObjName>().GetRow(2005423).Singular.ExtractText(), Svc.Data.GetExcelSheet<Item>().GetRow(30425).Singular.ExtractText()) && x.ObjectKind.EqualsAny(ObjectKind.EventObj, ObjectKind.Housing) && Vector3.Distance(Player.Object.Position, x.Position) < 4)
 						{
 								found = true;
 								if (EzThrottler.Throttle("TargetAndInteract"))
@@ -420,6 +424,17 @@ public unsafe class LimbManager : IDisposable
 				}
 		}
 
+		private Dictionary<LimbDifficulty, int[]> FPSRequirements = new()
+		{
+				[LimbDifficulty.Titan] = [480,240,120,90,60],
+				[LimbDifficulty.Morbol] = [240,120,90,60,30],
+				[LimbDifficulty.Cactuar] = [120,90,60,30,15],
+		};
+		private int CalcRequiredFPS()
+		{
+				return FPSRequirements.SafeSelect(C.LimbDifficulty)?.SafeSelect(C.Tolerance) ?? -1;
+		}
+
 		public void DrawSettings()
 		{
 				var save = false;
@@ -437,10 +452,14 @@ public unsafe class LimbManager : IDisposable
 				ImGui.SetNextItemWidth(100f);
 				save |= ImGuiEx.EnumCombo("Difficulty", ref C.LimbDifficulty);
 				ImGui.SetNextItemWidth(100f);
-				save |= ImGui.DragInt($"Tolerance", ref C.Tolerance, 0.05f);
+				save |= ImGui.DragInt($"Tolerance", ref C.Tolerance.ValidateRange(0, 4), 0.05f, 0, 4);
 				ImGui.SameLine();
 				if (ImGui.Button("Default##1")) C.Tolerance = new LimbConfig().Tolerance;
-				ImGuiEx.TextWrapped(EColor.Red, $"Warning! Tolerance of 1 requires 240 fps, 2 - 120 fps, 3 - 90 fps, 4 - 60 fps. Lesser tolerance means less errors. Lesser difficulty requires less fps.");
+				var req = CalcRequiredFPS();
+				var current = ImGui.GetIO().Framerate;
+				var delta = current - req;
+				ImGuiEx.TextWrapped(delta > -1?ImGuiColors.ParsedGreen:(delta > -(req*0.15f)?ImGuiColors.DalamudYellow:ImGuiColors.DalamudRed), $"Required framerate: {req}\nYour framerate: {(int)current}");
+				ImGuiEx.TextWrapped($"Reducing tolerance or difficulty will reduce required framerate.");
 				ImGui.SetNextItemWidth(100f);
 				save |= ImGui.DragInt($"Step", ref C.Step, 0.05f);
 				ImGui.SameLine();
