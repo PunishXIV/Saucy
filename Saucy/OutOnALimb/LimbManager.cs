@@ -49,12 +49,12 @@ public unsafe class LimbManager : IDisposable
     {
         C = conf;
         new EzFrameworkUpdate(Tick);
-        Svc.Chat.ChatMessage += this.Chat_ChatMessage;
+        Svc.Chat.ChatMessageHandled += this.Chat_ChatMessage;
     }
 
     public void Dispose()
     {
-        Svc.Chat.ChatMessage -= this.Chat_ChatMessage;
+        Svc.Chat.ChatMessageHandled -= this.Chat_ChatMessage;
     }
 
     private void InteractWithClosestLimb()
@@ -110,7 +110,7 @@ public unsafe class LimbManager : IDisposable
 				[Svc.Data.GetExcelSheet<Addon>().GetRow(9713).Text.ExtractText(true)] = HitPower.Maximum,
 		};
 
-		private void Chat_ChatMessage(XivChatType type, uint senderId, ref SeString sender, ref SeString message, ref bool isHandled)
+		private void Chat_ChatMessage(XivChatType type, uint senderId, SeString sender, SeString message)
 		{
 				if (!C.EnableLimb) return;
 				if (!Svc.Condition[ConditionFlag.OccupiedInQuestEvent]) return;
