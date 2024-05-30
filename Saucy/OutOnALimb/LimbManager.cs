@@ -99,10 +99,10 @@ public unsafe class LimbManager : IDisposable
 
 		private Dictionary<string, HitPower> HitPowerText = new()
 		{
-				[Svc.Data.GetExcelSheet<Addon>().GetRow(9706).Text.ExtractText()] = HitPower.Nothing,
-				[Svc.Data.GetExcelSheet<Addon>().GetRow(9707).Text.ExtractText()] = HitPower.Weak,
-				[Svc.Data.GetExcelSheet<Addon>().GetRow(9708).Text.ExtractText()] = HitPower.Strong,
-				[Svc.Data.GetExcelSheet<Addon>().GetRow(9709).Text.ExtractText()] = HitPower.Maximum,
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9710).Text.ExtractText(true)] = HitPower.Nothing,
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9711).Text.ExtractText(true)] = HitPower.Weak,
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9712).Text.ExtractText(true)] = HitPower.Strong,
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9713).Text.ExtractText(true)] = HitPower.Maximum,
 		};
 
 		private void Chat_ChatMessage(XivChatType type, uint senderId, ref SeString sender, ref SeString message, ref bool isHandled)
@@ -112,9 +112,9 @@ public unsafe class LimbManager : IDisposable
 				if ((int)type == 2105)
 				{
 						var s = message.ExtractText();
-						if(HitPowerText.TryGetValue(s, out var hitPower))
+						if(HitPowerText.TryGetFirst(x => s.Contains(x.Key), out var hitPower))
 						{
-								Record(hitPower);
+								Record(hitPower.Value);
 						}
 				}
 		}
@@ -201,7 +201,7 @@ public unsafe class LimbManager : IDisposable
 										if (TryGetAddonByName<AddonSelectString>("SelectString", out var ss) && IsAddonReady(&ss->AtkUnitBase))
 										{
 												var text = MemoryHelper.ReadSeString(&ss->AtkUnitBase.GetTextNodeById(2)->NodeText).ExtractText();
-												if (text.Contains(Svc.Data.GetExcelSheet<Addon>().GetRow(9994).Text.ExtractText(), StringComparison.OrdinalIgnoreCase))
+												if (text.Contains(Svc.Data.GetExcelSheet<Addon>().GetRow(9994).Text.ExtractText(true), StringComparison.OrdinalIgnoreCase))
 												{
 														if (EzThrottler.Throttle("ConfirmPlay"))
 														{
@@ -288,7 +288,7 @@ public unsafe class LimbManager : IDisposable
 								var matches = new Regex(Svc.ClientState.ClientLanguage switch
 								{
 										ClientLanguage.English => @"Current payout: ([0-9]+)",
-										ClientLanguage.French => @"Gain de PGS en cas de réussite: ([0-9]+)",
+										ClientLanguage.French => @"Gain de PGS en cas de réussite : ([0-9]+)",
 										ClientLanguage.German => @"Momentaner Gewinn: ([0-9]+)",
 										ClientLanguage.Japanese => @"MGP.([0-9]+)",
 										_ => throw new ArgumentOutOfRangeException(nameof(Svc.ClientState.ClientLanguage))
