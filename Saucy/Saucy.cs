@@ -59,7 +59,7 @@ namespace Saucy
 
         public Saucy([RequiredVersion("1.0")] DalamudPluginInterface pluginInterface)
         {
-            ECommonsMain.Init(pluginInterface, this);
+            ECommonsMain.Init(pluginInterface, this, Module.All);
             PunishLibMain.Init(pluginInterface, "Saucy", new AboutPlugin() { Sponsor = "https://ko-fi.com/taurenkey" });
 
             Config = Svc.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();

@@ -1,12 +1,9 @@
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
-using Dalamud.Utility.Signatures;
-using ECommons;
 using ECommons.DalamudServices;
 using ECommons.ImGuiMethods;
 using FFTriadBuddy;
-using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
@@ -18,7 +15,6 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using TriadBuddyPlugin;
-using static System.Windows.Forms.AxHost;
 
 
 namespace Saucy
@@ -28,7 +24,7 @@ namespace Saucy
     public unsafe class PluginUI : IDisposable
     {
         private Configuration configuration;
-        
+
         // this extra bool exists for ImGui, since you can't ref a property
         private bool visible = false;
         public bool Visible
@@ -110,15 +106,30 @@ namespace Saucy
                             DrawTriadTab();
                             ImGui.EndTabItem();
                         }
-										}
+                    }
 
-										if (ImGui.BeginTabItem("Out on a Limb"))
-										{
-												Saucy.P.LimbManager.DrawSettings();
-												ImGui.EndTabItem();
-										}
+                    if (ImGui.BeginTabItem("Out on a Limb"))
+                    {
+                        if (ImGui.BeginTabBar($"LimbTab"))
+                        {
+                            if (ImGui.BeginTabItem("Main"))
+                            {
+                                Saucy.P.LimbManager.DrawSettings();
+                                ImGui.EndTabItem();
+                            }
+                            if (ImGui.BeginTabItem($"Debug"))
+                            {
+                                Saucy.P.LimbManager.DrawDebug();
+                                ImGui.EndTabItem();
+                            }
 
-										if (ImGui.BeginTabItem("Other Games"))
+                            ImGui.EndTabBar();
+                        }
+                       
+                        ImGui.EndTabItem();
+                    }
+
+                    if (ImGui.BeginTabItem("Other Games"))
                     {
                         DrawOtherGamesTab();
                         ImGui.EndTabItem();
@@ -145,8 +156,8 @@ namespace Saucy
 
         private void DrawOtherGamesTab()
         {
-           //ImGui.Checkbox("Enable Air Force One Module", ref AirForceOneModule.ModuleEnabled);
-            
+            //ImGui.Checkbox("Enable Air Force One Module", ref AirForceOneModule.ModuleEnabled);
+
             var sliceIsRightEnabled = SliceIsRightModule.ModuleEnabled;
             if (ImGui.Checkbox("Enable Slice is Right Module", ref sliceIsRightEnabled))
             {
@@ -154,23 +165,23 @@ namespace Saucy
                 Saucy.Config.Save();
             }
 
-            if(ImGui.Checkbox("Enable Auto Mini-Cactpot", ref Saucy.Config.EnableAutoMiniCactpot))
+            if (ImGui.Checkbox("Enable Auto Mini-Cactpot", ref Saucy.Config.EnableAutoMiniCactpot))
             {
-								Saucy.Config.Save();
-						}
+                Saucy.Config.Save();
+            }
             if (Saucy.Config.EnableAutoMiniCactpot)
             {
                 const string text = "ezMiniCactpot is required to be installed and enabled for this option to work.";
 
-								var installed = Svc.PluginInterface.InstalledPlugins.Any(x => x.InternalName == "MiniCactpotSolver" && x.IsLoaded);
+                var installed = Svc.PluginInterface.InstalledPlugins.Any(x => x.InternalName == "MiniCactpotSolver" && x.IsLoaded);
                 if (installed)
                 {
                     ImGuiEx.HelpMarker(text, ImGuiColors.ParsedGreen, FontAwesomeIcon.Check.ToIconString());
-								}
+                }
                 else
                 {
-										ImGuiEx.HelpMarker(text, ImGuiColors.DalamudRed, "\uf00d");
-								}
+                    ImGuiEx.HelpMarker(text, ImGuiColors.DalamudRed, "\uf00d");
+                }
             }
         }
 
@@ -225,7 +236,7 @@ namespace Saucy
 
                 ImGui.EndTabBar();
             }
-            
+
             ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
             reset = ImGui.Button("RESET STATS (Hold Ctrl)", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y)) && ImGui.GetIO().KeyCtrl;
         }
@@ -390,7 +401,7 @@ namespace Saucy
 
             if (ImGui.Checkbox("Open Saucy When Challenging an NPC", ref autoOpen))
             {
-                configuration.OpenAutomatically= autoOpen;
+                configuration.OpenAutomatically = autoOpen;
                 configuration.Save();
             }
 
@@ -411,7 +422,7 @@ namespace Saucy
                     {
                         preview = selectedDeck >= 0 ? Saucy.TTSolver.profileGS.GetPlayerDecks()[selectedDeck].name : string.Empty;
                     }
-                   
+
                     if (ImGui.BeginCombo("Select Deck", preview))
                     {
                         if (ImGui.Selectable(""))
