@@ -50,11 +50,13 @@ public unsafe class LimbManager : IDisposable
         C = conf;
         new EzFrameworkUpdate(Tick);
         Svc.Chat.ChatMessageHandled += this.Chat_ChatMessage;
+        Svc.Chat.ChatMessageUnhandled += this.Chat_ChatMessage;
     }
 
     public void Dispose()
     {
         Svc.Chat.ChatMessageHandled -= this.Chat_ChatMessage;
+        Svc.Chat.ChatMessageUnhandled -= this.Chat_ChatMessage;
     }
 
     private void InteractWithClosestLimb()
@@ -104,22 +106,23 @@ public unsafe class LimbManager : IDisposable
 
 		private Dictionary<string, HitPower> HitPowerText = new()
 		{
-				[Svc.Data.GetExcelSheet<Addon>().GetRow(9710).Text.ExtractText(true)] = HitPower.Nothing,
-				[Svc.Data.GetExcelSheet<Addon>().GetRow(9711).Text.ExtractText(true)] = HitPower.Weak,
-				[Svc.Data.GetExcelSheet<Addon>().GetRow(9712).Text.ExtractText(true)] = HitPower.Strong,
-				[Svc.Data.GetExcelSheet<Addon>().GetRow(9713).Text.ExtractText(true)] = HitPower.Maximum,
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9710).Text.ExtractText().RemoveSpaces()] = HitPower.Nothing,
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9711).Text.ExtractText().RemoveSpaces()] = HitPower.Weak,
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9712).Text.ExtractText().RemoveSpaces()] = HitPower.Strong,
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9713).Text.ExtractText().RemoveSpaces()] = HitPower.Maximum,
 		};
 
 		private void Chat_ChatMessage(XivChatType type, uint senderId, SeString sender, SeString message)
 		{
 				if (!C.EnableLimb) return;
 				if (!Svc.Condition[ConditionFlag.OccupiedInQuestEvent]) return;
-				if ((int)type == 2105)
+        PluginLog.Information($"{type}/{message.ExtractText().RemoveSpaces()}");
+        if ((int)type == 2105)
 				{
-						var s = message.ExtractText();
-						if(HitPowerText.TryGetFirst(x => s.Contains(x.Key), out var hitPower))
+						var s = message.ExtractText().RemoveSpaces();
+						if(HitPowerText.TryGetValue(s, out var hitPower))
 						{
-								Record(hitPower.Value);
+								Record(hitPower);
 						}
 				}
 		}
@@ -205,8 +208,8 @@ public unsafe class LimbManager : IDisposable
 								{
 										if (TryGetAddonByName<AddonSelectString>("SelectString", out var ss) && IsAddonReady(&ss->AtkUnitBase))
 										{
-												var text = MemoryHelper.ReadSeString(&ss->AtkUnitBase.GetTextNodeById(2)->NodeText).ExtractText();
-												if (text.Contains(Svc.Data.GetExcelSheet<Addon>().GetRow(9994).Text.ExtractText(true), StringComparison.OrdinalIgnoreCase))
+												var text = MemoryHelper.ReadSeString(&ss->AtkUnitBase.GetTextNodeById(2)->NodeText).ExtractText().RemoveSpaces();
+												if (text.Contains(Svc.Data.GetExcelSheet<Addon>().GetRow(9994).Text.ExtractText().RemoveSpaces(), StringComparison.OrdinalIgnoreCase))
 												{
 														if (EzThrottler.Throttle("ConfirmPlay"))
 														{
