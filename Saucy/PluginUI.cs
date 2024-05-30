@@ -189,11 +189,6 @@ namespace Saucy
         {
             if (ImGui.BeginTabBar("Stats"))
             {
-                ImGui.Columns(3, "stats", false);
-                ImGui.NextColumn();
-                ImGuiEx.CenterColumnText(ImGuiColors.ParsedGold, "SAUCY STATS", true);
-                ImGui.Columns(1);
-
                 if (ImGui.BeginTabItem("Lifetime"))
                 {
                     this.DrawStatsTab(Saucy.Config.Stats, out bool reset);
@@ -234,11 +229,38 @@ namespace Saucy
                     ImGui.EndTabItem();
                 }
 
+                if (ImGui.BeginTabItem($"Out on a Limb"))
+                {
+                    DrawLimbStats(stat);
+                    ImGui.EndTabItem();
+                }
+
                 ImGui.EndTabBar();
             }
 
             ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
             reset = ImGui.Button("RESET STATS (Hold Ctrl)", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y)) && ImGui.GetIO().KeyCtrl;
+        }
+
+        private void DrawLimbStats(Stats stat)
+        {
+            ImGui.BeginChild("Limb Stats", new Vector2(0, ImGui.GetContentRegionAvail().Y - 30f), true);
+            ImGui.Columns(3, null, false);
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText(ImGuiColors.DalamudRed, "Out on a Limb", true);
+            ImGuiHelpers.ScaledDummy(10f);
+            ImGui.Columns(2, null, false);
+            ImGui.NextColumn();
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText("Games Played", true);
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText("MGP Won", true);
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText($"{stat.LimbGamesPlayed.ToString("N0")}");
+            ImGui.NextColumn();
+            ImGuiEx.CenterColumnText($"{stat.LimbMGP.ToString("N0")}");
+
+            ImGui.EndChild();
         }
 
         private void DrawCuffStats(Stats stat)

@@ -108,14 +108,14 @@ namespace Saucy.CuffACur
 
                                 FuncHook ??= Svc.Hook.HookFromAddress<UnknownFunction>(Svc.SigScanner.ScanText("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 30 0F B7 FA"), FuncDetour);
                                 FuncHook.Original((nint)addon, 0x17, 0, evt);
-                                Saucy.uiReaderCuffResults.SetIsResultsUI(true);
+                                Saucy.uiReaderGamesResults.SetIsResultsUI(true);
 
                             }
                         }
                     }
                 }
 
-                if (!Svc.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.OccupiedInQuestEvent] && !Saucy.uiReaderCuffResults.HasResultsUI)
+                if (!Svc.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.OccupiedInQuestEvent] && !Saucy.uiReaderGamesResults.HasResultsUI)
                 {
                     GameObject* cuf = (GameObject*)Svc.Objects.Where(x => (x.DataId == 2005029 && GetTargetDistance(x) <= 1f) || (x.DataId == 197370 && GetTargetDistance(x) <= 4f)).OrderByDescending(x => GetTargetDistance(x)).FirstOrDefault()?.Address;
                     if ((IntPtr)cuf == IntPtr.Zero)

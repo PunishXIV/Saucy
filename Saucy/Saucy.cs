@@ -32,7 +32,7 @@ namespace Saucy
     public sealed class Saucy : IDalamudPlugin
     {
         public string Name => "Saucy";
-        internal static Saucy P;
+        public static Saucy P;
 
         private const string commandName = "/saucy";
         public static PluginUI PluginUi { get; set; }
@@ -44,7 +44,7 @@ namespace Saucy
         public static UIReaderTriadCardList uiReaderCardList;
         public static UIReaderTriadDeckEdit uiReaderDeckEdit;
         public static UIReaderScheduler uiReaderScheduler;
-        public static UIReaderCuffResults uiReaderCuffResults;
+        public static UIReaderGamesResults uiReaderGamesResults;
         public static StatTracker statTracker;
         public static GameDataLoader dataLoader;
         public static List<Task> AirForceOneTask = new List<Task>();
@@ -93,15 +93,16 @@ namespace Saucy
             var uiReaderMatchResults = new UIReaderTriadResults(Svc.GameGui);
             uiReaderMatchResults.OnUpdated += CheckResults;
 
-            uiReaderCuffResults = new UIReaderCuffResults(Svc.GameGui);
-            uiReaderCuffResults.OnUpdated += CheckCuffResults;
+            uiReaderGamesResults = new UIReaderGamesResults(Svc.GameGui);
+            uiReaderGamesResults.OnCuffUpdated += CheckCuffResults;
+            uiReaderGamesResults.OnLimbUpdated += CheckLimbResults;
 
             uiReaderScheduler = new UIReaderScheduler(Svc.GameGui);
             uiReaderScheduler.AddObservedAddon(uiReaderGame);
             uiReaderScheduler.AddObservedAddon(uiReaderPrep.uiReaderMatchRequest);
             uiReaderScheduler.AddObservedAddon(uiReaderPrep.uiReaderDeckSelect);
             uiReaderScheduler.AddObservedAddon(uiReaderMatchResults);
-            uiReaderScheduler.AddObservedAddon(uiReaderCuffResults);
+            uiReaderScheduler.AddObservedAddon(uiReaderGamesResults);
 
             var memReaderTriadFunc = new UnsafeReaderTriadCards(Svc.SigScanner);
             GameCardDB.Get().memReader = memReaderTriadFunc;
@@ -115,6 +116,21 @@ namespace Saucy
             LimbManager = new(Config.LimbConfig);
             MiniCactpotManager = new();
 				}
+
+        private void CheckLimbResults(UIStateLimbResults results)
+        {
+            if (LimbManager.C.EnableLimb)
+            {
+                Config.UpdateStats(stats =>
+                {
+                    stats.LimbMGP += GetBonusMGP(results.numMGP);
+                    stats.LimbGamesPlayed++;
+                });
+
+                uiReaderGamesResults.SetIsResultsUI(false);
+                Saucy.Config.Save();
+            }
+        }
 
         private async void CheckCuffResults(UIStateCuffResults obj)
         {
@@ -149,7 +165,7 @@ namespace Saucy
                     }
                 }
 
-                uiReaderCuffResults.SetIsResultsUI(false);
+                uiReaderGamesResults.SetIsResultsUI(false);
                 Saucy.Config.Save();
             }
         }

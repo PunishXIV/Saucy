@@ -39,7 +39,7 @@ public unsafe class LimbManager : IDisposable
     private int MinIndex = 0;
     private bool RecordMinIndex = false;
     public int GamesToPlay = 0;
-    private LimbConfig C;
+    public LimbConfig C;
     private bool Exit = false;
 
     private static bool TidyChat =>
@@ -470,7 +470,7 @@ public unsafe class LimbManager : IDisposable
         ImGui.SetNextItemWidth(100f);
         save |= ImGuiEx.EnumCombo("Difficulty", ref C.LimbDifficulty);
         ImGui.SetNextItemWidth(100f);
-        save |= ImGui.DragInt($"Tolerance", ref C.Tolerance.ValidateRange(0, 4), 0.05f, 0, 4);
+        save |= ImGui.DragInt($"Tolerance", ref C.Tolerance.ValidateRange(1, 4), 0.05f, 1, 4);
         ImGui.SameLine();
         if (ImGui.Button("Default##1")) C.Tolerance = new LimbConfig().Tolerance;
         var req = CalcRequiredFPS();

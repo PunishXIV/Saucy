@@ -1,16 +1,23 @@
 ﻿using Dalamud.Game.Gui;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
+using Saucy.CuffACur;
+using Saucy.OutOnALimb;
+using Saucy;
 using System;
 using System.Runtime.InteropServices;
+using ECommons.DalamudServices;
+using System.Linq;
 
 namespace TriadBuddyPlugin
 {
-    public class UIReaderCuffResults : IUIReader
+    public class UIReaderGamesResults : IUIReader
     {
         private readonly IGameGui gameGui;
-        private UIStateCuffResults cachedState = new();
-        public Action<UIStateCuffResults> OnUpdated;
+        private UIStateCuffResults cuffResults = new();
+        private UIStateLimbResults limbResults = new();
+        public Action<UIStateCuffResults> OnCuffUpdated;
+        public Action<UIStateLimbResults> OnLimbUpdated;
         public Action<bool> OnResultsUIChanged;
 
         private bool needsNotify = false;
@@ -18,7 +25,7 @@ namespace TriadBuddyPlugin
         public bool HasResultsUI => hasResultsUI;
         private bool hasResultsUI;
 
-        public UIReaderCuffResults(IGameGui gameGui)
+        public UIReaderGamesResults(IGameGui gameGui)
         {
             this.gameGui = gameGui;
         }
@@ -36,7 +43,8 @@ namespace TriadBuddyPlugin
         public void OnAddonShown(IntPtr addonPtr)
         {
             needsNotify = true;
-            cachedState = new();
+            cuffResults = new();
+            limbResults = new();
         }
 
         public unsafe void OnAddonUpdate(IntPtr addonPtr)
@@ -49,13 +57,18 @@ namespace TriadBuddyPlugin
 
             if (needsNotify)
             {
-                
                 UpdateCachedState(baseNode);
 
-                if (cachedState.numMGP >= 0)
+                if (cuffResults.numMGP >= 0)
                 {
                     needsNotify = false;
-                    OnUpdated?.Invoke(cachedState);
+                    OnCuffUpdated?.Invoke(cuffResults);
+                }
+
+                if (limbResults.numMGP >= 0)
+                {
+                    needsNotify = false;
+                    OnLimbUpdated?.Invoke(limbResults);
                 }
             }
         }
@@ -72,19 +85,33 @@ namespace TriadBuddyPlugin
         private unsafe void UpdateCachedState(AtkUnitBase* baseNode)
         {
             var number = baseNode->UldManager.NodeList[4]->GetComponent()->UldManager.NodeList[2]->GetComponent()->UldManager.NodeList[1]->GetAsAtkTextNode();
-            if (!int.TryParse(number->NodeText.ToString(), out cachedState.numMGP))
+
+            if (CufModule.ModuleEnabled)
             {
-                cachedState.numMGP = -1;
+                if (!int.TryParse(number->NodeText.ToString(), out cuffResults.numMGP))
+                {
+                    cuffResults.numMGP = -1;
+                }
+
+                switch (cuffResults.numMGP)
+                {
+                    case 10:
+                        cuffResults.isBruising = true; break;
+                    case 15:
+                        cuffResults.isPunishing = true; break;
+                    case 25:
+                        cuffResults.isBrutal = true; break;
+                }
             }
 
-            switch (cachedState.numMGP)
+            if (Saucy.Saucy.P.LimbManager.C.EnableLimb)
             {
-                case 10:
-                    cachedState.isBruising = true; break;
-                case 15:
-                    cachedState.isPunishing = true; break;
-                case 25:
-                    cachedState.isBrutal = true; break;
+                if (!int.TryParse(number->NodeText.ToString().Where(Char.IsDigit).ToArray(), out limbResults.numMGP))
+                {
+                    limbResults.numMGP = -1;
+                }
+
+                Svc.Log.Debug($"{limbResults.numMGP}");
             }
 
         }
@@ -96,5 +123,10 @@ namespace TriadBuddyPlugin
         public bool isBruising;
         public bool isPunishing;
         public bool isBrutal;
+    }
+
+    public class UIStateLimbResults
+    {
+        public int numMGP;
     }
 }
