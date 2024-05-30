@@ -414,11 +414,6 @@ public unsafe class LimbManager : IDisposable
         return item.Power != HitPower.Unobserved;
     }
 
-    private bool ApproximatelyEquals(int f1, int f2)
-    {
-        return Math.Abs(f1 - f2) <= C.Tolerance;
-    }
-
     private void Record(HitPower result)
     {
         if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
@@ -470,7 +465,7 @@ public unsafe class LimbManager : IDisposable
         ImGui.SetNextItemWidth(100f);
         save |= ImGuiEx.EnumCombo("Difficulty", ref C.LimbDifficulty);
         ImGui.SetNextItemWidth(100f);
-        save |= ImGui.DragInt($"Tolerance", ref C.Tolerance.ValidateRange(0, 4), 0.05f, 0, 4);
+        save |= ImGuiEx.SliderInt($"Tolerance", ref C.Tolerance.ValidateRange(1, 4), 1, 4);
         ImGui.SameLine();
         if (ImGui.Button("Default##1")) C.Tolerance = new LimbConfig().Tolerance;
         var req = CalcRequiredFPS();
