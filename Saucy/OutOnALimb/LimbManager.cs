@@ -49,12 +49,14 @@ public unsafe class LimbManager : IDisposable
     {
         C = conf;
         new EzFrameworkUpdate(Tick);
-        Svc.Chat.ChatMessage += this.Chat_ChatMessage;
+        Svc.Chat.ChatMessageHandled += this.Chat_ChatMessage;
+        Svc.Chat.ChatMessageUnhandled += this.Chat_ChatMessage;
     }
 
     public void Dispose()
     {
-        Svc.Chat.ChatMessage -= this.Chat_ChatMessage;
+        Svc.Chat.ChatMessageHandled -= this.Chat_ChatMessage;
+        Svc.Chat.ChatMessageUnhandled -= this.Chat_ChatMessage;
     }
 
     private void InteractWithClosestLimb()
@@ -102,27 +104,28 @@ public unsafe class LimbManager : IDisposable
         }
     }
 
-    private Dictionary<string, HitPower> HitPowerText = new()
-    {
-        [Svc.Data.GetExcelSheet<Addon>().GetRow(9706).Text.ExtractText()] = HitPower.Nothing,
-        [Svc.Data.GetExcelSheet<Addon>().GetRow(9707).Text.ExtractText()] = HitPower.Weak,
-        [Svc.Data.GetExcelSheet<Addon>().GetRow(9708).Text.ExtractText()] = HitPower.Strong,
-        [Svc.Data.GetExcelSheet<Addon>().GetRow(9709).Text.ExtractText()] = HitPower.Maximum,
-    };
+		private Dictionary<string, HitPower> HitPowerText = new()
+		{
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9710).Text.ExtractText().RemoveSpaces()] = HitPower.Nothing,
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9711).Text.ExtractText().RemoveSpaces()] = HitPower.Weak,
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9712).Text.ExtractText().RemoveSpaces()] = HitPower.Strong,
+				[Svc.Data.GetExcelSheet<Addon>().GetRow(9713).Text.ExtractText().RemoveSpaces()] = HitPower.Maximum,
+		};
 
-    private void Chat_ChatMessage(XivChatType type, uint senderId, ref SeString sender, ref SeString message, ref bool isHandled)
-    {
-        if (!C.EnableLimb) return;
-        if (!Svc.Condition[ConditionFlag.OccupiedInQuestEvent]) return;
+		private void Chat_ChatMessage(XivChatType type, uint senderId, SeString sender, SeString message)
+		{
+				if (!C.EnableLimb) return;
+				if (!Svc.Condition[ConditionFlag.OccupiedInQuestEvent]) return;
+        PluginLog.Information($"{type}/{message.ExtractText().RemoveSpaces()}");
         if ((int)type == 2105)
-        {
-            var s = message.ExtractText();
-            if (HitPowerText.TryGetValue(s, out var hitPower))
-            {
-                Record(hitPower);
-            }
-        }
-    }
+				{
+						var s = message.ExtractText().RemoveSpaces();
+						if(HitPowerText.TryGetValue(s, out var hitPower))
+						{
+								Record(hitPower);
+						}
+				}
+		}
 
     private void Reset()
     {
@@ -189,31 +192,31 @@ public unsafe class LimbManager : IDisposable
         return ret;
     }
 
-    private void Tick()
-    {
-        if (!C.EnableLimb) return;
-        if (!Player.Available) return;
-        if (!IsScreenReady()) return;
-        if (GamesToPlay > 0)
-        {
-            InteractWithClosestLimb();
-        }
-        if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent])
-        {
-            {
-                if (TryGetAddonByName<AtkUnitBase>("MiniGameAimg", out var addon) && IsAddonReady(addon))
-                {
-                    if (TryGetAddonByName<AddonSelectString>("SelectString", out var ss) && IsAddonReady(&ss->AtkUnitBase))
-                    {
-                        var text = MemoryHelper.ReadSeString(&ss->AtkUnitBase.GetTextNodeById(2)->NodeText).ExtractText();
-                        if (text.Contains(Svc.Data.GetExcelSheet<Addon>().GetRow(9994).Text.ExtractText(), StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (EzThrottler.Throttle("ConfirmPlay"))
-                            {
-                                ClickSelectString.Using((nint)ss).SelectItem1();
-                            }
-                        }
-                    }
+		private void Tick()
+		{
+				if (!C.EnableLimb) return;
+				if (!Player.Available) return;
+				if (!IsScreenReady()) return;
+				if (GamesToPlay > 0)
+				{
+						InteractWithClosestLimb();
+				}
+				if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent])
+				{
+						{
+								if (TryGetAddonByName<AtkUnitBase>("MiniGameAimg", out var addon) && IsAddonReady(addon))
+								{
+										if (TryGetAddonByName<AddonSelectString>("SelectString", out var ss) && IsAddonReady(&ss->AtkUnitBase))
+										{
+												var text = MemoryHelper.ReadSeString(&ss->AtkUnitBase.GetTextNodeById(2)->NodeText).ExtractText().RemoveSpaces();
+												if (text.Contains(Svc.Data.GetExcelSheet<Addon>().GetRow(9994).Text.ExtractText().RemoveSpaces(), StringComparison.OrdinalIgnoreCase))
+												{
+														if (EzThrottler.Throttle("ConfirmPlay"))
+														{
+																ClickSelectString.Using((nint)ss).SelectItem1();
+														}
+												}
+										}
 
                     var reference = addon->GetNodeById(NodeIDs[C.LimbDifficulty]);
                     var cursor = addon->GetNodeById(39);
@@ -282,58 +285,58 @@ public unsafe class LimbManager : IDisposable
         }
     }
 
-    private void HandleYesno()
-    {
-        if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
-        {
-            var reader = new ReaderMiniGameBotanist(addon);
-            if (TryGetAddonByName<AddonSelectYesno>("SelectYesno", out var ss) && IsAddonReady(&ss->AtkUnitBase))
-            {
-                var text = MemoryHelper.ReadSeString(&ss->PromptText->NodeText).ExtractText();
-                var matches = new Regex(Svc.ClientState.ClientLanguage switch
-                {
-                    ClientLanguage.English => @"Current payout: ([0-9]+)",
-                    ClientLanguage.French => @"Gain de PGS en cas de réussite: ([0-9]+)",
-                    ClientLanguage.German => @"Momentaner Gewinn: ([0-9]+)",
-                    ClientLanguage.Japanese => @"MGP.([0-9]+)",
-                    _ => throw new ArgumentOutOfRangeException(nameof(Svc.ClientState.ClientLanguage))
-                }).Match(text);
-                if (matches.Success)
-                {
-                    var mgp = int.Parse(matches.Groups[1].Value);
-                    if (Exit)
-                    {
-                        if (EzThrottler.Throttle("Yesno", 2000)) ClickSelectYesNo.Using((nint)ss).No();
-                    }
-                    else
-                    {
-                        if (mgp >= 400)
-                        {
-                            if (reader.SecondsRemaining > C.StopAt)
-                            {
-                                if (EzThrottler.Throttle("Yesno", 2000)) ClickSelectYesNo.Using((nint)ss).Yes();
-                            }
-                            else
-                            {
-                                if (EzThrottler.Throttle("Yesno", 2000)) ClickSelectYesNo.Using((nint)ss).No();
-                            }
-                        }
-                        else
-                        {
-                            if (reader.SecondsRemaining > C.HardStopAt)
-                            {
-                                if (EzThrottler.Throttle("Yesno", 2000)) ClickSelectYesNo.Using((nint)ss).Yes();
-                            }
-                            else
-                            {
-                                if (EzThrottler.Throttle("Yesno", 2000)) ClickSelectYesNo.Using((nint)ss).No();
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+		private void HandleYesno()
+		{
+				if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
+				{
+						var reader = new ReaderMiniGameBotanist(addon);
+						if (TryGetAddonByName<AddonSelectYesno>("SelectYesno", out var ss) && IsAddonReady(&ss->AtkUnitBase))
+						{
+								var text = MemoryHelper.ReadSeString(&ss->PromptText->NodeText).ExtractText();
+								var matches = new Regex(Svc.ClientState.ClientLanguage switch
+								{
+										ClientLanguage.English => @"Current payout: ([0-9]+)",
+										ClientLanguage.French => @"Gain de PGS en cas de réussite : ([0-9]+)",
+										ClientLanguage.German => @"Momentaner Gewinn: ([0-9]+)",
+										ClientLanguage.Japanese => @"MGP.([0-9]+)",
+										_ => throw new ArgumentOutOfRangeException(nameof(Svc.ClientState.ClientLanguage))
+								}).Match(text);
+								if (matches.Success)
+								{
+										var mgp = int.Parse(matches.Groups[1].Value);
+										if (Exit)
+										{
+												if (EzThrottler.Throttle("Yesno", 2000)) ClickSelectYesNo.Using((nint)ss).No();
+										}
+										else
+										{
+												if (mgp >= 400)
+												{
+														if (reader.SecondsRemaining > C.StopAt)
+														{
+																if (EzThrottler.Throttle("Yesno", 2000)) ClickSelectYesNo.Using((nint)ss).Yes();
+														}
+														else
+														{
+																if (EzThrottler.Throttle("Yesno", 2000)) ClickSelectYesNo.Using((nint)ss).No();
+														}
+												}
+												else
+												{
+														if (reader.SecondsRemaining > C.HardStopAt)
+														{
+																if (EzThrottler.Throttle("Yesno", 2000)) ClickSelectYesNo.Using((nint)ss).Yes();
+														}
+														else
+														{
+																if (EzThrottler.Throttle("Yesno", 2000)) ClickSelectYesNo.Using((nint)ss).No();
+														}
+												}
+										}
+								}
+						}
+				}
+		}
 
     private List<HitResult> GetNext(int index, uint num)
     {
@@ -414,11 +417,6 @@ public unsafe class LimbManager : IDisposable
         return item.Power != HitPower.Unobserved;
     }
 
-    private bool ApproximatelyEquals(int f1, int f2)
-    {
-        return Math.Abs(f1 - f2) <= C.Tolerance;
-    }
-
     private void Record(HitPower result)
     {
         if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
@@ -470,7 +468,7 @@ public unsafe class LimbManager : IDisposable
         ImGui.SetNextItemWidth(100f);
         save |= ImGuiEx.EnumCombo("Difficulty", ref C.LimbDifficulty);
         ImGui.SetNextItemWidth(100f);
-        save |= ImGui.DragInt($"Tolerance", ref C.Tolerance.ValidateRange(1, 4), 0.05f, 1, 4);
+        save |= ImGuiEx.SliderInt($"Tolerance", ref C.Tolerance.ValidateRange(1, 4), 1, 4);
         ImGui.SameLine();
         if (ImGui.Button("Default##1")) C.Tolerance = new LimbConfig().Tolerance;
         var req = CalcRequiredFPS();
