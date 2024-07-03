@@ -54,7 +54,7 @@ namespace Saucy.TripleTriad
                     };
                     addon->FireCallback(2, values);
 
-                    PlaceCardHook ??= Svc.Hook.HookFromAddress<PlaceCardDelegate>(Svc.SigScanner.ScanText("40 56 48 83 EC 20 48 8B F1 E8 ?? ?? ?? ?? 83 BE"), PlaceCardDetour);
+                    PlaceCardHook ??= Svc.Hook.HookFromAddress<PlaceCardDelegate>(Svc.SigScanner.ScanText("40 56 48 83 EC ?? 48 8B F1 E8 ?? ?? ?? ?? 48 8B C8"), PlaceCardDetour);
                     PlaceCardHook.Original((IntPtr)addon);
                 }
             }
