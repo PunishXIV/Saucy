@@ -30,7 +30,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="DalamudPackager" Version="2.1.10" />
+		<PackageReference Include="DalamudPackager" Version="2.1.13" />
 		<PackageReference Include="NAudio" Version="2.1.0" />
 		<PackageReference Include="NAudio.Lame" Version="2.0.1" />
 		<ProjectReference Include="..\ClickLib\ClickLib\ClickLib.csproj" />
