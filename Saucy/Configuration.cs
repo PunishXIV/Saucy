@@ -34,7 +34,7 @@ namespace Saucy
         // the below exist just to make saving less cumbersome
 
         [NonSerialized]
-        private DalamudPluginInterface? pluginInterface;
+        private IDalamudPluginInterface? pluginInterface;
 
         public void UpdateStats(Action<Stats> updateAction)
         {
@@ -42,7 +42,7 @@ namespace Saucy
             updateAction(SessionStats);
         }
 
-        public void Initialize(DalamudPluginInterface pluginInterface)
+        public void Initialize(IDalamudPluginInterface pluginInterface)
         {
             this.pluginInterface = pluginInterface;
         }

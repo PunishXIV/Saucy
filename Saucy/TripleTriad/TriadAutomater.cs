@@ -9,9 +9,9 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel.GeneratedSheets;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using ECommons.Logging;
 using static ECommons.GenericHelpers;
 using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 
@@ -107,7 +107,7 @@ namespace Saucy.TripleTriad
 
         private static unsafe ReceiveEventDelegate GetReceiveEvent(AtkEventListener* listener)
         {
-            var receiveEventAddress = new IntPtr(listener->vfunc[2]);
+            var receiveEventAddress = new IntPtr(listener->VirtualTable->ReceiveEvent);
             return Marshal.GetDelegateForFunctionPointer<ReceiveEventDelegate>(receiveEventAddress)!;
         }
 
@@ -235,7 +235,7 @@ namespace Saucy.TripleTriad
                         var text = MemoryHelper.ReadSeString(&textNode->NodeText).ExtractText();
                         if (text.EqualsAny(s))
                         {
-                            Dalamud.Logging.PluginLog.Verbose($"SelectYesno {s} addon {i}");
+                            PluginLog.Verbose($"SelectYesno {s} addon {i}");
                             return addon;
                         }
                     }
@@ -255,7 +255,7 @@ namespace Saucy.TripleTriad
             if (atkValues == null) return;
             try
             {
-                unitBase->FireCallback(values.Length, atkValues);
+                unitBase->FireCallback((uint)values.Length, atkValues);
             }
             finally
             {

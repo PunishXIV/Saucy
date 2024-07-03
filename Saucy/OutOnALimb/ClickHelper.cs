@@ -16,7 +16,7 @@ public unsafe class ClickHelper
 
 		public static ReceiveEventDelegate GetReceiveEvent(AtkEventListener* listener)
 		{
-				var receiveEventAddress = new IntPtr(listener->vfunc[2]);
+				var receiveEventAddress = new IntPtr(listener->VirtualTable->ReceiveEvent);
 				return Marshal.GetDelegateForFunctionPointer<ReceiveEventDelegate>(receiveEventAddress)!;
 		}
 
@@ -41,7 +41,7 @@ public static unsafe class ClickHelperExtensions
 				=> ClickHelper.ClickAddonComponent(addon, target.AtkComponentBase.OwnerNode, which, type, eventData);
 
 		public static void ClickRadioButton(this AtkComponentRadioButton target, AtkComponentBase* addon, uint which, EventType type = EventType.CHANGE)
-				=> ClickHelper.ClickAddonComponent(addon, target.AtkComponentBase.OwnerNode, which, type);
+				=> ClickHelper.ClickAddonComponent(addon, target.AtkComponentButton.OwnerNode, which, type);
 
 		public static void ClickAddonButton(this AtkComponentButton target, AtkUnitBase* addon, AtkEvent* eventData)
 		{
@@ -75,10 +75,10 @@ public static unsafe class ClickHelperExtensions
 
 		public static void ClickRadioButton(this AtkComponentRadioButton target, AtkUnitBase* addon)
 		{
-				var btnRes = target.AtkComponentBase.OwnerNode->AtkResNode;
+				var btnRes = target.AtkComponentButton.OwnerNode->AtkResNode;
 				var evt = btnRes.AtkEventManager.Event;
 
 				Svc.Log.Debug($"{evt->Type} {evt->Param}");
-				addon->ReceiveEvent(evt->Type, (int)evt->Param, btnRes.AtkEventManager.Event, evt->Flags);
+				addon->ReceiveEvent(evt->Type, (int)evt->Param, btnRes.AtkEventManager.Event);
 		}
 }

@@ -1,9 +1,8 @@
-﻿using Dalamud.Data;
-using Dalamud.Logging;
-using FFTriadBuddy;
+﻿using FFTriadBuddy;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using ECommons.Logging;
 
 namespace TriadBuddyPlugin
 {
@@ -53,10 +52,10 @@ namespace TriadBuddyPlugin
                     {
                         ParseGameData(dataManager);
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         needsRetry = retryIdx > 1;
-                        PluginLog.Warning(ex, "exception while parsing! retry:{0}", needsRetry);
+                        PluginLog.Warning("exception while parsing! retry: " + needsRetry);
                     }
 
                     if (needsRetry)

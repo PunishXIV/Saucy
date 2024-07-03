@@ -1,16 +1,11 @@
 using ClickLib;
 using ClickLib.Clicks;
-using Dalamud.Data;
-using Dalamud.Game;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
-using Dalamud.Game.Gui;
-using Dalamud.IoC;
 using Dalamud.Plugin;
 using ECommons;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using ImGuiNET;
 using MgAl2O4.Utils;
 using NAudio.Wave;
 using PunishLib;
@@ -24,6 +19,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using ECommons.Logging;
 using TriadBuddyPlugin;
 using static ECommons.GenericHelpers;
 
@@ -57,7 +53,7 @@ namespace Saucy
         public LimbManager LimbManager;
         public MiniCactpotManager MiniCactpotManager;
 
-        public Saucy([RequiredVersion("1.0")] DalamudPluginInterface pluginInterface)
+        public Saucy(IDalamudPluginInterface pluginInterface)
         {
             ECommonsMain.Init(pluginInterface, this, Module.All);
             PunishLibMain.Init(pluginInterface, "Saucy", new AboutPlugin() { Sponsor = "https://ko-fi.com/taurenkey" });
@@ -289,9 +285,9 @@ namespace Saucy
                     uiReaderScheduler.Update(deltaSeconds);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Dalamud.Logging.PluginLog.Error(ex, "state update failed");
+                DuoLog.Error("state update failed");
             }
 
           

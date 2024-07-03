@@ -1,12 +1,11 @@
-﻿using Dalamud.Game.Gui;
-using Dalamud.Logging;
-using FFTriadBuddy;
+﻿using FFTriadBuddy;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
 using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using ECommons.Logging;
 
 namespace TriadBuddyPlugin
 {

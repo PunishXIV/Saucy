@@ -1,9 +1,9 @@
-﻿using Dalamud.Logging;
-using FFXIVClientStructs.FFXIV.Component.GUI;
+﻿using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using ECommons.Logging;
 
 namespace TriadBuddyPlugin
 {

@@ -1,13 +1,11 @@
 ﻿using Dalamud;
-using Dalamud.Data;
 using Dalamud.Game;
 using Dalamud.Game.Command;
-using Dalamud.Game.Gui;
 using Dalamud.Interface.Windowing;
-using Dalamud.Logging;
 using Dalamud.Plugin;
 using MgAl2O4.Utils;
 using System;
+using ECommons.Logging;
 
 namespace TriadBuddyPlugin
 {
@@ -15,7 +13,7 @@ namespace TriadBuddyPlugin
     {
         public string Name => "Triad Buddy";
 
-        public readonly DalamudPluginInterface pluginInterface;
+        public readonly IDalamudPluginInterface pluginInterface;
         public readonly ICommandManager commandManager;
         public readonly IFramework framework;
         public readonly IDataManager dataManager;
@@ -40,7 +38,7 @@ namespace TriadBuddyPlugin
 
         private Configuration configuration { get; init; }
 
-        public Plugin(DalamudPluginInterface pluginInterface, IFramework framework, ICommandManager commandManager, IGameGui gameGui, IDataManager dataManager, SigScanner sigScanner)
+        public Plugin(IDalamudPluginInterface pluginInterface, IFramework framework, ICommandManager commandManager, IGameGui gameGui, IDataManager dataManager, SigScanner sigScanner)
         {
             this.pluginInterface = pluginInterface;
             this.commandManager = commandManager;
@@ -176,7 +174,7 @@ namespace TriadBuddyPlugin
             }
             catch (Exception ex)
             {
-                PluginLog.Error(ex, "state update failed");
+                PluginLog.Error("state update failed: " + ex);
             }
         }
     }

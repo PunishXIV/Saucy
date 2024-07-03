@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
-using Dalamud.Interface;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using ImGuiNET;
@@ -83,9 +82,9 @@ internal static class SliceIsRightModule
         return Vector3.Distance(localPlayer != null ? localPlayer.Position : Vector3.Zero, center);
     }
 
-    private static void RenderObject(GameObject gameObject, int model, float? radius = null)
+    private static void RenderObject(IGameObject gameObject, int model, float? radius = null)
     {
-        if (ObjectsAndSpawnTime.TryGetValue(gameObject.ObjectId, out var dateTime))
+        if (ObjectsAndSpawnTime.TryGetValue(gameObject.EntityId, out var dateTime))
         {
             if (dateTime.AddSeconds(5) > DateTime.Now) return;
 
@@ -112,11 +111,11 @@ internal static class SliceIsRightModule
         }
         else
         {
-            ObjectsAndSpawnTime.Add(gameObject.ObjectId, DateTime.Now);
+            ObjectsAndSpawnTime.Add(gameObject.EntityId, DateTime.Now);
         }
     }
     
-    private static void DrawRectWorld(GameObject gameObject, float rotation, float length, float width, uint colour)
+    private static void DrawRectWorld(IGameObject gameObject, float rotation, float length, float width, uint colour)
     {
         BeginRender(gameObject.Address + gameObject.Rotation.ToString(CultureInfo.InvariantCulture));
         var position = gameObject.Position;
@@ -169,7 +168,7 @@ internal static class SliceIsRightModule
         EndRender();
     }
 
-    private static void DrawFilledCircleWorld(GameObject gameObject, float radius, uint colour)
+    private static void DrawFilledCircleWorld(IGameObject gameObject, float radius, uint colour)
     {
         BeginRender(gameObject.Address.ToString());
         var position = gameObject.Position;

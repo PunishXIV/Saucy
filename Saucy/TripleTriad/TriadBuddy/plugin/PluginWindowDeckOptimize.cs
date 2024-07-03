@@ -1,21 +1,19 @@
 ﻿using Dalamud;
-using Dalamud.Data;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
-using Dalamud.Interface.Internal;
 using Dalamud.Interface.Windowing;
-using Dalamud.Logging;
 using ECommons.DalamudServices;
 using FFTriadBuddy;
 using ImGuiNET;
-using ImGuiScene;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Dalamud.Interface.Textures;
+using ECommons.Logging;
 
 namespace TriadBuddyPlugin
 {
-    public class PluginWindowDeckOptimize : Window, IDisposable
+    public class PluginWindowDeckOptimize : Window
     {
         private readonly Vector4 colorSetupData = new Vector4(0.9f, 0.9f, 0.0f, 1);
         private readonly Vector4 colorResultData = new Vector4(0.0f, 0.9f, 0.9f, 1);
@@ -53,8 +51,8 @@ namespace TriadBuddyPlugin
         private TriadDeck bestDeck;
         private SolverResult bestWinChance;
 
-        private Dictionary<int, IDalamudTextureWrap> mapCardImages = new();
-        private IDalamudTextureWrap cardBackgroundImage;
+        private Dictionary<int, ISharedImmediateTexture> mapCardImages = new();
+        private ISharedImmediateTexture cardBackgroundImage;
 
         private Vector2 cardBackgroundUV0 = new(0.0f, 0.0f);
         private Vector2 cardBackgroundUV1 = new(1.0f, 1.0f);
@@ -83,8 +81,8 @@ namespace TriadBuddyPlugin
             deckOptimizer = (solver != null) ? solver.deckOptimizer : new TriadDeckOptimizer();
             deckOptimizer.OnFoundDeck += DeckOptimizer_OnFoundDeck;
 
-            cardBackgroundImage = Svc.Texture.GetTextureFromGame("ui/uld/CardTripleTriad.tex");
-            cardBackgroundUV1.Y = (cardBackgroundImage != null) ? (cardImageSize.Y / cardBackgroundImage.Height) : 1.0f;
+            cardBackgroundImage = Svc.Texture.GetFromGame("ui/uld/CardTripleTriad.tex");
+            cardBackgroundUV1.Y = (cardBackgroundImage != null) ? (cardImageSize.Y / cardBackgroundImage.GetWrapOrEmpty().Height) : 1.0f;
 
             cardImagePos[0] = new Vector2(0, 0);
             cardImagePos[1] = new Vector2(cardImageSize.X + 5, 0);
@@ -114,15 +112,6 @@ namespace TriadBuddyPlugin
                 {
                     pendingCardIds[idx] = deck.knownCards[idx].Id;
                 }
-            }
-        }
-
-        public void Dispose()
-        {
-            cardBackgroundImage.Dispose();
-            foreach (var kvp in mapCardImages)
-            {
-                kvp.Value.Dispose();
             }
         }
 
@@ -207,7 +196,7 @@ namespace TriadBuddyPlugin
             uiReaderDeckEdit?.SetHighlightedCards(shownCardIds);
         }
 
-        private IDalamudTextureWrap GetCardTexture(int cardId)
+        private ISharedImmediateTexture GetCardTexture(int cardId)
         {
             if (mapCardImages.TryGetValue(cardId, out var texWrap))
             {
@@ -215,7 +204,7 @@ namespace TriadBuddyPlugin
             }
 
             uint iconId = TriadCardDB.GetCardTextureId(cardId);
-            var newTexWrap = Svc.Texture.GetIcon(iconId);
+            var newTexWrap = Svc.Texture.GetFromGameIcon(iconId);
             mapCardImages.Add(cardId, newTexWrap);
 
             return newTexWrap;
@@ -350,7 +339,7 @@ namespace TriadBuddyPlugin
         private void DrawCard(Vector2 drawPos, int cardId, int tooltipIdx)
         {
             ImGui.SetCursorPos(drawPos);
-            ImGui.Image(cardBackgroundImage.ImGuiHandle, cardImageSize, cardBackgroundUV0, cardBackgroundUV1);
+            ImGui.Image(cardBackgroundImage.GetWrapOrEmpty().ImGuiHandle, cardImageSize, cardBackgroundUV0, cardBackgroundUV1);
 
             var cardImage = (cardId >= 0) ? GetCardTexture(cardId) : null;
             if (cardImage != null)
@@ -358,7 +347,7 @@ namespace TriadBuddyPlugin
                 ImGui.SetCursorPos(drawPos);
                 var drawOffset = ImGui.GetCursorScreenPos();
 
-                ImGui.Image(cardImage.ImGuiHandle, cardImageSize);
+                ImGui.Image(cardImage.GetWrapOrEmpty().ImGuiHandle, cardImageSize);
 
                 if (ImGui.IsItemHovered())
                 {
@@ -581,12 +570,6 @@ namespace TriadBuddyPlugin
             }
 
             uiReaderDeckEdit?.OnDeckOptimizerVisible(false);
-
-            // free cached card images on window close
-            foreach (var kvp in mapCardImages)
-            {
-                kvp.Value.Dispose();
-            }
             mapCardImages.Clear();
         }
     }

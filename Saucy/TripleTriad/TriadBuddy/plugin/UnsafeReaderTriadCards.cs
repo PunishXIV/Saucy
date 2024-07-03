@@ -1,7 +1,7 @@
 ﻿using Dalamud.Game;
-using Dalamud.Logging;
 using System;
 using System.Runtime.InteropServices;
+using ECommons.Logging;
 
 namespace TriadBuddyPlugin
 {
@@ -43,7 +43,7 @@ namespace TriadBuddyPlugin
                 }
                 catch (Exception ex)
                 {
-                    PluginLog.Error(ex, "oh noes!");
+                    PluginLog.Error("oh noes!");
                 }
             }
 

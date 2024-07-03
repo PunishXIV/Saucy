@@ -1,20 +1,18 @@
 ﻿using Dalamud;
-using Dalamud.Data;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
-using Dalamud.Interface.Internal;
+using Dalamud.Interface.Textures;
 using Dalamud.Interface.Windowing;
 using ECommons.DalamudServices;
 using FFTriadBuddy;
 using ImGuiNET;
-using ImGuiScene;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 
 namespace TriadBuddyPlugin
 {
-    public class PluginWindowStatus : Window, IDisposable
+    public class PluginWindowStatus : Window
     {
         private readonly UIReaderTriadGame uiReaderGame;
         private readonly UIReaderTriadPrep uiReaderPrep;
@@ -25,7 +23,7 @@ namespace TriadBuddyPlugin
         public bool showConfigs = false;
         private bool showDebugDetails;
         private float orgDrawPosX;
-        private Dictionary<int, IDalamudTextureWrap> mapCardImages = new();
+        private Dictionary<int, ISharedImmediateTexture> mapCardImages = new();
         private const float debugCellSize = 30.0f;
         private const float debugCellPading = 4.0f;
 
@@ -76,14 +74,6 @@ namespace TriadBuddyPlugin
             CacheLocalization();
         }
 
-        public void Dispose()
-        {
-            foreach (var kvp in mapCardImages)
-            {
-                kvp.Value.Dispose();
-            }
-        }
-
         private void CacheLocalization()
         {
             locStatus = Localization.Localize("ST_Status", "Status:");
@@ -118,11 +108,6 @@ namespace TriadBuddyPlugin
 
         public override void OnClose()
         {
-            // release all images collected so far
-            foreach (var kvp in mapCardImages)
-            {
-                kvp.Value.Dispose();
-            }
             mapCardImages.Clear();
         }
 
@@ -454,7 +439,7 @@ namespace TriadBuddyPlugin
             if (cardOb != null && cardOb.IsValid())
             {
                 var texture = GetCardTexture(cardOb.Id);
-                drawList.AddImage(texture.ImGuiHandle,
+                drawList.AddImage(texture.GetWrapOrEmpty().ImGuiHandle,
                     pos + new Vector2(debugCellPading, debugCellPading),
                     pos + new Vector2(debugCellPading + debugCellSize, debugCellPading + debugCellSize));
             }
@@ -488,7 +473,7 @@ namespace TriadBuddyPlugin
             pos.Y += debugCellSize + debugCellPading * 2;
         }
 
-        private IDalamudTextureWrap GetCardTexture(int cardId)
+        private ISharedImmediateTexture GetCardTexture(int cardId)
         {
             if (mapCardImages.TryGetValue(cardId, out var texWrap))
             {
@@ -496,7 +481,7 @@ namespace TriadBuddyPlugin
             }
 
             uint iconId = TriadCardDB.GetCardIconTextureId(cardId);
-            var newTexWrap = Svc.Texture.GetIcon(iconId);
+            var newTexWrap = Svc.Texture.GetFromGameIcon(iconId);
             mapCardImages.Add(cardId, newTexWrap);
 
             return newTexWrap;

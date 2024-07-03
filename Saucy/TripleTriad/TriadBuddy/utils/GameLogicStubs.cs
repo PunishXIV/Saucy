@@ -1,6 +1,6 @@
-﻿using Dalamud.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using ECommons.Logging;
 
 // also know as: i should've made gamelogic into a library
 //

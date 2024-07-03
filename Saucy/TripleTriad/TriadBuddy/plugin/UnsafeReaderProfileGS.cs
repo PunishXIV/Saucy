@@ -1,9 +1,8 @@
-﻿using Dalamud.Game.Gui;
-using Dalamud.Logging;
-using Dalamud.Memory;
+﻿using Dalamud.Memory;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using System;
 using System.Runtime.InteropServices;
+using ECommons.Logging;
 
 namespace TriadBuddyPlugin
 {
@@ -79,7 +78,7 @@ namespace TriadBuddyPlugin
                 if (uiModulePtr != IntPtr.Zero)
                 {
                     // would be a nice place to use gameGui.address.GetVirtualFunction<> :(
-                    var getGSProfileDataPtr = new IntPtr(((UIModule*)uiModulePtr)->vfunc[29]);
+                    var getGSProfileDataPtr = new IntPtr(((UIModule*)uiModulePtr)->VirtualTable->GetGoldSaucerModule);
                     var getGSProfileData = Marshal.GetDelegateForFunctionPointer<GetGSProfileDataDelegate>(getGSProfileDataPtr);
 
                     var profileData = getGSProfileData(uiModulePtr);
@@ -116,7 +115,7 @@ namespace TriadBuddyPlugin
             }
             catch (Exception ex)
             {
-                PluginLog.Error(ex, "Failed to read GS profile data, turning reader off");
+                PluginLog.Error("Failed to read GS profile data, turning reader off");
                 HasErrors = true;
             }
 

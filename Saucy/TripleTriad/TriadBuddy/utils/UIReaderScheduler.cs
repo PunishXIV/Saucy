@@ -1,5 +1,4 @@
-﻿using Dalamud.Game.Gui;
-using FFXIVClientStructs.FFXIV.Component.GUI;
+﻿using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
 
@@ -107,7 +106,7 @@ namespace MgAl2O4.Utils
             if (addonPtr != IntPtr.Zero)
             {
                 var baseNode = (AtkUnitBase*)addonPtr;
-                if (baseNode->RootNode != null && baseNode->RootNode->IsVisible)
+                if (baseNode->RootNode != null && baseNode->RootNode->IsVisible())
                 {
                     return addonPtr;
                 }

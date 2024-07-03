@@ -1,5 +1,4 @@
-﻿using Dalamud.Game.Gui;
-using FFXIVClientStructs.FFXIV.Component.GUI;
+﻿using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
 using System;
 using System.Runtime.InteropServices;
@@ -102,9 +101,9 @@ namespace TriadBuddyPlugin
             var nodeArrResult0 = GUINodeUtils.GetImmediateChildNodes(nodeResult);
             if (nodeArrResult0 != null && nodeArrResult0.Length == 3)
             {
-                cachedState.isDraw = (nodeArrResult0[0] != null) ? nodeArrResult0[0]->IsVisible : false;
-                cachedState.isLose = (nodeArrResult0[1] != null) ? nodeArrResult0[1]->IsVisible : false;
-                cachedState.isWin = (nodeArrResult0[2] != null) ? nodeArrResult0[2]->IsVisible : false;
+                cachedState.isDraw = (nodeArrResult0[0] != null) ? nodeArrResult0[0]->IsVisible() : false;
+                cachedState.isLose = (nodeArrResult0[1] != null) ? nodeArrResult0[1]->IsVisible() : false;
+                cachedState.isWin = (nodeArrResult0[2] != null) ? nodeArrResult0[2]->IsVisible() : false;
             }
         }
     }

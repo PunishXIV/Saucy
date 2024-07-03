@@ -1,6 +1,6 @@
-﻿using Dalamud.Logging;
-using FFTriadBuddy;
+﻿using FFTriadBuddy;
 using System;
+using ECommons.Logging;
 
 namespace TriadBuddyPlugin
 {

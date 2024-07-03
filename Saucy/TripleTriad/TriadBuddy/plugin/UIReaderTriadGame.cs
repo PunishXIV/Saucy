@@ -1,11 +1,10 @@
-﻿using Dalamud.Game.Gui;
-using Dalamud.Logging;
-using FFXIVClientStructs.FFXIV.Component.GUI;
+﻿using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using ECommons.Logging;
 
 namespace TriadBuddyPlugin
 {
@@ -15,32 +14,32 @@ namespace TriadBuddyPlugin
         private unsafe struct AddonTripleTriad
         {
             [FieldOffset(0x0)] public AtkUnitBase AtkUnitBase;
-            [FieldOffset(0x220)] public byte TurnState;                 // 0: waiting, 1: normal move, 2: masked move (order/chaos)
+            [FieldOffset(0x230)] public byte TurnState;                 // 0: waiting, 1: normal move, 2: masked move (order/chaos)
 
-            [FieldOffset(0x228)] public AddonTripleTriadCard BlueDeck0;
-            [FieldOffset(0x2d0)] public AddonTripleTriadCard BlueDeck1;
-            [FieldOffset(0x378)] public AddonTripleTriadCard BlueDeck2;
-            [FieldOffset(0x420)] public AddonTripleTriadCard BlueDeck3;
-            [FieldOffset(0x4c8)] public AddonTripleTriadCard BlueDeck4;
+            [FieldOffset(0x238)] public AddonTripleTriadCard BlueDeck0; // 2be = end of numbers
+            [FieldOffset(0x2e0)] public AddonTripleTriadCard BlueDeck1; // 366 = end of numbers
+            [FieldOffset(0x388)] public AddonTripleTriadCard BlueDeck2;
+            [FieldOffset(0x430)] public AddonTripleTriadCard BlueDeck3;
+            [FieldOffset(0x4d8)] public AddonTripleTriadCard BlueDeck4;
 
-            [FieldOffset(0x570)] public AddonTripleTriadCard RedDeck0;
-            [FieldOffset(0x618)] public AddonTripleTriadCard RedDeck1;
-            [FieldOffset(0x6c0)] public AddonTripleTriadCard RedDeck2;
-            [FieldOffset(0x768)] public AddonTripleTriadCard RedDeck3;
-            [FieldOffset(0x810)] public AddonTripleTriadCard RedDeck4;
+            [FieldOffset(0x580)] public AddonTripleTriadCard RedDeck0;
+            [FieldOffset(0x628)] public AddonTripleTriadCard RedDeck1;
+            [FieldOffset(0x6d0)] public AddonTripleTriadCard RedDeck2;
+            [FieldOffset(0x778)] public AddonTripleTriadCard RedDeck3;
+            [FieldOffset(0x820)] public AddonTripleTriadCard RedDeck4;
 
-            [FieldOffset(0x8b8)] public AddonTripleTriadCard Board0;
-            [FieldOffset(0x960)] public AddonTripleTriadCard Board1;
-            [FieldOffset(0xa08)] public AddonTripleTriadCard Board2;
-            [FieldOffset(0xab0)] public AddonTripleTriadCard Board3;
-            [FieldOffset(0xb58)] public AddonTripleTriadCard Board4;
-            [FieldOffset(0xc00)] public AddonTripleTriadCard Board5;
-            [FieldOffset(0xca8)] public AddonTripleTriadCard Board6;
-            [FieldOffset(0xd50)] public AddonTripleTriadCard Board7;
-            [FieldOffset(0xdf8)] public AddonTripleTriadCard Board8;
+            [FieldOffset(0x8c8)] public AddonTripleTriadCard Board0;
+            [FieldOffset(0x970)] public AddonTripleTriadCard Board1;
+            [FieldOffset(0xa18)] public AddonTripleTriadCard Board2;
+            [FieldOffset(0xac0)] public AddonTripleTriadCard Board3;
+            [FieldOffset(0xb68)] public AddonTripleTriadCard Board4;
+            [FieldOffset(0xc10)] public AddonTripleTriadCard Board5;
+            [FieldOffset(0xcb8)] public AddonTripleTriadCard Board6;
+            [FieldOffset(0xd60)] public AddonTripleTriadCard Board7;
+            [FieldOffset(0xe08)] public AddonTripleTriadCard Board8;
 
-            [FieldOffset(0xf88)] public byte NumCardsBlue;
-            [FieldOffset(0xf89)] public byte NumCardsRed;
+            [FieldOffset(0xf98)] public byte NumCardsBlue;
+            [FieldOffset(0xf99)] public byte NumCardsRed;
 
             // 0xFCA - int timer blue?
             // 0xFB0 - int timer red?
@@ -271,7 +270,7 @@ namespace TriadBuddyPlugin
         {
             // verify, is that for both pvp and tournament games?
             var nodePvPButton = GUINodeUtils.PickNode(level0, 11, 12);
-            if (nodePvPButton != null && nodePvPButton->IsVisible)
+            if (nodePvPButton != null && nodePvPButton->IsVisible())
             {
                 return true;
             }

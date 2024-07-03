@@ -1,5 +1,4 @@
-﻿using Dalamud.Configuration;
-using Dalamud.Plugin;
+﻿using Dalamud.Plugin;
 using System;
 using System.Collections.Generic;
 
@@ -34,9 +33,9 @@ namespace TriadBuddyPlugin
         public Dictionary<int, NpcStatInfo> NpcStats { get; set; } = new();
 
         [NonSerialized]
-        private DalamudPluginInterface pluginInterface;
+        private IDalamudPluginInterface pluginInterface;
 
-        public void Initialize(DalamudPluginInterface pluginInterface)
+        public void Initialize(IDalamudPluginInterface pluginInterface)
         {
             this.pluginInterface = pluginInterface;
         }

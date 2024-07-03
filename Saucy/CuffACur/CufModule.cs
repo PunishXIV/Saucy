@@ -126,13 +126,13 @@ namespace Saucy.CuffACur
                     tg->InteractWithObject(cuf);
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
 
             }
         }
 
-        public static float GetTargetDistance(Dalamud.Game.ClientState.Objects.Types.GameObject target)
+        public static float GetTargetDistance(IGameObject target)
         {
 
             var LocalPlayer = Svc.ClientState.LocalPlayer;
@@ -140,7 +140,7 @@ namespace Saucy.CuffACur
             if (LocalPlayer is null)
                 return 0;
 
-            if (target.ObjectId == LocalPlayer.ObjectId)
+            if (target.EntityId == LocalPlayer.EntityId)
                 return 0;
 
             Vector2 position = new(target.Position.X, target.Position.Z);

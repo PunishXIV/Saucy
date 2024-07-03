@@ -6,7 +6,6 @@ using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Interface.Colors;
 using Dalamud.Memory;
-using ECommons.Automation;
 using ECommons.DalamudServices;
 using ECommons.EzEventManager;
 using ECommons.GameHelpers;
@@ -24,6 +23,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text.RegularExpressions;
+using Dalamud.Game;
 using static ECommons.GenericHelpers;
 
 namespace Saucy.OutOnALimb;
@@ -112,18 +112,18 @@ public unsafe class LimbManager : IDisposable
 				[Svc.Data.GetExcelSheet<Addon>().GetRow(9713).Text.ExtractText().RemoveSpaces()] = HitPower.Maximum,
 		};
 
-		private void Chat_ChatMessage(XivChatType type, uint senderId, SeString sender, SeString message)
+		private void Chat_ChatMessage(XivChatType type, int timestamp, SeString sender, SeString message)
 		{
 				if (!C.EnableLimb) return;
 				if (!Svc.Condition[ConditionFlag.OccupiedInQuestEvent]) return;
-        PluginLog.Information($"{type}/{message.ExtractText().RemoveSpaces()}");
-        if ((int)type == 2105)
+                PluginLog.Information($"{type}/{message.ExtractText().RemoveSpaces()}");
+                if ((int)type == 2105)
 				{
-						var s = message.ExtractText().RemoveSpaces();
-						if(HitPowerText.TryGetValue(s, out var hitPower))
-						{
-								Record(hitPower);
-						}
+				    var s = message.ExtractText().RemoveSpaces();
+				    if(HitPowerText.TryGetValue(s, out var hitPower))
+				    {
+						    Record(hitPower);
+				    }
 				}
 		}
 
