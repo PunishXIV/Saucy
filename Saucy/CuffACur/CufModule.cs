@@ -1,13 +1,9 @@
-﻿using ClickLib.Clicks;
-using Dalamud.Game.ClientState.Objects.Types;
-using Dalamud.Hooking;
+﻿using Dalamud.Hooking;
 using ECommons.DalamudServices;
-using FFXIVClientStructs.FFXIV.Client.Game;
+using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
-using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using Lumina.Excel.GeneratedSheets;
 using System;
 using System.Linq;
 using System.Numerics;
@@ -40,7 +36,7 @@ namespace Saucy.CuffACur
                     {
                         try
                         {
-                            ClickSelectString.Using((IntPtr)startMenu).SelectItem1();
+                            new AddonMaster.SelectString(startMenu).Entry1();
                             return;
                         }
                         catch
@@ -132,7 +128,7 @@ namespace Saucy.CuffACur
             }
         }
 
-        public static float GetTargetDistance(Dalamud.Game.ClientState.Objects.Types.GameObject target)
+        public static float GetTargetDistance(Dalamud.Game.ClientState.Objects.Types.IGameObject target)
         {
 
             var LocalPlayer = Svc.ClientState.LocalPlayer;
@@ -140,7 +136,7 @@ namespace Saucy.CuffACur
             if (LocalPlayer is null)
                 return 0;
 
-            if (target.ObjectId == LocalPlayer.ObjectId)
+            if (target.GameObjectId == LocalPlayer.GameObjectId)
                 return 0;
 
             Vector2 position = new(target.Position.X, target.Position.Z);

@@ -134,7 +134,7 @@ namespace TriadBuddyPlugin
 
                             var solverCardDesc = solverCardOb != null ? solverCardOb.Name.GetCodeName() : "??";
                             var forcedCardDesc = forcedCardOb != null ? forcedCardOb.Name.GetCodeName() : "??";
-                            Dalamud.Logging.PluginLog.Warning($"Solver selected card [{moveCardIdx}]:{solverCardDesc}, but game wants: [{screenMemory.gameState.forcedCardIdx}]:{forcedCardDesc} !");
+                            PluginLog.Warning($"Solver selected card [{moveCardIdx}]:{solverCardDesc}, but game wants: [{screenMemory.gameState.forcedCardIdx}]:{forcedCardDesc} !");
 
                             moveCardIdx = screenMemory.gameState.forcedCardIdx;
                             solverCardOb = forcedCardOb;

@@ -1,13 +1,14 @@
 ﻿using Dalamud;
-using Dalamud.Game.Gui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
+using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using TriadBuddy;
 
 namespace TriadBuddyPlugin
 {
@@ -16,8 +17,6 @@ namespace TriadBuddyPlugin
         private const float WindowContentWidth = 270.0f;
 
         private readonly UIReaderTriadCardList uiReaderCardList;
-        private readonly IGameGui gameGui;
-        private readonly Configuration config;
         private readonly PluginWindowNpcStats statsWindow;
 
         private List<Tuple<TriadCard, GameCardInfo>> listCards = new();
@@ -36,24 +35,23 @@ namespace TriadBuddyPlugin
         private bool hideNpcBeatenOnce = false;
         private bool hideNpcCompleted = false;
 
-        private string locNpcOnly;
-        private string locNotOwnedOnly;
-        private string locFilterActive;
-        private string locHideBeatenNpc;
-        private string locHideCompletedNpc;
-        private string locTabCards;
-        private string locTabNpc;
-        private string locNpcReward;
-        private string locShowOnMap;
-        private string locNoAvail;
-        private string locNpcStats;
-        private string locEstMGP;
+        private string? locNpcOnly;
+        private string? locNotOwnedOnly;
+        private string? locFilterActive;
+        private string? locHideBeatenNpc;
+        private string? locHideCompletedNpc;
+        private string? locTabCards;
+        private string? locTabNpc;
+        private string? locNpcReward;
+        private string? locShowOnMap;
+        private string? locNoAvail;
+        private string? locNpcStats;
+        private string? locEstMGP;
+        private bool hasCachedLocStrings;
 
-        public PluginWindowCardSearch(UIReaderTriadCardList uiReaderCardList, IGameGui gameGui, Configuration config, PluginWindowNpcStats statsWindow) : base("Card Search")
+        public PluginWindowCardSearch(UIReaderTriadCardList uiReaderCardList, PluginWindowNpcStats statsWindow) : base("Card Search")
         {
             this.uiReaderCardList = uiReaderCardList;
-            this.gameGui = gameGui;
-            this.config = config;
             this.statsWindow = statsWindow;
 
             var searchFilterCardPtr = ImGuiNative.ImGuiTextFilter_ImGuiTextFilter(null);
@@ -66,12 +64,12 @@ namespace TriadBuddyPlugin
             uiReaderCardList.OnUIStateChanged += OnUIStateChanged;
             UpdateWindowData();
 
-            if (config != null)
+            if (Service.pluginConfig != null)
             {
-                showNpcMatchesOnly = config.CheckCardNpcMatchOnly;
-                showNotOwnedOnly = config.CheckCardNotOwnedOnly;
-                hideNpcBeatenOnce = config.CheckNpcHideBeaten;
-                hideNpcCompleted = config.CheckNpcHideCompleted;
+                showNpcMatchesOnly = Service.pluginConfig.CheckCardNpcMatchOnly;
+                showNotOwnedOnly = Service.pluginConfig.CheckCardNotOwnedOnly;
+                hideNpcBeatenOnce = Service.pluginConfig.CheckNpcHideBeaten;
+                hideNpcCompleted = Service.pluginConfig.CheckNpcHideCompleted;
             }
 
             // doesn't matter will be updated on next draw
@@ -92,8 +90,10 @@ namespace TriadBuddyPlugin
                 ImGuiWindowFlags.NoFocusOnAppearing |
                 ImGuiWindowFlags.NoNav;
 
-            Plugin.CurrentLocManager.LocalizationChanged += (_) => CacheLocalization();
-            CacheLocalization();
+            if (Plugin.CurrentLocManager != null)
+            {
+                Plugin.CurrentLocManager.LocalizationChanged += (_) => { hasCachedLocStrings = false; };
+            }
         }
 
         public void Dispose()
@@ -102,8 +102,11 @@ namespace TriadBuddyPlugin
             ImGuiNative.ImGuiTextFilter_destroy(searchFilterNpc.NativePtr);
         }
 
-        private void CacheLocalization()
+        private void UpdateLocalizationCache()
         {
+            if (hasCachedLocStrings) { return; }
+            hasCachedLocStrings = true;
+
             locNpcOnly = Localization.Localize("CS_NpcOnly", "NPC matches only");
             locNotOwnedOnly = Localization.Localize("CS_NotOwnedOnly", "Not owned only");
             locFilterActive = Localization.Localize("CS_FilterActive", "(Collection filtering is active)");
@@ -171,7 +174,7 @@ namespace TriadBuddyPlugin
 
                 if (listCards.Count > 1)
                 {
-                    listCards.Sort((a, b) => a.Item1.Name.GetLocalized().CompareTo(b.Item1.Name.GetLocalized()));
+                    listCards.Sort((a, b) => a.Item1.SortOrder.CompareTo(b.Item1.SortOrder));
                 }
 
                 selectedCardIdx = -1;
@@ -187,6 +190,8 @@ namespace TriadBuddyPlugin
         {
             if (ImGui.BeginTabBar("##CollectionSearch", ImGuiTabBarFlags.None))
             {
+                UpdateLocalizationCache();
+
                 if (ImGui.BeginTabItem(locTabCards))
                 {
                     DrawCardsTab();
@@ -219,11 +224,11 @@ namespace TriadBuddyPlugin
                         continue;
                     }
 
-                    var itemDesc = cardOb.Name.GetLocalized();
+                    var itemDesc = $"[{CardUtils.GetOrderDesc(cardOb)}] {CardUtils.GetRarityDesc(cardOb)} {CardUtils.GetUIDesc(cardOb)}";
                     if (searchFilterCard.PassFilter(itemDesc))
                     {
                         bool isSelected = selectedCardIdx == idx;
-                        if (ImGui.Selectable($"{(int)cardOb.Rarity + 1}★   {itemDesc}", isSelected))
+                        if (ImGui.Selectable(itemDesc, isSelected))
                         {
                             selectedCardIdx = idx;
                             OnCardSelectionChanged();
@@ -241,10 +246,10 @@ namespace TriadBuddyPlugin
             ImGui.Spacing();
             if (ImGui.Checkbox(locNpcOnly, ref showNpcMatchesOnly))
             {
-                if (config != null)
+                if (Service.pluginConfig != null)
                 {
-                    config.CheckCardNpcMatchOnly = showNpcMatchesOnly;
-                    config.Save();
+                    Service.pluginConfig.CheckCardNpcMatchOnly = showNpcMatchesOnly;
+                    Service.pluginConfig.Save();
                 }
             }
 
@@ -252,10 +257,10 @@ namespace TriadBuddyPlugin
             {
                 if (ImGui.Checkbox(locNotOwnedOnly, ref showNotOwnedOnly))
                 {
-                    if (config != null)
+                    if (Service.pluginConfig != null)
                     {
-                        config.CheckCardNotOwnedOnly = showNotOwnedOnly;
-                        config.Save();
+                        Service.pluginConfig.CheckCardNotOwnedOnly = showNotOwnedOnly;
+                        Service.pluginConfig.Save();
                     }
                 }
             }
@@ -302,19 +307,19 @@ namespace TriadBuddyPlugin
             ImGui.Spacing();
             if (ImGui.Checkbox(locHideBeatenNpc, ref hideNpcBeatenOnce))
             {
-                if (config != null)
+                if (Service.pluginConfig != null)
                 {
-                    config.CheckNpcHideBeaten = hideNpcBeatenOnce;
-                    config.Save();
+                    Service.pluginConfig.CheckNpcHideBeaten = hideNpcBeatenOnce;
+                    Service.pluginConfig.Save();
                 }
             }
 
             if (ImGui.Checkbox(locHideCompletedNpc, ref hideNpcCompleted))
             {
-                if (config != null)
+                if (Service.pluginConfig != null)
                 {
-                    config.CheckNpcHideCompleted = hideNpcCompleted;
-                    config.Save();
+                    Service.pluginConfig.CheckNpcHideCompleted = hideNpcCompleted;
+                    Service.pluginConfig.Save();
                 }
             }
 
@@ -328,13 +333,13 @@ namespace TriadBuddyPlugin
         private void DrawNpcDetails()
         {
             var npcData = (selectedNpcIdx < 0 || selectedNpcIdx >= listNpcs.Count) ? null : listNpcs[selectedNpcIdx];
-            if (npcData != null && npcData.Item2 != null)
+            if (npcData != null && npcData.Item2 != null && npcData.Item2.Location != null)
             {
                 var cursorY = ImGui.GetCursorPosY();
                 ImGui.SetCursorPosY(cursorY - ImGui.GetStyle().FramePadding.Y);
                 if (ImGuiComponents.IconButton(FontAwesomeIcon.Map))
                 {
-                    gameGui.OpenMapWithMapLink(npcData.Item2.Location);
+                    Service.gameGui.OpenMapWithMapLink(npcData.Item2.Location);
                 }
                 if (ImGui.IsItemHovered())
                 {
@@ -352,7 +357,7 @@ namespace TriadBuddyPlugin
                     statsWindow.SetupAndOpen(npcData.Item1);
                 }
 
-                var hasAvgRewards = StatTracker.GetAverageRewardPerMatchDesc(config, npcData.Item2, out var avgRewardPerMatch);
+                var hasAvgRewards = StatTracker.GetAverageRewardPerMatchDesc(Service.pluginConfig, npcData.Item2, out var avgRewardPerMatch);
                 ImGui.SetCursorPosY(cursorY);
                 ImGui.SameLine();
                 ImGui.Text(locNpcStats + (hasAvgRewards ? "," : ""));
@@ -378,7 +383,7 @@ namespace TriadBuddyPlugin
                         var (cardOb, cardListIdx) = listNpcReward[idx];
                         bool isCardOwned = settingsDB.ownedCards.Contains(cardOb);
 
-                        var itemDesc = cardOb.Name.GetLocalized();
+                        var itemDesc = $"{CardUtils.GetOrderDesc(cardOb)} {CardUtils.GetUIDesc(cardOb)}";
                         bool isSelected = selectedCardIdx == cardListIdx;
 
                         if (isCardOwned)
@@ -386,7 +391,7 @@ namespace TriadBuddyPlugin
                             ImGui.PushStyleColor(ImGuiCol.Text, 0xffa8a8a8);
                         }
 
-                        if (ImGui.Selectable($"{(int)cardOb.Rarity + 1}★   {itemDesc}", isSelected))
+                        if (ImGui.Selectable($"{CardUtils.GetRarityDesc(cardOb)}  {itemDesc}", isSelected))
                         {
                             selectedCardIdx = cardListIdx;
                             OnCardSelectionChanged();
@@ -414,7 +419,12 @@ namespace TriadBuddyPlugin
 
         private void OnCardSelectionChanged()
         {
-            var (cardOb, cardInfo) = (selectedCardIdx >= 0) && (selectedCardIdx < listCards.Count) ? listCards[selectedCardIdx] : null;
+            if (selectedCardIdx < 0 || selectedCardIdx >= listCards.Count)
+            {
+                return;
+            }
+
+            var (cardOb, cardInfo) = listCards[selectedCardIdx];
             if (cardOb != null && cardInfo != null)
             {
                 var filterEnum = (filterMode == 1) ? GameCardCollectionFilter.OnlyOwned :
@@ -423,7 +433,7 @@ namespace TriadBuddyPlugin
 
                 var collectionPos = cardInfo.Collection[(int)filterEnum];
 
-                //PluginLog.Log($"Card selection! {cardOb.Name.GetLocalized()}, filter:{filterEnum} ({filterMode}) => page:{collectionPos.PageIndex}, cell:{collectionPos.CellIndex}");
+                //Service.logger.Info($"Card selection! {cardOb.Name.GetLocalized()}, filter:{filterEnum} ({filterMode}) => page:{collectionPos.PageIndex}, cell:{collectionPos.CellIndex}");
                 uiReaderCardList.SetPageAndGridView(collectionPos.PageIndex, collectionPos.CellIndex);
             }
         }

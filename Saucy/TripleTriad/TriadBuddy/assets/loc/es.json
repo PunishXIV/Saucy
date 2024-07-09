@@ -1,4 +1,5 @@
 {
+	"CFG_DeckEditHighlights": { "message": "Mostrar resaltados en edición de mazos" },
 	"CFG_GameToggleHints": { "message": "Mostrar pistas de resolución en el juego" },
 	"CFG_OptimizerParallelLoad": { "message": "Uso de CPU para optimizador de mazos" },
 	"CFG_OptimizerParallelLoadHint": { "message": "Controla el número de procesadores lógicos utilizados para los cálculos. ¡No reduce la carga de CPUs individuales!" },

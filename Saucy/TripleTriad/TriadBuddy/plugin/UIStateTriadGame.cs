@@ -15,13 +15,14 @@ namespace TriadBuddyPlugin
         public byte owner;
         public bool isPresent;
         public bool isLocked;
-        public string texturePath;
+        public string? texturePath;
 
         public bool IsHidden => isPresent && (numU == 0);
 
-        public bool Equals(UIStateTriadCard other)
+        public bool Equals(UIStateTriadCard? other)
         {
-            return (isPresent == other.isPresent) &&
+            return (other != null) &&
+                (isPresent == other.isPresent) &&
                 (isLocked == other.isLocked) &&
                 (owner == other.owner) &&
                 (texturePath == other.texturePath);
@@ -40,26 +41,31 @@ namespace TriadBuddyPlugin
             return desc;
         }
 
-        public TriadCard ToTriadCard(GameUIParser ctx)
+        public TriadCard? ToTriadCard(GameUIParser ctx)
         {
             return !isPresent ? null :
                 IsHidden ? ctx.cards.hiddenCard :
-                ctx.ParseCard(numU, numL, numD, numR, texturePath);
+                ctx.ParseCard(numU, numL, numD, numR, texturePath ?? "");
         }
     }
 
     public class UIStateTriadGame : IEquatable<UIStateTriadGame>
     {
-        public List<string> rules;
-        public List<string> redPlayerDesc;
+        public List<string> rules = new();
+        public List<string> redPlayerDesc = new();
         public UIStateTriadCard[] blueDeck = new UIStateTriadCard[5];
         public UIStateTriadCard[] redDeck = new UIStateTriadCard[5];
         public UIStateTriadCard[] board = new UIStateTriadCard[9];
         public bool isPvP;
         public byte move;
 
-        public bool Equals(UIStateTriadGame other)
+        public bool Equals(UIStateTriadGame? other)
         {
+            if (other == null)
+            {
+                return false;
+            }
+
             if (move != other.move)
             {
                 return false;
@@ -105,9 +111,9 @@ namespace TriadBuddyPlugin
             return true;
         }
 
-        public TriadNpc ToTriadNpc(GameUIParser ctx)
+        public TriadNpc? ToTriadNpc(GameUIParser ctx)
         {
-            TriadNpc resultOb = null;
+            TriadNpc? resultOb = null;
             bool canLogError = false;
 
             foreach (var name in redPlayerDesc)

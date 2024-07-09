@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.Gui;
+﻿using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
@@ -17,8 +17,8 @@ namespace MgAl2O4.Utils
     {
         private class AddonInfo
         {
-            public string name;
-            public IUIReader reader;
+            public string? name;
+            public IUIReader? reader;
             public bool isActive;
 
             public IntPtr addonPtr;
@@ -55,6 +55,11 @@ namespace MgAl2O4.Utils
                     {
                         if (!addon.isActive)
                         {
+                            if (addon.name == null || addon.reader == null)
+                            {
+                                continue;
+                            }
+
                             var addonPtr = GetAddonPtrIfValid(addon.name);
                             if (addonPtr != IntPtr.Zero)
                             {
@@ -76,6 +81,11 @@ namespace MgAl2O4.Utils
                     {
                         if (addon.isActive)
                         {
+                            if (addon.name == null || addon.reader == null)
+                            {
+                                continue;
+                            }
+
                             var addonPtr = GetAddonPtrIfValid(addon.name);
                             if (addonPtr != addon.addonPtr)
                             {
@@ -107,7 +117,7 @@ namespace MgAl2O4.Utils
             if (addonPtr != IntPtr.Zero)
             {
                 var baseNode = (AtkUnitBase*)addonPtr;
-                if (baseNode->RootNode != null && baseNode->RootNode->IsVisible)
+                if (baseNode->RootNode != null && baseNode->RootNode->IsVisible())
                 {
                     return addonPtr;
                 }

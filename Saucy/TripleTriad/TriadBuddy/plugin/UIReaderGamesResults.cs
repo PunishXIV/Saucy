@@ -1,11 +1,7 @@
-﻿using Dalamud.Game.Gui;
-using FFXIVClientStructs.FFXIV.Component.GUI;
+﻿using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
 using Saucy.CuffACur;
-using Saucy.OutOnALimb;
-using Saucy;
 using System;
-using System.Runtime.InteropServices;
 using ECommons.DalamudServices;
 using System.Linq;
 

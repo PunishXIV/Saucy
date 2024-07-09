@@ -5,10 +5,10 @@ namespace FFTriadBuddy
 {
     public class TriadCardDB
     {
-        private static TriadCardDB instance = new TriadCardDB();
+        private static TriadCardDB instance = new();
 
-        public List<TriadCard> cards = new List<TriadCard>();
-        public Dictionary<int, List<TriadCard>> sameNumberMap = new Dictionary<int, List<TriadCard>>();
+        public List<TriadCard?> cards = [];
+        public Dictionary<int, List<TriadCard>> sameNumberMap = [];
         public TriadCard hiddenCard;
 
         public TriadCardDB()
@@ -22,12 +22,12 @@ namespace FFTriadBuddy
             return instance;
         }
 
-        public TriadCard Find(string Name)
+        public TriadCard? Find(string Name)
         {
             return cards.Find(x => (x != null) && x.Name.GetCodeName().Equals(Name, StringComparison.OrdinalIgnoreCase));
         }
 
-        public TriadCard Find(int numUp, int numLeft, int numDown, int numRight)
+        public TriadCard? Find(int numUp, int numLeft, int numDown, int numRight)
         {
             // side number may be ambiguous! returns first match
             return cards.Find(x =>
@@ -38,7 +38,7 @@ namespace FFTriadBuddy
                 (x.Sides[(int)ETriadGameSide.Right] == numRight));
         }
 
-        public TriadCard Find(int numUp, int numLeft, int numDown, int numRight, ETriadCardType type, ETriadCardRarity rarity)
+        public TriadCard? Find(int numUp, int numLeft, int numDown, int numRight, ETriadCardType type, ETriadCardRarity rarity)
         {
             return cards.Find(x =>
                 (x != null) &&
@@ -50,22 +50,23 @@ namespace FFTriadBuddy
                 (x.Type == type));
         }
 
-        public TriadCard FindById(int cardId)
+        public TriadCard? FindById(int cardId)
         {
             if (cardId < 0 || cardId >= cards.Count)
             {
                 return null;
             }
 
-            if (cards[cardId] != null && cards[cardId].Id == cardId)
+            var knownCard = cards[cardId];
+            if (knownCard != null && knownCard.Id == cardId)
             {
-                return cards[cardId];
+                return knownCard;
             }
 
             return cards.Find(x => (x != null) && x.Id == cardId);
         }
 
-        public TriadCard FindByTexture(string texPath)
+        public TriadCard? FindByTexture(string texPath)
         {
             // map image ids: 082100+ directly to card id: 0+ (legacy support? TODO: kill me)
             // map image ids: 082500+ directly to card id: 0+ (legacy support? TODO: kill me)
@@ -134,13 +135,13 @@ namespace FFTriadBuddy
             int sameNumberId = 0;
             for (int Idx1 = 0; Idx1 < cards.Count; Idx1++)
             {
-                TriadCard card1 = cards[Idx1];
+                TriadCard? card1 = cards[Idx1];
                 if (card1 != null && card1.SameNumberId < 0)
                 {
                     bool bHasSameNumberCards = false;
                     for (int Idx2 = (Idx1 + 1); Idx2 < cards.Count; Idx2++)
                     {
-                        TriadCard card2 = cards[Idx2];
+                        TriadCard? card2 = cards[Idx2];
                         if (card2 != null && card2.SameNumberId < 0)
                         {
                             bool bHasSameNumbers =

@@ -12,22 +12,23 @@ namespace TriadBuddyPlugin
     {
         private readonly StatTracker statTracker;
 
-        private GameNpcInfo npcInfo;
-        private string npcName;
+        private GameNpcInfo? npcInfo;
+        private string? npcName;
 
-        private string locTitle;
-        private string locNumTracked;
-        private string locBtnReset;
-        private string locBtnCopy;
-        private string locGameStats;
-        private string locGameWins;
-        private string locGameDraws;
-        private string locGameLosses;
-        private string locDropStats;
-        private string locDropMGP;
-        private string locDropCard;
-        private string locEstMGP;
-        private string locEstMGPHint;
+        private string? locTitle;
+        private string? locNumTracked;
+        private string? locBtnReset;
+        private string? locBtnCopy;
+        private string? locGameStats;
+        private string? locGameWins;
+        private string? locGameDraws;
+        private string? locGameLosses;
+        private string? locDropStats;
+        private string? locDropMGP;
+        private string? locDropCard;
+        private string? locEstMGP;
+        private string? locEstMGPHint;
+        private bool hasCachedLocStrings;
 
         public PluginWindowNpcStats(StatTracker statTracker) : base("NPC stats")
         {
@@ -40,8 +41,10 @@ namespace TriadBuddyPlugin
             Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar;
             RespectCloseHotkey = false;
 
-            Plugin.CurrentLocManager.LocalizationChanged += (_) => CacheLocalization();
-            CacheLocalization();
+            if (Plugin.CurrentLocManager != null)
+            {
+                Plugin.CurrentLocManager.LocalizationChanged += (_) => { hasCachedLocStrings = false; };
+            }
         }
 
         public void Dispose()
@@ -49,8 +52,11 @@ namespace TriadBuddyPlugin
             // meh
         }
 
-        private void CacheLocalization()
+        private void UpdateLocalizationCache()
         {
+            if (hasCachedLocStrings) { return; }
+            hasCachedLocStrings = true;
+
             locTitle = Localization.Localize("NS_Title", "NPC stats");
             locNumTracked = Localization.Localize("NS_NumMacthes", "Num tracked matches: {0}");
             locBtnReset = Localization.Localize("NS_Reset", "Reset");
@@ -66,18 +72,21 @@ namespace TriadBuddyPlugin
             locEstMGPHint = Localization.Localize("NS_DropIncludesSelling", "Includes MGP from selling cards");
         }
 
-        public void SetupAndOpen(TriadNpc triadNpc)
+        public void SetupAndOpen(TriadNpc? triadNpc)
         {
-            if (GameNpcDB.Get().mapNpcs.TryGetValue(triadNpc?.Id ?? 0, out var npcInfo))
+            this.npcInfo = null;
+
+            if (triadNpc == null)
+            {
+                return;
+            }
+
+            if (GameNpcDB.Get().mapNpcs.TryGetValue(triadNpc.Id, out var npcInfo))
             {
                 this.npcInfo = npcInfo;
                 npcName = triadNpc.Name.GetLocalized();
 
                 IsOpen = true;
-            }
-            else
-            {
-                this.npcInfo = null;
             }
         }
 
@@ -86,6 +95,7 @@ namespace TriadBuddyPlugin
             var colorName = new Vector4(0.9f, 0.9f, 0.2f, 1);
             var colorValue = new Vector4(0.2f, 0.9f, 0.9f, 1);
             var colorGray = new Vector4(0.6f, 0.6f, 0.6f, 1);
+            UpdateLocalizationCache();
 
             if (npcInfo != null)
             {
@@ -94,27 +104,27 @@ namespace TriadBuddyPlugin
                 var savedStats = statTracker.GetNpcStatsOrDefault(npcInfo);
                 int numMatches = savedStats.GetNumMatches();
 
-                ImGui.Text(string.Format(locNumTracked, numMatches));
+                ImGui.Text(string.Format(locNumTracked ?? "", numMatches));
                 ImGui.Spacing();
 
                 ImGui.Text(locGameStats);
                 ImGui.Indent();
-                ImGui.Text(string.Format(locGameWins, savedStats.NumWins) + ",");
+                ImGui.Text(string.Format(locGameWins ?? "", savedStats.NumWins) + ",");
                 ImGui.SameLine();
-                ImGui.Text(string.Format(locGameDraws, savedStats.NumDraws) + ",");
+                ImGui.Text(string.Format(locGameDraws ?? "", savedStats.NumDraws) + ",");
                 ImGui.SameLine();
-                ImGui.Text(string.Format(locGameLosses, savedStats.NumLosses));
+                ImGui.Text(string.Format(locGameLosses ?? "", savedStats.NumLosses));
                 if (numMatches > 0)
                 {
                     string winPctDesc = (1.0f * savedStats.NumWins / numMatches).ToString("P1").Replace("%", "%%");
-                    ImGui.TextColored(colorValue, string.Format(locGameWins, winPctDesc));
+                    ImGui.TextColored(colorValue, string.Format(locGameWins ?? "", winPctDesc));
                 }
                 ImGui.Unindent();
                 ImGui.Spacing();
 
-                ImGui.Text(locDropStats);
+                ImGui.Text(locDropStats ?? "");
                 ImGui.Indent();
-                ImGui.Text(string.Format(locDropMGP, savedStats.NumCoins));
+                ImGui.Text(string.Format(locDropMGP ?? "", savedStats.NumCoins));
 
                 var cardDB = TriadCardDB.Get();
                 var gameCardDB = GameCardDB.Get();
@@ -124,9 +134,9 @@ namespace TriadBuddyPlugin
                     if (kvp.Key >= 0 && kvp.Key < cardDB.cards.Count && kvp.Value > 0)
                     {
                         var cardOb = cardDB.FindById(kvp.Key);
-                        if (cardOb.IsValid() && gameCardDB.mapCards.TryGetValue(kvp.Key, out var cardInfo))
+                        if (cardOb != null && cardOb.IsValid() && gameCardDB.mapCards.TryGetValue(kvp.Key, out var cardInfo))
                         {
-                            ImGui.Text(string.Format(locDropCard, cardOb.Name.GetLocalized(), kvp.Value));
+                            ImGui.Text(string.Format(locDropCard ?? "", cardOb.Name.GetLocalized(), kvp.Value));
                             sumNetGain += kvp.Value * cardInfo.SaleValue;
 
                             if (savedStats.NumWins > 0)
@@ -149,7 +159,7 @@ namespace TriadBuddyPlugin
                 {
                     ImGui.TextColored(colorValue, $"{(1.0f * sumNetGain / numMatches):0.#}");
                     ImGui.SameLine();
-                    ImGuiComponents.HelpMarker(locEstMGPHint);
+                    ImGuiComponents.HelpMarker(locEstMGPHint ?? "");
                 }
                 else
                 {
@@ -187,7 +197,7 @@ namespace TriadBuddyPlugin
                     if (kvp.Key >= 0 && kvp.Key < cardDB.cards.Count && kvp.Value > 0)
                     {
                         var cardOb = cardDB.FindById(kvp.Key);
-                        if (cardOb.IsValid())
+                        if (cardOb != null && cardOb.IsValid())
                         {
                             desc += $"\n[{cardOb.Id}]:{cardOb.Name.GetCodeName()} => {kvp.Value}";
                         }

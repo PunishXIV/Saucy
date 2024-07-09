@@ -1,36 +1,36 @@
 ﻿using Dalamud;
-using Dalamud.Game.Gui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
+using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
 using ImGuiNET;
 using System;
 using System.Numerics;
+using TriadBuddy;
 
 namespace TriadBuddyPlugin
 {
     public class PluginWindowCardInfo : Window, IDisposable
     {
         private readonly UIReaderTriadCardList uiReaderCardList;
-        private readonly IGameGui gameGui;
 
-        private TriadCard selectedCard;
-        private GameCardInfo selectedCardInfo;
-        private GameNpcInfo rewardNpcInfo;
-        private TriadNpc rewardNpc;
-        private string rewardNpcRules;
-        private int rewardSourceIdx;
-        private int numRewardSources;
+        private TriadCard? selectedCard;
+        private GameCardInfo? selectedCardInfo;
+        private GameNpcInfo? rewardNpcInfo;
+        private TriadNpc? rewardNpc;
+        private string rewardNpcRules = string.Empty;
+        private int rewardSourceIdx = -1;
+        private int numRewardSources = 0;
 
-        private string locNpcReward;
-        private string locShowOnMap;
-        private string locNoAvail;
+        private string? locNpcReward;
+        private string? locShowOnMap;
+        private string? locNoAvail;
+        private bool hasCachedLocStrings;
 
-        public PluginWindowCardInfo(UIReaderTriadCardList uiReaderCardList, IGameGui gameGui) : base("Card Info")
+        public PluginWindowCardInfo(UIReaderTriadCardList uiReaderCardList) : base("Card Info")
         {
             this.uiReaderCardList = uiReaderCardList;
-            this.gameGui = gameGui;
 
             uiReaderCardList.OnVisibilityChanged += (_) => UpdateWindowData();
             uiReaderCardList.OnUIStateChanged += (_) => UpdateWindowData();
@@ -51,8 +51,10 @@ namespace TriadBuddyPlugin
                 ImGuiWindowFlags.NoFocusOnAppearing |
                 ImGuiWindowFlags.NoNav;
 
-            Plugin.CurrentLocManager.LocalizationChanged += (_) => CacheLocalization();
-            CacheLocalization();
+            if (Plugin.CurrentLocManager != null)
+            {
+                Plugin.CurrentLocManager.LocalizationChanged += (_) => { hasCachedLocStrings = false; };
+            }
         }
 
         public void Dispose()
@@ -60,8 +62,11 @@ namespace TriadBuddyPlugin
             // meh
         }
 
-        private void CacheLocalization()
+        private void UpdateLocalizationCache()
         {
+            if (hasCachedLocStrings) { return; }
+            hasCachedLocStrings = true;
+
             locNpcReward = Localization.Localize("CI_NpcReward", "NPC reward:");
             locShowOnMap = Localization.Localize("CI_ShowMap", "Show on map");
             locNoAvail = Localization.Localize("CI_NotAvail", "Not available");
@@ -69,9 +74,19 @@ namespace TriadBuddyPlugin
 
         private void UpdateWindowData()
         {
-            bool canShow = (uiReaderCardList != null) && uiReaderCardList.IsVisible && (uiReaderCardList.cachedState?.iconId == 0);
-            if (canShow)
+            bool canShow = false;
+
+            if (uiReaderCardList != null &&
+                uiReaderCardList.IsVisible &&
+                uiReaderCardList.cachedState != null &&
+                uiReaderCardList.cachedState.iconId == 0)
             {
+                if (!IsOpen)
+                {
+                    // force refresh owned cards, required for parsing id based on collection index
+                    GameCardDB.Get().Refresh();
+                }
+
                 var parseCtx = new GameUIParser();
                 selectedCard = uiReaderCardList.cachedState.ToTriadCard(parseCtx);
 
@@ -105,12 +120,14 @@ namespace TriadBuddyPlugin
         {
             if (selectedCard != null)
             {
+                UpdateLocalizationCache();
+
                 var colorName = new Vector4(0.9f, 0.9f, 0.2f, 1);
                 var colorGray = new Vector4(0.6f, 0.6f, 0.6f, 1);
 
                 ImGui.TextColored(colorName, selectedCard.Name.GetLocalized());
 
-                ImGui.Text($"{(int)selectedCard.Rarity + 1}★");
+                ImGui.Text(CardUtils.GetRarityDesc(selectedCard));
                 ImGui.SameLine();
                 ImGui.Text($"{selectedCard.Sides[(int)ETriadGameSide.Up]:X}-{selectedCard.Sides[(int)ETriadGameSide.Left]:X}-{selectedCard.Sides[(int)ETriadGameSide.Down]:X}-{selectedCard.Sides[(int)ETriadGameSide.Right]:X}");
                 if (selectedCard.Type != ETriadCardType.None)
@@ -135,7 +152,7 @@ namespace TriadBuddyPlugin
 
                 ImGui.Text(locNpcReward);
 
-                if (selectedCardInfo != null && rewardNpc != null && rewardNpcInfo != null)
+                if (selectedCardInfo != null && rewardNpc != null && rewardNpcInfo != null && rewardNpcInfo.Location != null)
                 {
                     ImGui.SameLine();
                     ImGui.TextColored(colorName, rewardNpc.Name.GetLocalized());
@@ -150,7 +167,7 @@ namespace TriadBuddyPlugin
                     ImGui.SetCursorPosY(cursorY - ImGui.GetStyle().FramePadding.Y);
                     if (ImGuiComponents.IconButton(FontAwesomeIcon.Map))
                     {
-                        gameGui.OpenMapWithMapLink(rewardNpcInfo.Location);
+                        Service.gameGui.OpenMapWithMapLink(rewardNpcInfo.Location);
                     }
                     if (ImGui.IsItemHovered())
                     {
@@ -180,7 +197,7 @@ namespace TriadBuddyPlugin
             rewardNpcInfo = null;
             rewardNpcRules = "";
 
-            if (numRewardSources <= 0)
+            if (numRewardSources <= 0 || selectedCardInfo == null)
             {
                 return;
             }

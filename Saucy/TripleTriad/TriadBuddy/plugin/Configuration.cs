@@ -1,5 +1,4 @@
 ﻿using Dalamud.Configuration;
-using Dalamud.Plugin;
 using System;
 using System.Collections.Generic;
 
@@ -11,6 +10,7 @@ namespace TriadBuddyPlugin
         public int Version { get; set; } = 0;
 
         public bool ShowSolverHintsInGame { get; set; } = true;
+        public bool ShowDeckEditHighlights { get; set; } = true;
         public bool CanUseProfileReader { get; set; } = true;
         public float DeckOptimizerCPU { get; set; } = 1.0f;
 
@@ -33,17 +33,9 @@ namespace TriadBuddyPlugin
 
         public Dictionary<int, NpcStatInfo> NpcStats { get; set; } = new();
 
-        [NonSerialized]
-        private DalamudPluginInterface pluginInterface;
-
-        public void Initialize(DalamudPluginInterface pluginInterface)
-        {
-            this.pluginInterface = pluginInterface;
-        }
-
         public void Save()
         {
-            //pluginInterface?.SavePluginConfig(this);
+            //Service.pluginInterface.SavePluginConfig(this);
         }
     }
 }

@@ -5,14 +5,8 @@ namespace TriadBuddyPlugin
     public class StatTracker
     {
         private readonly static Configuration.NpcStatInfo EmptyStats = new();
-        private readonly Configuration config;
 
-        public StatTracker(Configuration config)
-        {
-            this.config = config;
-        }
-
-        public void OnMatchFinished(Solver solver, UIStateTriadResults uiState)
+        public void OnMatchFinished(SolverGame solver, UIStateTriadResults uiState)
         {
             if (!GameNpcDB.Get().mapNpcs.TryGetValue(solver.lastGameNpc?.Id ?? -1, out var npcInfo))
             {
@@ -23,7 +17,7 @@ namespace TriadBuddyPlugin
             if (savedStats == null)
             {
                 savedStats = new();
-                config.NpcStats.Add(npcInfo.triadId, savedStats);
+                Service.pluginConfig.NpcStats.Add(npcInfo.triadId, savedStats);
             }
 
             savedStats.NumCoins += uiState.numMGP;
@@ -58,15 +52,15 @@ namespace TriadBuddyPlugin
                 }
             }
 
-            config.Save();
+            Service.pluginConfig.Save();
 
             // consume value to avoid counting if next match is against player
             solver.lastGameNpc = null;
         }
 
-        public Configuration.NpcStatInfo GetNpcStats(GameNpcInfo npcInfo)
+        public Configuration.NpcStatInfo? GetNpcStats(GameNpcInfo npcInfo)
         {
-            if (config.NpcStats.TryGetValue(npcInfo.triadId, out var savedStats))
+            if (Service.pluginConfig.NpcStats.TryGetValue(npcInfo.triadId, out var savedStats))
             {
                 return savedStats;
             }
@@ -78,8 +72,8 @@ namespace TriadBuddyPlugin
 
         public void RemoveNpcStats(GameNpcInfo npcInfo)
         {
-            config.NpcStats.Remove(npcInfo.triadId);
-            config.Save();
+            Service.pluginConfig.NpcStats.Remove(npcInfo.triadId);
+            Service.pluginConfig.Save();
         }
 
         public static bool GetAverageRewardPerMatchDesc(Configuration config, GameNpcInfo npcInfo, out float avgMGP)
@@ -98,7 +92,7 @@ namespace TriadBuddyPlugin
                         if (kvp.Key >= 0 && kvp.Key < cardDB.cards.Count && kvp.Value > 0)
                         {
                             var cardOb = cardDB.FindById(kvp.Key);
-                            if (cardOb.IsValid() && gameCardDB.mapCards.TryGetValue(kvp.Key, out var cardInfo))
+                            if (cardOb != null && cardOb.IsValid() && gameCardDB.mapCards.TryGetValue(kvp.Key, out var cardInfo))
                             {
                                 sumNetGain += kvp.Value * cardInfo.SaleValue;
                             }

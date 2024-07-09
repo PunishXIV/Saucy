@@ -1,6 +1,4 @@
-﻿using Dalamud.Game.Gui;
-using Dalamud.Logging;
-using FFTriadBuddy;
+﻿using FFTriadBuddy;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
@@ -18,23 +16,23 @@ namespace TriadBuddyPlugin
             [FieldOffset(0x0)] public AtkUnitBase AtkUnitBase;
             [FieldOffset(0xe0)] public AtkCollisionNode* SelectedCardColisionNode;
 
-            [FieldOffset(0x288)] public byte CardRarity;                // 1..5
-            [FieldOffset(0x289)] public byte CardType;                  // 0: no type, 1: primal, 2: scion, 3: beastman, 4: garland
-            [FieldOffset(0x28b)] public byte NumSideU;
-            [FieldOffset(0x28c)] public byte NumSideD;
-            [FieldOffset(0x28d)] public byte NumSideR;
-            [FieldOffset(0x28e)] public byte NumSideL;
-            [FieldOffset(0x290)] public int CardIconId;                 // texture id for button (82100+) or 0 when missing
+            [FieldOffset(0x298)] public byte CardRarity;                // 1..5
+            [FieldOffset(0x299)] public byte CardType;                  // 0: no type, 1: primal, 2: scion, 3: beastman, 4: garland
+            [FieldOffset(0x29b)] public byte NumSideU;
+            [FieldOffset(0x29c)] public byte NumSideD;
+            [FieldOffset(0x29d)] public byte NumSideR;
+            [FieldOffset(0x29e)] public byte NumSideL;
+            [FieldOffset(0x2a0)] public int CardIconId;                 // texture id for button (82100+) or 0 when missing
 
-            [FieldOffset(0x31c)] public byte FilterMode;                // 0xD = all, 0x3 = only owned, 0xC = only missing
-            [FieldOffset(0x50c)] public byte PageIndex;                 // ignores writes
-            [FieldOffset(0x514)] public byte CardIndex;                 // can be written to, yay!
+            [FieldOffset(0x32c)] public byte FilterMode;                // 0xD = all, 0x3 = only owned, 0xC = only missing
+            [FieldOffset(0x51c)] public byte PageIndex;                 // ignores writes
+            [FieldOffset(0x524)] public byte CardIndex;                 // can be written to, yay!
         }
 
         [StructLayout(LayoutKind.Explicit, Size = 0x110)]               // it's around 0x200?
         public unsafe struct AgentTriadCardList
         {
-            [FieldOffset(0x100)] public int PageIndex;                  // can be written to, yay!
+            [FieldOffset(0x100)] public int PageIndex;                  // ignores writes
             [FieldOffset(0x108)] public int CardIndex;                  // ignores writes
             [FieldOffset(0x10c)] public byte FilterMode;                // 0 = all, 1 = only owned, 2 = only missing
 
@@ -55,20 +53,14 @@ namespace TriadBuddyPlugin
         }
 
         public UIStateTriadCardList cachedState = new();
-        public Action<UIStateTriadCardList> OnUIStateChanged;
-        public Action<bool> OnVisibilityChanged;
+        public Action<UIStateTriadCardList>? OnUIStateChanged;
+        public Action<bool>? OnVisibilityChanged;
 
         public Status status = Status.AddonNotFound;
         public bool IsVisible => (status != Status.AddonNotFound) && (status != Status.AddonNotVisible);
         public bool HasErrors => false;
 
-        private IGameGui gameGui;
         private IntPtr cachedAddonAgentPtr;
-
-        public UIReaderTriadCardList(IGameGui gameGui)
-        {
-            this.gameGui = gameGui;
-        }
 
         public string GetAddonName()
         {
@@ -86,14 +78,14 @@ namespace TriadBuddyPlugin
 
         public void OnAddonShown(IntPtr addonPtr)
         {
-            cachedAddonAgentPtr = (addonPtr != IntPtr.Zero) ? gameGui.FindAgentInterface(addonPtr) : IntPtr.Zero;
+            cachedAddonAgentPtr = (addonPtr != IntPtr.Zero) ? Service.gameGui.FindAgentInterface(addonPtr) : IntPtr.Zero;
 
             if (cachedAddonAgentPtr == IntPtr.Zero)
             {
                 // failsafe, likely to break with patch
-                cachedAddonAgentPtr = LoadFailsafeAgent(gameGui);
+                cachedAddonAgentPtr = LoadFailsafeAgent();
 #if DEBUG
-                PluginLog.Log($"using agentPtr from failsafe: {(ulong)cachedAddonAgentPtr:X}");
+                Service.logger.Info($"using agentPtr from failsafe: {(ulong)cachedAddonAgentPtr:X}");
 #endif // DEBUG
             }
         }
@@ -115,8 +107,8 @@ namespace TriadBuddyPlugin
             (cachedState.descriptionPos, cachedState.descriptionSize) = GUINodeUtils.GetNodePosAndSize(descNode);
 
             byte newFilterMode =
-                (addon->FilterMode == 0x3) ? (byte)1 :
-                (addon->FilterMode == 0xC) ? (byte)2 :
+                (addon->FilterMode == 0x7) ? (byte)1 :
+                (addon->FilterMode == 0xA) ? (byte)2 :
                 (byte)0;
 
             if (cachedState.pageIndex != addon->PageIndex ||
@@ -141,9 +133,9 @@ namespace TriadBuddyPlugin
             SetStatus(Status.NoErrors);
         }
 
-        public static unsafe IntPtr LoadFailsafeAgent(IGameGui gameGui)
+        public static unsafe IntPtr LoadFailsafeAgent()
         {
-            var uiModule = (UIModule*)gameGui.GetUIModule();
+            var uiModule = (UIModule*)Service.gameGui.GetUIModule();
             if (uiModule != null)
             {
                 var agentModule = uiModule->GetAgentModule();
@@ -173,7 +165,7 @@ namespace TriadBuddyPlugin
             }
 
             // refresh cached pointers before using them
-            IntPtr addonPtr = gameGui.GetAddonByName(GetAddonName(), 1);
+            IntPtr addonPtr = Service.gameGui.GetAddonByName(GetAddonName(), 1);
             OnAddonShown(addonPtr);
 
             if (addonPtr != IntPtr.Zero && cachedAddonAgentPtr != IntPtr.Zero)
@@ -198,7 +190,7 @@ namespace TriadBuddyPlugin
 
                 if (HasErrors)
                 {
-                    PluginLog.Error("CardList reader error: " + newStatus);
+                    Service.logger.Error("CardList reader error: " + newStatus);
                 }
 
                 if (wasVisible != IsVisible)
@@ -244,9 +236,16 @@ namespace TriadBuddyPlugin
         public byte cardIndex;
         public byte filterMode;
 
-        public TriadCard ToTriadCard(GameUIParser ctx)
+        public TriadCard? ToTriadCard(GameUIParser ctx)
         {
-            return ctx.ParseCard(numU, numL, numD, numR, GameDataLoader.ConvertToTriadType(type), GameDataLoader.ConvertToTriadRarity(rarity), false);
+            var matchOb = ctx.ParseCard(numU, numL, numD, numR, (ETriadCardType)type, (ETriadCardRarity)rarity, false);
+            if (matchOb == null || matchOb.SameNumberId >= 0)
+            {
+                // number match is increasing unreliable, use grid location instead
+                return ctx.ParseCardByGridLocation(pageIndex, cardIndex, filterMode);
+            }
+
+            return matchOb;
         }
     }
 }

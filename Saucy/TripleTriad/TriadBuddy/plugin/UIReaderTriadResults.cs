@@ -1,5 +1,4 @@
-﻿using Dalamud.Game.Gui;
-using FFXIVClientStructs.FFXIV.Component.GUI;
+﻿using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
 using System;
 using System.Runtime.InteropServices;
@@ -14,16 +13,10 @@ namespace TriadBuddyPlugin
             [FieldOffset(0x1c8)] public uint rewardItemId;
         }
 
-        private readonly IGameGui gameGui;
         private UIStateTriadResults cachedState = new();
-        public Action<UIStateTriadResults> OnUpdated;
+        public Action<UIStateTriadResults>? OnUpdated;
 
         private bool needsNotify = false;
-
-        public UIReaderTriadResults(IGameGui gameGui)
-        {
-            this.gameGui = gameGui;
-        }
 
         public string GetAddonName()
         {
@@ -51,7 +44,7 @@ namespace TriadBuddyPlugin
 
             if (needsNotify)
             {
-                IntPtr agentPtr = gameGui.FindAgentInterface(addonPtr);
+                IntPtr agentPtr = Service.gameGui.FindAgentInterface(addonPtr);
                 if (agentPtr != IntPtr.Zero)
                 {
                     var agent = (AgentTripleTriad*)agentPtr;
@@ -102,9 +95,9 @@ namespace TriadBuddyPlugin
             var nodeArrResult0 = GUINodeUtils.GetImmediateChildNodes(nodeResult);
             if (nodeArrResult0 != null && nodeArrResult0.Length == 3)
             {
-                cachedState.isDraw = (nodeArrResult0[0] != null) ? nodeArrResult0[0]->IsVisible : false;
-                cachedState.isLose = (nodeArrResult0[1] != null) ? nodeArrResult0[1]->IsVisible : false;
-                cachedState.isWin = (nodeArrResult0[2] != null) ? nodeArrResult0[2]->IsVisible : false;
+                cachedState.isDraw = (nodeArrResult0[0] != null) ? nodeArrResult0[0]->IsVisible() : false;
+                cachedState.isLose = (nodeArrResult0[1] != null) ? nodeArrResult0[1]->IsVisible() : false;
+                cachedState.isWin = (nodeArrResult0[2] != null) ? nodeArrResult0[2]->IsVisible() : false;
             }
         }
     }

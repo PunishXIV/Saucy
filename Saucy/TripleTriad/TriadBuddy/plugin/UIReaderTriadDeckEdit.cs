@@ -1,5 +1,4 @@
-﻿using Dalamud.Game.Gui;
-using FFXIVClientStructs.FFXIV.Component.GUI;
+﻿using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using MgAl2O4.Utils;
 using System;
@@ -16,26 +15,21 @@ namespace TriadBuddyPlugin
         {
             [FieldOffset(0x0)] public AtkUnitBase AtkUnitBase;
 
-            [FieldOffset(0xD64)] public byte PageIndex;                 // ignores writes
-            [FieldOffset(0xD68)] public byte CardIndex;                 // can be written to, yay!
+            [FieldOffset(0xD70)] public byte PageIndex;                 // ignores writes
+            [FieldOffset(0xD74)] public byte PageIndex2;                // ignores writes
+            [FieldOffset(0xD78)] public byte CardIndex;                 // ignores writes
         }
 
         public UIStateTriadDeckEdit cachedState = new();
-        public Action<bool> OnVisibilityChanged;
+        public UnsafeReaderTriadDeck? unsafeDeck;
+        public Action<bool>? OnVisibilityChanged;
 
         public bool IsVisible { get; private set; }
 
-        private float blinkAlpha;
+        private float searchSyncBlinkRemaining;
         private bool isOptimizerActive;
 
         private List<string> highlightTexPaths = new();
-        private readonly IGameGui gameGui;
-
-        public UIReaderTriadDeckEdit(IGameGui gameGui)
-        {
-            this.gameGui = gameGui;
-            blinkAlpha = 0.0f;
-        }
 
         public string GetAddonName()
         {
@@ -57,7 +51,14 @@ namespace TriadBuddyPlugin
         public unsafe void OnAddonUpdate(IntPtr addonPtr)
         {
             var addon = (AddonTriadDeckEdit*)addonPtr;
-            blinkAlpha = (blinkAlpha + ImGui.GetIO().DeltaTime) % 1.0f;
+            var hasHighlights = isOptimizerActive;
+
+            if (searchSyncBlinkRemaining > 0)
+            {
+                var deltaTime = ImGui.GetIO().DeltaTime;
+                searchSyncBlinkRemaining -= deltaTime;
+                hasHighlights = true;
+            }
 
             // root, 14 children (sibling scan)
             //     [9] res node, card icon grid + fancy stuff
@@ -79,7 +80,7 @@ namespace TriadBuddyPlugin
 
                     if (nodeImage != null)
                     {
-                        if (!isOptimizerActive)
+                        if (!hasHighlights)
                         {
                             // no optimizer: reset highlights
                             nodeImage->MultiplyBlue = 100;
@@ -88,14 +89,9 @@ namespace TriadBuddyPlugin
                         }
                         else
                         {
-                            var texPath = GUINodeUtils.GetNodeTexturePath(nodeImage);
+                            var texPath = GUINodeUtils.GetNodeTexturePath(nodeImage) ?? "";
                             bool shouldHighlight = IsCardTexPathMatching(texPath);
-
-                            // lerp color:
-                            //   t0 .. t0.5 = 0 -> 100%
-                            //   t0.5 .. t1 -> hold 100%
-                            float colorAlpha = (blinkAlpha < 0.5f) ? (blinkAlpha * 2.0f) : 1.0f;
-                            byte colorV = (byte)(shouldHighlight ? (50 + 50 * colorAlpha) : 25);
+                            byte colorV = (byte)(shouldHighlight ? 100 : 25);
 
                             nodeImage->MultiplyBlue = colorV;
                             nodeImage->MultiplyRed = colorV;
@@ -116,7 +112,7 @@ namespace TriadBuddyPlugin
             highlightTexPaths.Clear();
         }
 
-        public void SetHighlightedCards(int[] cardIds)
+        public void SetHighlightedCards(int[]? cardIds)
         {
             highlightTexPaths.Clear();
             if (cardIds != null)
@@ -124,7 +120,7 @@ namespace TriadBuddyPlugin
                 foreach (int cardId in cardIds)
                 {
                     // see TriadCardDB.FindByTexture for details on patterns
-                    var pathPattern = string.Format("082000/{0:D6}", FFTriadBuddy.TriadCardDB.GetCardIconTextureId(cardId));
+                    var pathPattern = string.Format("088000/{0:D6}", FFTriadBuddy.TriadCardDB.GetCardIconTextureId(cardId));
                     highlightTexPaths.Add(pathPattern);
                 }
             }
@@ -143,6 +139,15 @@ namespace TriadBuddyPlugin
             return false;
         }
 
+        public void SetSearchResultHighlight(int[] cardIds)
+        {
+            if (!isOptimizerActive)
+            {
+                SetHighlightedCards(cardIds);
+                searchSyncBlinkRemaining = 1.0f;
+            }
+        }
+
         public unsafe bool SetPageAndGridView(int pageIndex, int cellIndex)
         {
             // doesn't really belong to a ui "reader", but won't be making a class just for calling one function
@@ -157,11 +162,11 @@ namespace TriadBuddyPlugin
             // agentPtr is NOT available through deck edit addon here
             // use GSInfoCardDeck instead
 
-            IntPtr addonPtr = gameGui.GetAddonByName(GetAddonName(), 1);
-            IntPtr agentPtr = gameGui.FindAgentInterface("GSInfoCardDeck");
+            IntPtr addonPtr = Service.gameGui.GetAddonByName(GetAddonName(), 1);
+            IntPtr agentPtr = Service.gameGui.FindAgentInterface("GSInfoCardDeck");
             if (agentPtr == IntPtr.Zero)
             {
-                agentPtr = UIReaderTriadCardList.LoadFailsafeAgent(gameGui);
+                agentPtr = UIReaderTriadCardList.LoadFailsafeAgent();
             }
 
             if (addonPtr != IntPtr.Zero && agentPtr != IntPtr.Zero)
@@ -177,8 +182,10 @@ namespace TriadBuddyPlugin
                 agent->FilterDeckSorting = 0;
                 agent->FilterMode = 0;
 
-                agent->PageIndex = pageIndex;
-                addon->CardIndex = (byte)cellIndex;
+                agent->PageIndex = (byte)pageIndex;
+                
+                unsafeDeck?.RefreshUI(agentPtr);
+                unsafeDeck?.SetSelectedCard(addonPtr, cellIndex);
 
                 return true;
             }

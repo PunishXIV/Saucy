@@ -1,11 +1,11 @@
-﻿using Dalamud.Game.Gui;
-using Dalamud.Interface;
+﻿using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using TriadBuddy;
 
 namespace TriadBuddyPlugin
 {
@@ -14,17 +14,18 @@ namespace TriadBuddyPlugin
         private const float WindowContentWidth = 270.0f;
 
         private readonly UIReaderTriadDeckEdit uiReaderDeckEdit;
-        private readonly IGameGui gameGui;
 
         private List<Tuple<TriadCard, GameCardInfo>> listCards = new();
 
         private int selectedCardIdx;
         private ImGuiTextFilterPtr searchFilter;
 
-        public PluginWindowDeckSearch(UIReaderTriadDeckEdit uiReaderDeckEdit, IGameGui gameGui) : base("Deck Search")
+        private int prevNumFiltered;
+        private int prevNumCards;
+
+        public PluginWindowDeckSearch(UIReaderTriadDeckEdit uiReaderDeckEdit) : base("Deck Search")
         {
             this.uiReaderDeckEdit = uiReaderDeckEdit;
-            this.gameGui = gameGui;
 
             var searchFilterPtr = ImGuiNative.ImGuiTextFilter_ImGuiTextFilter(null);
             searchFilter = new ImGuiTextFilterPtr(searchFilterPtr);
@@ -90,7 +91,7 @@ namespace TriadBuddyPlugin
 
             if (listCards.Count > 1)
             {
-                listCards.Sort((a, b) => a.Item1.Name.GetLocalized().CompareTo(b.Item1.Name.GetLocalized()));
+                listCards.Sort((a, b) => a.Item1.SortOrder.CompareTo(b.Item1.SortOrder));
             }
 
             selectedCardIdx = -1;
@@ -105,17 +106,18 @@ namespace TriadBuddyPlugin
         {
             searchFilter.Draw("", WindowContentWidth * ImGuiHelpers.GlobalScale);
 
+            var filteredCards = new List<int>();
             if (ImGui.BeginListBox("##cards", new Vector2(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 10)))
             {
                 for (int idx = 0; idx < listCards.Count; idx++)
                 {
                     var (cardOb, cardInfo) = listCards[idx];
 
-                    var itemDesc = cardOb.Name.GetLocalized();
+                    var itemDesc = $"[{CardUtils.GetOrderDesc(cardOb)}] {CardUtils.GetRarityDesc(cardOb)} {CardUtils.GetUIDesc(cardOb)}";
                     if (searchFilter.PassFilter(itemDesc))
                     {
-                        bool isSelected = selectedCardIdx == idx;
-                        if (ImGui.Selectable($"{(int)cardOb.Rarity + 1}★   {itemDesc}", isSelected))
+                        bool isSelected = selectedCardIdx == idx;                       
+                        if (ImGui.Selectable(itemDesc, isSelected))
                         {
                             selectedCardIdx = idx;
                             OnCardSelectionChanged();
@@ -125,21 +127,43 @@ namespace TriadBuddyPlugin
                         {
                             ImGui.SetItemDefaultFocus();
                         }
+
+                        filteredCards.Add(cardOb.Id);
                     }
                 }
                 ImGui.EndListBox();
+            }
+
+            bool hasFilteredCardsChanges = (prevNumCards != listCards.Count) || (prevNumFiltered != filteredCards.Count);
+            bool hasSomeCardsFiltered = (filteredCards.Count > 0) && (filteredCards.Count != listCards.Count);
+            if (hasFilteredCardsChanges && hasSomeCardsFiltered && Service.pluginConfig.ShowDeckEditHighlights)
+            {
+                prevNumCards = listCards.Count;
+                prevNumFiltered = filteredCards.Count;
+
+                uiReaderDeckEdit.SetSearchResultHighlight(filteredCards.ToArray());
             }
         }
 
         private void OnCardSelectionChanged()
         {
-            var (cardOb, cardInfo) = (selectedCardIdx >= 0) && (selectedCardIdx < listCards.Count) ? listCards[selectedCardIdx] : null;
+            if (selectedCardIdx < 0 || selectedCardIdx >= listCards.Count)
+            {
+                return;
+            }
+
+            var (cardOb, cardInfo) = listCards[selectedCardIdx];
             if (cardOb != null && cardInfo != null)
             {
                 var collectionPos = cardInfo.Collection[(int)GameCardCollectionFilter.DeckEditDefault];
 
-                //Dalamud.Logging.PluginLog.Log($"Card selection! {cardOb.Name.GetLocalized()} => page:{collectionPos.PageIndex}, cell:{collectionPos.CellIndex}");
+                //Dalamud.Logging.Service.logger.Info($"Card selection! {cardOb.Name.GetLocalized()} => page:{collectionPos.PageIndex}, cell:{collectionPos.CellIndex}");
                 uiReaderDeckEdit.SetPageAndGridView(collectionPos.PageIndex, collectionPos.CellIndex);
+
+                if (Service.pluginConfig.ShowDeckEditHighlights)
+                {
+                    uiReaderDeckEdit.SetSearchResultHighlight(new int[] { cardOb.Id });
+                }
             }
         }
     }

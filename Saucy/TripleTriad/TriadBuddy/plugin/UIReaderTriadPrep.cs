@@ -1,5 +1,4 @@
-﻿using Dalamud.Game.Gui;
-using FFXIVClientStructs.FFXIV.Component.GUI;
+﻿using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
 using System;
 using System.Collections.Generic;
@@ -15,21 +14,18 @@ namespace TriadBuddyPlugin
         public bool HasMatchRequestUI => hasRequestUI;
         public bool HasDeckSelectionUI => hasDeckSelectionUI;
 
-        public Action<UIStateTriadPrep> OnUIStateChanged;
-        public Action<bool> OnMatchRequestChanged;
-        public Action<bool> OnDeckSelectionChanged;
+        public Action<UIStateTriadPrep>? OnUIStateChanged;
+        public Action<bool>? OnMatchRequestChanged;
+        public Action<bool>? OnDeckSelectionChanged;
 
         public UIReaderTriadPrepMatchRequest uiReaderMatchRequest = new();
         public UIReaderTriadPrepDeckSelect uiReaderDeckSelect = new();
 
-        private IGameGui gameGui;
         private bool hasRequestUI;
         private bool hasDeckSelectionUI;
 
-        public UIReaderTriadPrep(IGameGui gameGui)
+        public UIReaderTriadPrep()
         {
-            this.gameGui = gameGui;
-
             uiReaderMatchRequest.parentReader = this;
             uiReaderDeckSelect.parentReader = this;
         }
@@ -121,19 +117,19 @@ namespace TriadBuddyPlugin
             var nodeRulesA = GUINodeUtils.PickNode(nodeArrL0, 6, 13);
             var nodeArrL1A = GUINodeUtils.GetImmediateChildNodes(nodeRulesA);
             var nodeL2A1 = GUINodeUtils.PickNode(nodeArrL1A, 0, 6);
-            cachedState.rules[3] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2A1, 2, 3));
+            cachedState.rules[3] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2A1, 2, 3)) ?? "";
             var nodeL2A2 = GUINodeUtils.PickNode(nodeArrL1A, 1, 6);
-            cachedState.rules[2] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2A2, 2, 3));
+            cachedState.rules[2] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2A2, 2, 3)) ?? "";
 
             var nodeRulesB = GUINodeUtils.PickNode(nodeArrL0, 7, 13);
             var nodeArrL1B = GUINodeUtils.GetImmediateChildNodes(nodeRulesB);
             var nodeL2B1 = GUINodeUtils.PickNode(nodeArrL1B, 0, 3);
-            cachedState.rules[1] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2B1, 2, 3));
+            cachedState.rules[1] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2B1, 2, 3)) ?? "";
             var nodeL2B2 = GUINodeUtils.PickNode(nodeArrL1B, 1, 3);
-            cachedState.rules[0] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2B2, 2, 3));
+            cachedState.rules[0] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2B2, 2, 3)) ?? "";
 
             var nodeNpc = GUINodeUtils.PickNode(nodeArrL0, 8, 13);
-            cachedState.npc = GUINodeUtils.GetNodeText(GUINodeUtils.GetChildNode(nodeNpc));
+            cachedState.npc = GUINodeUtils.GetNodeText(GUINodeUtils.GetChildNode(nodeNpc)) ?? "";
 
             cachedState.decks.Clear();
         }
@@ -186,7 +182,7 @@ namespace TriadBuddyPlugin
                             }
 
                             var nodeC2 = GUINodeUtils.PickChildNode(nodeB, 11, 12);
-                            deckOb.name = GUINodeUtils.GetNodeText(nodeC2);
+                            deckOb.name = GUINodeUtils.GetNodeText(nodeC2) ?? "";
                         }
 
                         cachedState.decks.Add(deckOb);
@@ -217,7 +213,7 @@ namespace TriadBuddyPlugin
     // helper class for scheduler: handles single octave performance UI and passes all notifies to parent
     public class UIReaderTriadPrepMatchRequest : IUIReader
     {
-        public UIReaderTriadPrep parentReader;
+        public UIReaderTriadPrep? parentReader;
 
         public string GetAddonName()
         {
@@ -226,7 +222,7 @@ namespace TriadBuddyPlugin
 
         public void OnAddonLost()
         {
-            parentReader.OnAddonLost();
+            parentReader?.OnAddonLost();
         }
 
         public void OnAddonShown(IntPtr addonPtr)
@@ -236,14 +232,14 @@ namespace TriadBuddyPlugin
 
         public void OnAddonUpdate(IntPtr addonPtr)
         {
-            parentReader.OnAddonUpdateMatchRequest(addonPtr);
+            parentReader?.OnAddonUpdateMatchRequest(addonPtr);
         }
     }
 
     // helper class for scheduler: handles three octaves performance UI and passes all notifies to parent
     public class UIReaderTriadPrepDeckSelect : IUIReader
     {
-        public UIReaderTriadPrep parentReader;
+        public UIReaderTriadPrep? parentReader;
 
         public string GetAddonName()
         {
@@ -252,7 +248,7 @@ namespace TriadBuddyPlugin
 
         public void OnAddonLost()
         {
-            parentReader.OnAddonLost();
+            parentReader?.OnAddonLost();
         }
 
         public void OnAddonShown(IntPtr addonPtr)
@@ -262,14 +258,14 @@ namespace TriadBuddyPlugin
 
         public void OnAddonUpdate(IntPtr addonPtr)
         {
-            parentReader.OnAddonUpdateDeckSelect(addonPtr);
+            parentReader?.OnAddonUpdateDeckSelect(addonPtr);
         }
     }
 
     public class UIStateTriadPrepDeck
     {
         public string[] cardTexPaths = new string[5];
-        public string name;
+        public string name = string.Empty;
 
         public ulong rootNodeAddr;
         public int id;
@@ -281,7 +277,7 @@ namespace TriadBuddyPlugin
     public class UIStateTriadPrep
     {
         public string[] rules = new string[4];
-        public string npc;
+        public string npc = string.Empty;
 
         public Vector2 screenPos;
         public Vector2 screenSize;

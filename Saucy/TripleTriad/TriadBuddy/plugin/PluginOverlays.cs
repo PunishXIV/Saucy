@@ -1,4 +1,4 @@
-﻿using Dalamud.Interface;
+﻿using Dalamud.Interface.Utility;
 using FFTriadBuddy;
 using ImGuiNET;
 using System.Numerics;
@@ -14,8 +14,6 @@ namespace TriadBuddyPlugin
 
         public readonly UIReaderTriadGame uiReaderGame;
         public readonly UIReaderTriadPrep uiReaderPrep;
-        public readonly Solver solver;
-        public readonly Configuration config;
 
         // overlay: game board
         private bool hasGameOverlay;
@@ -26,25 +24,27 @@ namespace TriadBuddyPlugin
         // overlay: deck selection
         private bool hasDeckSelection;
 
-        public PluginOverlays(Solver solver, UIReaderTriadGame uiReaderGame, UIReaderTriadPrep uiReaderPrep, Configuration config)
+        public PluginOverlays(UIReaderTriadGame uiReaderGame, UIReaderTriadPrep uiReaderPrep)
         {
-            this.solver = solver;
             this.uiReaderGame = uiReaderGame;
             this.uiReaderPrep = uiReaderPrep;
-            this.config = config;
 
-            solver.OnMoveChanged += OnSolverMove;
+            if (SolverUtils.solverGame != null)
+            {
+                SolverUtils.solverGame.OnMoveChanged += OnSolverMove;
+            }
+            
             uiReaderPrep.OnDeckSelectionChanged += (active) => hasDeckSelection = active;
         }
 
         public void OnSolverMove(bool foundMove)
         {
             hasGameOverlay = foundMove;
-            if (foundMove)
+            if (foundMove && SolverUtils.solverGame != null)
             {
-                gameBoardIdx = solver.moveBoardIdx;
-                gameCardIdx = solver.moveCardIdx;
-                gameCardColor = GetChanceColor(solver.moveWinChance);
+                gameBoardIdx = SolverUtils.solverGame.moveBoardIdx;
+                gameCardIdx = SolverUtils.solverGame.moveCardIdx;
+                gameCardColor = GetChanceColor(SolverUtils.solverGame.moveWinChance);
             }
             else
             {
@@ -74,7 +74,7 @@ namespace TriadBuddyPlugin
                 return;
             }
 
-            if (config.ShowSolverHintsInGame)
+            if (Service.pluginConfig.ShowSolverHintsInGame)
             {
                 var (deckCardPos, deckCardSize) = uiReaderGame.GetBlueCardPosAndSize(gameCardIdx);
                 var (boardCardPos, boardCardSize) = uiReaderGame.GetBoardCardPosAndSize(gameBoardIdx);
@@ -90,7 +90,7 @@ namespace TriadBuddyPlugin
 
         private void DrawDeckSelectionOverlay()
         {
-            if (uiReaderPrep == null || uiReaderPrep.cachedState == null)
+            if (uiReaderPrep == null || uiReaderPrep.cachedState == null || SolverUtils.solverPreGameDecks == null)
             {
                 hasDeckSelection = false;
                 return;
@@ -103,7 +103,7 @@ namespace TriadBuddyPlugin
             for (int idx = 0; idx < uiReaderPrep.cachedState.decks.Count; idx++)
             {
                 var deckState = uiReaderPrep.cachedState.decks[idx];
-                if (solver.preGameDecks.TryGetValue(deckState.id, out var deckData))
+                if (SolverUtils.solverPreGameDecks.preGameDecks.TryGetValue(deckState.id, out var deckData))
                 {
                     bool isSolverReady = deckData.chance.score > 0;
                     var hintText = !isSolverReady ? "..." : deckData.chance.winChance.ToString("P0");

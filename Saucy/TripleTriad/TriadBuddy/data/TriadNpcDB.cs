@@ -11,8 +11,8 @@ namespace FFTriadBuddy
         public List<TriadGameModifier> Rules;
         public TriadDeck Deck;
 
-        public Regex NameRegex;
-        public Regex NamePartialRegex;
+        public Regex? NameRegex;
+        public Regex? NamePartialRegex;
 
         // sometimes (German client only?) npc names from game data will be using tags for handling inflections
         // those will show up as:
@@ -81,21 +81,21 @@ namespace FFTriadBuddy
 
     public class TriadNpcDB
     {
-        private static TriadNpcDB instance = new TriadNpcDB();
-        public List<TriadNpc> npcs = new List<TriadNpc>();
+        private static TriadNpcDB instance = new();
+        public List<TriadNpc> npcs = [];
 
         public static TriadNpcDB Get()
         {
             return instance;
         }
 
-        public TriadNpc Find(string Name)
+        public TriadNpc? Find(string Name)
         {
             string nameLower = Name.ToLower();
             return npcs.Find(x => (x != null) && x.IsMatchingName(nameLower));
         }
 
-        public TriadNpc FindByNameStart(string Name)
+        public TriadNpc? FindByNameStart(string Name)
         {
             string nameLower = Name.ToLower();
             return npcs.Find(x => (x != null) && x.IsMatchingNameStart(nameLower));

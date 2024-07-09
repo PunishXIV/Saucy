@@ -1,6 +1,4 @@
-﻿using Dalamud.Game;
-using Dalamud.Logging;
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 
 namespace TriadBuddyPlugin
@@ -12,16 +10,16 @@ namespace TriadBuddyPlugin
         private delegate byte IsCardOwnedDelegate(IntPtr uiState, ushort cardId);
         private delegate byte IsNpcBeatenDelegate(IntPtr uiState, int triadNpcId);
 
-        private readonly IsCardOwnedDelegate IsCardOwnedFunc;
-        private readonly IsNpcBeatenDelegate IsNpcBeatenFunc;
+        private readonly IsCardOwnedDelegate? IsCardOwnedFunc;
+        private readonly IsNpcBeatenDelegate? IsNpcBeatenFunc;
         private readonly IntPtr UIStatePtr;
 
-        public UnsafeReaderTriadCards(ISigScanner sigScanner)
+        public UnsafeReaderTriadCards()
         {
             IntPtr IsCardOwnedPtr = IntPtr.Zero;
             IntPtr IsNpcBeatenPtr = IntPtr.Zero;
 
-            if (sigScanner != null)
+            if (Service.sigScanner != null)
             {
                 try
                 {
@@ -29,21 +27,21 @@ namespace TriadBuddyPlugin
                     //   identified by pretty unique rowId from TripleTriad sheet: 0x230002
                     //   looking for negative of that number (0xFFDCFFFE) gives pretty much only npc access functions (set + get)
 
-                    IsNpcBeatenPtr = sigScanner.ScanText("40 53 48 83 ec 20 8d 82 fe ff dc ff");
+                    IsNpcBeatenPtr = Service.sigScanner.ScanText("40 53 48 83 ec 20 8d 82 fe ff dc ff");
 
                     // IsTriadCardOwned(void* uiState, ushort cardId)
                     //   used by GSInfoCardList's agent, function preparing card lists
                     //   +0x30 ptr to end of list, +0x10c used filter (all, only owned, only missing)
                     //   break on end of list write, check loops counting cards at function start in filter == 1 scope
 
-                    IsCardOwnedPtr = sigScanner.ScanText("40 53 48 83 ec 20 48 8b d9 66 85 d2 74 3b 0f");
+                    IsCardOwnedPtr = Service.sigScanner.ScanText("40 53 48 83 ec 20 48 8b d9 66 85 d2 74 3b 0f");
 
                     // UIState addr, use LEA opcode before calling IsTriadCardOwned, same function as described above
-                    UIStatePtr = sigScanner.GetStaticAddressFromSig("48 8d 0d ?? ?? ?? ?? e8 ?? ?? ?? ?? 84 c0 74 0f 8b cb");
+                    UIStatePtr = Service.sigScanner.GetStaticAddressFromSig("48 8d 0d ?? ?? ?? ?? e8 ?? ?? ?? ?? 84 c0 74 0f 8b cb");
                 }
                 catch (Exception ex)
                 {
-                    PluginLog.Error(ex, "oh noes!");
+                    Service.logger.Error(ex, "oh noes!");
                 }
             }
 
@@ -55,7 +53,7 @@ namespace TriadBuddyPlugin
             }
             else
             {
-                PluginLog.Error("Failed to find triad card functions, turning reader off");
+                Service.logger.Error("Failed to find triad card functions, turning reader off");
             }
         }
 
@@ -66,7 +64,7 @@ namespace TriadBuddyPlugin
                 return false;
             }
 
-            return !HasErrors && IsCardOwnedFunc(UIStatePtr, (ushort)cardId) != 0;
+            return (IsCardOwnedFunc != null) && IsCardOwnedFunc(UIStatePtr, (ushort)cardId) != 0;
         }
 
         public bool IsNpcBeaten(int npcId)
@@ -76,7 +74,7 @@ namespace TriadBuddyPlugin
                 return false;
             }
 
-            return !HasErrors && IsNpcBeatenFunc(UIStatePtr, npcId) != 0;
+            return (IsNpcBeatenFunc != null) && IsNpcBeatenFunc(UIStatePtr, npcId) != 0;
         }
 
         /*public void TestBeatenNpcs()

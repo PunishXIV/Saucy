@@ -1,4 +1,5 @@
 {
+	"CFG_DeckEditHighlights": { "message": "Show highlights in deck edit" },
 	"CFG_GameToggleHints": { "message": "Show solver hints in game" },
 	"CFG_OptimizerParallelLoad": { "message": "CPU usage for Deck Optimizer" },
 	"CFG_OptimizerParallelLoadHint": { "message": "Controls number of logical processors used for calculations. Does not reduce load of individual CPUs!" },

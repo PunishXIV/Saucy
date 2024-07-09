@@ -1,4 +1,5 @@
 {
+	"CFG_DeckEditHighlights": { "message": "在牌组编辑中显示高亮" },
 	"CFG_GameToggleHints": { "message": "在游戏中显示求解器提示" },
 	"CFG_OptimizerParallelLoad": { "message": "牌组优化器的 CPU 使用" },
 	"CFG_OptimizerParallelLoadHint": { "message": "控制用于计算的逻辑处理器数量。不会减少单个CPU的负荷！" },

@@ -31,11 +31,6 @@
           "NAudio.Core": "2.0.0"
         }
       },
-      "ILRepack": {
-        "type": "Transitive",
-        "resolved": "2.0.18",
-        "contentHash": "sR5Aj3JLDbA8JwESfWYfigSz5k1oNSHPN434W1LX8sboWJYEOSQP/KkvZGmJKPgajzSUKkl2jDar3LPZiMFU4Q=="
-      },
       "Microsoft.NETCore.Platforms": {
         "type": "Transitive",
         "resolved": "3.1.0",
@@ -97,11 +92,6 @@
           "NAudio.Core": "2.1.0"
         }
       },
-      "Reloaded.Memory": {
-        "type": "Transitive",
-        "resolved": "7.1.0",
-        "contentHash": "4Y5tCsRWdW/shj9W7RqJq37LStuW1VVtjxsBp4LKZilPcjudeQg9k+u+6fnDgacCEJiG3S2EtcaiNtVMTdaSnQ=="
-      },
       "System.Security.AccessControl": {
         "type": "Transitive",
         "resolved": "4.7.0",
@@ -116,18 +106,14 @@
         "resolved": "4.7.0",
         "contentHash": "ojD0PX0XhneCsUbAZVKdb7h/70vyYMDYs85lwEI+LngEONe/17A0cFaRFqZU+sOEidcVswYWikYOQ9PPfjlbtQ=="
       },
-      "clicklib": {
-        "type": "Project",
-        "dependencies": {
-          "ILRepack": "[2.0.18, )",
-          "Reloaded.Memory": "[7.1.0, )"
-        }
-      },
       "ecommons": {
         "type": "Project"
       },
       "punishlib": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "ECommons": "[2.2.0.2, )"
+        }
       }
     }
   }

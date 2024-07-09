@@ -11,7 +11,7 @@ namespace TriadBuddyPlugin
 
         public int matchFee;
 
-        public MapLinkPayload Location;
+        public MapLinkPayload? Location;
         public List<int> rewardCards = new();
 
         // call GameNpcDB.Refresh() before reading fields below
@@ -24,7 +24,7 @@ namespace TriadBuddyPlugin
     {
         private static GameNpcDB instance = new();
 
-        public UnsafeReaderTriadCards memReader;
+        public UnsafeReaderTriadCards? memReader;
         public Dictionary<int, GameNpcInfo> mapNpcs = new();
 
         public static GameNpcDB Get() { return instance; }

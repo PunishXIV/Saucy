@@ -41,18 +41,40 @@ namespace TriadBuddyPlugin
         public static readonly int MaxGridPages = 15;
         public static readonly int MaxGridCells = 30;
 
-        public UnsafeReaderTriadCards memReader;
+        public UnsafeReaderTriadCards? memReader;
         public Dictionary<int, GameCardInfo> mapCards = new();
         public List<int> ownedCardIds = new();
         private int maxCardId = 0;
 
         public static GameCardDB Get() { return instance; }
 
-        public GameCardInfo FindById(int cardId)
+        public GameCardInfo? FindById(int cardId)
         {
             if (mapCards.TryGetValue(cardId, out var cardInfo))
             {
                 return cardInfo;
+            }
+
+            return null;
+        }
+
+        public GameCardInfo? FindByGridLocation(int pageIdx, int cellIdx, int filterMode)
+        {
+            if (pageIdx < 0 || cellIdx < 0 || filterMode < 0 || filterMode > 2)
+            {
+                return null;
+            }
+
+            foreach (var kvp in mapCards)
+            {
+                if (kvp.Value != null)
+                {
+                    var pos = kvp.Value.Collection[filterMode];
+                    if (pos.PageIndex == pageIdx && pos.CellIndex == cellIdx)
+                    {
+                        return kvp.Value;
+                    }
+                }
             }
 
             return null;
@@ -120,8 +142,14 @@ namespace TriadBuddyPlugin
             var cardsDB = TriadCardDB.Get();
 
             var sortedTriadCards = new List<TriadCard>();
-            sortedTriadCards.AddRange(cardsDB.cards);
-            sortedTriadCards.RemoveAll(x => (x == null) || !x.IsValid());
+            foreach (var cardOb in cardsDB.cards)
+            {
+                if (cardOb != null && cardOb.IsValid())
+                {
+                    sortedTriadCards.Add(cardOb);
+                }
+            }
+
             sortedTriadCards.Sort((a, b) => a.SortOrder.CompareTo(b.SortOrder));
 
             var noCollectionData = new GameCardInfo.CollectionPos() { PageIndex = -1, CellIndex = -1 };
@@ -135,7 +163,7 @@ namespace TriadBuddyPlugin
                 foreach (var cardOb in sortedTriadCards)
                 {
                     bool isValid = mapCards.TryGetValue(cardOb.Id, out var cardInfoOb);
-                    if (isValid)
+                    if (isValid && cardInfoOb != null)
                     {
                         bool isOwned = ownedCardIds.Contains(cardOb.Id);
                         bool isMatchingFilter =

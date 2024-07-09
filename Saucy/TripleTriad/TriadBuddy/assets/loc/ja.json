@@ -1,4 +1,5 @@
 {
+	"CFG_DeckEditHighlights": { "message": "デッキ編集でハイライトを表示する" },
 	"CFG_GameToggleHints": { "message": "ゲーム中に解答のヒントを表示" },
 	"CFG_OptimizerParallelLoad": { "message": "デッキ最適化のためのCPU使用率" },
 	"CFG_OptimizerParallelLoadHint": { "message": "計算に使用される論理プロセッサの数を制御します。個々のCPUの負荷を軽減しません。" },

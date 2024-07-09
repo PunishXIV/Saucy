@@ -1,6 +1,4 @@
-﻿using MgAl2O4.Utils;
-using System;
-using System.Diagnostics;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -56,10 +54,6 @@ namespace FFTriadBuddy
 
         public override bool FindNextMove(TriadGameSolver solver, TriadGameSimulationState gameState, out int cardIdx, out int boardPos, out SolverResult solverResult)
         {
-#if DEBUG
-            if ((debugFlags & DebugFlags.ShowMoveStart) != DebugFlags.None) { Logger.WriteLine($"FindNextMove, numPlaced:{gameState.numCardsPlaced}"); }
-#endif // DEBUG
-
             cardIdx = -1;
             boardPos = -1;
             solverResult = SolverResult.Zero;
@@ -146,10 +140,7 @@ namespace FFTriadBuddy
                 testMask <<= 1;
             }
 
-#if DEBUG
-            // more bits set than mask allows?
-            Debugger.Break();
-#endif
+
             return -1;
         }
     }
@@ -175,10 +166,6 @@ namespace FFTriadBuddy
 
         public override bool FindNextMove(TriadGameSolver solver, TriadGameSimulationState gameState, out int cardIdx, out int boardPos, out SolverResult solverResult)
         {
-#if DEBUG
-            if ((debugFlags & DebugFlags.ShowMoveStart) != DebugFlags.None) { Logger.WriteLine($"FindNextMove, numPlaced:{gameState.numCardsPlaced}"); }
-#endif // DEBUG
-
             cardIdx = -1;
             boardPos = -1;
 
@@ -278,9 +265,6 @@ namespace FFTriadBuddy
                                 branchResult = SearchActionSpace(solver, gameStateCopy, searchLevel + 1, out _, out _, out _);
                             }
 
-#if DEBUG
-                            if ((debugFlags & DebugFlags.ShowMoveDetails) != DebugFlags.None && isRootLevel) { Logger.WriteLine($"  board[{boardIdx}], card[{cardIdx}] = {branchResult}"); }
-#endif // DEBUG
                             if (branchResult.IsBetterThan(bestActionResult) || !hasValidPlacements)
                             {
                                 bestActionResult = branchResult;
@@ -308,32 +292,6 @@ namespace FFTriadBuddy
                     bestBoardPos = TriadGameAgentRandom.PickRandomBitFromMask(availBoardMask, failsafeRandStream.Next(numAvailBoard));
                 }
 
-#if DEBUG
-                if ((debugFlags & DebugFlags.ShowMoveResult) != DebugFlags.None && isRootLevel)
-                {
-                    string namePrefix = string.IsNullOrEmpty(solver.name) ? "" : ("[" + solver.name + "] ");
-                    Logger.WriteLine("{0}Solver {11}win:{1:P2} (draw:{2:P2}), blue[{3}], red[{4}], turn:{5}, availBoard:{6} ({7:x}), availCards:{8} ({9}:{10:x})",
-                        namePrefix,
-                        bestActionResult.winChance, bestActionResult.drawChance,
-                        gameState.deckBlue, gameState.deckRed, turnOwner,
-                        numAvailBoard, availBoardMask,
-                        numAvailCards, gameState.state == ETriadGameState.InProgressBlue ? "B" : "R", availCardsMask,
-                        hasValidPlacements ? "[FAILSAFE] " : "");
-                }
-#endif // DEBUG
-            }
-            else
-            {
-#if DEBUG
-                if ((debugFlags & DebugFlags.ShowMoveResult) != DebugFlags.None && isRootLevel)
-                {
-                    string namePrefix = string.IsNullOrEmpty(solver.name) ? "" : ("[" + solver.name + "] ");
-                    Logger.WriteLine("{0}Can't find move! availBoard:{1} ({2:x}), availCards:{3} ({4}:{5:x})",
-                        namePrefix,
-                        numAvailBoard, availBoardMask,
-                        numAvailCards, gameState.state == ETriadGameState.InProgressBlue ? "B" : "R", availCardsMask);
-                }
-#endif // DEBUG
             }
 
             // what to do with results depend on current move owner:
@@ -383,23 +341,13 @@ namespace FFTriadBuddy
                 bestCardIdx = -1;
                 bestBoardPos = -1;
                 bestActionResult = FindWinningProbability(solver, gameState);
-#if DEBUG
-                if ((debugFlags & DebugFlags.ShowMoveDetailsRng) != DebugFlags.None)
-                {
-                    Logger.WriteLine($"level:{searchLevel}, numPlaced:{gameState.numCardsPlaced} => random workers:{bestActionResult}");
-                }
-#endif // DEBUG
+
 
                 return bestActionResult;
             }
 
             var result = base.SearchActionSpace(solver, gameState, searchLevel, out bestCardIdx, out bestBoardPos, out bestActionResult);
-#if DEBUG
-            if ((debugFlags & DebugFlags.ShowMoveDetails) != DebugFlags.None && searchLevel == 0)
-            {
-                Logger.WriteLine($"level:{searchLevel}, numPlaced:{gameState.numCardsPlaced} => result:{bestActionResult}");
-            }
-#endif // DEBUG
+
             return result;
         }
 
@@ -488,9 +436,7 @@ namespace FFTriadBuddy
                 }
             }
 
-#if DEBUG
-            if ((debugFlags & DebugFlags.AgentInitialize) != DebugFlags.None) { Logger.WriteLine($"{agentName}: minPlacedToExplore:{minPlacedToExplore}, minPlacedToExploreWithForced:{minPlacedToExploreWithForced}"); }
-#endif // DEBUG
+
         }
 
         protected override bool CanRunRandomExploration(TriadGameSolver solver, TriadGameSimulationState gameState, int searchLevel)
@@ -534,12 +480,6 @@ namespace FFTriadBuddy
             var (blueDefenseScore, blueCaptureScore) = CalculateBoardScore(solver, gameState);
             var deckScore = CalculateBlueDeckScore(solver, gameState);
 
-#if DEBUG
-            if ((debugFlags & DebugFlags.ShowMoveDetailsRng) != DebugFlags.None)
-            {
-                Logger.WriteLine($"stateScore => def:{blueDefenseScore}, capture:{blueCaptureScore}, deck:{deckScore}");
-            }
-#endif // DEBUG
 
             return ((blueDefenseScore * PriorityDefense) + (blueCaptureScore * PriorityCapture) + (deckScore * PriorityDeck)) / (PriorityDefense + PriorityDeck + PriorityCapture);
         }

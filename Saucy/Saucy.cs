@@ -1,16 +1,10 @@
-using ClickLib;
-using ClickLib.Clicks;
-using Dalamud.Data;
-using Dalamud.Game;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
-using Dalamud.Game.Gui;
-using Dalamud.IoC;
 using Dalamud.Plugin;
 using ECommons;
 using ECommons.DalamudServices;
+using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using ImGuiNET;
 using MgAl2O4.Utils;
 using NAudio.Wave;
 using PunishLib;
@@ -57,7 +51,7 @@ namespace Saucy
         public LimbManager LimbManager;
         public MiniCactpotManager MiniCactpotManager;
 
-        public Saucy([RequiredVersion("1.0")] DalamudPluginInterface pluginInterface)
+        public Saucy(IDalamudPluginInterface pluginInterface)
         {
             ECommonsMain.Init(pluginInterface, this, Module.All);
             PunishLibMain.Init(pluginInterface, "Saucy", new AboutPlugin() { Sponsor = "https://ko-fi.com/taurenkey" });
@@ -77,20 +71,20 @@ namespace Saucy
             Svc.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
             dataLoader = new GameDataLoader();
-            dataLoader.StartAsyncWork(Svc.Data);
+            dataLoader.StartAsyncWork();
 
-            TTSolver.profileGS = new UnsafeReaderProfileGS(Svc.GameGui);
+            TTSolver.profileGS = new UnsafeReaderProfileGS();
 
-            uiReaderGame = new UIReaderTriadGame(Svc.GameGui);
+            uiReaderGame = new UIReaderTriadGame();
             uiReaderGame.OnUIStateChanged += TTSolver.UpdateGame;
 
-            uiReaderPrep = new UIReaderTriadPrep(Svc.GameGui);
+            uiReaderPrep = new UIReaderTriadPrep();
             uiReaderPrep.shouldScanDeckData = (TTSolver.profileGS == null) || TTSolver.profileGS.HasErrors;
             uiReaderPrep.OnUIStateChanged += TTSolver.UpdateDecks;
 
-            uiReaderCardList = new UIReaderTriadCardList(Svc.GameGui);
+            uiReaderCardList = new UIReaderTriadCardList();
 
-            var uiReaderMatchResults = new UIReaderTriadResults(Svc.GameGui);
+            var uiReaderMatchResults = new UIReaderTriadResults();
             uiReaderMatchResults.OnUpdated += CheckResults;
 
             uiReaderGamesResults = new UIReaderGamesResults(Svc.GameGui);
@@ -104,18 +98,17 @@ namespace Saucy
             uiReaderScheduler.AddObservedAddon(uiReaderMatchResults);
             uiReaderScheduler.AddObservedAddon(uiReaderGamesResults);
 
-            var memReaderTriadFunc = new UnsafeReaderTriadCards(Svc.SigScanner);
+            var memReaderTriadFunc = new UnsafeReaderTriadCards();
             GameCardDB.Get().memReader = memReaderTriadFunc;
             GameNpcDB.Get().memReader = memReaderTriadFunc;
-            
+
             SliceIsRightModule.Initialize();
 
             Svc.Framework.Update += RunBot;
-            Click.Initialize();
 
             LimbManager = new(Config.LimbConfig);
             MiniCactpotManager = new();
-				}
+        }
 
         private void CheckLimbResults(UIStateLimbResults results)
         {
@@ -291,10 +284,10 @@ namespace Saucy
             }
             catch (Exception ex)
             {
-                Dalamud.Logging.PluginLog.Error(ex, "state update failed");
+                Svc.Log.Error(ex, "state update failed");
             }
 
-          
+
             if (Saucy.Config.OpenAutomatically && uiReaderPrep.HasMatchRequestUI && !TriadAutomater.ModuleEnabled)
             {
                 PluginUi.Visible = true;
@@ -366,7 +359,7 @@ namespace Saucy
                 if (talk == IntPtr.Zero) return;
                 var talkAddon = (AtkUnitBase*)talk;
                 if (!IsAddonReady(talkAddon)) return;
-                ClickTalk.Using(talk).Click();
+                new AddonMaster.Talk(talk).Click();
             }
             catch { }
         }
@@ -396,7 +389,7 @@ namespace Saucy
             SliceIsRightModule.ModuleEnabled = false;
             LimbManager.Dispose();
             MiniCactpotManager.Dispose();
-						ECommonsMain.Dispose(); //Don't forget!
+            ECommonsMain.Dispose(); //Don't forget!
             P = null; //necessary to free the reference for GC
         }
 
@@ -408,7 +401,7 @@ namespace Saucy
             var args = arguments.Split();
             if (args.Length > 0)
             {
-                
+
                 if (args[0].ToLower() == "sr")
                 {
                     SliceIsRightModule.ModuleEnabled = false;
