@@ -1,6 +1,6 @@
 <!-- Repository Header Begin -->
 <div align="center">
-<img src="https://love.puni.sh/resources/saucy.svg" alt="AutoRetainer IconUrl" width="15%">
+<img src="https://s3.puni.sh/media/plugin/7/icon-bl3wub19h2u.png" alt="Saucy IconUrl" width="15%">
 
 # Saucy
 
