@@ -10,7 +10,7 @@ namespace TriadBuddyPlugin
     public class UIReaderTriadGame : IUIReader
     {
         [StructLayout(LayoutKind.Explicit, Size = 0x1000)]              // no idea what size, last entries seems to be around +0xfc0? 
-        private unsafe struct AddonTripleTriad
+        public unsafe struct AddonTripleTriad
         {
             [FieldOffset(0x0)] public AtkUnitBase AtkUnitBase;
             [FieldOffset(0x230)] public byte TurnState;                 // 0: waiting, 1: normal move, 2: masked move (order/chaos)
@@ -47,7 +47,7 @@ namespace TriadBuddyPlugin
         }
 
         [StructLayout(LayoutKind.Explicit, Size = 0xA8)]
-        private unsafe struct AddonTripleTriadCard
+        public unsafe struct AddonTripleTriadCard
         {
             [FieldOffset(0x8)] public AtkComponentBase* CardDropControl;
             [FieldOffset(0x80)] public byte CardRarity;                 // 1..5

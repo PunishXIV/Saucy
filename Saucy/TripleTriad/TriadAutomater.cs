@@ -13,6 +13,7 @@ using System.Text;
 using static ECommons.GenericHelpers;
 using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 using ECommons.Automation.UIInput;
+using static TriadBuddyPlugin.UIReaderTriadGame;
 
 namespace Saucy.TripleTriad
 {
@@ -38,23 +39,11 @@ namespace Saucy.TripleTriad
         {
             try
             {
-                if (TryGetAddonByName<AtkUnitBase>("TripleTriad", out var addon))
+                if (TryGetAddonByName<AddonTripleTriad>("TripleTriad", out var addon))
                 {
-                    var values = stackalloc AtkValue[2];
-                    values[0] = new()
-                    {
-                        Type = ValueType.Int,
-                        Int = 14,
-                    };
-                    values[1] = new()
-                    {
-                        Type = ValueType.UInt,
-                        UInt = (uint)slot + ((uint)which << 16),
-                    };
-                    addon->FireCallback(2, values);
-
-                    //PlaceCardHook ??= Svc.Hook.HookFromAddress<PlaceCardDelegate>(Svc.SigScanner.ScanText("40 56 48 83 EC 20 48 8B F1 E8 ?? ?? ?? ?? 83 BE"), PlaceCardDetour);
-                    //PlaceCardHook.Original((IntPtr)addon);
+                    Callback.Fire(&addon->AtkUnitBase, true, 14, (uint)slot + ((uint)which << 16));
+                    addon->AtkUnitBase.Update(0);
+                    addon->TurnState = 0;
                 }
             }
             catch
@@ -88,7 +77,6 @@ namespace Saucy.TripleTriad
             if (Saucy.uiReaderPrep.HasDeckSelectionUI)
             {
                 DeckSelect();
-
             }
 
         }
