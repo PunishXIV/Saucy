@@ -61,7 +61,7 @@ public unsafe class MiniCactpotManager : IDisposable
                     {
                         var element = addon->GetNodeById((uint)nodeId);
                         //Log($"Checking {i} {element->MultiplyRed} {element->MultiplyGreen} {element->MultiplyBlue}");
-                        if (element->MultiplyRed == 0 && element->MultiplyBlue == 0 && element->MultiplyGreen == 100)
+                        if (element->MultiplyRed == 33 && element->MultiplyBlue == 33 && element->MultiplyGreen == 33)
                         {
                             var component = (AtkComponentNode*)element;
                             var button = (AtkComponentCheckBox*)component->Component;
@@ -88,7 +88,7 @@ public unsafe class MiniCactpotManager : IDisposable
                     for (int i = 21; i <= 28; i++)
                     {
                         var btn = addon->GetNodeById((uint)i);
-                        if (btn->MultiplyBlue == 0 && btn->MultiplyRed == 0 && btn->MultiplyGreen == 100)
+                        if (btn->MultiplyBlue == 33 && btn->MultiplyRed == 33 && btn->MultiplyGreen == 33)
                         {
                             if (EzThrottler.Throttle("ClickMiniCactpot", 100))
                             {
