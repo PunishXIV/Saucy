@@ -191,7 +191,7 @@ namespace FFTriadBuddy
             }
 
             int NumCards = knownCards.Count + unknownCardPool.Count;
-            int DeckPower = (NumCards > 0) ? System.Math.Min(System.Math.Max((SumRating * 2 / NumCards), 1), 10) : 1;
+            int DeckPower = (NumCards > 0) ? Math.Min(Math.Max((SumRating * 2 / NumCards), 1), 10) : 1;
 
             return DeckPower;
         }

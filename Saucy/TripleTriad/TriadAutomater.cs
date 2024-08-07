@@ -91,7 +91,7 @@ namespace Saucy.TripleTriad
 
                     if (Saucy.Config.SelectedDeckIndex == -1 && !Saucy.Config.UseRecommendedDeck)
                     {
-                        var button = (AtkComponentButton*)addon->UldManager.NodeList[3];
+                        var button = addon->UldManager.NodeList[3]->GetAsAtkComponentButton();
                         button->ClickAddonButton(addon);
                         return;
                     }
@@ -102,7 +102,7 @@ namespace Saucy.TripleTriad
                         //Deck Index
                         values[0] = new()
                         {
-                            Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
+                            Type = ValueType.Int,
                             Int = deck,
                         };
                         addon->FireCallback(1, values);

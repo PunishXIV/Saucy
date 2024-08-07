@@ -431,6 +431,13 @@ namespace Saucy
 
             if (Saucy.TTSolver.profileGS.GetPlayerDecks().Count() > 0)
             {
+                bool useAutoDeck = Saucy.Config.UseRecommendedDeck;
+                if (ImGui.Checkbox("Automatically choose your deck with the best win chance", ref useAutoDeck))
+                {
+                    Saucy.Config.UseRecommendedDeck = useAutoDeck;
+                    Saucy.Config.Save();
+                }
+
                 if (!Saucy.Config.UseRecommendedDeck)
                 {
                     ImGui.PushItemWidth(200);
@@ -467,13 +474,6 @@ namespace Saucy
                         ImGui.EndCombo();
                     }
 
-                    ImGui.SameLine();
-                }
-                bool useAutoDeck = Saucy.Config.UseRecommendedDeck;
-                if (ImGui.Checkbox("Automatically choose your deck with the best win chance", ref useAutoDeck))
-                {
-                    Saucy.Config.UseRecommendedDeck = useAutoDeck;
-                    Saucy.Config.Save();
                 }
             }
             else

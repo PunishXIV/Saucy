@@ -121,7 +121,7 @@ namespace Saucy
                 });
 
                 uiReaderGamesResults.SetIsResultsUI(false);
-                Saucy.Config.Save();
+                Config.Save();
             }
         }
 
@@ -129,7 +129,7 @@ namespace Saucy
         {
             if (CufModule.ModuleEnabled)
             {
-                Saucy.Config.UpdateStats(stats =>
+                Config.UpdateStats(stats =>
                 {
                     stats.CuffMGP += GetBonusMGP(obj.numMGP);
                     if (obj.isPunishing) stats.CuffPunishings += 1;
@@ -146,7 +146,7 @@ namespace Saucy
                 {
                     TriadAutomater.NumberOfTimes = 1;
                     CufModule.ModuleEnabled = false;
-                    if (Saucy.Config.PlaySound)
+                    if (Config.PlaySound)
                     {
                         PlaySound();
                     }
@@ -159,7 +159,7 @@ namespace Saucy
                 }
 
                 uiReaderGamesResults.SetIsResultsUI(false);
-                Saucy.Config.Save();
+                Config.Save();
             }
         }
 
@@ -167,7 +167,7 @@ namespace Saucy
         {
             if (TriadAutomater.ModuleEnabled)
             {
-                Saucy.Config.UpdateStats(stats =>
+                Config.UpdateStats(stats =>
                 {
                     stats.GamesPlayedWithSaucy++;
                     stats.MGPWon += this.GetBonusMGP(obj.numMGP);
@@ -188,13 +188,13 @@ namespace Saucy
 
                 if (obj.isWin)
                 {
-                    Saucy.Config.UpdateStats(stats => stats.GamesWonWithSaucy++);
+                    Config.UpdateStats(stats => stats.GamesWonWithSaucy++);
                     if (obj.cardItemId > 0)
                     {
                         if (TriadAutomater.PlayUntilCardDrops)
                             TriadAutomater.NumberOfTimes--;
 
-                        Saucy.Config.UpdateStats(stats => stats.CardsDroppedWithSaucy++);
+                        Config.UpdateStats(stats => stats.CardsDroppedWithSaucy++);
 
                         var cardDB = GameCardDB.Get();
 
@@ -202,7 +202,7 @@ namespace Saucy
                         {
                             if (cardInfo.ItemId == obj.cardItemId)
                             {
-                                Saucy.Config.UpdateStats(stats =>
+                                Config.UpdateStats(stats =>
                                 {
                                     if (stats.CardsWon.ContainsKey((uint)cardInfo.CardId))
                                         stats.CardsWon[(uint)cardInfo.CardId] += 1;
@@ -219,7 +219,7 @@ namespace Saucy
 
                 this.Rematch();
             }
-            Saucy.Config.Save();
+            Config.Save();
 
 
         }
@@ -288,7 +288,7 @@ namespace Saucy
             }
 
 
-            if (Saucy.Config.OpenAutomatically && uiReaderPrep.HasMatchRequestUI && !TriadAutomater.ModuleEnabled)
+            if (Config.OpenAutomatically && uiReaderPrep.HasMatchRequestUI && !TriadAutomater.ModuleEnabled)
             {
                 PluginUi.Visible = true;
                 openTT = true;
@@ -319,7 +319,7 @@ namespace Saucy
                     }
                     else
                     {
-                        if (Saucy.Config.PlaySound)
+                        if (Config.PlaySound)
                         {
                             PlaySound();
                         }
@@ -370,7 +370,7 @@ namespace Saucy
         {
             lock (_lockObj)
             {
-                string sound = Saucy.Config.SelectedSound;
+                string sound = Config.SelectedSound;
                 string path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory.FullName, "Sounds", $"{sound}.mp3");
                 if (!File.Exists(path)) return;
                 var reader = new Mp3FileReader(path);
