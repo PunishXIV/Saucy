@@ -230,7 +230,7 @@ namespace TriadBuddyPlugin
                 var cards = new TriadCard?[5];
                 for (int cardIdx = 0; cardIdx < 5; cardIdx++)
                 {
-                    cards[cardIdx] = ctx.ParseCardByTexture(deckOb.cardTexPaths[cardIdx]);
+                    cards[cardIdx] = ctx.ParseCard(deckOb.cardTexPaths[cardIdx]);
                 }
 
                 deckData.solverDeck = ctx.HasErrors ? null : new TriadDeck(cards);

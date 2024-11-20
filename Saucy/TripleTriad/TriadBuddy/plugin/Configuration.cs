@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace TriadBuddyPlugin
 {
     [Serializable]
-    public class Configuration : IPluginConfiguration
+    public class Configuration
     {
         public int Version { get; set; } = 0;
 
@@ -45,7 +45,7 @@ namespace TriadBuddyPlugin
 
         public void Save()
         {
-            Service.pluginInterface.SavePluginConfig(this);
+            //Service.pluginInterface.SavePluginConfig(this);
         }
     }
 }

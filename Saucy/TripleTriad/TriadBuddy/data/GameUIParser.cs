@@ -34,7 +34,7 @@ namespace TriadBuddyPlugin
                 if (matchOb.SameNumberId >= 0)
                 {
                     // ambiguous match, use texture for exact Id
-                    matchOb = ParseCardByTexture(texPath, false);
+                    matchOb = ParseCard(texPath, false);
                 }
             }
 
@@ -58,7 +58,7 @@ namespace TriadBuddyPlugin
             return matchOb;
         }
 
-        public TriadCard? ParseCardByTexture(string texPath, bool markFailed = true)
+        public TriadCard? ParseCard(string texPath, bool markFailed = true)
         {
             var matchOb = cards.FindByTexture(texPath);
             if (matchOb == null && markFailed)
