@@ -2,7 +2,6 @@
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using ECommons.DalamudServices;
 
 namespace TriadBuddyPlugin
 {
@@ -12,25 +11,18 @@ namespace TriadBuddyPlugin
         public static IDalamudPluginInterface pluginInterface = null!;
         public static Configuration pluginConfig = null!;
 
-        [PluginService]
-        public static IDataManager dataManager => Svc.Data;
+        [PluginService] public static IDataManager dataManager { get; private set; } = null!;
 
-        [PluginService]
-        public static ICommandManager commandManager => Svc.Commands;
+        [PluginService] public static ICommandManager commandManager { get; private set; } = null!;
 
-        [PluginService]
-        public static ISigScanner sigScanner => Svc.SigScanner;
+        [PluginService] public static ISigScanner sigScanner { get; private set; } = null!;
 
-        [PluginService]
-        public static IFramework framework => Svc.Framework;
+        [PluginService] public static IFramework framework { get; private set; } = null!;
 
-        [PluginService]
-        public static IGameGui gameGui => Svc.GameGui;
+        [PluginService] public static IGameGui gameGui { get; private set; } = null!;
 
-        [PluginService]
-        public static ITextureProvider textureProvider => Svc.Texture;
+        [PluginService] public static ITextureProvider textureProvider { get; private set; } = null!;
 
-        [PluginService]
-        public static IPluginLog logger => Svc.Log;
+        [PluginService] public static IPluginLog logger { get; private set; } = null!;
     }
 }

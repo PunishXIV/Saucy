@@ -22,10 +22,7 @@ namespace TriadBuddyPlugin
             {
                 try
                 {
-                    // SetDeckEditCell(void* addonPtr, int cellIdx)
-                    //   +0xd88 = AddonTriadDeckEdit.CardIndex is part of signature
-
-                    SetSelectedCardPtr = Service.sigScanner.ScanText("48 89 74 24 18 57 48 83 ec 20 48 63 f2 48 8b f9 89 b1 88 0d 00 00");
+                    SetSelectedCardPtr = Service.sigScanner.ScanText("E8 ?? ?? ?? ?? BE ?? ?? ?? ?? 40 84 FF");
 
                     // Client::UI::Agent::AgentGoldSaucer.ReceiveEvent msg:6 -> FUN_140b973b0 msg:7
                     //  writes to agent +0x100 and calls refresh

@@ -97,8 +97,8 @@ namespace Saucy.CuffACur
                                         Param = 0,
                                         NextEvent = null,
                                         Type = (AtkEventType)0x17,
-                                        Unk29 = 0,
-                                        Flags = 0xDD
+                                       Unk29 = 0,
+                                       Flags = 0xDD
                                     }
                                 };
 

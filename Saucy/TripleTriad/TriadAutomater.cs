@@ -5,11 +5,9 @@ using ECommons.Automation;
 using ECommons.DalamudServices;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Text;
 using static ECommons.GenericHelpers;
 using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 using ECommons.Automation.UIInput;
@@ -20,7 +18,8 @@ namespace Saucy.TripleTriad
     internal static unsafe class TriadAutomater
     {
 
-        public delegate int PlaceCardDelegate(IntPtr addon);
+        public delegate int PlaceCardDelegate(nint addon);
+
         public static Hook<PlaceCardDelegate> PlaceCardHook;
         public static bool ModuleEnabled = false;
         public static Dictionary<uint, int> TempCardsWonList = new Dictionary<uint, int>();
@@ -31,7 +30,7 @@ namespace Saucy.TripleTriad
         public static bool LogOutAfterCompletion = false;
         public static bool PlayUntilAllCardsDropOnce = false;
 
-        public static int PlaceCardDetour(IntPtr a1)
+        public static int PlaceCardDetour(nint a1)
         {
             return PlaceCardHook.Original(a1);
         }
@@ -39,7 +38,7 @@ namespace Saucy.TripleTriad
         {
             try
             {
-                if (TryGetAddonByName<AddonTripleTriad>("TripleTriad", out var addon))
+                if (TryGetAddonByName("TripleTriad", out AddonTripleTriad* addon))
                 {
                     Callback.Fire(&addon->AtkUnitBase, true, 14, (uint)slot + ((uint)which << 16));
                     addon->AtkUnitBase.Update(0);
@@ -56,7 +55,7 @@ namespace Saucy.TripleTriad
         {
             if (Saucy.TTSolver.preGameDecks.Count > 0)
             {
-                var selectedDeck = Saucy.Config.SelectedDeckIndex;
+                int selectedDeck = Saucy.Config.SelectedDeckIndex;
                 if (selectedDeck >= 0 && !Saucy.TTSolver.preGameDecks.ContainsKey(selectedDeck))
                 {
                     Saucy.Config.SelectedDeckIndex = -1;
@@ -86,12 +85,12 @@ namespace Saucy.TripleTriad
 
             try
             {
-                if (TryGetAddonByName<AtkUnitBase>("TripleTriadSelDeck", out var addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
+                if (TryGetAddonByName<AtkUnitBase>("TripleTriadSelDeck", out AtkUnitBase* addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
                 {
 
                     if (Saucy.Config.SelectedDeckIndex == -1 && !Saucy.Config.UseRecommendedDeck)
                     {
-                        var button = addon->UldManager.NodeList[3]->GetAsAtkComponentButton();
+                        AtkComponentButton* button = addon->UldManager.NodeList[3]->GetAsAtkComponentButton();
                         button->ClickAddonButton(addon);
                         return;
                     }
@@ -122,7 +121,7 @@ namespace Saucy.TripleTriad
 
         }
 
-        private unsafe static void AcceptTriadMatch()
+        private static unsafe void AcceptTriadMatch()
         {
             try
             {
@@ -147,7 +146,7 @@ namespace Saucy.TripleTriad
 
         public static bool SelectYesLogout()
         {
-            var addon = GetSpecificYesno(Svc.Data.GetExcelSheet<Addon>()?.GetRow(115)?.Text.ToDalamudString().ExtractText());
+            AtkUnitBase* addon = GetSpecificYesno(Svc.Data.GetExcelSheet<Addon>().GetRow(115).Text.ToDalamudString().ExtractText());
             if (addon == null) return false;
             new AddonMaster.SelectYesno(addon).Yes();
             return true;

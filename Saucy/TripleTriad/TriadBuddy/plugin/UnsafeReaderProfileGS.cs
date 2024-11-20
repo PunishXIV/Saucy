@@ -1,7 +1,9 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.UI;
+using ImGuiScene;
 using System;
 using System.Text;
 using static FFXIVClientStructs.FFXIV.Client.UI.Misc.GoldSaucerModule;
+using static TriadBuddyPlugin.SolverPreGameDecks;
 
 namespace TriadBuddyPlugin
 {
@@ -52,7 +54,7 @@ namespace TriadBuddyPlugin
                             var deckOb = new PlayerDeck()
                             {
                                 id = deckId,
-                                name = Encoding.UTF8.GetString(deckPtr->Name),
+                                name = Encoding.UTF8.GetString(deckPtr->Name).Trim('\0'),
                             };
 
                             for (int idx = 0; idx < 5; idx++)

@@ -9,7 +9,7 @@ using System;
 
 namespace TriadBuddyPlugin
 {
-    public class Plugin
+    public class Plugin : IDalamudPlugin
     {
         public string Name => "Triad Buddy";
 
@@ -36,10 +36,13 @@ namespace TriadBuddyPlugin
         public Plugin()
         {
             pluginInterface.Create<Service>();
+#if DEBUG
+            MgAl2O4.Utils.Logger.logger = Service.logger;
+#endif // DEBUG
 
             Service.plugin = this;
             Service.pluginInterface = pluginInterface;
-            //Service.pluginConfig = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            Service.pluginConfig = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
             // prep utils
             var myAssemblyName = GetType().Assembly.GetName().Name;

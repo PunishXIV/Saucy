@@ -16,23 +16,23 @@ namespace TriadBuddyPlugin
             [FieldOffset(0x0)] public AtkUnitBase AtkUnitBase;
             [FieldOffset(0xe0)] public AtkCollisionNode* SelectedCardColisionNode;
 
-            [FieldOffset(0x298)] public byte CardRarity;                // 1..5
-            [FieldOffset(0x299)] public byte CardType;                  // 0: no type, 1: primal, 2: scion, 3: beastman, 4: garland
-            [FieldOffset(0x29b)] public byte NumSideU;
-            [FieldOffset(0x29c)] public byte NumSideD;
-            [FieldOffset(0x29d)] public byte NumSideR;
-            [FieldOffset(0x29e)] public byte NumSideL;
-            [FieldOffset(0x2a0)] public int CardIconId;                 // texture id for button (82100+) or 0 when missing
+            [FieldOffset(0x2a0)] public byte CardRarity;                // 1..5
+            [FieldOffset(0x2a1)] public byte CardType;                  // 0: no type, 1: primal, 2: scion, 3: beastman, 4: garland
+            [FieldOffset(0x2a3)] public byte NumSideU;
+            [FieldOffset(0x2a4)] public byte NumSideD;
+            [FieldOffset(0x2a5)] public byte NumSideR;
+            [FieldOffset(0x2a6)] public byte NumSideL;
+            [FieldOffset(0x2a8)] public int CardIconId;                 // texture id for button (82100+) or 0 when missing
 
-            [FieldOffset(0x32c)] public byte FilterMode;                // 0xD = all, 0x3 = only owned, 0xC = only missing
-            [FieldOffset(0x51c)] public byte PageIndex;                 // ignores writes
-            [FieldOffset(0x524)] public byte CardIndex;                 // can be written to, yay!
+            [FieldOffset(0x334)] public byte FilterMode;                // 0xD = all, 0x3 = only owned, 0xC = only missing
+            [FieldOffset(0x52c)] public byte PageIndex;                 // ignores writes
+            [FieldOffset(0x534)] public byte CardIndex;                 // can be written to, yay!
         }
 
         [StructLayout(LayoutKind.Explicit, Size = 0x110)]               // it's around 0x200?
         public unsafe struct AgentTriadCardList
         {
-            [FieldOffset(0x100)] public int PageIndex;                  // ignores writes
+            [FieldOffset(0x100)] public int PageIndex;                  // can be written to
             [FieldOffset(0x108)] public int CardIndex;                  // ignores writes
             [FieldOffset(0x10c)] public byte FilterMode;                // 0 = all, 1 = only owned, 2 = only missing
 

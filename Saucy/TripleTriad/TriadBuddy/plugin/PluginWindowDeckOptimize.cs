@@ -522,7 +522,7 @@ namespace TriadBuddyPlugin
             }
 
             // TODO: do i want to add UI selectors for locked cards? probably not.
-            var lockedCards = new List<TriadCard?>();
+            var lockedCards = new List<TriadCard>();
             for (int idx = 0; idx < 5; idx++)
             {
                 lockedCards.Add(null);
