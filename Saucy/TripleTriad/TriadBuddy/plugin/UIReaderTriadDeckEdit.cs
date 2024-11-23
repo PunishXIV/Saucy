@@ -10,14 +10,14 @@ namespace TriadBuddyPlugin
 {
     public class UIReaderTriadDeckEdit : IUIReader
     {
-        [StructLayout(LayoutKind.Explicit, Size = 0xD70)]
+        [StructLayout(LayoutKind.Explicit, Size = 0xDA0)]
         private unsafe struct AddonTriadDeckEdit
         {
             [FieldOffset(0x0)] public AtkUnitBase AtkUnitBase;
 
-            [FieldOffset(0xD70)] public byte PageIndex;                 // ignores writes
-            [FieldOffset(0xD74)] public byte PageIndex2;                // ignores writes
-            [FieldOffset(0xD78)] public byte CardIndex;                 // ignores writes
+            [FieldOffset(0xD90)] public byte PageIndex;                 // ignores writes
+            [FieldOffset(0xD94)] public byte PageIndex2;                // ignores writes
+            [FieldOffset(0xD98)] public byte CardIndex;                 // ignores writes
         }
 
         public UIStateTriadDeckEdit cachedState = new();

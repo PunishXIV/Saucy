@@ -10,44 +10,36 @@ namespace TriadBuddyPlugin
     public class UIReaderTriadGame : IUIReader
     {
         [StructLayout(LayoutKind.Explicit, Size = 0x1000)]              // no idea what size, last entries seems to be around +0xfc0? 
-        public unsafe struct AddonTripleTriad
+        internal unsafe struct AddonTripleTriad
         {
             [FieldOffset(0x0)] public AtkUnitBase AtkUnitBase;
-            [FieldOffset(0x230)] public byte TurnState;                 // 0: waiting, 1: normal move, 2: masked move (order/chaos)
+            [FieldOffset(0x238)] public byte TurnState;                 // 0: waiting, 1: normal move, 2: masked move (order/chaos)
 
-            [FieldOffset(0x238)] public AddonTripleTriadCard BlueDeck0; // 2be = end of numbers
-            [FieldOffset(0x2e0)] public AddonTripleTriadCard BlueDeck1; // 366 = end of numbers
-            [FieldOffset(0x388)] public AddonTripleTriadCard BlueDeck2;
-            [FieldOffset(0x430)] public AddonTripleTriadCard BlueDeck3;
-            [FieldOffset(0x4d8)] public AddonTripleTriadCard BlueDeck4;
+            [FieldOffset(0x240)] public AddonTripleTriadCard BlueDeck0; // 2be = end of numbers
+            [FieldOffset(0x2e8)] public AddonTripleTriadCard BlueDeck1; // 366 = end of numbers
+            [FieldOffset(0x390)] public AddonTripleTriadCard BlueDeck2;
+            [FieldOffset(0x438)] public AddonTripleTriadCard BlueDeck3;
+            [FieldOffset(0x4e0)] public AddonTripleTriadCard BlueDeck4;
 
-            [FieldOffset(0x580)] public AddonTripleTriadCard RedDeck0;
-            [FieldOffset(0x628)] public AddonTripleTriadCard RedDeck1;
-            [FieldOffset(0x6d0)] public AddonTripleTriadCard RedDeck2;
-            [FieldOffset(0x778)] public AddonTripleTriadCard RedDeck3;
-            [FieldOffset(0x820)] public AddonTripleTriadCard RedDeck4;
+            [FieldOffset(0x588)] public AddonTripleTriadCard RedDeck0;
+            [FieldOffset(0x630)] public AddonTripleTriadCard RedDeck1;
+            [FieldOffset(0x6d8)] public AddonTripleTriadCard RedDeck2;
+            [FieldOffset(0x780)] public AddonTripleTriadCard RedDeck3;
+            [FieldOffset(0x828)] public AddonTripleTriadCard RedDeck4;
 
-            [FieldOffset(0x8c8)] public AddonTripleTriadCard Board0;
-            [FieldOffset(0x970)] public AddonTripleTriadCard Board1;
-            [FieldOffset(0xa18)] public AddonTripleTriadCard Board2;
-            [FieldOffset(0xac0)] public AddonTripleTriadCard Board3;
-            [FieldOffset(0xb68)] public AddonTripleTriadCard Board4;
-            [FieldOffset(0xc10)] public AddonTripleTriadCard Board5;
-            [FieldOffset(0xcb8)] public AddonTripleTriadCard Board6;
-            [FieldOffset(0xd60)] public AddonTripleTriadCard Board7;
-            [FieldOffset(0xe08)] public AddonTripleTriadCard Board8;
-
-            [FieldOffset(0xf98)] public byte NumCardsBlue;
-            [FieldOffset(0xf99)] public byte NumCardsRed;
-
-            // 0xFCA - int timer blue?
-            // 0xFB0 - int timer red?
-            // 0xFB4 - idk, 4-ish bytes of something changing
-            // 0xFB8 - idk, 4-ish bytes of something changing
+            [FieldOffset(0x8d0)] public AddonTripleTriadCard Board0;
+            [FieldOffset(0x978)] public AddonTripleTriadCard Board1;
+            [FieldOffset(0xa20)] public AddonTripleTriadCard Board2;
+            [FieldOffset(0xac8)] public AddonTripleTriadCard Board3;
+            [FieldOffset(0xb70)] public AddonTripleTriadCard Board4;
+            [FieldOffset(0xc18)] public AddonTripleTriadCard Board5;
+            [FieldOffset(0xcc0)] public AddonTripleTriadCard Board6;
+            [FieldOffset(0xd68)] public AddonTripleTriadCard Board7;
+            [FieldOffset(0xe10)] public AddonTripleTriadCard Board8;
         }
 
         [StructLayout(LayoutKind.Explicit, Size = 0xA8)]
-        public unsafe struct AddonTripleTriadCard
+        internal unsafe struct AddonTripleTriadCard
         {
             [FieldOffset(0x8)] public AtkComponentBase* CardDropControl;
             [FieldOffset(0x80)] public byte CardRarity;                 // 1..5

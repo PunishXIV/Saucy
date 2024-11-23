@@ -17,6 +17,7 @@ namespace TriadBuddyPlugin
         // call GameNpcDB.Refresh() before reading fields below
         public bool IsBeatenOnce;
         public bool IsCompleted;
+
         public bool IsExcludedFromAchievementTracker => (achievementId == 0xffff);
     }
 
@@ -27,7 +28,10 @@ namespace TriadBuddyPlugin
         public UnsafeReaderTriadCards? memReader;
         public Dictionary<int, GameNpcInfo> mapNpcs = new();
 
-        public static GameNpcDB Get() { return instance; }
+        public static GameNpcDB Get()
+        {
+            return instance;
+        }
 
         public void Refresh()
         {
@@ -41,6 +45,7 @@ namespace TriadBuddyPlugin
 
             // card search window is already doing GameCardDB refresh before this
             var cardInfoDB = GameCardDB.Get();
+
             foreach (var kvp in mapNpcs)
             {
                 bool isCompleted = true;
@@ -50,6 +55,7 @@ namespace TriadBuddyPlugin
                     if (!cardInfoDB.ownedCardIds.Contains(rewardId))
                     {
                         isCompleted = false;
+
                         break;
                     }
                 }

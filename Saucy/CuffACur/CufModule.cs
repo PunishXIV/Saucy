@@ -96,9 +96,9 @@ namespace Saucy.CuffACur
                                         Target = (AtkEventTarget*)btn,
                                         Param = 0,
                                         NextEvent = null,
-                                        Type = (AtkEventType)0x17,
-                                        Unk29 = 0,
-                                        Flags = 0xDD
+                                       // Type = (AtkEventType)0x17,
+                                   //    Unk29 = 0,
+                                    //   Flags = 0xDD
                                     }
                                 };
 
