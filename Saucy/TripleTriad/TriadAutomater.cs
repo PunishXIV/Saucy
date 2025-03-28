@@ -146,7 +146,7 @@ namespace Saucy.TripleTriad
 
         public static bool SelectYesLogout()
         {
-            AtkUnitBase* addon = GetSpecificYesno(Svc.Data.GetExcelSheet<Addon>().GetRow(115).Text.ToDalamudString().ExtractTextEC());
+            AtkUnitBase* addon = GetSpecificYesno(Svc.Data.GetExcelSheet<Addon>().GetRow(115).Text.ToDalamudString().ExtractText());
             if (addon == null) return false;
             new AddonMaster.SelectYesno(addon).Yes();
             return true;
@@ -163,7 +163,7 @@ namespace Saucy.TripleTriad
                     if (IsAddonReady(addon))
                     {
                         var textNode = addon->UldManager.NodeList[15]->GetAsAtkTextNode();
-                        var text = MemoryHelper.ReadSeString(&textNode->NodeText).ExtractTextEC();
+                        var text = MemoryHelper.ReadSeString(&textNode->NodeText).ExtractText();
                         if (text.EqualsAny(s))
                         {
                             Svc.Log.Verbose($"SelectYesno {s} addon {i}");

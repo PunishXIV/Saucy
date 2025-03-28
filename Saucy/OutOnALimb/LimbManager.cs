@@ -79,7 +79,7 @@ public unsafe class LimbManager : IDisposable
             //2005423	Out on a Limb	0	Out on a Limb machines	0	1	1	0	0
             //30425	Out on a Limb machine	0	Out on a Limb machines	0	1	1	0	0	Experience the heart-exploding excitement of the Gold Saucer in your own home with this authentic Out on a Limb machine.	Out on a Limb Machine	ui/icon/052000/052680.tex	1	1	14	Out on a Limb Machine	Furnishing		EquipSlotCategory#0	125	18740	1	False	True	False	False	2	0	False	False	False	ItemAction#0	2	0	adventurer	ItemRepairResource#0		0	False	False	0	1	0	0		None		0	0, 0, 0, 0	0, 0, 0, 0	adventurer	0	0	0	0	0	0	0	0	0		0		0		0		0		0		0		0		0		0		0		0		0		0	0	0	False	False	0	False
 
-            if (x.Name.ExtractTextEC().EqualsIgnoreCaseAny(Svc.Data.GetExcelSheet<EObjName>().GetRow(2005423).Singular.ExtractTextEC(), Svc.Data.GetExcelSheet<Item>().GetRow(30425).Singular.ExtractTextEC()) && x.ObjectKind.EqualsAny(ObjectKind.EventObj, ObjectKind.Housing) && Vector3.Distance(Player.Object.Position, x.Position) < 4)
+            if (x.Name.ExtractText().EqualsIgnoreCaseAny(Svc.Data.GetExcelSheet<EObjName>().GetRow(2005423).Singular.ExtractText(), Svc.Data.GetExcelSheet<Item>().GetRow(30425).Singular.ExtractText()) && x.ObjectKind.EqualsAny(ObjectKind.EventObj, ObjectKind.Housing) && Vector3.Distance(Player.Object.Position, x.Position) < 4)
             {
                 found = true;
                 if (EzThrottler.Throttle("TargetAndInteract"))
@@ -105,20 +105,20 @@ public unsafe class LimbManager : IDisposable
 
     private Dictionary<string, HitPower> HitPowerText = new()
     {
-        [Svc.Data.GetExcelSheet<Addon>().GetRow(9710).Text.ExtractTextEC().RemoveSpaces()] = HitPower.Nothing,
-        [Svc.Data.GetExcelSheet<Addon>().GetRow(9711).Text.ExtractTextEC().RemoveSpaces()] = HitPower.Weak,
-        [Svc.Data.GetExcelSheet<Addon>().GetRow(9712).Text.ExtractTextEC().RemoveSpaces()] = HitPower.Strong,
-        [Svc.Data.GetExcelSheet<Addon>().GetRow(9713).Text.ExtractTextEC().RemoveSpaces()] = HitPower.Maximum,
+        [Svc.Data.GetExcelSheet<Addon>().GetRow(9710).Text.ExtractText().RemoveSpaces()] = HitPower.Nothing,
+        [Svc.Data.GetExcelSheet<Addon>().GetRow(9711).Text.ExtractText().RemoveSpaces()] = HitPower.Weak,
+        [Svc.Data.GetExcelSheet<Addon>().GetRow(9712).Text.ExtractText().RemoveSpaces()] = HitPower.Strong,
+        [Svc.Data.GetExcelSheet<Addon>().GetRow(9713).Text.ExtractText().RemoveSpaces()] = HitPower.Maximum,
     };
 
     private void Chat_ChatMessage(XivChatType type, int senderId, SeString sender, SeString message)
     {
         if (!C.EnableLimb) return;
         if (!Svc.Condition[ConditionFlag.OccupiedInQuestEvent]) return;
-        PluginLog.Information($"{type}/{message.ExtractTextEC().RemoveSpaces()}");
+        PluginLog.Information($"{type}/{message.ExtractText().RemoveSpaces()}");
         if ((int)type == 2105)
         {
-            var s = message.ExtractTextEC().RemoveSpaces();
+            var s = message.ExtractText().RemoveSpaces();
             if (HitPowerText.TryGetValue(s, out var hitPower))
             {
                 Record(hitPower);
@@ -207,12 +207,12 @@ public unsafe class LimbManager : IDisposable
                 {
                     if (TryGetAddonByName<AddonSelectString>("SelectString", out var ss) && IsAddonReady(&ss->AtkUnitBase))
                     {
-                        var text = MemoryHelper.ReadSeString(&ss->AtkUnitBase.GetTextNodeById(2)->NodeText).ExtractTextEC().RemoveSpaces();
-                        if (text.Contains(Svc.Data.GetExcelSheet<Addon>().GetRow(9994).Text.ExtractTextEC().RemoveSpaces(), StringComparison.OrdinalIgnoreCase))
+                        var text = MemoryHelper.ReadSeString(&ss->AtkUnitBase.GetTextNodeById(2)->NodeText).ExtractText().RemoveSpaces();
+                        if (text.Contains(Svc.Data.GetExcelSheet<Addon>().GetRow(9994).Text.ExtractText().RemoveSpaces(), StringComparison.OrdinalIgnoreCase))
                         {
                             if (EzThrottler.Throttle("ConfirmPlay"))
                             {
-                                new AddonMaster.SelectString(ss).Entry1();
+                                new AddonMaster.SelectString(ss).Entries[0].Select();
                             }
                         }
                     }
@@ -291,7 +291,7 @@ public unsafe class LimbManager : IDisposable
             var reader = new ReaderMiniGameBotanist(addon);
             if (TryGetAddonByName<AddonSelectYesno>("SelectYesno", out var ss) && IsAddonReady(&ss->AtkUnitBase))
             {
-                var text = MemoryHelper.ReadSeString(&ss->PromptText->NodeText).ExtractTextEC();
+                var text = MemoryHelper.ReadSeString(&ss->PromptText->NodeText).ExtractText();
                 var matches = new Regex(Svc.ClientState.ClientLanguage switch
                 {
                     ClientLanguage.English => @"Current payout: ([0-9]+)",

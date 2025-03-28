@@ -36,7 +36,7 @@ namespace Saucy.CuffACur
                     {
                         try
                         {
-                            new AddonMaster.SelectString(startMenu).Entry1();
+                            new AddonMaster.SelectString(startMenu).Entries[0].Select();
                             return;
                         }
                         catch
