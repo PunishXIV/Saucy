@@ -517,7 +517,7 @@ namespace Saucy
 
             if (TriadAutomater.PlayUntilAllCardsDropOnce)
             {
-                ImGui.SameLine();
+                ImGui.Indent();
                 if (ImGui.Checkbox("Only Unobtained Cards", ref onlyUnobtained))
                 {
                     TriadAutomater.TempCardsWonList.Clear();
