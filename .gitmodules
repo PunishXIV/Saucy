@@ -4,6 +4,3 @@
 [submodule "ECommons"]
 	path = ECommons
 	url = https://github.com/Taurenkey/ECommons
-[submodule "ClickLib"]
-	path = ClickLib
-	url = https://github.com/Limiana/ClickLib.git
