@@ -5,6 +5,7 @@ using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Interface.Colors;
 using Dalamud.Memory;
+using ECommons.Automation.UIInput;
 using ECommons.DalamudServices;
 using ECommons.EzEventManager;
 using ECommons.GameHelpers;
@@ -23,7 +24,6 @@ using System.Linq;
 using System.Numerics;
 using System.Text.RegularExpressions;
 using static ECommons.GenericHelpers;
-using ECommons.Automation.UIInput;
 
 namespace Saucy.OutOnALimb;
 public unsafe class LimbManager : IDisposable
@@ -159,7 +159,7 @@ public unsafe class LimbManager : IDisposable
         if (TryGetAddonByName<AtkUnitBase>("MiniGameAimg", out var addon) && IsAddonReady(addon))
         {
             var reader = new ReaderMiniGameBotanist(addon);
-            var button = addon->GetButtonNodeById(37);
+            var button = addon->GetComponentButtonById(37);
             if (button->IsEnabled)
             {
                 if (EzThrottler.Throttle("ClickAimgGameButton", 20000))
@@ -178,7 +178,7 @@ public unsafe class LimbManager : IDisposable
         if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
         {
             var reader = new ReaderMiniGameBotanist(addon);
-            var button = addon->GetButtonNodeById(24);
+            var button = addon->GetComponentButtonById(24);
             if (button->IsEnabled && reader.State == 3)
             {
                 if (EzThrottler.Throttle("ClickBtnGameButton", 2000))
@@ -231,7 +231,7 @@ public unsafe class LimbManager : IDisposable
                 if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
                 {
                     var reader = new ReaderMiniGameBotanist(addon);
-                    var button = addon->GetButtonNodeById(24);
+                    var button = addon->GetComponentButtonById(24);
                     var cursor = GetCursor();
 
                     if (reader.State == 3)
@@ -517,7 +517,7 @@ public unsafe class LimbManager : IDisposable
             if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
             {
                 var reader = new ReaderMiniGameBotanist(addon);
-                var button = addon->GetButtonNodeById(24);
+                var button = addon->GetComponentButtonById(24);
                 var cursor = GetCursor();
                 ImGuiEx.Text($"Cursor: {cursor}");
                 ImGui.Checkbox("Only request", ref OnlyRequest);

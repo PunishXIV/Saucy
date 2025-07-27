@@ -166,23 +166,7 @@ namespace Saucy
             }
 
             if (ImGui.Checkbox("Enable Auto Mini-Cactpot", ref Saucy.Config.EnableAutoMiniCactpot))
-            {
                 Saucy.Config.Save();
-            }
-            if (Saucy.Config.EnableAutoMiniCactpot)
-            {
-                const string text = "ezMiniCactpot is required to be installed and enabled for this option to work.";
-
-                var installed = Svc.PluginInterface.InstalledPlugins.Any(x => x.InternalName == "MiniCactpotSolver" && x.IsLoaded);
-                if (installed)
-                {
-                    ImGuiEx.HelpMarker(text, ImGuiColors.ParsedGreen, FontAwesomeIcon.Check.ToIconString());
-                }
-                else
-                {
-                    ImGuiEx.HelpMarker(text, ImGuiColors.DalamudRed, "\uf00d");
-                }
-            }
         }
 
         private void DrawStatsTab()

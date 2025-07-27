@@ -9,6 +9,7 @@ using MgAl2O4.Utils;
 using NAudio.Wave;
 using PunishLib;
 using Saucy.CuffACur;
+using Saucy.MiniCactpot;
 using Saucy.OtherGames;
 using Saucy.OutOnALimb;
 using Saucy.TripleTriad;
