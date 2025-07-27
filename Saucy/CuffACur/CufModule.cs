@@ -122,7 +122,7 @@ namespace Saucy.CuffACur
                     tg->InteractWithObject(cuf);
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
 
             }
