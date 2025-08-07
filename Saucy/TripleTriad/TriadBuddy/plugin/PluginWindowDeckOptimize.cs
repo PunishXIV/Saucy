@@ -6,7 +6,7 @@ using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -368,7 +368,7 @@ namespace TriadBuddyPlugin
             Vector2 cardBackgroundUV1 = new(1.0f, cardImageSize.Y / cardBackgroundImage.Height);
 
             ImGui.SetCursorPos(drawPos);
-            ImGui.Image(cardBackgroundImage.ImGuiHandle, cardImageSize, Vector2.Zero, cardBackgroundUV1);
+            ImGui.Image(cardBackgroundImage.Handle, cardImageSize, Vector2.Zero, cardBackgroundUV1);
 
             var cardImage = (cardId >= 0) ? GetCardTexture(cardId) : null;
             if (cardImage != null)
@@ -376,7 +376,7 @@ namespace TriadBuddyPlugin
                 ImGui.SetCursorPos(drawPos);
                 var drawOffset = ImGui.GetCursorScreenPos();
 
-                ImGui.Image(cardImage.ImGuiHandle, cardImageSize);
+                ImGui.Image(cardImage.Handle, cardImageSize);
 
                 if (ImGui.IsItemHovered())
                 {

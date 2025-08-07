@@ -1,7 +1,7 @@
 ﻿using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -27,7 +27,7 @@ namespace TriadBuddyPlugin
         {
             this.uiReaderDeckEdit = uiReaderDeckEdit;
 
-            var searchFilterPtr = ImGuiNative.ImGuiTextFilter_ImGuiTextFilter(null);
+            var searchFilterPtr = ImGuiNative.ImGuiTextFilter(null);
             searchFilter = new ImGuiTextFilterPtr(searchFilterPtr);
 
             uiReaderDeckEdit.OnVisibilityChanged += (_) => UpdateWindowData();
@@ -54,7 +54,7 @@ namespace TriadBuddyPlugin
 
         public void Dispose()
         {
-            ImGuiNative.ImGuiTextFilter_destroy(searchFilter.NativePtr);
+            ImGuiNative.Destroy(searchFilter.Handle);
         }
 
         private void UpdateWindowData()

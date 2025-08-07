@@ -135,7 +135,7 @@ namespace TriadBuddyPlugin
 
         public static unsafe IntPtr LoadFailsafeAgent()
         {
-            var uiModule = (UIModule*)Service.gameGui.GetUIModule();
+            var uiModule = (UIModule*)Service.gameGui.GetUIModule().Address;
             if (uiModule != null)
             {
                 var agentModule = uiModule->GetAgentModule();

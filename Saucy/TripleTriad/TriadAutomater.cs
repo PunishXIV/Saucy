@@ -158,7 +158,7 @@ namespace Saucy.TripleTriad
             {
                 try
                 {
-                    var addon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("SelectYesno", i);
+                    var addon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("SelectYesno", i).Address;
                     if (addon == null) return null;
                     if (IsAddonReady(addon))
                     {
