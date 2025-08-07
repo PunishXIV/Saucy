@@ -27,7 +27,7 @@ namespace TriadBuddyPlugin
                     //   identified by pretty unique rowId from TripleTriad sheet: 0x230002
                     //   looking for negative of that number (0xFFDCFFFE) gives pretty much only npc access functions (set + get)
 
-                    IsNpcBeatenPtr = Service.sigScanner.ScanText("40 53 48 83 ec 20 8d 82 fe ff dc ff");
+                    IsNpcBeatenPtr = Service.sigScanner.ScanText("E8 ?? ?? ?? ?? 84 C0 0F 94 C0 88 43 58 33 ED");
 
                     // IsTriadCardOwned(void* uiState, ushort cardId)
                     //   used by GSInfoCardList's agent, function preparing card lists
@@ -37,7 +37,7 @@ namespace TriadBuddyPlugin
                     IsCardOwnedPtr = Service.sigScanner.ScanText("40 53 48 83 ec 20 48 8b d9 66 85 d2 74 3b 0f");
 
                     // UIState addr, use LEA opcode before calling IsTriadCardOwned, same function as described above
-                    UIStatePtr = Service.sigScanner.GetStaticAddressFromSig("48 8d 0d ?? ?? ?? ?? e8 ?? ?? ?? ?? 84 c0 74 0f 8b cb");
+                    UIStatePtr = Service.sigScanner.GetStaticAddressFromSig("E8 ?? ?? ?? ?? EB 35 8B FD");
                 }
                 catch (Exception ex)
                 {
