@@ -358,7 +358,7 @@ namespace Saucy
             {
                 var talk = Svc.GameGui.GetAddonByName("Talk", 1);
                 if (talk == IntPtr.Zero) return;
-                var talkAddon = (AtkUnitBase*)talk;
+                var talkAddon = (AtkUnitBase*)talk.Address;
                 if (!IsAddonReady(talkAddon)) return;
                 new AddonMaster.Talk(talk).Click();
             }

@@ -25,8 +25,8 @@ public unsafe class MiniCactpotManager : IDisposable
     private void OnUpdate(AddonEvent type, AddonArgs args)
     {
         if (!Saucy.Config.EnableAutoMiniCactpot) return;
-        var addon = (AddonLotteryDaily*)args.Addon;
-        if (new Reader((AtkUnitBase*)args.Addon).Stage == 5) ClickConfirmClose((AddonLotteryDaily*)args.Addon, 5);
+        var addon = (AddonLotteryDaily*)args.Addon.Address;
+        if (new Reader((AtkUnitBase*)args.Addon.Address).Stage == 5) ClickConfirmClose((AddonLotteryDaily*)args.Addon.Address, 5);
         var newState = Enumerable.Range(0, 9).Select(i => addon->GameNumbers[i]).ToArray();
         if (!boardState?.SequenceEqual(newState) ?? true)
         {

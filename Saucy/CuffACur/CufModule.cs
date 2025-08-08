@@ -47,7 +47,7 @@ namespace Saucy.CuffACur
 
                     if (addon != IntPtr.Zero)
                     {
-                        var ui = (AtkUnitBase*)addon;
+                        var ui = (AtkUnitBase*)addon.Address;
 
                         if (ui->IsVisible)
                         {

@@ -1,6 +1,6 @@
 ﻿using Dalamud.Interface.Utility;
 using FFTriadBuddy;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using System.Numerics;
 
 namespace TriadBuddyPlugin

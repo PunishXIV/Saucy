@@ -4,7 +4,7 @@ using Dalamud.Interface.Components;
 using ECommons.DalamudServices;
 using ECommons.ImGuiMethods;
 using FFTriadBuddy;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
 using Saucy.OtherGames;
@@ -93,7 +93,7 @@ namespace Saucy
                     if (Saucy.openTT)
                     {
                         Saucy.openTT = false;
-                        if (ImGuiEx.BeginTabItem("Triple Triad", ImGuiTabItemFlags.SetSelected))
+                        if (ImGui.BeginTabItem("Triple Triad", ImGuiTabItemFlags.SetSelected))
                         {
                             DrawTriadTab();
                             ImGui.EndTabItem();
@@ -229,11 +229,11 @@ namespace Saucy
         private void DrawLimbStats(Stats stat)
         {
             ImGui.BeginChild("Limb Stats", new Vector2(0, ImGui.GetContentRegionAvail().Y - 30f), true);
-            ImGui.Columns(3, null, false);
+            ImGui.Columns(3, default, false);
             ImGui.NextColumn();
             ImGuiEx.CenterColumnText(ImGuiColors.DalamudRed, "Out on a Limb", true);
             ImGuiHelpers.ScaledDummy(10f);
-            ImGui.Columns(2, null, false);
+            ImGui.Columns(2, default, false);
             ImGui.NextColumn();
             ImGui.NextColumn();
             ImGuiEx.CenterColumnText("Games Played", true);
@@ -250,7 +250,7 @@ namespace Saucy
         private void DrawCuffStats(Stats stat)
         {
             ImGui.BeginChild("Cuff Stats", new Vector2(0, ImGui.GetContentRegionAvail().Y - 30f), true);
-            ImGui.Columns(3, null, false);
+            ImGui.Columns(3, default, false);
             ImGui.NextColumn();
             ImGuiEx.CenterColumnText(ImGuiColors.DalamudRed, "Cuff-a-cur", true);
             ImGuiHelpers.ScaledDummy(10f);
@@ -290,7 +290,7 @@ namespace Saucy
         private void DrawTTStats(Stats stat)
         {
             ImGui.BeginChild("TT Stats", new Vector2(0, ImGui.GetContentRegionAvail().Y - 30f), true);
-            ImGui.Columns(3, null, false);
+            ImGui.Columns(3, default, false);
             ImGui.NextColumn();
             ImGuiEx.CenterColumnText(ImGuiColors.DalamudRed, "Triple Triad", true);
             ImGuiHelpers.ScaledDummy(10f);
@@ -550,7 +550,7 @@ namespace Saucy
 
                 bool playSound = Saucy.Config.PlaySound;
 
-                ImGui.Columns(2, null, false);
+                ImGui.Columns(2, default, false);
                 if (ImGui.Checkbox("Play sound upon completion", ref playSound))
                 {
                     Saucy.Config.PlaySound = playSound;
@@ -621,7 +621,7 @@ namespace Saucy
 
                 bool playSound = Saucy.Config.PlaySound;
 
-                ImGui.Columns(2, null, false);
+                ImGui.Columns(2, default, false);
                 if (ImGui.Checkbox("Play sound upon completion", ref playSound))
                 {
                     Saucy.Config.PlaySound = playSound;

@@ -1,9 +1,7 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.UI;
-using ImGuiScene;
 using System;
 using System.Text;
 using static FFXIVClientStructs.FFXIV.Client.UI.Misc.GoldSaucerModule;
-using static TriadBuddyPlugin.SolverPreGameDecks;
 
 namespace TriadBuddyPlugin
 {
@@ -37,7 +35,7 @@ namespace TriadBuddyPlugin
                 //
                 //     5.58: addr = uiModulePtr + 0x90dd0, this function is just getter for member var holding pointer
 
-                var uiModule = (Service.gameGui != null) ? (UIModule*)Service.gameGui.GetUIModule() : null;
+                var uiModule = (Service.gameGui != null) ? (UIModule*)Service.gameGui.GetUIModule().Address : null;
                 var gsModule = (uiModule != null) ? uiModule->GetGoldSaucerModule() : null;
 
                 if (gsModule != null)
