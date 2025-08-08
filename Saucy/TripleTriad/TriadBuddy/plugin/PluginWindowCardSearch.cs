@@ -1,10 +1,11 @@
 ﻿using Dalamud;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
-using Dalamud.Bindings.ImGui;
+using Saucy;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -225,7 +226,7 @@ namespace TriadBuddyPlugin
                     }
 
                     var itemDesc = $"[{CardUtils.GetOrderDesc(cardOb)}] {CardUtils.GetRarityDesc(cardOb)} {CardUtils.GetUIDesc(cardOb)}";
-                    if (searchFilterCard.PassFilter(itemDesc))
+                    if (searchFilterCard.PassFilterBool(itemDesc))
                     {
                         bool isSelected = selectedCardIdx == idx;
                         if (ImGui.Selectable(itemDesc, isSelected))
@@ -286,7 +287,7 @@ namespace TriadBuddyPlugin
                     }
 
                     var itemDesc = npcOb.Name.GetLocalized();
-                    if (searchFilterNpc.PassFilter(itemDesc))
+                    if (searchFilterNpc.PassFilterBool(itemDesc))
                     {
                         bool isSelected = selectedNpcIdx == idx;
                         if (ImGui.Selectable(itemDesc, isSelected))

@@ -1,7 +1,8 @@
-﻿using Dalamud.Interface.Utility;
+﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
-using Dalamud.Bindings.ImGui;
+using Saucy;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -114,7 +115,7 @@ namespace TriadBuddyPlugin
                     var (cardOb, cardInfo) = listCards[idx];
 
                     var itemDesc = $"[{CardUtils.GetOrderDesc(cardOb)}] {CardUtils.GetRarityDesc(cardOb)} {CardUtils.GetUIDesc(cardOb)}";
-                    if (searchFilter.PassFilter(itemDesc))
+                    if (searchFilter.PassFilterBool(itemDesc))
                     {
                         bool isSelected = selectedCardIdx == idx;                       
                         if (ImGui.Selectable(itemDesc, isSelected))
