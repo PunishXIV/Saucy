@@ -1,6 +1,6 @@
-[submodule "PunishLib"]
-	path = PunishLib
-	url = https://github.com/PunishXIV/PunishLib
 [submodule "ECommons"]
 	path = ECommons
 	url = https://github.com/Taurenkey/ECommons
+[submodule "PunishLib"]
+	path = PunishLib
+	url = https://github.com/PunishXIV/PunishLib
