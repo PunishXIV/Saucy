@@ -115,7 +115,7 @@
       "punishlib": {
         "type": "Project",
         "dependencies": {
-          "ECommons": "[3.0.0.8, )"
+          "ECommons": "[3.0.1, )"
         }
       }
     }
