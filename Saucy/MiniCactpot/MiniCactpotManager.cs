@@ -42,9 +42,7 @@ public unsafe class MiniCactpotManager : IDisposable
                             .Select(item => item.index)
                             .ToArray();
 
-                        // Check if we're in the final stage (4 numbers revealed) where we pick lanes
-                        var numRevealed = newState.Count(x => x > 0);
-                        PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Board state: [{string.Join(", ", newState)}], Revealed: {numRevealed}, Solution length: {solution.Length}, Active indexes: [{string.Join(", ", activeIndexes)}], Solution: [{string.Join(", ", solution)}]");
+                        PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Board state: [{string.Join(", ", newState)}], Revealed: {newState.Count(x => x > 0)}, Solution length: {solution.Length}, Active indexes: [{string.Join(", ", activeIndexes)}], Solution: [{string.Join(", ", solution)}]");
 
                         if (solution.Length is 8)
                             ClickLanes(addon, activeIndexes);
@@ -67,8 +65,8 @@ public unsafe class MiniCactpotManager : IDisposable
     {
         if (activeIndexes.First() is { } first)
         {
-            PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Clicking lane at index #{first} [{string.Join(", ", activeIndexes)}]");
-            addon->LaneSelector[first]->ClickRadioButton((AtkUnitBase*)addon);
+            PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Clicking lane at index #{SolverLaneToCsLane(first)} [{string.Join(", ", activeIndexes)}]");
+            addon->LaneSelector[SolverLaneToCsLane(first)]->ClickRadioButton((AtkUnitBase*)addon);
         }
         ClickConfirmClose(addon, -1);
     }
@@ -91,6 +89,20 @@ public unsafe class MiniCactpotManager : IDisposable
             confirm->ClickAddonButton((AtkUnitBase*)addon);
         }
     }
+
+    private int SolverLaneToCsLane(int lane)
+        => lane switch
+        {
+            0 => 5,
+            1 => 6,
+            2 => 7,
+            3 => 1,
+            4 => 2,
+            5 => 3,
+            6 => 0,
+            7 => 4,
+            _ => throw new ArgumentOutOfRangeException($"{nameof(lane)}", lane, "Must be between 0 and 8 (inclusive)"),
+        };
 
     public class Reader(AtkUnitBase* UnitBase, int BeginOffset = 0) : AtkReader(UnitBase, BeginOffset)
     {
