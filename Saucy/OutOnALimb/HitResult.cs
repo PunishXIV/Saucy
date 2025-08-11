@@ -1,12 +1,6 @@
 ﻿namespace Saucy.OutOnALimb;
-public class HitResult
+public class HitResult(int cursor, HitPower power)
 {
-		public int Position;
-		public HitPower Power = HitPower.Unobserved;
-
-		public HitResult(int cursor, HitPower power)
-		{
-				this.Position = cursor;
-				this.Power = power;
-		}
+    public int Position = cursor;
+    public HitPower Power = power;
 }

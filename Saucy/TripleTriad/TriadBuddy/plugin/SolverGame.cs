@@ -4,186 +4,183 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace TriadBuddyPlugin
+namespace TriadBuddyPlugin;
+
+public class SolverGame
 {
-    public class SolverGame
+    public enum Status
     {
-        public enum Status
+        NoErrors,
+        FailedToParseCards,
+        FailedToParseRules,
+        FailedToParseNpc,
+    }
+
+    public TriadGameScreenMemory? DebugScreenMemory { get; } = new();
+
+    public ScannerTriad.GameState? DebugScreenState { get; private set; }
+
+    public TriadNpc? lastGameNpc;
+    public TriadNpc? currentNpc;
+    public TriadCard? MoveCard => DebugScreenMemory.deckBlue?.GetCard(moveCardIdx);
+    public int moveCardIdx;
+    public int moveBoardIdx;
+    public SolverResult moveWinChance;
+    public bool hasMove;
+
+    public Status status;
+    public bool HasErrors => status != Status.NoErrors;
+
+    public event Action<bool>? OnMoveChanged;
+
+    public async void UpdateGame(UIStateTriadGame stateOb)
+    {
+        status = Status.NoErrors;
+
+        ScannerTriad.GameState? screenOb = null;
+        if (stateOb != null)
         {
-            NoErrors,
-            FailedToParseCards,
-            FailedToParseRules,
-            FailedToParseNpc,
+            var parseCtx = new GameUIParser();
+            screenOb = stateOb.ToTriadScreenState(parseCtx);
+            currentNpc = stateOb.ToTriadNpc(parseCtx);
+
+            if (parseCtx.HasErrors)
+            {
+                currentNpc = null;
+                status =
+                    parseCtx.hasFailedCard ? Status.FailedToParseCards :
+                    parseCtx.hasFailedModifier ? Status.FailedToParseRules :
+                    parseCtx.hasFailedNpc ? Status.FailedToParseNpc :
+                    Status.NoErrors;
+            }
+        }
+        else
+        {
+            // not really an error state, ui reader will push null state when game is finished
+            currentNpc = null;
         }
 
-        private TriadGameScreenMemory screenMemory = new();
-        public TriadGameScreenMemory? DebugScreenMemory => screenMemory;
-
-        private ScannerTriad.GameState? cachedScreenState;
-        public ScannerTriad.GameState? DebugScreenState => cachedScreenState;
-
-        public TriadNpc? lastGameNpc;
-        public TriadNpc? currentNpc;
-        public TriadCard? moveCard => screenMemory.deckBlue?.GetCard(moveCardIdx);
-        public int moveCardIdx;
-        public int moveBoardIdx;
-        public SolverResult moveWinChance;
-        public bool hasMove;
-
-        public Status status;
-        public bool HasErrors => status != Status.NoErrors;
-
-        public event Action<bool>? OnMoveChanged;
-
-        public async void UpdateGame(UIStateTriadGame stateOb)
+        if (currentNpc != null)
         {
-            status = Status.NoErrors;
+            lastGameNpc = currentNpc;
+        }
 
-            ScannerTriad.GameState? screenOb = null;
-            if (stateOb != null)
+        DebugScreenState = screenOb;
+        if (currentNpc != null &&
+            screenOb != null && screenOb.turnState == ScannerTriad.ETurnState.Active &&
+            stateOb != null && !stateOb.isPvP)
+        {
+            var updateFlags = DebugScreenMemory.OnNewScan(screenOb, currentNpc);
+            if (updateFlags != TriadGameScreenMemory.EUpdateFlags.None)
             {
-                var parseCtx = new GameUIParser();
-                screenOb = stateOb.ToTriadScreenState(parseCtx);
-                currentNpc = stateOb.ToTriadNpc(parseCtx);
-
-                if (parseCtx.HasErrors)
+                if (DebugScreenMemory.deckBlue != null && DebugScreenMemory.gameState != null && DebugScreenMemory.gameSolver != null)
                 {
-                    currentNpc = null;
-                    status =
-                        parseCtx.hasFailedCard ? Status.FailedToParseCards :
-                        parseCtx.hasFailedModifier ? Status.FailedToParseRules :
-                        parseCtx.hasFailedNpc ? Status.FailedToParseNpc :
-                        Status.NoErrors;
-                }
-            }
-            else
-            {
-                // not really an error state, ui reader will push null state when game is finished
-                currentNpc = null;
-            }
-
-            if (currentNpc != null)
-            {
-                lastGameNpc = currentNpc;
-            }
-
-            cachedScreenState = screenOb;
-            if (currentNpc != null &&
-                screenOb != null && screenOb.turnState == ScannerTriad.ETurnState.Active &&
-                stateOb != null && !stateOb.isPvP)
-            {
-                var updateFlags = screenMemory.OnNewScan(screenOb, currentNpc);
-                if (updateFlags != TriadGameScreenMemory.EUpdateFlags.None)
-                {
-                    if (screenMemory.deckBlue != null && screenMemory.gameState != null && screenMemory.gameSolver != null)
-                    {
 #if DEBUG
-                        // turn on verbose debugging when checking solver's behavior
-                        screenMemory.gameSolver.agent.debugFlags = TriadGameAgent.DebugFlags.ShowMoveStart | TriadGameAgent.DebugFlags.ShowMoveDetails;
+                    // turn on verbose debugging when checking solver's behavior
+                    DebugScreenMemory.gameSolver.agent.debugFlags = TriadGameAgent.DebugFlags.ShowMoveStart | TriadGameAgent.DebugFlags.ShowMoveDetails;
 #endif // DEBUG
 
-                        SolverUtils.solverDeckOptimize?.SetPauseForGameSolver(true);
+                    SolverUtils.solverDeckOptimize?.SetPauseForGameSolver(true);
 
-                        var nextMoveInfo = await UpdateGameRunSolver();
+                    var nextMoveInfo = await UpdateGameRunSolver();
 
-                        hasMove = true;
-                        moveCardIdx = nextMoveInfo.Item1;
-                        moveBoardIdx = (moveCardIdx < 0) ? -1 : nextMoveInfo.Item2;
-                        moveWinChance = nextMoveInfo.Item3;
+                    hasMove = true;
+                    moveCardIdx = nextMoveInfo.Item1;
+                    moveBoardIdx = (moveCardIdx < 0) ? -1 : nextMoveInfo.Item2;
+                    moveWinChance = nextMoveInfo.Item3;
 
-                        var solverCardOb = screenMemory.deckBlue.GetCard(moveCardIdx);
-                        if ((screenMemory.gameState.forcedCardIdx >= 0) && (moveCardIdx != screenMemory.gameState.forcedCardIdx))
-                        {
-                            // swap + chaos may cause selecting wrong instance of duplicated card?
-                            // it really, really shouldn't unless solver's agent is broken
-
-                            var forcedCardOb = screenMemory.deckBlue.GetCard(screenMemory.gameState.forcedCardIdx);
-
-                            var solverCardDesc = solverCardOb != null ? solverCardOb.Name.GetCodeName() : "??";
-                            var forcedCardDesc = forcedCardOb != null ? forcedCardOb.Name.GetCodeName() : "??";
-                            Service.logger.Warning($"Solver selected card [{moveCardIdx}]:{solverCardDesc}, but game wants: [{screenMemory.gameState.forcedCardIdx}]:{forcedCardDesc} !");
-
-                            moveCardIdx = screenMemory.gameState.forcedCardIdx;
-                            solverCardOb = forcedCardOb;
-                        }
-
-                        Logger.WriteLine("  suggested move: [{0}] {1} {2} (expected: {3})",
-                            moveBoardIdx, ETriadCardOwner.Blue,
-                            solverCardOb != null ? solverCardOb.Name.GetCodeName() : "??",
-                            moveWinChance.expectedResult);
-
-                        SolverUtils.solverDeckOptimize?.SetPauseForGameSolver(false);
-                    }
-                    else
+                    var solverCardOb = DebugScreenMemory.deckBlue.GetCard(moveCardIdx);
+                    if ((DebugScreenMemory.gameState.forcedCardIdx >= 0) && (moveCardIdx != DebugScreenMemory.gameState.forcedCardIdx))
                     {
-                        hasMove = false;
+                        // swap + chaos may cause selecting wrong instance of duplicated card?
+                        // it really, really shouldn't unless solver's agent is broken
+
+                        var forcedCardOb = DebugScreenMemory.deckBlue.GetCard(DebugScreenMemory.gameState.forcedCardIdx);
+
+                        var solverCardDesc = solverCardOb != null ? solverCardOb.Name.GetCodeName() : "??";
+                        var forcedCardDesc = forcedCardOb != null ? forcedCardOb.Name.GetCodeName() : "??";
+                        Svc.Log.Warning($"Solver selected card [{moveCardIdx}]:{solverCardDesc}, but game wants: [{DebugScreenMemory.gameState.forcedCardIdx}]:{forcedCardDesc} !");
+
+                        moveCardIdx = DebugScreenMemory.gameState.forcedCardIdx;
+                        solverCardOb = forcedCardOb;
                     }
 
-                    OnMoveChanged?.Invoke(hasMove);
+                    Logger.WriteLine("  suggested move: [{0}] {1} {2} (expected: {3})",
+                        moveBoardIdx, ETriadCardOwner.Blue,
+                        solverCardOb != null ? solverCardOb.Name.GetCodeName() : "??",
+                        moveWinChance.expectedResult);
+
+                    SolverUtils.solverDeckOptimize?.SetPauseForGameSolver(false);
                 }
-            }
-            else if (hasMove)
-            {
-                hasMove = false;
+                else
+                {
+                    hasMove = false;
+                }
+
                 OnMoveChanged?.Invoke(hasMove);
             }
         }
-
-        private Task<Tuple<int, int, SolverResult>> UpdateGameRunSolver()
+        else if (hasMove)
         {
-            screenMemory.gameSolver.FindNextMove(screenMemory.gameState, out int bestCardIdx, out int bestBoardPos, out var solverResult);
-            return Task.FromResult(new Tuple<int, int, SolverResult>(bestCardIdx, bestBoardPos, solverResult));
+            hasMove = false;
+            OnMoveChanged?.Invoke(hasMove);
         }
+    }
 
-        public void UpdateKnownPlayerDeck(TriadDeck playerDeck)
+    private Task<Tuple<int, int, SolverResult>> UpdateGameRunSolver()
+    {
+        DebugScreenMemory.gameSolver.FindNextMove(DebugScreenMemory.gameState, out var bestCardIdx, out var bestBoardPos, out var solverResult);
+        return Task.FromResult(new Tuple<int, int, SolverResult>(bestCardIdx, bestBoardPos, solverResult));
+    }
+
+    public void UpdateKnownPlayerDeck(TriadDeck playerDeck)
+    {
+        DebugScreenMemory.UpdatePlayerDeck(playerDeck);
+    }
+
+    public (List<TriadCard>, List<TriadCard>) GetScreenRedDeckDebug()
+    {
+        var knownCards = new List<TriadCard>();
+        var unknownCards = new List<TriadCard>();
+
+        if (DebugScreenMemory != null && DebugScreenMemory.deckRed != null && DebugScreenMemory.deckRed.deck != null)
         {
-            screenMemory.UpdatePlayerDeck(playerDeck);
-        }
-
-        public (List<TriadCard>, List<TriadCard>) GetScreenRedDeckDebug()
-        {
-            var knownCards = new List<TriadCard>();
-            var unknownCards = new List<TriadCard>();
-
-            if (screenMemory != null && screenMemory.deckRed != null && screenMemory.deckRed.deck != null)
+            var deckInst = DebugScreenMemory.deckRed;
+            if (deckInst.availableCardMask > 0)
             {
-                var deckInst = screenMemory.deckRed;
-                if (deckInst.availableCardMask > 0)
+                for (var Idx = 0; Idx < deckInst.cards.Length; Idx++)
                 {
-                    for (int Idx = 0; Idx < deckInst.cards.Length; Idx++)
+                    var bIsAvailable = (deckInst.availableCardMask & (1 << Idx)) != 0;
+                    if (bIsAvailable)
                     {
-                        bool bIsAvailable = (deckInst.availableCardMask & (1 << Idx)) != 0;
-                        if (bIsAvailable)
-                        {
-                            TriadCard cardOb = deckInst.GetCard(Idx);
-                            bool bIsKnownPool = deckInst.deck.knownCards.Contains(cardOb);
+                        var cardOb = deckInst.GetCard(Idx);
+                        var bIsKnownPool = deckInst.deck.knownCards.Contains(cardOb);
 
-                            var listToUse = bIsKnownPool ? knownCards : unknownCards;
-                            listToUse.Add(cardOb);
-                        }
-                    }
-                }
-
-                int visibleCardsMask = (deckInst.cards != null) ? ((1 << deckInst.cards.Length) - 1) : 0;
-                bool hasHiddenCards = (deckInst.availableCardMask & ~visibleCardsMask) != 0;
-                if (hasHiddenCards && deckInst.cards != null)
-                {
-                    for (int Idx = deckInst.cards.Length; Idx < 15; Idx++)
-                    {
-                        bool bIsAvailable = (deckInst.availableCardMask & (1 << Idx)) != 0;
-                        if (bIsAvailable)
-                        {
-                            TriadCard cardOb = deckInst.GetCard(Idx);
-                            bool bIsKnownPool = (deckInst.unknownPoolMask & (1 << Idx)) == 0;
-
-                            var listToUse = bIsKnownPool ? knownCards : unknownCards;
-                            listToUse.Add(cardOb);
-                        }
+                        var listToUse = bIsKnownPool ? knownCards : unknownCards;
+                        listToUse.Add(cardOb);
                     }
                 }
             }
 
-            return (knownCards, unknownCards);
+            var visibleCardsMask = (deckInst.cards != null) ? ((1 << deckInst.cards.Length) - 1) : 0;
+            var hasHiddenCards = (deckInst.availableCardMask & ~visibleCardsMask) != 0;
+            if (hasHiddenCards && deckInst.cards != null)
+            {
+                for (var Idx = deckInst.cards.Length; Idx < 15; Idx++)
+                {
+                    var bIsAvailable = (deckInst.availableCardMask & (1 << Idx)) != 0;
+                    if (bIsAvailable)
+                    {
+                        var cardOb = deckInst.GetCard(Idx);
+                        var bIsKnownPool = (deckInst.unknownPoolMask & (1 << Idx)) == 0;
+
+                        var listToUse = bIsKnownPool ? knownCards : unknownCards;
+                        listToUse.Add(cardOb);
+                    }
+                }
+            }
         }
+
+        return (knownCards, unknownCards);
     }
 }

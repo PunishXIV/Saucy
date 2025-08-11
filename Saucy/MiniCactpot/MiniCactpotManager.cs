@@ -43,6 +43,10 @@ public unsafe class MiniCactpotManager : IDisposable
                             .Select(item => item.index)
                             .ToArray();
 
+                        // Check if we're in the final stage (4 numbers revealed) where we pick lanes
+                        var numRevealed = newState.Count(x => x > 0);
+                        PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Board state: [{string.Join(", ", newState)}], Revealed: {numRevealed}, Solution length: {solution.Length}, Active indexes: [{string.Join(", ", activeIndexes)}], Solution: [{string.Join(", ", solution)}]");
+
                         if (solution.Length is 8)
                             ClickLanes(addon, activeIndexes);
                         else

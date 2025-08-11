@@ -1,5 +1,4 @@
-﻿using Dalamud.Plugin.Services;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 // also know as: i should've made gamelogic into a library
@@ -73,15 +72,15 @@ namespace FFTriadBuddy
 
     public class LocalizationDB
     {
-        public readonly static string[] Languages = { "de", "en", "fr", "ja", "cn", "ko" };
+        public static readonly string[] Languages = ["de", "en", "fr", "ja", "cn", "ko"];
         public static int UserLanguageIdx = 1;
-        private static LocalizationDB instance = new LocalizationDB();
+        private static readonly LocalizationDB instance = new();
 
-        public List<LocString> LocUnknown = new List<LocString>();
-        public List<LocString> LocRuleNames = new List<LocString>();
-        public List<LocString> LocCardTypes = new List<LocString>();
-        public List<LocString> LocCardNames = new List<LocString>();
-        public List<LocString> LocNpcNames = new List<LocString>();
+        public List<LocString> LocUnknown = [];
+        public List<LocString> LocRuleNames = [];
+        public List<LocString> LocCardTypes = [];
+        public List<LocString> LocCardNames = [];
+        public List<LocString> LocNpcNames = [];
 
         public Dictionary<ELocStringType, List<LocString>> mapLocStrings;
         public Dictionary<ETriadCardType, LocString> mapCardTypes;
@@ -93,16 +92,18 @@ namespace FFTriadBuddy
 
         public LocalizationDB()
         {
-            mapLocStrings = new Dictionary<ELocStringType, List<LocString>>();
-            mapLocStrings.Add(ELocStringType.Unknown, LocUnknown);
-            mapLocStrings.Add(ELocStringType.RuleName, LocRuleNames);
-            mapLocStrings.Add(ELocStringType.CardType, LocCardTypes);
-            mapLocStrings.Add(ELocStringType.CardName, LocCardNames);
-            mapLocStrings.Add(ELocStringType.NpcName, LocNpcNames);
+            mapLocStrings = new Dictionary<ELocStringType, List<LocString>>
+            {
+                { ELocStringType.Unknown, LocUnknown },
+                { ELocStringType.RuleName, LocRuleNames },
+                { ELocStringType.CardType, LocCardTypes },
+                { ELocStringType.CardName, LocCardNames },
+                { ELocStringType.NpcName, LocNpcNames }
+            };
 
-            mapCardTypes = new Dictionary<ETriadCardType, LocString>();
-            string[] enumNames = Enum.GetNames(typeof(ETriadCardType));
-            for (int enumIdx = 0; enumIdx < enumNames.Length; enumIdx++)
+            mapCardTypes = [];
+            var enumNames = Enum.GetNames(typeof(ETriadCardType));
+            for (var enumIdx = 0; enumIdx < enumNames.Length; enumIdx++)
             {
                 var locStr = new LocString(ELocStringType.CardType, enumIdx, enumIdx == 0 ? "" : enumNames[enumIdx]);
                 mapCardTypes.Add((ETriadCardType)enumIdx, locStr);
@@ -126,8 +127,8 @@ namespace FFTriadBuddy
 
     public class PlayerSettingsDB
     {
-        private static PlayerSettingsDB instance = new PlayerSettingsDB();
-        public List<TriadCard> ownedCards = new List<TriadCard>();
+        private static readonly PlayerSettingsDB instance = new();
+        public List<TriadCard> ownedCards = [];
         public TriadCard?[] starterCards;
 
         public static PlayerSettingsDB Get()
@@ -137,7 +138,7 @@ namespace FFTriadBuddy
 
         public PlayerSettingsDB()
         {
-            TriadCardDB cardDB = TriadCardDB.Get();
+            var cardDB = TriadCardDB.Get();
             starterCards = new TriadCard?[5];
 
             // localization is not fully loaded, just active language!
@@ -166,7 +167,7 @@ namespace FFTriadBuddy
             public TriadCard?[] blueDeck = new TriadCard[5];
             public TriadCard?[] redDeck = new TriadCard[5];
             public TriadCard? forcedBlueCard = null;
-            public List<TriadGameModifier> mods = new List<TriadGameModifier>();
+            public List<TriadGameModifier> mods = [];
             public ETurnState turnState = ETurnState.MissingTimer;
         }
     }

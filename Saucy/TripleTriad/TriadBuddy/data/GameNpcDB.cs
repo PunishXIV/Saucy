@@ -1,67 +1,66 @@
 ﻿using Dalamud.Game.Text.SeStringHandling.Payloads;
 using System.Collections.Generic;
 
-namespace TriadBuddyPlugin
+namespace TriadBuddyPlugin;
+
+public class GameNpcInfo
 {
-    public class GameNpcInfo
+    public int npcId;
+    public int triadId;
+    public int achievementId;
+
+    public int matchFee;
+
+    public MapLinkPayload? Location;
+    public List<int> rewardCards = [];
+
+    // call GameNpcDB.Refresh() before reading fields below
+    public bool IsBeatenOnce;
+    public bool IsCompleted;
+
+    public bool IsExcludedFromAchievementTracker => (achievementId == 0xffff);
+}
+
+public class GameNpcDB
+{
+    private static readonly GameNpcDB instance = new();
+
+    public UnsafeReaderTriadCards? memReader;
+    public Dictionary<int, GameNpcInfo> mapNpcs = [];
+
+    public static GameNpcDB Get()
     {
-        public int npcId;
-        public int triadId;
-        public int achievementId;
-
-        public int matchFee;
-
-        public MapLinkPayload? Location;
-        public List<int> rewardCards = new();
-
-        // call GameNpcDB.Refresh() before reading fields below
-        public bool IsBeatenOnce;
-        public bool IsCompleted;
-
-        public bool IsExcludedFromAchievementTracker => (achievementId == 0xffff);
+        return instance;
     }
 
-    public class GameNpcDB
+    public void Refresh()
     {
-        private static GameNpcDB instance = new();
-
-        public UnsafeReaderTriadCards? memReader;
-        public Dictionary<int, GameNpcInfo> mapNpcs = new();
-
-        public static GameNpcDB Get()
+        if (memReader != null && !memReader.HasErrors)
         {
-            return instance;
-        }
-
-        public void Refresh()
-        {
-            if (memReader != null && !memReader.HasErrors)
-            {
-                foreach (var kvp in mapNpcs)
-                {
-                    kvp.Value.IsBeatenOnce = memReader.IsNpcBeaten(kvp.Value.triadId);
-                }
-            }
-
-            // card search window is already doing GameCardDB refresh before this
-            var cardInfoDB = GameCardDB.Get();
-
             foreach (var kvp in mapNpcs)
             {
-                bool isCompleted = true;
-
-                foreach (var rewardId in kvp.Value.rewardCards)
-                {
-                    if (!cardInfoDB.ownedCardIds.Contains(rewardId))
-                    {
-                        isCompleted = false;
-
-                        break;
-                    }
-                }
-
-                kvp.Value.IsCompleted = isCompleted;
+                kvp.Value.IsBeatenOnce = memReader.IsNpcBeaten(kvp.Value.triadId);
             }
+        }
+
+        // card search window is already doing GameCardDB refresh before this
+        var cardInfoDB = GameCardDB.Get();
+
+        foreach (var kvp in mapNpcs)
+        {
+            var isCompleted = true;
+
+            foreach (var rewardId in kvp.Value.rewardCards)
+            {
+                if (!cardInfoDB.ownedCardIds.Contains(rewardId))
+                {
+                    isCompleted = false;
+
+                    break;
+                }
+            }
+
+            kvp.Value.IsCompleted = isCompleted;
         }
     }
 }

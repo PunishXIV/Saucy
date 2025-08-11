@@ -33,7 +33,7 @@ public unsafe class LimbManager : IDisposable
     private int RequestInput = 0;
     private int? Request = null;
     private bool OnlyRequest = false;
-    private List<HitResult> Results = [];
+    private readonly List<HitResult> Results = [];
     private int? Next = null;
     private int MinIndex = 0;
     private bool RecordMinIndex = false;
@@ -41,21 +41,20 @@ public unsafe class LimbManager : IDisposable
     public LimbConfig C;
     private bool Exit = false;
 
-    private static bool TidyChat =>
-    DalamudReflector.TryGetDalamudPlugin("TidyChat", out var _, false, true);
+    private static bool TidyChat => DalamudReflector.TryGetDalamudPlugin("TidyChat", out var _, false, true);
 
     public LimbManager(LimbConfig conf)
     {
         C = conf;
         new EzFrameworkUpdate(Tick);
-        Svc.Chat.ChatMessageHandled += this.Chat_ChatMessage;
-        Svc.Chat.ChatMessageUnhandled += this.Chat_ChatMessage;
+        Svc.Chat.ChatMessageHandled += Chat_ChatMessage;
+        Svc.Chat.ChatMessageUnhandled += Chat_ChatMessage;
     }
 
     public void Dispose()
     {
-        Svc.Chat.ChatMessageHandled -= this.Chat_ChatMessage;
-        Svc.Chat.ChatMessageUnhandled -= this.Chat_ChatMessage;
+        Svc.Chat.ChatMessageHandled -= Chat_ChatMessage;
+        Svc.Chat.ChatMessageUnhandled -= Chat_ChatMessage;
     }
 
     private void InteractWithClosestLimb()
@@ -103,7 +102,7 @@ public unsafe class LimbManager : IDisposable
         }
     }
 
-    private Dictionary<string, HitPower> HitPowerText = new()
+    private readonly Dictionary<string, HitPower> HitPowerText = new()
     {
         [Svc.Data.GetExcelSheet<Addon>().GetRow(9710).Text.GetText().RemoveSpaces()] = HitPower.Nothing,
         [Svc.Data.GetExcelSheet<Addon>().GetRow(9711).Text.GetText().RemoveSpaces()] = HitPower.Weak,
@@ -129,7 +128,7 @@ public unsafe class LimbManager : IDisposable
     private void Reset()
     {
         Results.Clear();
-        for (int i = 0; i <= 100; i += C.Step)
+        for (var i = 0; i <= 100; i += C.Step)
         {
             Results.Add(new(i, HitPower.Unobserved));
         }
@@ -340,7 +339,7 @@ public unsafe class LimbManager : IDisposable
     private List<HitResult> GetNext(int index, uint num)
     {
         var ret = new List<HitResult>();
-        for (int i = 0; i < num; i++)
+        for (var i = 0; i < num; i++)
         {
             var r = Results.SafeSelect(index + i);
             if (r != null) ret.Add(r);
@@ -351,7 +350,7 @@ public unsafe class LimbManager : IDisposable
     private List<HitResult> GetPrev(int index, uint num)
     {
         var ret = new List<HitResult>();
-        for (int i = 0; i < num; i++)
+        for (var i = 0; i < num; i++)
         {
             var r = Results.SafeSelect(index - i);
             if (r != null) ret.Add(r);
@@ -361,7 +360,7 @@ public unsafe class LimbManager : IDisposable
 
     private int GetNextTargetCursorPos()
     {
-        for (int i = MinIndex; i < Results.Count; i++)
+        for (var i = MinIndex; i < Results.Count; i++)
         {
             var current = Results[i];
             var prev = Results.SafeSelect(i - 1);
@@ -372,7 +371,7 @@ public unsafe class LimbManager : IDisposable
             }
         }
 
-        for (int i = MinIndex; i < Results.Count; i++)
+        for (var i = MinIndex; i < Results.Count; i++)
         {
             var current = Results[i];
             var prev = Results.SafeSelect(i - 1);
@@ -385,7 +384,7 @@ public unsafe class LimbManager : IDisposable
         }
         foreach (var x in StartingPoints)
         {
-            int[] adjustedPoints = [.. StartingPoints.Where(z => !isStartingPointChecked(z))];
+            int[] adjustedPoints = [.. StartingPoints.Where(z => !IsStartingPointChecked(z))];
             if (adjustedPoints.Length == 0) break;
             var transformedPoints = adjustedPoints.Select(z => GetClosestResultPoint(z).Position).ToArray();
             var index = 0;// Random.Shared.Next(transformedPoints.Length);
@@ -410,7 +409,7 @@ public unsafe class LimbManager : IDisposable
         return Results.OrderBy(x => Math.Abs(point - x.Position)).First();
     }
 
-    private bool isStartingPointChecked(int position)
+    private bool IsStartingPointChecked(int position)
     {
         var item = GetClosestResultPoint(position);
         return item.Power != HitPower.Unobserved;
@@ -438,7 +437,7 @@ public unsafe class LimbManager : IDisposable
         }
     }
 
-    private Dictionary<LimbDifficulty, int[]> FPSRequirements = new()
+    private readonly Dictionary<LimbDifficulty, int[]> FPSRequirements = new()
     {
         [LimbDifficulty.Titan] = [480, 240, 120, 90, 60],
         [LimbDifficulty.Morbol] = [240, 120, 90, 60, 30],
@@ -487,13 +486,13 @@ public unsafe class LimbManager : IDisposable
         if (save) Saucy.Config.Save();
     }
 
-    private static Dictionary<LimbDifficulty, int> Heights = new()
+    private static readonly Dictionary<LimbDifficulty, int> Heights = new()
     {
         [LimbDifficulty.Titan] = 20,
         [LimbDifficulty.Morbol] = 40,
         [LimbDifficulty.Cactuar] = 340,
     };
-    private static Dictionary<LimbDifficulty, uint> NodeIDs = new()
+    private static readonly Dictionary<LimbDifficulty, uint> NodeIDs = new()
     {
         [LimbDifficulty.Titan] = 41,
         [LimbDifficulty.Morbol] = 44,

@@ -14,29 +14,28 @@ internal static class SliceIsRightModule
 {
     public static bool ModuleEnabled
     {
-        get => _moduleEnabled;
+        get;
         set
         {
-            if (_moduleEnabled != value)
+            if (field != value)
             {
-                _moduleEnabled = value;
+                field = value;
                 RunModule();
             }
             else
             {
-                _moduleEnabled = value;
+                field = value;
             }
 
-            Saucy.Config.SliceIsRightModuleEnabled = _moduleEnabled;
+            Saucy.Config.SliceIsRightModuleEnabled = field;
         }
     }
-    private static bool _moduleEnabled;
-    
+
     private static bool IsInGoldSaucer => Svc.ClientState.TerritoryType == 144;
-    
+
     private const float HalfPi = 1.57079637f;
     private const float MaxDistance = 30f;
-    
+
     private static readonly uint ColourBlue = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 1f, 0.15f)));
     private static readonly uint ColourGreen = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 1f, 0.0f, 0.15f)));
     private static readonly uint ColourRed = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 0.0f, 0.0f, 0.4f)));
@@ -46,18 +45,13 @@ internal static class SliceIsRightModule
     {
         ModuleEnabled = Saucy.Config.SliceIsRightModuleEnabled;
     }
-    
+
     private static void RunModule()
     {
-        if (_moduleEnabled)
-        {
+        if (ModuleEnabled)
             Svc.PluginInterface.UiBuilder.Draw += DrawUI;
-        }
         else
-        {
             Svc.PluginInterface.UiBuilder.Draw -= DrawUI;
-        }
-        
     }
 
     private static void DrawUI()
@@ -75,7 +69,7 @@ internal static class SliceIsRightModule
             }
         }
     }
-    
+
     private static float DistanceToPlayer(Vector3 center)
     {
         var localPlayer = Svc.ClientState.LocalPlayer;
@@ -114,7 +108,7 @@ internal static class SliceIsRightModule
             ObjectsAndSpawnTime.Add(gameObject.GameObjectId, DateTime.Now);
         }
     }
-    
+
     private static void DrawRectWorld(IGameObject gameObject, float rotation, float length, float width, uint colour)
     {
         BeginRender(gameObject.Address + gameObject.Rotation.ToString(CultureInfo.InvariantCulture));
@@ -159,7 +153,7 @@ internal static class SliceIsRightModule
             {
                 windowDrawList.PathClear();
             }
-            
+
             vector31 = vector34;
             vector32 = vector35;
             vector33 = vector36;

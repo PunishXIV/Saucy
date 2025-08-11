@@ -1,129 +1,122 @@
-﻿using Dalamud.Plugin.Services;
-using FFXIVClientStructs.FFXIV.Component.GUI;
+﻿using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
 
-namespace MgAl2O4.Utils
+namespace MgAl2O4.Utils;
+
+public interface IUIReader
 {
-    public interface IUIReader
+    string GetAddonName();
+    void OnAddonLost();
+    void OnAddonShown(IntPtr addonPtr);
+    void OnAddonUpdate(IntPtr addonPtr);
+}
+
+public class UIReaderScheduler(IGameGui gameGui)
+{
+    private class AddonInfo
     {
-        string GetAddonName();
-        void OnAddonLost();
-        void OnAddonShown(IntPtr addonPtr);
-        void OnAddonUpdate(IntPtr addonPtr);
+        public string? name;
+        public IUIReader? reader;
+        public bool isActive;
+
+        public IntPtr addonPtr;
     }
 
-    public class UIReaderScheduler
+    private readonly IGameGui gameGui = gameGui;
+    private readonly List<AddonInfo> addons = [];
+
+    private const float slowCheckInterval = 0.5f;
+    private float slowCheckRemaining = 0.0f;
+    private bool hasActiveAddons = false;
+
+    public void AddObservedAddon(IUIReader uiReader)
     {
-        private class AddonInfo
+        addons.Add(new AddonInfo() { name = uiReader.GetAddonName(), reader = uiReader });
+    }
+
+    public void Update(float deltaSeconds)
+    {
+        if (gameGui != null)
         {
-            public string? name;
-            public IUIReader? reader;
-            public bool isActive;
-
-            public IntPtr addonPtr;
-        }
-
-        private readonly IGameGui gameGui;
-        private readonly List<AddonInfo> addons = new();
-
-        private const float slowCheckInterval = 0.5f;
-        private float slowCheckRemaining = 0.0f;
-        private bool hasActiveAddons = false;
-
-        public UIReaderScheduler(IGameGui gameGui)
-        {
-            this.gameGui = gameGui;
-        }
-
-        public void AddObservedAddon(IUIReader uiReader)
-        {
-            addons.Add(new AddonInfo() { name = uiReader.GetAddonName(), reader = uiReader });
-        }
-
-        public void Update(float deltaSeconds)
-        {
-            if (gameGui != null)
+            // slow check: look for newly created addons - would be nice to change to event driven
+            slowCheckRemaining -= deltaSeconds;
+            if (slowCheckRemaining <= 0.0f)
             {
-                // slow check: look for newly created addons - would be nice to change to event driven
-                slowCheckRemaining -= deltaSeconds;
-                if (slowCheckRemaining <= 0.0f)
+                slowCheckRemaining = slowCheckInterval;
+
+                foreach (var addon in addons)
                 {
-                    slowCheckRemaining = slowCheckInterval;
-
-                    foreach (var addon in addons)
+                    if (!addon.isActive)
                     {
-                        if (!addon.isActive)
+                        if (addon.name == null || addon.reader == null)
                         {
-                            if (addon.name == null || addon.reader == null)
-                            {
-                                continue;
-                            }
+                            continue;
+                        }
 
-                            var addonPtr = GetAddonPtrIfValid(addon.name);
+                        var addonPtr = GetAddonPtrIfValid(addon.name);
+                        if (addonPtr != IntPtr.Zero)
+                        {
+                            addon.addonPtr = addonPtr;
+                            addon.isActive = true;
+                            hasActiveAddons = true;
+
+                            addon.reader.OnAddonShown(addonPtr);
+                        }
+                    }
+                }
+            }
+
+            // every tick: update & look for lost addons
+            if (hasActiveAddons)
+            {
+                hasActiveAddons = false;
+                foreach (var addon in addons)
+                {
+                    if (addon.isActive)
+                    {
+                        if (addon.name == null || addon.reader == null)
+                        {
+                            continue;
+                        }
+
+                        var addonPtr = GetAddonPtrIfValid(addon.name);
+                        if (addonPtr != addon.addonPtr)
+                        {
+                            addon.isActive = false;
+                            addon.reader.OnAddonLost();
+
                             if (addonPtr != IntPtr.Zero)
                             {
-                                addon.addonPtr = addonPtr;
                                 addon.isActive = true;
-                                hasActiveAddons = true;
-
                                 addon.reader.OnAddonShown(addonPtr);
                             }
                         }
-                    }
-                }
 
-                // every tick: update & look for lost addons
-                if (hasActiveAddons)
-                {
-                    hasActiveAddons = false;
-                    foreach (var addon in addons)
-                    {
-                        if (addon.isActive)
+                        addon.addonPtr = addonPtr;
+                        if (addonPtr != IntPtr.Zero)
                         {
-                            if (addon.name == null || addon.reader == null)
-                            {
-                                continue;
-                            }
-
-                            var addonPtr = GetAddonPtrIfValid(addon.name);
-                            if (addonPtr != addon.addonPtr)
-                            {
-                                addon.isActive = false;
-                                addon.reader.OnAddonLost();
-
-                                if (addonPtr != IntPtr.Zero)
-                                {
-                                    addon.isActive = true;
-                                    addon.reader.OnAddonShown(addonPtr);
-                                }
-                            }
-
-                            addon.addonPtr = addonPtr;
-                            if (addonPtr != IntPtr.Zero)
-                            {
-                                addon.reader.OnAddonUpdate(addonPtr);
-                                hasActiveAddons = true;
-                            }
+                            addon.reader.OnAddonUpdate(addonPtr);
+                            hasActiveAddons = true;
                         }
                     }
                 }
             }
         }
+    }
 
-        private unsafe IntPtr GetAddonPtrIfValid(string name)
+    private unsafe IntPtr GetAddonPtrIfValid(string name)
+    {
+        IntPtr addonPtr = (gameGui == null) ? IntPtr.Zero : gameGui.GetAddonByName(name, 1);
+        if (addonPtr != IntPtr.Zero)
         {
-            IntPtr addonPtr = (gameGui == null) ? IntPtr.Zero : gameGui.GetAddonByName(name, 1);
-            if (addonPtr != IntPtr.Zero)
+            var baseNode = (AtkUnitBase*)addonPtr;
+            if (baseNode->RootNode != null && baseNode->RootNode->IsVisible())
             {
-                var baseNode = (AtkUnitBase*)addonPtr;
-                if (baseNode->RootNode != null && baseNode->RootNode->IsVisible())
-                {
-                    return addonPtr;
-                }
+                return addonPtr;
             }
-
-            return IntPtr.Zero;
         }
+
+        return IntPtr.Zero;
     }
 }
