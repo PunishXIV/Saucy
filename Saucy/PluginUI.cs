@@ -1,10 +1,13 @@
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
+using Dalamud.Interface.Windowing;
 using ECommons.ImGuiMethods;
 using FFTriadBuddy;
-using Dalamud.Bindings.ImGui;
+using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
 using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
+using Saucy.MiniCactpot;
 using Saucy.OtherGames;
 using Saucy.TripleTriad;
 using System;
@@ -13,23 +16,18 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using TriadBuddyPlugin;
-using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
-using Saucy.MiniCactpot;
 
 namespace Saucy;
 
 // It is good to have this be disposable in general, in case you ever need it
 // to do any cleanup
-public unsafe class PluginUI() : IDisposable
+public unsafe class PluginUI : Window
 {
-    // this extra bool exists for ImGui, since you can't ref a property
-    private bool visible = false;
-    public bool Visible
+    public PluginUI() : base("Saucy##Saucy")
     {
-        get => visible; set => visible = value;
+        Size = new Vector2(520, 420);
+        SizeCondition = ImGuiCond.FirstUseEver;
     }
-
-    public bool SettingsVisible { get; set; } = false;
 
     public GameNpcInfo CurrentNPC
     {
@@ -44,105 +42,90 @@ public unsafe class PluginUI() : IDisposable
         }
     }
 
-    public void Dispose()
-    {
-    }
-
     public bool Enabled { get; set; } = false;
 
-    public void Draw()
+    public override void Draw()
     {
         DrawMainWindow();
     }
 
     public void DrawMainWindow()
     {
-        if (!Visible)
+        if (ImGui.BeginTabBar("###Games", ImGuiTabBarFlags.Reorderable))
         {
-            return;
-        }
-
-        ImGui.SetNextWindowSize(new Vector2(520, 420), ImGuiCond.FirstUseEver);
-        //ImGui.SetNextWindowSizeConstraints(new Vector2(520, 420), new Vector2(float.MaxValue, float.MaxValue));
-        if (ImGui.Begin("Saucy Config", ref visible))
-        {
-            if (ImGui.BeginTabBar("###Games", ImGuiTabBarFlags.Reorderable))
+            if (ImGui.BeginTabItem("Cuff-a-Cur"))
             {
-                if (ImGui.BeginTabItem("Cuff-a-Cur"))
+                DrawCufTab();
+                ImGui.EndTabItem();
+            }
+
+            if (Saucy.openTT)
+            {
+                Saucy.openTT = false;
+                if (ImGui.BeginTabItem("Triple Triad", ImGuiTabItemFlags.SetSelected))
                 {
-                    DrawCufTab();
+                    DrawTriadTab();
                     ImGui.EndTabItem();
                 }
-
-                if (Saucy.openTT)
+            }
+            else
+            {
+                if (ImGui.BeginTabItem("Triple Triad"))
                 {
-                    Saucy.openTT = false;
-                    if (ImGui.BeginTabItem("Triple Triad", ImGuiTabItemFlags.SetSelected))
+                    DrawTriadTab();
+                    ImGui.EndTabItem();
+                }
+            }
+
+            if (ImGui.BeginTabItem("Out on a Limb"))
+            {
+                if (ImGui.BeginTabBar($"LimbTab"))
+                {
+                    if (ImGui.BeginTabItem("Main"))
                     {
-                        DrawTriadTab();
+                        Saucy.P.LimbManager.DrawSettings();
                         ImGui.EndTabItem();
                     }
-                }
-                else
-                {
-                    if (ImGui.BeginTabItem("Triple Triad"))
+                    if (ImGui.BeginTabItem($"Debug"))
                     {
-                        DrawTriadTab();
+                        Saucy.P.LimbManager.DrawDebug();
                         ImGui.EndTabItem();
                     }
+
+                    ImGui.EndTabBar();
                 }
 
-                if (ImGui.BeginTabItem("Out on a Limb"))
-                {
-                    if (ImGui.BeginTabBar($"LimbTab"))
-                    {
-                        if (ImGui.BeginTabItem("Main"))
-                        {
-                            Saucy.P.LimbManager.DrawSettings();
-                            ImGui.EndTabItem();
-                        }
-                        if (ImGui.BeginTabItem($"Debug"))
-                        {
-                            Saucy.P.LimbManager.DrawDebug();
-                            ImGui.EndTabItem();
-                        }
+                ImGui.EndTabItem();
+            }
 
-                        ImGui.EndTabBar();
-                    }
+            if (ImGui.BeginTabItem("Other Games"))
+            {
+                DrawOtherGamesTab();
+                ImGui.EndTabItem();
+            }
 
-                    ImGui.EndTabItem();
-                }
+            if (ImGui.BeginTabItem("Stats"))
+            {
+                DrawStatsTab();
+                ImGui.EndTabItem();
+            }
 
-                if (ImGui.BeginTabItem("Other Games"))
-                {
-                    DrawOtherGamesTab();
-                    ImGui.EndTabItem();
-                }
-
-                if (ImGui.BeginTabItem("Stats"))
-                {
-                    DrawStatsTab();
-                    ImGui.EndTabItem();
-                }
-
-                if (ImGui.BeginTabItem("About"))
-                {
-                    AboutTab.Draw("Saucy");
-                    ImGui.EndTabItem();
-                }
+            if (ImGui.BeginTabItem("About"))
+            {
+                AboutTab.Draw("Saucy");
+                ImGui.EndTabItem();
+            }
 
 #if DEBUG
-                if (ImGui.BeginTabItem("Debug"))
-                {
-                    DrawDebugTab();
-                    ImGui.EndTabItem();
-                }
+            if (ImGui.BeginTabItem("Debug"))
+            {
+                DrawDebugTab();
+                ImGui.EndTabItem();
+            }
 #endif
 
-                ImGui.EndTabBar();
-            }
+            ImGui.EndTabBar();
         }
-        ImGui.End();
     }
 
     private void DrawOtherGamesTab()
@@ -165,7 +148,12 @@ public unsafe class PluginUI() : IDisposable
         }
 
         if (ImGui.Checkbox("Enable Any Way the Wind Blows Module", ref C.AnyWayTheWindowBlowsModuleEnabled))
-            C.Save();
+        {
+            if (C.AnyWayTheWindowBlowsModuleEnabled)
+                C.EnabledModules.Add(ModuleManager.GetModule<AnyWayTheWindBlows>().InternalName);
+            else
+                C.EnabledModules.Remove(ModuleManager.GetModule<AnyWayTheWindBlows>().InternalName);
+        }
     }
 
     private void DrawStatsTab()

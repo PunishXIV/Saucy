@@ -27,12 +27,12 @@ public abstract partial class Module : IModule
             action();
     }
 
-    public unsafe void ExecuteTask(Action action, AtkUnitBase* addon)
+    public unsafe void ExecuteTask(Action action, nint pointer)
     {
         if (C.LittleBitchDelay > 0)
             TaskManager.Enqueue(() =>
             {
-                if (addon is not null)
+                if (pointer != IntPtr.Zero)
                     action();
                 else
                     LogVerbose($"Addon disappeared before action could fire.");
@@ -53,7 +53,7 @@ public abstract partial class Module
         }
         catch (Exception ex)
         {
-            LogError($"Failed to enable module: {ex.Message}");
+            LogError($"Failed to enable module: {ex}");
             return;
         }
 
@@ -69,7 +69,7 @@ public abstract partial class Module
         }
         catch (Exception ex)
         {
-            LogError($"Failed to disable module: {ex.Message}");
+            LogError($"Failed to disable module: {ex}");
             return;
         }
 

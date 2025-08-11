@@ -3,6 +3,7 @@ using Dalamud.Game.Command;
 using Dalamud.Plugin;
 using ECommons;
 using ECommons.Configuration;
+using ECommons.SimpleGui;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
@@ -32,7 +33,6 @@ public sealed class Saucy : IDalamudPlugin
     public static Saucy P;
 
     private const string commandName = "/saucy";
-    public static PluginUI PluginUi { get; set; }
 
     public static Solver TTSolver = new();
 
@@ -59,15 +59,12 @@ public sealed class Saucy : IDalamudPlugin
         C = EzConfig.Init<Configuration>();
         P = this;
 
-        PluginUi = new PluginUI();
+        EzConfigGui.Init(new PluginUI());
 
         Svc.Commands.AddHandler(commandName, new CommandInfo(OnCommand)
         {
             HelpMessage = "Opens the Saucy menu."
         });
-
-        Svc.PluginInterface.UiBuilder.Draw += DrawUI;
-        Svc.PluginInterface.UiBuilder.OpenConfigUi += DrawCUI;
 
         dataLoader = new GameDataLoader();
         dataLoader.StartAsyncWork();
@@ -122,7 +119,6 @@ public sealed class Saucy : IDalamudPlugin
             if (!C.EnabledModules.Contains(m.InternalName) && m.IsEnabled)
                 m.DisableInternal();
         }
-        Svc.Log.Info($"enabled modules: {string.Join(", ", C.EnabledModules)}");
     }
 
     private void CheckLimbResults(UIStateLimbResults results)
@@ -303,7 +299,7 @@ public sealed class Saucy : IDalamudPlugin
 
         if (C.OpenAutomatically && uiReaderPrep.HasMatchRequestUI && !TriadAutomater.ModuleEnabled)
         {
-            PluginUi.Visible = true;
+            EzConfigGui.Open();
             openTT = true;
         }
 
@@ -395,7 +391,6 @@ public sealed class Saucy : IDalamudPlugin
 
     public void Dispose()
     {
-        PluginUi.Dispose();
         Svc.Commands.RemoveHandler(commandName);
         Svc.Framework.Update -= RunBot;
         SliceIsRightModule.ModuleEnabled = false;
@@ -408,7 +403,7 @@ public sealed class Saucy : IDalamudPlugin
     private void OnCommand(string command, string arguments)
     {
         if (arguments.Length == 0)
-            PluginUi.Visible = !PluginUi.Visible;
+            EzConfigGui.Toggle();
 
         var args = arguments.Split();
         if (args.Length > 0)
@@ -469,15 +464,5 @@ public sealed class Saucy : IDalamudPlugin
                 }
             }
         }
-    }
-
-    private void DrawUI()
-    {
-        PluginUi.Draw();
-    }
-
-    private void DrawCUI()
-    {
-        PluginUi.Visible = true;
     }
 }
