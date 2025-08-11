@@ -1,7 +1,6 @@
 ﻿using Dalamud.Game;
 using Dalamud.IoC;
 using Dalamud.Plugin;
-using ECommons.DalamudServices;
 
 namespace TriadBuddyPlugin;
 

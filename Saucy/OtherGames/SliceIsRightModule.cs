@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
-using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using Dalamud.Bindings.ImGui;
 

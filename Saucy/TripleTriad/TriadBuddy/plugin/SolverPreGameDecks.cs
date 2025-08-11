@@ -1,6 +1,5 @@
 ﻿using FFTriadBuddy;
 using MgAl2O4.Utils;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

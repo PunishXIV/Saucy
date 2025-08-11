@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using TriadBuddyPlugin;
 
 namespace MgAl2O4.Utils;
 
