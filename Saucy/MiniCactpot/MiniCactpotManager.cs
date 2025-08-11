@@ -4,6 +4,7 @@ using ECommons.Automation;
 using ECommons.Automation.UIInput;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Saucy.Framework;
 using Saucy.OutOnALimb.ECEmbedded;
 using System;
 using System.Collections.Generic;
@@ -11,19 +12,19 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace Saucy.MiniCactpot;
-public unsafe class MiniCactpotManager : IDisposable
+public unsafe class MiniCactpotManager : Module
 {
+    public override string Name => "Mini Cactpot";
+
     private readonly CactpotSolver _solver = new();
     private int[]? boardState;
     private Task? gameTask;
 
-    public MiniCactpotManager() => Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "LotteryDaily", OnUpdate);
-
-    public void Dispose() => Svc.AddonLifecycle.UnregisterListener(OnUpdate);
+    public override void Enable() => Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "LotteryDaily", OnUpdate);
+    public override void Disable() => Svc.AddonLifecycle.UnregisterListener(OnUpdate);
 
     private void OnUpdate(AddonEvent type, AddonArgs args)
     {
-        if (!Saucy.Config.EnableAutoMiniCactpot) return;
         var addon = (AddonLotteryDaily*)args.Addon.Address;
         if (new Reader((AtkUnitBase*)args.Addon.Address).Stage == 5) ClickConfirmClose((AddonLotteryDaily*)args.Addon.Address, 5);
         var newState = Enumerable.Range(0, 9).Select(i => addon->GameNumbers[i]).ToArray();
@@ -66,7 +67,7 @@ public unsafe class MiniCactpotManager : IDisposable
         if (activeIndexes.First() is { } first)
         {
             PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Clicking lane at index #{SolverLaneToCsLane(first)} [{string.Join(", ", activeIndexes)}]");
-            addon->LaneSelector[SolverLaneToCsLane(first)]->ClickRadioButton((AtkUnitBase*)addon);
+            ExecuteTask(() => addon->LaneSelector[SolverLaneToCsLane(first)]->ClickRadioButton((AtkUnitBase*)addon), (AtkUnitBase*)addon);
         }
         ClickConfirmClose(addon, -1);
     }
@@ -76,7 +77,7 @@ public unsafe class MiniCactpotManager : IDisposable
         if (activeIndexes.First() is { } first)
         {
             PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Clicking button at index #{first} [{string.Join(", ", activeIndexes)}]");
-            Callback.Fire((AtkUnitBase*)addon, true, 1, first);
+            ExecuteTask(() => Callback.Fire((AtkUnitBase*)addon, true, 1, first), (AtkUnitBase*)addon);
         }
     }
 
@@ -86,7 +87,7 @@ public unsafe class MiniCactpotManager : IDisposable
         if (confirm->IsEnabled)
         {
             PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Clicking {(stage == 5 ? "close" : "confirm")}");
-            confirm->ClickAddonButton((AtkUnitBase*)addon);
+            ExecuteTask(() => confirm->ClickAddonButton((AtkUnitBase*)addon), (AtkUnitBase*)addon);
         }
     }
 

@@ -1,8 +1,9 @@
 using Dalamud.Configuration;
 using Dalamud.Plugin;
-using Saucy.OutOnALimb;
 using Newtonsoft.Json;
+using Saucy.OutOnALimb;
 using System;
+using System.Collections.ObjectModel;
 
 namespace Saucy;
 [Serializable]
@@ -24,11 +25,15 @@ public class Configuration : IPluginConfiguration
     public bool OnlyUnobtainedCards { get; set; } = false;
     public bool OpenAutomatically { get; set; } = false;
 
+    public ObservableCollection<string> EnabledModules = [];
+
     public bool SliceIsRightModuleEnabled { get; set; }
     public bool AnyWayTheWindowBlowsModuleEnabled = false;
 
     public LimbConfig LimbConfig { get; set; } = new();
     public bool EnableAutoMiniCactpot = false;
+
+    public int LittleBitchDelay = 250;
 
     // the below exist just to make saving less cumbersome
 

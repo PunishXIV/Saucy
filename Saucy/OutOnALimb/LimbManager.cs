@@ -37,14 +37,14 @@ public unsafe class LimbManager : IDisposable
     private int MinIndex = 0;
     private bool RecordMinIndex = false;
     public int GamesToPlay = 0;
-    public LimbConfig C;
+    public LimbConfig Cfg;
     private bool Exit = false;
 
     private static bool TidyChat => DalamudReflector.TryGetDalamudPlugin("TidyChat", out var _, false, true);
 
     public LimbManager(LimbConfig conf)
     {
-        C = conf;
+        Cfg = conf;
         new EzFrameworkUpdate(Tick);
         Svc.Chat.ChatMessageHandled += Chat_ChatMessage;
         Svc.Chat.ChatMessageUnhandled += Chat_ChatMessage;
@@ -111,7 +111,7 @@ public unsafe class LimbManager : IDisposable
 
     private void Chat_ChatMessage(XivChatType type, int senderId, SeString sender, SeString message)
     {
-        if (!C.EnableLimb) return;
+        if (!Cfg.EnableLimb) return;
         if (!Svc.Condition[ConditionFlag.OccupiedInQuestEvent]) return;
         PluginLog.Information($"{type}/{message.GetText().RemoveSpaces()}");
         if ((int)type == 2105)
@@ -127,7 +127,7 @@ public unsafe class LimbManager : IDisposable
     private void Reset()
     {
         Results.Clear();
-        for (var i = 0; i <= 100; i += C.Step)
+        for (var i = 0; i <= 100; i += Cfg.Step)
         {
             Results.Add(new(i, HitPower.Unobserved));
         }
@@ -191,7 +191,7 @@ public unsafe class LimbManager : IDisposable
 
     private void Tick()
     {
-        if (!C.EnableLimb) return;
+        if (!Cfg.EnableLimb) return;
         if (!Player.Available) return;
         if (!IsScreenReady()) return;
         if (GamesToPlay > 0)
@@ -215,10 +215,10 @@ public unsafe class LimbManager : IDisposable
                         }
                     }
 
-                    var reference = addon->GetNodeById(NodeIDs[C.LimbDifficulty]);
+                    var reference = addon->GetNodeById(NodeIDs[Cfg.LimbDifficulty]);
                     var cursor = addon->GetNodeById(39);
                     var iCursor = 400 - cursor->Height;
-                    if (iCursor > reference->Y && iCursor < reference->Y + Heights[C.LimbDifficulty])
+                    if (iCursor > reference->Y && iCursor < reference->Y + Heights[Cfg.LimbDifficulty])
                     {
                         SafeClickButtonAimg();
                     }
@@ -248,7 +248,7 @@ public unsafe class LimbManager : IDisposable
                         {
                             if (Request != null)
                             {
-                                if (Math.Abs(cursor - Request.Value) < C.Tolerance)
+                                if (Math.Abs(cursor - Request.Value) < Cfg.Tolerance)
                                 {
                                     if (SafeClickButtonBotanist()) Request = null;
                                 }
@@ -258,7 +258,7 @@ public unsafe class LimbManager : IDisposable
                         {
                             if (Next != null)
                             {
-                                if (Math.Abs(cursor - Next.Value) < C.Tolerance)
+                                if (Math.Abs(cursor - Next.Value) < Cfg.Tolerance)
                                 {
                                     if (SafeClickButtonBotanist()) Next = null;
                                 }
@@ -309,7 +309,7 @@ public unsafe class LimbManager : IDisposable
                     {
                         if (mgp >= 400)
                         {
-                            if (reader.SecondsRemaining > C.StopAt)
+                            if (reader.SecondsRemaining > Cfg.StopAt)
                             {
                                 if (EzThrottler.Throttle("Yesno", 2000)) new AddonMaster.SelectYesno(ss).Yes();
                             }
@@ -320,7 +320,7 @@ public unsafe class LimbManager : IDisposable
                         }
                         else
                         {
-                            if (reader.SecondsRemaining > C.HardStopAt)
+                            if (reader.SecondsRemaining > Cfg.HardStopAt)
                             {
                                 if (EzThrottler.Throttle("Yesno", 2000)) new AddonMaster.SelectYesno(ss).Yes();
                             }
@@ -444,7 +444,7 @@ public unsafe class LimbManager : IDisposable
     };
     private int CalcRequiredFPS()
     {
-        return FPSRequirements.SafeSelect(C.LimbDifficulty)?.SafeSelect(C.Tolerance) ?? -1;
+        return FPSRequirements.SafeSelect(Cfg.LimbDifficulty)?.SafeSelect(Cfg.Tolerance) ?? -1;
     }
 
     public void DrawSettings()
@@ -454,7 +454,7 @@ public unsafe class LimbManager : IDisposable
         if (TidyChat)
             ImGuiEx.TextWrapped(ImGuiColors.DalamudRed, $@"Tidychat Warning: Please ensure you do not have ""You sense something..."" messages (Advanced -> System messages) hidden or this will not work");
         ImGui.Separator();
-        save |= ImGui.Checkbox($"Enable", ref C.EnableLimb);
+        save |= ImGui.Checkbox($"Enable", ref Cfg.EnableLimb);
         ImGui.SetNextItemWidth(100f);
         ImGui.InputInt("Games to play", ref GamesToPlay.ValidateRange(0, 9999));
         ImGui.SameLine();
@@ -463,26 +463,26 @@ public unsafe class LimbManager : IDisposable
 
         ImGui.Separator();
         ImGui.SetNextItemWidth(100f);
-        save |= ImGuiEx.EnumCombo("Difficulty", ref C.LimbDifficulty);
+        save |= ImGuiEx.EnumCombo("Difficulty", ref Cfg.LimbDifficulty);
         ImGui.SetNextItemWidth(100f);
-        save |= ImGuiEx.SliderInt($"Tolerance", ref C.Tolerance.ValidateRange(1, 4), 1, 4);
+        save |= ImGuiEx.SliderInt($"Tolerance", ref Cfg.Tolerance.ValidateRange(1, 4), 1, 4);
         ImGui.SameLine();
-        if (ImGui.Button("Default##1")) C.Tolerance = new LimbConfig().Tolerance;
+        if (ImGui.Button("Default##1")) Cfg.Tolerance = new LimbConfig().Tolerance;
         var req = CalcRequiredFPS();
         var current = ImGui.GetIO().Framerate;
         var delta = current - req;
         ImGuiEx.TextWrapped(delta > -1 ? ImGuiColors.ParsedGreen : (delta > -(req * 0.15f) ? ImGuiColors.DalamudYellow : ImGuiColors.DalamudRed), $"Required framerate: {req}\nYour framerate: {(int)current}");
         ImGuiEx.TextWrapped($"Reducing tolerance or difficulty will reduce required framerate.");
         ImGui.SetNextItemWidth(100f);
-        save |= ImGui.DragInt($"Step", ref C.Step, 0.05f);
+        save |= ImGui.DragInt($"Step", ref Cfg.Step, 0.05f);
         ImGui.SameLine();
-        if (ImGui.Button("Default##2")) C.Step = new LimbConfig().Step;
+        if (ImGui.Button("Default##2")) Cfg.Step = new LimbConfig().Step;
         ImGui.SetNextItemWidth(100f);
-        save |= ImGui.DragInt($"Stop at remaining time with big win", ref C.StopAt, 0.5f);
+        save |= ImGui.DragInt($"Stop at remaining time with big win", ref Cfg.StopAt, 0.5f);
         ImGui.SetNextItemWidth(100f);
-        save |= ImGui.DragInt($"Stop at remaining time with little win", ref C.HardStopAt, 0.5f);
+        save |= ImGui.DragInt($"Stop at remaining time with little win", ref Cfg.HardStopAt, 0.5f);
 
-        if (save) Saucy.Config.Save();
+        if (save) C.Save();
     }
 
     private static readonly Dictionary<LimbDifficulty, int> Heights = new()
@@ -503,10 +503,10 @@ public unsafe class LimbManager : IDisposable
             if (TryGetAddonByName<AtkUnitBase>("MiniGameAimg", out var addon) && IsAddonReady(addon))
             {
                 //41 titan, 44 morbol, 47 cactuar
-                var reference = addon->GetNodeById(NodeIDs[C.LimbDifficulty]);
+                var reference = addon->GetNodeById(NodeIDs[Cfg.LimbDifficulty]);
                 var cursor = addon->GetNodeById(39);
                 var iCursor = 400 - cursor->Height;
-                if (iCursor > reference->Y && iCursor < reference->Y + Heights[C.LimbDifficulty]) ImGuiEx.Text($"Yes");
+                if (iCursor > reference->Y && iCursor < reference->Y + Heights[Cfg.LimbDifficulty]) ImGuiEx.Text($"Yes");
                 ImGuiEx.Text($"Reference: {reference->Y}");
                 ImGuiEx.Text($"Cursor: {cursor->Height}");
             }

@@ -2,18 +2,20 @@ using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Plugin;
 using ECommons;
+using ECommons.Configuration;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
 using NAudio.Wave;
 using PunishLib;
 using Saucy.CuffACur;
-using Saucy.MiniCactpot;
+using Saucy.Framework;
 using Saucy.OtherGames;
 using Saucy.OutOnALimb;
 using Saucy.TripleTriad;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -26,6 +28,7 @@ namespace Saucy;
 public sealed class Saucy : IDalamudPlugin
 {
     public string Name => "Saucy";
+    public static Configuration C { get; private set; } = null!;
     public static Saucy P;
 
     private const string commandName = "/saucy";
@@ -43,24 +46,20 @@ public sealed class Saucy : IDalamudPlugin
     public static GameDataLoader dataLoader;
     public static List<Task> AirForceOneTask = [];
     public static CancellationTokenSource AirForceOneToken = new();
-    public static Configuration Config;
 
     public static bool GameFinished => TTSolver.cachedScreenState == null;
     internal static bool openTT = false;
 
     public LimbManager LimbManager;
-    public MiniCactpotManager MiniCactpotManager;
-
+    public static ModuleManager ModuleManager;
     public Saucy(IDalamudPluginInterface pluginInterface)
     {
-        ECommonsMain.Init(pluginInterface, this, Module.All);
+        ECommonsMain.Init(pluginInterface, this, ECommons.Module.All);
         PunishLibMain.Init(pluginInterface, "Saucy", new AboutPlugin() { Sponsor = "https://ko-fi.com/taurenkey" });
-
-        Config = Svc.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-        Config.Initialize(Svc.PluginInterface);
+        C = EzConfig.Init<Configuration>();
         P = this;
 
-        PluginUi = new PluginUI(Config);
+        PluginUi = new PluginUI();
 
         Svc.Commands.AddHandler(commandName, new CommandInfo(OnCommand)
         {
@@ -68,7 +67,7 @@ public sealed class Saucy : IDalamudPlugin
         });
 
         Svc.PluginInterface.UiBuilder.Draw += DrawUI;
-        Svc.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
+        Svc.PluginInterface.UiBuilder.OpenConfigUi += DrawCUI;
 
         dataLoader = new GameDataLoader();
         dataLoader.StartAsyncWork();
@@ -108,22 +107,36 @@ public sealed class Saucy : IDalamudPlugin
 
         Svc.Framework.Update += RunBot;
 
-        LimbManager = new(Config.LimbConfig);
-        MiniCactpotManager = new();
+        LimbManager = new(C.LimbConfig);
+        ModuleManager = new();
+        C.EnabledModules.CollectionChanged += OnChange;
+    }
+
+    private void OnChange(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        foreach (var m in ModuleManager.Modules)
+        {
+            if (C.EnabledModules.Contains(m.InternalName) && !m.IsEnabled)
+                m.EnableInternal();
+
+            if (!C.EnabledModules.Contains(m.InternalName) && m.IsEnabled)
+                m.DisableInternal();
+        }
+        Svc.Log.Info($"enabled modules: {string.Join(", ", C.EnabledModules)}");
     }
 
     private void CheckLimbResults(UIStateLimbResults results)
     {
-        if (LimbManager.C.EnableLimb)
+        if (LimbManager.Cfg.EnableLimb)
         {
-            Config.UpdateStats(stats =>
+            C.UpdateStats(stats =>
             {
                 stats.LimbMGP += GetBonusMGP(results.numMGP);
                 stats.LimbGamesPlayed++;
             });
 
             uiReaderGamesResults.SetIsResultsUI(false);
-            Config.Save();
+            C.Save();
         }
     }
 
@@ -131,7 +144,7 @@ public sealed class Saucy : IDalamudPlugin
     {
         if (CufModule.ModuleEnabled)
         {
-            Config.UpdateStats(stats =>
+            C.UpdateStats(stats =>
             {
                 stats.CuffMGP += GetBonusMGP(obj.numMGP);
                 if (obj.isPunishing) stats.CuffPunishings += 1;
@@ -148,7 +161,7 @@ public sealed class Saucy : IDalamudPlugin
             {
                 TriadAutomater.NumberOfTimes = 1;
                 CufModule.ModuleEnabled = false;
-                if (Config.PlaySound)
+                if (C.PlaySound)
                 {
                     PlaySound();
                 }
@@ -161,7 +174,7 @@ public sealed class Saucy : IDalamudPlugin
             }
 
             uiReaderGamesResults.SetIsResultsUI(false);
-            Config.Save();
+            C.Save();
         }
     }
 
@@ -169,7 +182,7 @@ public sealed class Saucy : IDalamudPlugin
     {
         if (TriadAutomater.ModuleEnabled)
         {
-            Config.UpdateStats(stats =>
+            C.UpdateStats(stats =>
             {
                 stats.GamesPlayedWithSaucy++;
                 stats.MGPWon += GetBonusMGP(obj.numMGP);
@@ -190,13 +203,13 @@ public sealed class Saucy : IDalamudPlugin
 
             if (obj.isWin)
             {
-                Config.UpdateStats(stats => stats.GamesWonWithSaucy++);
+                C.UpdateStats(stats => stats.GamesWonWithSaucy++);
                 if (obj.cardItemId > 0)
                 {
                     if (TriadAutomater.PlayUntilCardDrops)
                         TriadAutomater.NumberOfTimes--;
 
-                    Config.UpdateStats(stats => stats.CardsDroppedWithSaucy++);
+                    C.UpdateStats(stats => stats.CardsDroppedWithSaucy++);
 
                     var cardDB = GameCardDB.Get();
 
@@ -204,7 +217,7 @@ public sealed class Saucy : IDalamudPlugin
                     {
                         if (cardInfo.ItemId == obj.cardItemId)
                         {
-                            Config.UpdateStats(stats =>
+                            C.UpdateStats(stats =>
                             {
                                 if (stats.CardsWon.ContainsKey((uint)cardInfo.CardId))
                                     stats.CardsWon[(uint)cardInfo.CardId] += 1;
@@ -221,7 +234,7 @@ public sealed class Saucy : IDalamudPlugin
 
             Rematch();
         }
-        Config.Save();
+        C.Save();
 
     }
 
@@ -288,7 +301,7 @@ public sealed class Saucy : IDalamudPlugin
             Svc.Log.Error(ex, "state update failed");
         }
 
-        if (Config.OpenAutomatically && uiReaderPrep.HasMatchRequestUI && !TriadAutomater.ModuleEnabled)
+        if (C.OpenAutomatically && uiReaderPrep.HasMatchRequestUI && !TriadAutomater.ModuleEnabled)
         {
             PluginUi.Visible = true;
             openTT = true;
@@ -319,7 +332,7 @@ public sealed class Saucy : IDalamudPlugin
                 }
                 else
                 {
-                    if (Config.PlaySound)
+                    if (C.PlaySound)
                     {
                         PlaySound();
                     }
@@ -369,7 +382,7 @@ public sealed class Saucy : IDalamudPlugin
     {
         lock (_lockObj)
         {
-            var sound = Config.SelectedSound;
+            var sound = C.SelectedSound;
             var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory.FullName, "Sounds", $"{sound}.mp3");
             if (!File.Exists(path)) return;
             var reader = new Mp3FileReader(path);
@@ -387,7 +400,7 @@ public sealed class Saucy : IDalamudPlugin
         Svc.Framework.Update -= RunBot;
         SliceIsRightModule.ModuleEnabled = false;
         LimbManager.Dispose();
-        MiniCactpotManager.Dispose();
+        ModuleManager.Dispose();
         ECommonsMain.Dispose(); //Don't forget!
         P = null; //necessary to free the reference for GC
     }
@@ -463,7 +476,7 @@ public sealed class Saucy : IDalamudPlugin
         PluginUi.Draw();
     }
 
-    private void DrawConfigUI()
+    private void DrawCUI()
     {
         PluginUi.Visible = true;
     }

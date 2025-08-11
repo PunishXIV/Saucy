@@ -54,10 +54,10 @@ internal static unsafe class TriadAutomater
     {
         if (Saucy.TTSolver.preGameDecks.Count > 0)
         {
-            var selectedDeck = Saucy.Config.SelectedDeckIndex;
+            var selectedDeck = C.SelectedDeckIndex;
             if (selectedDeck >= 0 && !Saucy.TTSolver.preGameDecks.ContainsKey(selectedDeck))
             {
-                Saucy.Config.SelectedDeckIndex = -1;
+                C.SelectedDeckIndex = -1;
             }
         }
 
@@ -85,7 +85,7 @@ internal static unsafe class TriadAutomater
             if (TryGetAddonByName("TripleTriadSelDeck", out AtkUnitBase* addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
             {
 
-                if (Saucy.Config.SelectedDeckIndex == -1 && !Saucy.Config.UseRecommendedDeck)
+                if (C.SelectedDeckIndex == -1 && !C.UseRecommendedDeck)
                 {
                     var button = addon->UldManager.NodeList[3]->GetAsAtkComponentButton();
                     button->ClickAddonButton(addon);
@@ -93,7 +93,7 @@ internal static unsafe class TriadAutomater
                 }
                 else
                 {
-                    var deck = Saucy.Config.UseRecommendedDeck ? Saucy.TTSolver.preGameBestId : Saucy.Config.SelectedDeckIndex;
+                    var deck = C.UseRecommendedDeck ? Saucy.TTSolver.preGameBestId : C.SelectedDeckIndex;
                     var values = stackalloc AtkValue[1];
                     //Deck Index
                     values[0] = new()

@@ -1,27 +1,80 @@
-﻿namespace Saucy.Framework;
+﻿using ECommons.Automation.NeoTaskManager;
+using FFXIVClientStructs.FFXIV.Component.GUI;
+using System;
+
+namespace Saucy.Framework;
 public abstract partial class Module : IModule
 {
     public Module()
     {
         InternalName = GetType().Name;
+        TaskManager = new();
     }
 
     public string InternalName { get; init; }
     public abstract string Name { get; }
-    public virtual bool IsEnabled
-    {
-        get;
-        set
-        {
-            field = value;
-            if (value)
-                Enable();
-            else
-                Disable();
-        }
-    }
+    public virtual bool IsEnabled { get; protected set; }
     public virtual void Enable() { }
     public virtual void Disable() { }
+
+    protected TaskManager TaskManager;
+
+    public void ExecuteTask(Action action)
+    {
+        if (C.LittleBitchDelay > 0)
+            TaskManager.Enqueue(action);
+        else
+            action();
+    }
+
+    public unsafe void ExecuteTask(Action action, AtkUnitBase* addon)
+    {
+        if (C.LittleBitchDelay > 0)
+            TaskManager.Enqueue(() =>
+            {
+                if (addon is not null)
+                    action();
+                else
+                    LogVerbose($"Addon disappeared before action could fire.");
+            });
+        else
+            action();
+    }
+}
+
+public abstract partial class Module
+{
+    internal virtual void EnableInternal()
+    {
+        try
+        {
+            Log($"Enabling module {InternalName}");
+            Enable();
+        }
+        catch (Exception ex)
+        {
+            LogError($"Failed to enable module: {ex.Message}");
+            return;
+        }
+
+        IsEnabled = true;
+    }
+
+    internal virtual void DisableInternal()
+    {
+        try
+        {
+            Log($"Disabling module {InternalName}");
+            Disable();
+        }
+        catch (Exception ex)
+        {
+            LogError($"Failed to disable module: {ex.Message}");
+            return;
+        }
+
+        IsEnabled = false;
+    }
 }
 
 public abstract partial class Module

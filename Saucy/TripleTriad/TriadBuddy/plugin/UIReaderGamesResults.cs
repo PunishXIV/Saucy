@@ -93,7 +93,7 @@ public class UIReaderGamesResults(IGameGui gameGui) : IUIReader
             }
         }
 
-        if (Saucy.Saucy.P.LimbManager.C.EnableLimb)
+        if (Saucy.Saucy.P.LimbManager.Cfg.EnableLimb)
         {
             if (!int.TryParse(number->NodeText.ToString().Where(Char.IsDigit).ToArray(), out limbResults.numMGP))
             {

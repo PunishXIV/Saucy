@@ -26,7 +26,7 @@ internal static class SliceIsRightModule
                 field = value;
             }
 
-            Saucy.Config.SliceIsRightModuleEnabled = field;
+            C.SliceIsRightModuleEnabled = field;
         }
     }
 
@@ -42,7 +42,7 @@ internal static class SliceIsRightModule
 
     public static void Initialize()
     {
-        ModuleEnabled = Saucy.Config.SliceIsRightModuleEnabled;
+        ModuleEnabled = C.SliceIsRightModuleEnabled;
     }
 
     private static void RunModule()

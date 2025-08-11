@@ -13,15 +13,15 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using TriadBuddyPlugin;
+using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
+using Saucy.MiniCactpot;
 
 namespace Saucy;
 
 // It is good to have this be disposable in general, in case you ever need it
 // to do any cleanup
-public unsafe class PluginUI(Configuration configuration) : IDisposable
+public unsafe class PluginUI() : IDisposable
 {
-    private readonly Configuration configuration = configuration;
-
     // this extra bool exists for ImGui, since you can't ref a property
     private bool visible = false;
     public bool Visible
@@ -131,6 +131,14 @@ public unsafe class PluginUI(Configuration configuration) : IDisposable
                     ImGui.EndTabItem();
                 }
 
+#if DEBUG
+                if (ImGui.BeginTabItem("Debug"))
+                {
+                    DrawDebugTab();
+                    ImGui.EndTabItem();
+                }
+#endif
+
                 ImGui.EndTabBar();
             }
         }
@@ -145,14 +153,19 @@ public unsafe class PluginUI(Configuration configuration) : IDisposable
         if (ImGui.Checkbox("Enable Slice is Right Module", ref sliceIsRightEnabled))
         {
             SliceIsRightModule.ModuleEnabled = sliceIsRightEnabled;
-            Saucy.Config.Save();
+            C.Save();
         }
 
-        if (ImGui.Checkbox("Enable Auto Mini-Cactpot", ref Saucy.Config.EnableAutoMiniCactpot))
-            Saucy.Config.Save();
+        if (ImGui.Checkbox("Enable Auto Mini-Cactpot", ref C.EnableAutoMiniCactpot))
+        {
+            if (C.EnableAutoMiniCactpot)
+                C.EnabledModules.Add(ModuleManager.GetModule<MiniCactpotManager>().InternalName);
+            else
+                C.EnabledModules.Remove(ModuleManager.GetModule<MiniCactpotManager>().InternalName);
+        }
 
-        if (ImGui.Checkbox("Enable Any Way the Wind Blows Module", ref Saucy.Config.AnyWayTheWindowBlowsModuleEnabled))
-            Saucy.Config.Save();
+        if (ImGui.Checkbox("Enable Any Way the Wind Blows Module", ref C.AnyWayTheWindowBlowsModuleEnabled))
+            C.Save();
     }
 
     private void DrawStatsTab()
@@ -161,21 +174,21 @@ public unsafe class PluginUI(Configuration configuration) : IDisposable
         {
             if (ImGui.BeginTabItem("Lifetime"))
             {
-                DrawStatsTab(Saucy.Config.Stats, out var reset);
+                DrawStatsTab(C.Stats, out var reset);
 
                 if (reset)
                 {
-                    Saucy.Config.Stats = new();
-                    Saucy.Config.Save();
+                    C.Stats = new();
+                    C.Save();
                 }
 
                 ImGui.EndTabItem();
             }
             if (ImGui.BeginTabItem("Session"))
             {
-                DrawStatsTab(Saucy.Config.SessionStats, out var reset);
+                DrawStatsTab(C.SessionStats, out var reset);
                 if (reset)
-                    Saucy.Config.SessionStats = new();
+                    C.SessionStats = new();
                 ImGui.EndTabItem();
             }
 
@@ -389,26 +402,26 @@ public unsafe class PluginUI(Configuration configuration) : IDisposable
                 CufModule.ModuleEnabled = false;
         }
 
-        var autoOpen = configuration.OpenAutomatically;
+        var autoOpen = C.OpenAutomatically;
 
         if (ImGui.Checkbox("Open Saucy When Challenging an NPC", ref autoOpen))
         {
-            configuration.OpenAutomatically = autoOpen;
-            configuration.Save();
+            C.OpenAutomatically = autoOpen;
+            C.Save();
         }
 
-        var selectedDeck = configuration.SelectedDeckIndex;
+        var selectedDeck = C.SelectedDeckIndex;
 
         if (Saucy.TTSolver.profileGS.GetPlayerDecks().Count() > 0)
         {
-            var useAutoDeck = Saucy.Config.UseRecommendedDeck;
+            var useAutoDeck = C.UseRecommendedDeck;
             if (ImGui.Checkbox("Automatically choose your deck with the best win chance", ref useAutoDeck))
             {
-                Saucy.Config.UseRecommendedDeck = useAutoDeck;
-                Saucy.Config.Save();
+                C.UseRecommendedDeck = useAutoDeck;
+                C.Save();
             }
 
-            if (!Saucy.Config.UseRecommendedDeck)
+            if (!C.UseRecommendedDeck)
             {
                 ImGui.PushItemWidth(200);
                 string preview;
@@ -425,7 +438,7 @@ public unsafe class PluginUI(Configuration configuration) : IDisposable
                 {
                     if (ImGui.Selectable(""))
                     {
-                        configuration.SelectedDeckIndex = -1;
+                        C.SelectedDeckIndex = -1;
                     }
 
                     foreach (var deck in Saucy.TTSolver.profileGS.GetPlayerDecks())
@@ -435,8 +448,8 @@ public unsafe class PluginUI(Configuration configuration) : IDisposable
                         //var index = Saucy.TTSolver.preGameDecks.Where(x => x.Value == deck).First().Key;
                         if (ImGui.Selectable(deck.name, index == selectedDeck))
                         {
-                            configuration.SelectedDeckIndex = index;
-                            configuration.Save();
+                            C.SelectedDeckIndex = index;
+                            C.Save();
                         }
                     }
 
@@ -480,7 +493,7 @@ public unsafe class PluginUI(Configuration configuration) : IDisposable
             TriadAutomater.NumberOfTimes = 1;
         }
 
-        var onlyUnobtained = Saucy.Config.OnlyUnobtainedCards;
+        var onlyUnobtained = C.OnlyUnobtainedCards;
 
         if (TriadAutomater.PlayUntilAllCardsDropOnce)
         {
@@ -488,8 +501,8 @@ public unsafe class PluginUI(Configuration configuration) : IDisposable
             if (ImGui.Checkbox("Only Unobtained Cards", ref onlyUnobtained))
             {
                 TriadAutomater.TempCardsWonList.Clear();
-                Saucy.Config.OnlyUnobtainedCards = onlyUnobtained;
-                Saucy.Config.Save();
+                C.OnlyUnobtainedCards = onlyUnobtained;
+                C.Save();
             }
         }
 
@@ -499,14 +512,14 @@ public unsafe class PluginUI(Configuration configuration) : IDisposable
             GameCardDB.Get().Refresh();
             foreach (var card in CurrentNPC.rewardCards)
             {
-                if ((Saucy.Config.OnlyUnobtainedCards && !GameCardDB.Get().FindById(card).IsOwned) || !Saucy.Config.OnlyUnobtainedCards)
+                if ((C.OnlyUnobtainedCards && !GameCardDB.Get().FindById(card).IsOwned) || !C.OnlyUnobtainedCards)
                 {
                     TriadAutomater.TempCardsWonList.TryAdd((uint)card, 0);
                     ImGui.Text($"- {TriadCardDB.Get().FindById(GameCardDB.Get().FindById(card).CardId).Name.GetLocalized()} {TriadAutomater.TempCardsWonList[(uint)card]}/{TriadAutomater.NumberOfTimes}");
                 }
             }
 
-            if (Saucy.Config.OnlyUnobtainedCards && TriadAutomater.TempCardsWonList.Count == 0)
+            if (C.OnlyUnobtainedCards && TriadAutomater.TempCardsWonList.Count == 0)
             {
                 ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
                 ImGui.TextWrapped($@"You already have all cards from this NPC. This feature will not work until you untick ""Only Unobtained Cards"" or choose a different NPC.");
@@ -529,28 +542,28 @@ public unsafe class PluginUI(Configuration configuration) : IDisposable
 
             ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
 
-            var playSound = Saucy.Config.PlaySound;
+            var playSound = C.PlaySound;
 
             ImGui.Columns(2, default, false);
             if (ImGui.Checkbox("Play sound upon completion", ref playSound))
             {
-                Saucy.Config.PlaySound = playSound;
-                Saucy.Config.Save();
+                C.PlaySound = playSound;
+                C.Save();
             }
 
             if (playSound)
             {
                 ImGui.NextColumn();
                 ImGui.Text("Select Sound");
-                if (ImGui.BeginCombo("###SelectSound", Saucy.Config.SelectedSound))
+                if (ImGui.BeginCombo("###SelectSound", C.SelectedSound))
                 {
                     var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory.FullName, "Sounds");
                     foreach (var file in new DirectoryInfo(path).GetFiles())
                     {
-                        if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", Saucy.Config.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
+                        if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", C.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
                         {
-                            Saucy.Config.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
-                            Saucy.Config.Save();
+                            C.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
+                            C.Save();
                         }
                     }
 
@@ -600,28 +613,28 @@ public unsafe class PluginUI(Configuration configuration) : IDisposable
 
             ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
 
-            var playSound = Saucy.Config.PlaySound;
+            var playSound = C.PlaySound;
 
             ImGui.Columns(2, default, false);
             if (ImGui.Checkbox("Play sound upon completion", ref playSound))
             {
-                Saucy.Config.PlaySound = playSound;
-                Saucy.Config.Save();
+                C.PlaySound = playSound;
+                C.Save();
             }
 
             if (playSound)
             {
                 ImGui.NextColumn();
                 ImGui.Text("Select Sound");
-                if (ImGui.BeginCombo("###SelectSound", Saucy.Config.SelectedSound))
+                if (ImGui.BeginCombo("###SelectSound", C.SelectedSound))
                 {
                     var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory.FullName, "Sounds");
                     foreach (var file in new DirectoryInfo(path).GetFiles())
                     {
-                        if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", Saucy.Config.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
+                        if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", C.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
                         {
-                            Saucy.Config.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
-                            Saucy.Config.Save();
+                            C.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
+                            C.Save();
                         }
                     }
 
@@ -636,5 +649,31 @@ public unsafe class PluginUI(Configuration configuration) : IDisposable
             }
             ImGui.Columns(1);
         }
+    }
+
+    private void DrawDebugTab()
+    {
+
+        foreach (var module in Saucy.ModuleManager.Modules)
+        {
+            ImGui.Text($"{module.Name}: {module.IsEnabled}");
+        }
+        var mgr = GoldSaucerManager.Instance();
+        if (mgr is null) return;
+
+        var dir = mgr->CurrentGFateDirector;
+        if (dir is null) return;
+
+        ImGui.Text($"GateType: {dir->GateType}");
+        ImGui.Text($"GatePositionType: {dir->GatePositionType}");
+        ImGui.Text($"Flags: {dir->Flags}");
+        ImGui.Text($"IsRunningGate: {dir->IsRunningGate()}");
+        ImGui.Text($"IsAcceptingGate: {dir->IsAcceptingGate()}");
+    }
+
+    public enum GateType : byte
+    {
+        AnyWayTheWindBlows = 5,
+        AirForceOne = 7,
     }
 }
