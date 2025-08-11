@@ -150,6 +150,9 @@ public unsafe class PluginUI(Configuration configuration) : IDisposable
 
         if (ImGui.Checkbox("Enable Auto Mini-Cactpot", ref Saucy.Config.EnableAutoMiniCactpot))
             Saucy.Config.Save();
+
+        if (ImGui.Checkbox("Enable Any Way the Wind Blows Module", ref Saucy.Config.AnyWayTheWindowBlowsModuleEnabled))
+            Saucy.Config.Save();
     }
 
     private void DrawStatsTab()

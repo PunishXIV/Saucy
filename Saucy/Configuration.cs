@@ -25,6 +25,7 @@ public class Configuration : IPluginConfiguration
     public bool OpenAutomatically { get; set; } = false;
 
     public bool SliceIsRightModuleEnabled { get; set; }
+    public bool AnyWayTheWindowBlowsModuleEnabled = false;
 
     public LimbConfig LimbConfig { get; set; } = new();
     public bool EnableAutoMiniCactpot = false;
