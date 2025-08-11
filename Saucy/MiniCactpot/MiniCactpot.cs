@@ -12,7 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace Saucy.MiniCactpot;
-public unsafe class MiniCactpotManager : Module
+public unsafe class MiniCactpot : Module
 {
     public override string Name => "Mini Cactpot";
 
@@ -43,7 +43,7 @@ public unsafe class MiniCactpotManager : Module
                             .Select(item => item.index)
                             .ToArray();
 
-                        PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Board state: [{string.Join(", ", newState)}], Revealed: {newState.Count(x => x > 0)}, Solution length: {solution.Length}, Active indexes: [{string.Join(", ", activeIndexes)}], Solution: [{string.Join(", ", solution)}]");
+                        PluginLog.Debug($"[{nameof(MiniCactpot)}] Board state: [{string.Join(", ", newState)}], Revealed: {newState.Count(x => x > 0)}, Solution length: {solution.Length}, Active indexes: [{string.Join(", ", activeIndexes)}], Solution: [{string.Join(", ", solution)}]");
 
                         if (solution.Length is 8)
                             ClickLanes(addon, activeIndexes);
@@ -66,7 +66,7 @@ public unsafe class MiniCactpotManager : Module
     {
         if (activeIndexes.First() is { } first)
         {
-            PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Clicking lane at index #{SolverLaneToCsLane(first)} [{string.Join(", ", activeIndexes)}]");
+            PluginLog.Debug($"[{nameof(MiniCactpot)}] Clicking lane at index #{SolverLaneToCsLane(first)} [{string.Join(", ", activeIndexes)}]");
             ExecuteTask(() => addon->LaneSelector[SolverLaneToCsLane(first)]->ClickRadioButton((AtkUnitBase*)addon), (nint)addon);
         }
         ClickConfirmClose(addon, -1);
@@ -76,7 +76,7 @@ public unsafe class MiniCactpotManager : Module
     {
         if (activeIndexes.First() is { } first)
         {
-            PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Clicking button at index #{first} [{string.Join(", ", activeIndexes)}]");
+            PluginLog.Debug($"[{nameof(MiniCactpot)}] Clicking button at index #{first} [{string.Join(", ", activeIndexes)}]");
             ExecuteTask(() => Callback.Fire((AtkUnitBase*)addon, true, 1, first), (nint)addon);
         }
     }
@@ -86,7 +86,7 @@ public unsafe class MiniCactpotManager : Module
         var confirm = addon->GetComponentButtonById(67);
         if (confirm->IsEnabled)
         {
-            PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Clicking {(stage == 5 ? "close" : "confirm")}");
+            PluginLog.Debug($"[{nameof(MiniCactpot)}] Clicking {(stage == 5 ? "close" : "confirm")}");
             ExecuteTask(() => confirm->ClickAddonButton((AtkUnitBase*)addon), (nint)confirm);
         }
     }

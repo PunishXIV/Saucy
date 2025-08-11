@@ -27,11 +27,11 @@ public class Configuration : IPluginConfiguration
 
     public ObservableCollection<string> EnabledModules = [];
 
-    public bool SliceIsRightModuleEnabled { get; set; }
+    public bool SliceIsRightModuleEnabled = false;
     public bool AnyWayTheWindowBlowsModuleEnabled = false;
+    public bool EnableAutoMiniCactpot = false;
 
     public LimbConfig LimbConfig { get; set; } = new();
-    public bool EnableAutoMiniCactpot = false;
 
     public int LittleBitchDelay = 250;
 

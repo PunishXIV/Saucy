@@ -7,7 +7,6 @@ using FFTriadBuddy;
 using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
 using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
-using Saucy.MiniCactpot;
 using Saucy.OtherGames;
 using Saucy.TripleTriad;
 using System;
@@ -46,105 +45,42 @@ public unsafe class PluginUI : Window
 
     public override void Draw()
     {
-        DrawMainWindow();
-    }
-
-    public void DrawMainWindow()
-    {
-        if (ImGui.BeginTabBar("###Games", ImGuiTabBarFlags.Reorderable))
-        {
-            if (ImGui.BeginTabItem("Cuff-a-Cur"))
+        ImGuiEx.EzTabBar("###Games",
+            ("Cuff-a-Cur", DrawCufTab, null, false),
+            ("Triple Triad", DrawTriadTab, null, false),
+            ("Out on a Limb", () =>
             {
-                DrawCufTab();
-                ImGui.EndTabItem();
-            }
-
-            if (Saucy.openTT)
-            {
-                Saucy.openTT = false;
-                if (ImGui.BeginTabItem("Triple Triad", ImGuiTabItemFlags.SetSelected))
-                {
-                    DrawTriadTab();
-                    ImGui.EndTabItem();
-                }
-            }
-            else
-            {
-                if (ImGui.BeginTabItem("Triple Triad"))
-                {
-                    DrawTriadTab();
-                    ImGui.EndTabItem();
-                }
-            }
-
-            if (ImGui.BeginTabItem("Out on a Limb"))
-            {
-                if (ImGui.BeginTabBar($"LimbTab"))
-                {
-                    if (ImGui.BeginTabItem("Main"))
-                    {
-                        Saucy.P.LimbManager.DrawSettings();
-                        ImGui.EndTabItem();
-                    }
-                    if (ImGui.BeginTabItem($"Debug"))
-                    {
-                        Saucy.P.LimbManager.DrawDebug();
-                        ImGui.EndTabItem();
-                    }
-
-                    ImGui.EndTabBar();
-                }
-
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("Other Games"))
-            {
-                DrawOtherGamesTab();
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("Stats"))
-            {
-                DrawStatsTab();
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("About"))
-            {
-                AboutTab.Draw("Saucy");
-                ImGui.EndTabItem();
-            }
-
+                ImGuiEx.EzTabBar("Out on a Limb",
+                    ("Main", P.LimbManager.DrawSettings, null, false),
+                    ("Debug", P.LimbManager.DrawDebug, null, false));
+            }, null, false),
+            ("Other Games", DrawOtherGamesTab, null, false),
+            ("Stats", DrawStatsTab, null, false),
+            ("About", () => AboutTab.Draw("Saucy"), null, false)
 #if DEBUG
-            if (ImGui.BeginTabItem("Debug"))
-            {
-                DrawDebugTab();
-                ImGui.EndTabItem();
-            }
+            , ("Debug", DrawDebugTab, null, false)
 #endif
-
-            ImGui.EndTabBar();
-        }
+            );
     }
 
     private void DrawOtherGamesTab()
     {
         //ImGui.Checkbox("Enable Air Force One Module", ref AirForceOneModule.ModuleEnabled);
 
-        var sliceIsRightEnabled = SliceIsRightModule.ModuleEnabled;
-        if (ImGui.Checkbox("Enable Slice is Right Module", ref sliceIsRightEnabled))
+        if (ImGui.Checkbox("Enable Slice is Right Module", ref C.SliceIsRightModuleEnabled))
         {
-            SliceIsRightModule.ModuleEnabled = sliceIsRightEnabled;
-            C.Save();
+            if (C.SliceIsRightModuleEnabled)
+                C.EnabledModules.Add(ModuleManager.GetModule<SliceIsRight>().InternalName);
+            else
+                C.EnabledModules.Remove(ModuleManager.GetModule<SliceIsRight>().InternalName);
         }
 
         if (ImGui.Checkbox("Enable Auto Mini-Cactpot", ref C.EnableAutoMiniCactpot))
         {
             if (C.EnableAutoMiniCactpot)
-                C.EnabledModules.Add(ModuleManager.GetModule<MiniCactpotManager>().InternalName);
+                C.EnabledModules.Add(ModuleManager.GetModule<MiniCactpot.MiniCactpot>().InternalName);
             else
-                C.EnabledModules.Remove(ModuleManager.GetModule<MiniCactpotManager>().InternalName);
+                C.EnabledModules.Remove(ModuleManager.GetModule<MiniCactpot.MiniCactpot>().InternalName);
         }
 
         if (ImGui.Checkbox("Enable Any Way the Wind Blows Module", ref C.AnyWayTheWindowBlowsModuleEnabled))

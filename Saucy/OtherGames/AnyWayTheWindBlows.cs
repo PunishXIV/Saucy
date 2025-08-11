@@ -15,7 +15,7 @@ public class AnyWayTheWindBlows : Module
     // from https://github.com/img02/Fungah-Totally-Safe-Spot/
     public override string Name => "Any Way the Wind Blows";
 
-    public override void Enable() => EzConfigGui.WindowSystem.AddWindow(new Dot());
+    public override void Enable() => EzConfigGui.WindowSystem.AddWindow(new Dot(this));
     public override void Disable() => EzConfigGui.RemoveWindow<Dot>();
 
     public class Stage
@@ -41,16 +41,14 @@ public class AnyWayTheWindBlows : Module
 
     public class Dot : Window
     {
-        public Dot() : base($"{nameof(AnyWayTheWindBlows)}.{nameof(Dot)}")
-            => Flags = ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoInputs;
-
-        public override unsafe bool DrawConditions()
+        private AnyWayTheWindBlows Module { get; }
+        public Dot(AnyWayTheWindBlows anyWayTheWindBlows) : base($"{nameof(AnyWayTheWindBlows)}.{nameof(Dot)}")
         {
-            var mgr = GoldSaucerManager.Instance();
-            if (mgr is null) return false;
-            var dir = mgr->CurrentGFateDirector;
-            return dir is not null && dir->GateType is 5 && dir->Flags.HasFlag(GFateDirectorFlag.IsJoined) && !dir->Flags.HasFlag(GFateDirectorFlag.IsFinished);
+            Flags = ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoInputs;
+            Module = anyWayTheWindBlows;
         }
+
+        public override unsafe bool DrawConditions() => Module.PlayerOnStage && Module.CurrentGate is GateType.AnyWayTheWindBlows;
 
         public override void Draw()
         {

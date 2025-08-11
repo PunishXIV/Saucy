@@ -6,73 +6,50 @@ using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using Dalamud.Bindings.ImGui;
+using Saucy.Framework;
+using Dalamud.Interface.Windowing;
+using ECommons.SimpleGui;
+using ECommons.GameHelpers;
 
 namespace Saucy.OtherGames;
 
-internal static class SliceIsRightModule
+public class SliceIsRight : Module
 {
-    public static bool ModuleEnabled
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                RunModule();
-            }
-            else
-            {
-                field = value;
-            }
+    public override string Name => "Slice is Right";
 
-            C.SliceIsRightModuleEnabled = field;
-        }
-    }
+    public override void Enable() => EzConfigGui.WindowSystem.AddWindow(new SliceVisualisation(this));
+    public override void Disable() => EzConfigGui.RemoveWindow<SliceVisualisation>();
 
-    private static bool IsInGoldSaucer => Svc.ClientState.TerritoryType == 144;
-
-    private const float HalfPi = 1.57079637f;
+    private static float HalfPi => MathF.PI / 2;
     private const float MaxDistance = 30f;
 
     private static readonly uint ColourBlue = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 1f, 0.15f)));
     private static readonly uint ColourGreen = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 1f, 0.0f, 0.15f)));
     private static readonly uint ColourRed = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 0.0f, 0.0f, 0.4f)));
-    private static readonly IDictionary<ulong, DateTime> ObjectsAndSpawnTime = new Dictionary<ulong, DateTime>();
+    private static readonly Dictionary<ulong, DateTime> ObjectsAndSpawnTime = [];
 
-    public static void Initialize()
+    public class SliceVisualisation : Window
     {
-        ModuleEnabled = C.SliceIsRightModuleEnabled;
-    }
-
-    private static void RunModule()
-    {
-        if (ModuleEnabled)
-            Svc.PluginInterface.UiBuilder.Draw += DrawUI;
-        else
-            Svc.PluginInterface.UiBuilder.Draw -= DrawUI;
-    }
-
-    private static void DrawUI()
-    {
-        if (!Svc.ClientState.IsLoggedIn || !IsInGoldSaucer) return;
-
-        foreach (var gameObject in Svc.Objects)
+        private SliceIsRight Module { get; }
+        public SliceVisualisation(SliceIsRight module) : base($"{nameof(SliceIsRight)}.{nameof(SliceVisualisation)}")
         {
-            if (!(DistanceToPlayer(gameObject.Position) <= MaxDistance)) continue;
+            Flags = ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoInputs;
+            Module = module;
+        }
 
-            var model = Marshal.ReadInt32(gameObject.Address + 128);
-            if (gameObject.ObjectKind == ObjectKind.EventObj && model is >= 2010777 and <= 2010779)
+        public override unsafe bool DrawConditions() => Module.PlayerOnStage && Module.CurrentGate is GateType.SliceIsRight;
+
+        public override void Draw()
+        {
+            foreach (var gameObject in Svc.Objects)
             {
-                RenderObject(gameObject, model);
+                if (!(Player.DistanceTo(gameObject) <= MaxDistance)) continue;
+
+                var model = Marshal.ReadInt32(gameObject.Address + 128);
+                if (gameObject.ObjectKind == ObjectKind.EventObj && model is >= 2010777 and <= 2010779)
+                    RenderObject(gameObject, model);
             }
         }
-    }
-
-    private static float DistanceToPlayer(Vector3 center)
-    {
-        var localPlayer = Svc.ClientState.LocalPlayer;
-        return Vector3.Distance(localPlayer != null ? localPlayer.Position : Vector3.Zero, center);
     }
 
     private static void RenderObject(IGameObject gameObject, int model, float? radius = null)
@@ -91,8 +68,8 @@ internal static class SliceIsRightModule
                     break;
                 case 2010778:
                     length = (float)((double?)radius ?? 25.0);
-                    var rotation1 = (float)(gameObject.Rotation + 1.5707963705062866);
-                    var rotation2 = (float)(gameObject.Rotation - 1.5707963705062866);
+                    var rotation1 = (float)(gameObject.Rotation + HalfPi);
+                    var rotation2 = (float)(gameObject.Rotation - HalfPi);
                     DrawRectWorld(gameObject, rotation1, length, 5f, ColourGreen);
                     DrawRectWorld(gameObject, rotation2, length, 5f, ColourGreen);
                     break;
@@ -103,9 +80,7 @@ internal static class SliceIsRightModule
             }
         }
         else
-        {
             ObjectsAndSpawnTime.Add(gameObject.GameObjectId, DateTime.Now);
-        }
     }
 
     private static void DrawRectWorld(IGameObject gameObject, float rotation, float length, float width, uint colour)
@@ -114,8 +89,8 @@ internal static class SliceIsRightModule
         var position = gameObject.Position;
         var io = ImGui.GetIO();
         var vector21 = io.DisplaySize;
-        var vector31 = new Vector3(position.X + width / 2f * (float)Math.Sin(1.5707963705062866 + rotation), position.Y, position.Z + width / 2f * (float)Math.Cos(1.5707963705062866 + rotation));
-        var vector32 = new Vector3(position.X + width / 2f * (float)Math.Sin(rotation - 1.5707963705062866), position.Y, position.Z + width / 2f * (float)Math.Cos(rotation - 1.5707963705062866));
+        var vector31 = new Vector3(position.X + width / 2f * (float)Math.Sin(HalfPi + rotation), position.Y, position.Z + width / 2f * (float)Math.Cos(HalfPi + rotation));
+        var vector32 = new Vector3(position.X + width / 2f * (float)Math.Sin(rotation - HalfPi), position.Y, position.Z + width / 2f * (float)Math.Cos(rotation - HalfPi));
         var vector33 = new Vector3(position.X, position.Y, position.Z);
         const int num1 = 20;
         var num2 = length / num1;
@@ -139,19 +114,13 @@ internal static class SliceIsRightModule
             {
                 flag |= Svc.GameGui.WorldToScreen(vector37, out var vector22);
                 if (vector22.X > 0.0 & (double)vector22.X < vector21.X || vector22.Y > 0.0 & (double)vector22.Y < vector21.Y)
-                {
                     windowDrawList.PathLineTo(vector22);
-                }
             }
 
             if (flag)
-            {
                 windowDrawList.PathFillConvex(colour);
-            }
             else
-            {
                 windowDrawList.PathClear();
-            }
 
             vector31 = vector34;
             vector32 = vector35;

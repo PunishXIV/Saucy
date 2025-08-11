@@ -1,3 +1,4 @@
+using ECommons;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +26,12 @@ public class ModuleManager : IDisposable
             {
                 Svc.Log.Error(ex, $"[{nameof(ModuleManager)}] Failed to create instance of module type: {moduleType.Name}");
             }
+        }
+
+        foreach (var m in _modules)
+        {
+            if (!C.EnabledModules.Contains(m.InternalName)) continue;
+            GenericHelpers.TryExecute(m.EnableInternal);
         }
     }
 

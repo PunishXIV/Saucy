@@ -100,8 +100,6 @@ public sealed class Saucy : IDalamudPlugin
         GameCardDB.Get().memReader = memReaderTriadFunc;
         GameNpcDB.Get().memReader = memReaderTriadFunc;
 
-        SliceIsRightModule.Initialize();
-
         Svc.Framework.Update += RunBot;
 
         LimbManager = new(C.LimbConfig);
@@ -393,7 +391,6 @@ public sealed class Saucy : IDalamudPlugin
     {
         Svc.Commands.RemoveHandler(commandName);
         Svc.Framework.Update -= RunBot;
-        SliceIsRightModule.ModuleEnabled = false;
         LimbManager.Dispose();
         ModuleManager.Dispose();
         ECommonsMain.Dispose(); //Don't forget!
@@ -408,12 +405,6 @@ public sealed class Saucy : IDalamudPlugin
         var args = arguments.Split();
         if (args.Length > 0)
         {
-
-            if (args[0].ToLower() == "sr")
-            {
-                SliceIsRightModule.ModuleEnabled = false;
-            }
-
             if (args[0].ToLower() == "tt")
             {
                 if (args[1].ToLower() == "go")
