@@ -1,10 +1,7 @@
 ﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
-using Dalamud.Interface.Windowing;
 using ECommons.GameHelpers;
 using ECommons.ImGuiMethods;
-using ECommons.SimpleGui;
-using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
 using Saucy.Framework;
 using System.Linq;
 using System.Numerics;
@@ -15,8 +12,8 @@ public class AnyWayTheWindBlows : Module
     // from https://github.com/img02/Fungah-Totally-Safe-Spot/
     public override string Name => "Any Way the Wind Blows";
 
-    public override void Enable() => EzConfigGui.WindowSystem.AddWindow(new Dot(this));
-    public override void Disable() => EzConfigGui.RemoveWindow<Dot>();
+    public override void Enable() => Svc.PluginInterface.UiBuilder.Draw += Draw;
+    public override void Disable() => Svc.PluginInterface.UiBuilder.Draw -= Draw;
 
     public class Stage
     {
@@ -39,23 +36,17 @@ public class AnyWayTheWindBlows : Module
         public static bool FungahPresent => Svc.Objects.Any(o => o.DataId == 1010476);
     }
 
-    public class Dot : Window
+    public void Draw()
     {
-        private AnyWayTheWindBlows Module { get; }
-        public Dot(AnyWayTheWindBlows anyWayTheWindBlows) : base($"{nameof(AnyWayTheWindBlows)}.{nameof(Dot)}")
+        if (!InSaucer || !PlayerOnStage || CurrentGate is not GateType.AnyWayTheWindBlows) return;
+        if (Svc.GameGui.WorldToScreen(Stage.SafeSpot.Position, out var pos))
         {
-            Flags = ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoInputs;
-            Module = anyWayTheWindBlows;
-        }
-
-        public override unsafe bool DrawConditions() => Module.PlayerOnStage && Module.CurrentGate is GateType.AnyWayTheWindBlows;
-
-        public override void Draw()
-        {
-            if (Svc.GameGui.WorldToScreen(Stage.SafeSpot.Position, out var pos))
+            ImGuiHelpers.SetNextWindowPosRelativeMainViewport(new Vector2(pos.X - 15, pos.Y - 15));
+            ImGui.SetNextWindowSize(new Vector2(90, 50) * ImGuiHelpers.GlobalScale);
+            if (ImGui.Begin("Pointer", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoInputs))
             {
-                Position = new Vector2(pos.X - 15, pos.Y - 15);
                 ImGui.GetWindowDrawList().AddCircleFilled(pos, 5f, Stage.SafeSpot.On ? EzColor.Green : EzColor.Red);
+
                 if (!Stage.SafeSpot.On && Stage.SafeSpot.Near)
                 {
                     ImGui.SetCursorPosY(24f);
@@ -68,6 +59,8 @@ public class AnyWayTheWindBlows : Module
                     else if (Player.Position.Z < Stage.SafeSpot.Position.Z) ImGui.Text("move down");
                     else if (Player.Position.Z > Stage.SafeSpot.Position.Z) ImGui.Text("move up");
                 }
+
+                ImGui.End();
             }
         }
     }

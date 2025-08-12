@@ -1,15 +1,13 @@
-﻿using System;
+﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.ClientState.Objects.Types;
+using ECommons.GameHelpers;
+using FFXIVClientStructs.FFXIV.Common.Math;
+using Saucy.Framework;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.InteropServices;
-using Dalamud.Game.ClientState.Objects.Enums;
-using Dalamud.Game.ClientState.Objects.Types;
-using FFXIVClientStructs.FFXIV.Common.Math;
-using Dalamud.Bindings.ImGui;
-using Saucy.Framework;
-using Dalamud.Interface.Windowing;
-using ECommons.SimpleGui;
-using ECommons.GameHelpers;
 
 namespace Saucy.OtherGames;
 
@@ -17,8 +15,8 @@ public class SliceIsRight : Module
 {
     public override string Name => "Slice is Right";
 
-    public override void Enable() => EzConfigGui.WindowSystem.AddWindow(new SliceVisualisation(this));
-    public override void Disable() => EzConfigGui.RemoveWindow<SliceVisualisation>();
+    public override void Enable() => Svc.PluginInterface.UiBuilder.Draw += Draw;
+    public override void Disable() => Svc.PluginInterface.UiBuilder.Draw -= Draw;
 
     private static float HalfPi => MathF.PI / 2;
     private const float MaxDistance = 30f;
@@ -28,36 +26,24 @@ public class SliceIsRight : Module
     private static readonly uint ColourRed = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 0.0f, 0.0f, 0.4f)));
     private static readonly Dictionary<ulong, DateTime> ObjectsAndSpawnTime = [];
 
-    public class SliceVisualisation : Window
+    public void Draw()
     {
-        private SliceIsRight Module { get; }
-        public SliceVisualisation(SliceIsRight module) : base($"{nameof(SliceIsRight)}.{nameof(SliceVisualisation)}")
+        if (!InSaucer || CurrentGate is not GateType.SliceIsRight) return;
+        foreach (var gameObject in Svc.Objects)
         {
-            Flags = ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoInputs;
-            Module = module;
-        }
+            if (!(Player.DistanceTo(gameObject) <= MaxDistance)) continue;
 
-        public override unsafe bool DrawConditions() => Module.PlayerOnStage && Module.CurrentGate is GateType.SliceIsRight;
-
-        public override void Draw()
-        {
-            foreach (var gameObject in Svc.Objects)
-            {
-                if (!(Player.DistanceTo(gameObject) <= MaxDistance)) continue;
-
-                var model = Marshal.ReadInt32(gameObject.Address + 128);
-                if (gameObject.ObjectKind == ObjectKind.EventObj && model is >= 2010777 and <= 2010779)
-                    RenderObject(gameObject, model);
-            }
+            var model = Marshal.ReadInt32(gameObject.Address + 132);
+            if (gameObject.ObjectKind == ObjectKind.EventObj && model is >= 2010777 and <= 2010779)
+                RenderObject(gameObject, model);
         }
     }
 
-    private static void RenderObject(IGameObject gameObject, int model, float? radius = null)
+    private void RenderObject(IGameObject gameObject, int model, float? radius = null)
     {
         if (ObjectsAndSpawnTime.TryGetValue(gameObject.GameObjectId, out var dateTime))
         {
             if (dateTime.AddSeconds(5) > DateTime.Now) return;
-
             float length;
             switch (model)
             {
@@ -83,7 +69,7 @@ public class SliceIsRight : Module
             ObjectsAndSpawnTime.Add(gameObject.GameObjectId, DateTime.Now);
     }
 
-    private static void DrawRectWorld(IGameObject gameObject, float rotation, float length, float width, uint colour)
+    private void DrawRectWorld(IGameObject gameObject, float rotation, float length, float width, uint colour)
     {
         BeginRender(gameObject.Address + gameObject.Rotation.ToString(CultureInfo.InvariantCulture));
         var position = gameObject.Position;
@@ -130,7 +116,7 @@ public class SliceIsRight : Module
         EndRender();
     }
 
-    private static void DrawFilledCircleWorld(IGameObject gameObject, float radius, uint colour)
+    private void DrawFilledCircleWorld(IGameObject gameObject, float radius, uint colour)
     {
         BeginRender(gameObject.Address.ToString());
         var position = gameObject.Position;
@@ -157,7 +143,7 @@ public class SliceIsRight : Module
         EndRender();
     }
 
-    private static void BeginRender(string name)
+    private void BeginRender(string name)
     {
         ImGui.PushID("sliceWindowI" + name);
         ImGui.PushStyleVar((ImGuiStyleVar)1, Vector2.Zero);
@@ -167,7 +153,7 @@ public class SliceIsRight : Module
         ImGui.SetWindowSize(io.DisplaySize);
     }
 
-    private static void EndRender()
+    private void EndRender()
     {
         ImGui.End();
         ImGui.PopStyleVar();

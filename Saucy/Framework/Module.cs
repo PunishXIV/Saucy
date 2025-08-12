@@ -41,6 +41,8 @@ public abstract partial class Module : IModule
             action();
     }
 
+    public bool InSaucer => Svc.ClientState.TerritoryType is 144;
+
     public unsafe bool PlayerOnStage
     {
         get

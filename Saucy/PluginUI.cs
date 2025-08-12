@@ -2,9 +2,14 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
+using Dalamud.Plugin.Services;
+using ECommons.GameFunctions;
 using ECommons.ImGuiMethods;
 using FFTriadBuddy;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
+using FFXIVClientStructs.FFXIV.Client.Game.Object;
+using NAudio.Gui;
 using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
 using Saucy.OtherGames;
@@ -14,6 +19,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using TriadBuddyPlugin;
 
 namespace Saucy;
@@ -578,6 +584,29 @@ public unsafe class PluginUI : Window
     private void DrawDebugTab()
     {
 
+        try
+        {
+            foreach (var obj in Svc.Objects)
+            {
+                if (obj == null) return;
+                var model = Marshal.ReadInt32(obj.Address + 128);
+                ImGui.Text($"[#{obj.GameObjectId}] {obj.Name.TextValue} #{model}/{Marshal.ReadInt32(obj.Address + 132)}");
+                if (ImGui.IsItemHovered())
+                {
+                    if (Svc.GameGui.WorldToScreen(obj.Position, out var screenPos))
+                    {
+                        ImGui.GetForegroundDrawList().AddLine(ImGui.GetMousePos(), screenPos, EzColor.Orange.ARGB);
+                        ImGui.GetForegroundDrawList().AddCircleFilled(screenPos, 3f, EzColor.Orange.ARGB);
+                    }
+                }
+            }
+        }
+        catch
+        {
+
+        }
+
+        ImGui.Text($"MODULES");
         foreach (var module in Saucy.ModuleManager.Modules)
         {
             ImGui.Text($"{module.Name}: {module.IsEnabled}");
@@ -593,11 +622,5 @@ public unsafe class PluginUI : Window
         ImGui.Text($"Flags: {dir->Flags}");
         ImGui.Text($"IsRunningGate: {dir->IsRunningGate()}");
         ImGui.Text($"IsAcceptingGate: {dir->IsAcceptingGate()}");
-    }
-
-    public enum GateType : byte
-    {
-        AnyWayTheWindBlows = 5,
-        AirForceOne = 7,
     }
 }
