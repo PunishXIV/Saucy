@@ -2,14 +2,9 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
-using Dalamud.Plugin.Services;
-using ECommons.GameFunctions;
 using ECommons.ImGuiMethods;
 using FFTriadBuddy;
-using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
-using FFXIVClientStructs.FFXIV.Client.Game.Object;
-using NAudio.Gui;
 using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
 using Saucy.OtherGames;
@@ -19,7 +14,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using TriadBuddyPlugin;
 
 namespace Saucy;
@@ -583,44 +577,17 @@ public unsafe class PluginUI : Window
 
     private void DrawDebugTab()
     {
+        if (ImGui.SliderInt("Module Delay", ref C.LittleBitchDelay, 0, 10000))
+            C.Save();
 
-        try
+        if (GoldSaucerManager.Instance() != null && GoldSaucerManager.Instance()->CurrentGFateDirector != null)
         {
-            foreach (var obj in Svc.Objects)
-            {
-                if (obj == null) return;
-                var model = Marshal.ReadInt32(obj.Address + 128);
-                ImGui.Text($"[#{obj.GameObjectId}] {obj.Name.TextValue} #{model}/{Marshal.ReadInt32(obj.Address + 132)}");
-                if (ImGui.IsItemHovered())
-                {
-                    if (Svc.GameGui.WorldToScreen(obj.Position, out var screenPos))
-                    {
-                        ImGui.GetForegroundDrawList().AddLine(ImGui.GetMousePos(), screenPos, EzColor.Orange.ARGB);
-                        ImGui.GetForegroundDrawList().AddCircleFilled(screenPos, 3f, EzColor.Orange.ARGB);
-                    }
-                }
-            }
+            var dir = GoldSaucerManager.Instance()->CurrentGFateDirector;
+            ImGui.Text($"GateType: {dir->GateType}");
+            ImGui.Text($"GatePositionType: {dir->GatePositionType}");
+            ImGui.Text($"Flags: {dir->Flags}");
+            ImGui.Text($"IsRunningGate: {dir->IsRunningGate()}");
+            ImGui.Text($"IsAcceptingGate: {dir->IsAcceptingGate()}");
         }
-        catch
-        {
-
-        }
-
-        ImGui.Text($"MODULES");
-        foreach (var module in Saucy.ModuleManager.Modules)
-        {
-            ImGui.Text($"{module.Name}: {module.IsEnabled}");
-        }
-        var mgr = GoldSaucerManager.Instance();
-        if (mgr is null) return;
-
-        var dir = mgr->CurrentGFateDirector;
-        if (dir is null) return;
-
-        ImGui.Text($"GateType: {dir->GateType}");
-        ImGui.Text($"GatePositionType: {dir->GatePositionType}");
-        ImGui.Text($"Flags: {dir->Flags}");
-        ImGui.Text($"IsRunningGate: {dir->IsRunningGate()}");
-        ImGui.Text($"IsAcceptingGate: {dir->IsAcceptingGate()}");
     }
 }

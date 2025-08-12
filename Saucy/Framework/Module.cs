@@ -1,6 +1,9 @@
 ﻿using ECommons.Automation.NeoTaskManager;
 using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
+using FFXIVClientStructs.FFXIV.Client.System.Memory;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
+using System.Collections.Generic;
 
 namespace Saucy.Framework;
 public abstract partial class Module : IModule
@@ -22,21 +25,10 @@ public abstract partial class Module : IModule
     public void ExecuteTask(Action action)
     {
         if (C.LittleBitchDelay > 0)
+        {
+            TaskManager.EnqueueDelay(C.LittleBitchDelay);
             TaskManager.Enqueue(action);
-        else
-            action();
-    }
-
-    public unsafe void ExecuteTask(Action action, nint pointer)
-    {
-        if (C.LittleBitchDelay > 0)
-            TaskManager.Enqueue(() =>
-            {
-                if (pointer != IntPtr.Zero)
-                    action();
-                else
-                    LogVerbose($"Addon disappeared before action could fire.");
-            });
+        }
         else
             action();
     }

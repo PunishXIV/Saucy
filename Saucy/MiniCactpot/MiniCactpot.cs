@@ -67,7 +67,19 @@ public unsafe class MiniCactpot : Module
         if (activeIndexes.First() is { } first)
         {
             PluginLog.Debug($"[{nameof(MiniCactpot)}] Clicking lane at index #{SolverLaneToCsLane(first)} [{string.Join(", ", activeIndexes)}]");
-            ExecuteTask(() => addon->LaneSelector[SolverLaneToCsLane(first)]->ClickRadioButton((AtkUnitBase*)addon), (nint)addon);
+            ExecuteTask(() =>
+            {
+                if (addon != null)
+                {
+                    var lane = addon->LaneSelector[SolverLaneToCsLane(first)];
+                    if (lane != null)
+                        lane->ClickRadioButton((AtkUnitBase*)addon);
+                    else
+                        TaskManager.Abort();
+                }
+                else
+                    TaskManager.Abort();
+            });
         }
         ClickConfirmClose(addon, -1);
     }
@@ -77,7 +89,13 @@ public unsafe class MiniCactpot : Module
         if (activeIndexes.First() is { } first)
         {
             PluginLog.Debug($"[{nameof(MiniCactpot)}] Clicking button at index #{first} [{string.Join(", ", activeIndexes)}]");
-            ExecuteTask(() => Callback.Fire((AtkUnitBase*)addon, true, 1, first), (nint)addon);
+            ExecuteTask(() =>
+            {
+                if (addon != null)
+                    Callback.Fire((AtkUnitBase*)addon, true, 1, first);
+                else
+                    TaskManager.Abort();
+            });
         }
     }
 
@@ -87,7 +105,13 @@ public unsafe class MiniCactpot : Module
         if (confirm->IsEnabled)
         {
             PluginLog.Debug($"[{nameof(MiniCactpot)}] Clicking {(stage == 5 ? "close" : "confirm")}");
-            ExecuteTask(() => confirm->ClickAddonButton((AtkUnitBase*)addon), (nint)confirm);
+            ExecuteTask(() =>
+            {
+                if (confirm != null)
+                    confirm->ClickAddonButton((AtkUnitBase*)addon);
+                else
+                    TaskManager.Abort();
+            });
         }
     }
 

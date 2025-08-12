@@ -1,5 +1,6 @@
 using Dalamud.Configuration;
 using Dalamud.Plugin;
+using ECommons.Configuration;
 using Newtonsoft.Json;
 using Saucy.OutOnALimb;
 using System;
@@ -35,24 +36,11 @@ public class Configuration : IPluginConfiguration
 
     public int LittleBitchDelay = 250;
 
-    // the below exist just to make saving less cumbersome
-
-    [NonSerialized]
-    private IDalamudPluginInterface? pluginInterface;
-
     public void UpdateStats(Action<Stats> updateAction)
     {
         updateAction(Stats);
         updateAction(SessionStats);
     }
 
-    public void Initialize(IDalamudPluginInterface pluginInterface)
-    {
-        this.pluginInterface = pluginInterface;
-    }
-
-    public void Save()
-    {
-        pluginInterface!.SavePluginConfig(this);
-    }
+    public void Save() => EzConfig.Save();
 }

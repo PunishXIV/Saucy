@@ -46,7 +46,6 @@ public class AnyWayTheWindBlows : Module
             if (ImGui.Begin("Pointer", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoInputs))
             {
                 ImGui.GetWindowDrawList().AddCircleFilled(pos, 5f, Stage.SafeSpot.On ? EzColor.Green : EzColor.Red);
-
                 if (!Stage.SafeSpot.On && Stage.SafeSpot.Near)
                 {
                     ImGui.SetCursorPosY(24f);
