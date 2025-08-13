@@ -2,9 +2,9 @@
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using ECommons.Automation;
 using ECommons.Automation.UIInput;
-using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Saucy.Framework;
 using Saucy.OutOnALimb.ECEmbedded;
 using System;
 using System.Collections.Generic;
@@ -12,19 +12,19 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace Saucy.MiniCactpot;
-public unsafe class MiniCactpotManager : IDisposable
+public unsafe class MiniCactpot : Module
 {
+    public override string Name => "Mini Cactpot";
+
     private readonly CactpotSolver _solver = new();
     private int[]? boardState;
     private Task? gameTask;
 
-    public MiniCactpotManager() => Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "LotteryDaily", OnUpdate);
-
-    public void Dispose() => Svc.AddonLifecycle.UnregisterListener(OnUpdate);
+    public override void Enable() => Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "LotteryDaily", OnUpdate);
+    public override void Disable() => Svc.AddonLifecycle.UnregisterListener(OnUpdate);
 
     private void OnUpdate(AddonEvent type, AddonArgs args)
     {
-        if (!Saucy.Config.EnableAutoMiniCactpot) return;
         var addon = (AddonLotteryDaily*)args.Addon.Address;
         if (new Reader((AtkUnitBase*)args.Addon.Address).Stage == 5) ClickConfirmClose((AddonLotteryDaily*)args.Addon.Address, 5);
         var newState = Enumerable.Range(0, 9).Select(i => addon->GameNumbers[i]).ToArray();
@@ -42,6 +42,8 @@ public unsafe class MiniCactpotManager : IDisposable
                             .Where(item => item.value)
                             .Select(item => item.index)
                             .ToArray();
+
+                        PluginLog.Debug($"[{nameof(MiniCactpot)}] Board state: [{string.Join(", ", newState)}], Revealed: {newState.Count(x => x > 0)}, Solution length: {solution.Length}, Active indexes: [{string.Join(", ", activeIndexes)}], Solution: [{string.Join(", ", solution)}]");
 
                         if (solution.Length is 8)
                             ClickLanes(addon, activeIndexes);
@@ -64,8 +66,20 @@ public unsafe class MiniCactpotManager : IDisposable
     {
         if (activeIndexes.First() is { } first)
         {
-            PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Clicking lane at index #{first} [{string.Join(", ", activeIndexes)}]");
-            addon->LaneSelector[first]->ClickRadioButton((AtkUnitBase*)addon);
+            PluginLog.Debug($"[{nameof(MiniCactpot)}] Clicking lane at index #{SolverLaneToCsLane(first)} [{string.Join(", ", activeIndexes)}]");
+            ExecuteTask(() =>
+            {
+                if (addon != null)
+                {
+                    var lane = addon->LaneSelector[SolverLaneToCsLane(first)];
+                    if (lane != null)
+                        lane->ClickRadioButton((AtkUnitBase*)addon);
+                    else
+                        TaskManager.Abort();
+                }
+                else
+                    TaskManager.Abort();
+            });
         }
         ClickConfirmClose(addon, -1);
     }
@@ -74,8 +88,14 @@ public unsafe class MiniCactpotManager : IDisposable
     {
         if (activeIndexes.First() is { } first)
         {
-            PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Clicking button at index #{first} [{string.Join(", ", activeIndexes)}]");
-            Callback.Fire((AtkUnitBase*)addon, true, 1, first);
+            PluginLog.Debug($"[{nameof(MiniCactpot)}] Clicking button at index #{first} [{string.Join(", ", activeIndexes)}]");
+            ExecuteTask(() =>
+            {
+                if (addon != null)
+                    Callback.Fire((AtkUnitBase*)addon, true, 1, first);
+                else
+                    TaskManager.Abort();
+            });
         }
     }
 
@@ -84,10 +104,30 @@ public unsafe class MiniCactpotManager : IDisposable
         var confirm = addon->GetComponentButtonById(67);
         if (confirm->IsEnabled)
         {
-            PluginLog.Debug($"[{nameof(MiniCactpotManager)}] Clicking {(stage == 5 ? "close" : "confirm")}");
-            confirm->ClickAddonButton((AtkUnitBase*)addon);
+            PluginLog.Debug($"[{nameof(MiniCactpot)}] Clicking {(stage == 5 ? "close" : "confirm")}");
+            ExecuteTask(() =>
+            {
+                if (confirm != null)
+                    confirm->ClickAddonButton((AtkUnitBase*)addon);
+                else
+                    TaskManager.Abort();
+            });
         }
     }
+
+    private int SolverLaneToCsLane(int lane)
+        => lane switch
+        {
+            0 => 5,
+            1 => 6,
+            2 => 7,
+            3 => 1,
+            4 => 2,
+            5 => 3,
+            6 => 0,
+            7 => 4,
+            _ => throw new ArgumentOutOfRangeException($"{nameof(lane)}", lane, "Must be between 0 and 8 (inclusive)"),
+        };
 
     public class Reader(AtkUnitBase* UnitBase, int BeginOffset = 0) : AtkReader(UnitBase, BeginOffset)
     {

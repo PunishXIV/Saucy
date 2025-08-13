@@ -2,127 +2,118 @@
 using MgAl2O4.Utils;
 using Saucy.CuffACur;
 using System;
-using ECommons.DalamudServices;
 using System.Linq;
 
-namespace TriadBuddyPlugin
+namespace TriadBuddyPlugin;
+
+public class UIReaderGamesResults(IGameGui gameGui) : IUIReader
 {
-    public class UIReaderGamesResults : IUIReader
+    private readonly IGameGui gameGui = gameGui;
+    private UIStateCuffResults cuffResults = new();
+    private UIStateLimbResults limbResults = new();
+    public Action<UIStateCuffResults> OnCuffUpdated;
+    public Action<UIStateLimbResults> OnLimbUpdated;
+    public Action<bool> OnResultsUIChanged;
+
+    private bool needsNotify = false;
+
+    public bool HasResultsUI { get; private set; }
+
+    public string GetAddonName()
     {
-        private readonly IGameGui gameGui;
-        private UIStateCuffResults cuffResults = new();
-        private UIStateLimbResults limbResults = new();
-        public Action<UIStateCuffResults> OnCuffUpdated;
-        public Action<UIStateLimbResults> OnLimbUpdated;
-        public Action<bool> OnResultsUIChanged;
+        return "GoldSaucerReward";
+    }
 
-        private bool needsNotify = false;
+    public void OnAddonLost()
+    {
+        SetIsResultsUI(false);
+    }
 
-        public bool HasResultsUI => hasResultsUI;
-        private bool hasResultsUI;
+    public void OnAddonShown(IntPtr addonPtr)
+    {
+        needsNotify = true;
+        cuffResults = new();
+        limbResults = new();
+    }
 
-        public UIReaderGamesResults(IGameGui gameGui)
+    public unsafe void OnAddonUpdate(IntPtr addonPtr)
+    {
+        var baseNode = (AtkUnitBase*)addonPtr;
+        if (baseNode == null)
         {
-            this.gameGui = gameGui;
+            return;
         }
 
-        public string GetAddonName()
+        if (needsNotify)
         {
-            return "GoldSaucerReward";
-        }
+            UpdateCachedState(baseNode);
 
-        public void OnAddonLost()
-        {
-            SetIsResultsUI(false);
-        }
-
-        public void OnAddonShown(IntPtr addonPtr)
-        {
-            needsNotify = true;
-            cuffResults = new();
-            limbResults = new();
-        }
-
-        public unsafe void OnAddonUpdate(IntPtr addonPtr)
-        {
-            var baseNode = (AtkUnitBase*)addonPtr;
-            if (baseNode == null)
+            if (cuffResults.numMGP >= 0)
             {
-                return;
+                needsNotify = false;
+                OnCuffUpdated?.Invoke(cuffResults);
             }
 
-            if (needsNotify)
+            if (limbResults.numMGP >= 0)
             {
-                UpdateCachedState(baseNode);
-
-                if (cuffResults.numMGP >= 0)
-                {
-                    needsNotify = false;
-                    OnCuffUpdated?.Invoke(cuffResults);
-                }
-
-                if (limbResults.numMGP >= 0)
-                {
-                    needsNotify = false;
-                    OnLimbUpdated?.Invoke(limbResults);
-                }
+                needsNotify = false;
+                OnLimbUpdated?.Invoke(limbResults);
             }
-        }
-
-        public void SetIsResultsUI(bool value)
-        {
-            if (hasResultsUI != value)
-            {
-                hasResultsUI = value;
-                OnResultsUIChanged?.Invoke(value);
-            }
-        }
-
-        private unsafe void UpdateCachedState(AtkUnitBase* baseNode)
-        {
-            var number = baseNode->UldManager.NodeList[4]->GetComponent()->UldManager.NodeList[2]->GetComponent()->UldManager.NodeList[1]->GetAsAtkTextNode();
-
-            if (CufModule.ModuleEnabled)
-            {
-                if (!int.TryParse(number->NodeText.ToString(), out cuffResults.numMGP))
-                {
-                    cuffResults.numMGP = -1;
-                }
-
-                switch (cuffResults.numMGP)
-                {
-                    case 10:
-                        cuffResults.isBruising = true; break;
-                    case 15:
-                        cuffResults.isPunishing = true; break;
-                    case 25:
-                        cuffResults.isBrutal = true; break;
-                }
-            }
-
-            if (Saucy.Saucy.P.LimbManager.C.EnableLimb)
-            {
-                if (!int.TryParse(number->NodeText.ToString().Where(Char.IsDigit).ToArray(), out limbResults.numMGP))
-                {
-                    limbResults.numMGP = -1;
-                }
-
-                Svc.Log.Debug($"{limbResults.numMGP}");
-            }
-
         }
     }
 
-    public class UIStateCuffResults
+    public void SetIsResultsUI(bool value)
     {
-        public int numMGP;
-        public bool isBruising;
-        public bool isPunishing;
-        public bool isBrutal;
+        if (HasResultsUI != value)
+        {
+            HasResultsUI = value;
+            OnResultsUIChanged?.Invoke(value);
+        }
     }
 
-    public class UIStateLimbResults
+    private unsafe void UpdateCachedState(AtkUnitBase* baseNode)
     {
-        public int numMGP;
+        var number = baseNode->UldManager.NodeList[4]->GetComponent()->UldManager.NodeList[2]->GetComponent()->UldManager.NodeList[1]->GetAsAtkTextNode();
+
+        if (CufModule.ModuleEnabled)
+        {
+            if (!int.TryParse(number->NodeText.ToString(), out cuffResults.numMGP))
+            {
+                cuffResults.numMGP = -1;
+            }
+
+            switch (cuffResults.numMGP)
+            {
+                case 10:
+                    cuffResults.isBruising = true; break;
+                case 15:
+                    cuffResults.isPunishing = true; break;
+                case 25:
+                    cuffResults.isBrutal = true; break;
+            }
+        }
+
+        if (Saucy.Saucy.P.LimbManager.Cfg.EnableLimb)
+        {
+            if (!int.TryParse(number->NodeText.ToString().Where(Char.IsDigit).ToArray(), out limbResults.numMGP))
+            {
+                limbResults.numMGP = -1;
+            }
+
+            Svc.Log.Debug($"{limbResults.numMGP}");
+        }
     }
+}
+
+public class UIStateCuffResults
+{
+    public int numMGP;
+    public bool isBruising;
+    public bool isPunishing;
+    public bool isBrutal;
+}
+
+public class UIStateLimbResults
+{
+    public int numMGP;
 }

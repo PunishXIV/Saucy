@@ -1,93 +1,49 @@
-﻿using System;
+﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.ClientState.Objects.Types;
+using ECommons.GameHelpers;
+using FFXIVClientStructs.FFXIV.Common.Math;
+using Saucy.Framework;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.InteropServices;
-using Dalamud.Game.ClientState.Objects.Enums;
-using Dalamud.Game.ClientState.Objects.Types;
-using ECommons.DalamudServices;
-using FFXIVClientStructs.FFXIV.Common.Math;
-using Dalamud.Bindings.ImGui;
 
 namespace Saucy.OtherGames;
 
-internal static class SliceIsRightModule
+public class SliceIsRight : Module
 {
-    public static bool ModuleEnabled
-    {
-        get => _moduleEnabled;
-        set
-        {
-            if (_moduleEnabled != value)
-            {
-                _moduleEnabled = value;
-                RunModule();
-            }
-            else
-            {
-                _moduleEnabled = value;
-            }
+    public override string Name => "Slice is Right";
 
-            Saucy.Config.SliceIsRightModuleEnabled = _moduleEnabled;
-        }
-    }
-    private static bool _moduleEnabled;
-    
-    private static bool IsInGoldSaucer => Svc.ClientState.TerritoryType == 144;
-    
-    private const float HalfPi = 1.57079637f;
+    public override void Enable() => Svc.PluginInterface.UiBuilder.Draw += Draw;
+    public override void Disable() => Svc.PluginInterface.UiBuilder.Draw -= Draw;
+
+    private static float HalfPi => MathF.PI / 2;
     private const float MaxDistance = 30f;
-    
+
     private static readonly uint ColourBlue = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 1f, 0.15f)));
     private static readonly uint ColourGreen = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 1f, 0.0f, 0.15f)));
     private static readonly uint ColourRed = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 0.0f, 0.0f, 0.4f)));
-    private static readonly IDictionary<ulong, DateTime> ObjectsAndSpawnTime = new Dictionary<ulong, DateTime>();
+    private static readonly Dictionary<ulong, DateTime> ObjectsAndSpawnTime = [];
 
-    public static void Initialize()
+    public void Draw()
     {
-        ModuleEnabled = Saucy.Config.SliceIsRightModuleEnabled;
-    }
-    
-    private static void RunModule()
-    {
-        if (_moduleEnabled)
-        {
-            Svc.PluginInterface.UiBuilder.Draw += DrawUI;
-        }
-        else
-        {
-            Svc.PluginInterface.UiBuilder.Draw -= DrawUI;
-        }
-        
-    }
-
-    private static void DrawUI()
-    {
-        if (!Svc.ClientState.IsLoggedIn || !IsInGoldSaucer) return;
-
+        if (!InSaucer || CurrentGate is not GateType.SliceIsRight) return;
         foreach (var gameObject in Svc.Objects)
         {
-            if (!(DistanceToPlayer(gameObject.Position) <= MaxDistance)) continue;
+            if (!(Player.DistanceTo(gameObject) <= MaxDistance)) continue;
 
-            var model = Marshal.ReadInt32(gameObject.Address + 128);
+            var model = Marshal.ReadInt32(gameObject.Address + 132);
             if (gameObject.ObjectKind == ObjectKind.EventObj && model is >= 2010777 and <= 2010779)
-            {
                 RenderObject(gameObject, model);
-            }
         }
     }
-    
-    private static float DistanceToPlayer(Vector3 center)
-    {
-        var localPlayer = Svc.ClientState.LocalPlayer;
-        return Vector3.Distance(localPlayer != null ? localPlayer.Position : Vector3.Zero, center);
-    }
 
-    private static void RenderObject(IGameObject gameObject, int model, float? radius = null)
+    private void RenderObject(IGameObject gameObject, int model, float? radius = null)
     {
         if (ObjectsAndSpawnTime.TryGetValue(gameObject.GameObjectId, out var dateTime))
         {
             if (dateTime.AddSeconds(5) > DateTime.Now) return;
-
             float length;
             switch (model)
             {
@@ -98,8 +54,8 @@ internal static class SliceIsRightModule
                     break;
                 case 2010778:
                     length = (float)((double?)radius ?? 25.0);
-                    var rotation1 = (float)(gameObject.Rotation + 1.5707963705062866);
-                    var rotation2 = (float)(gameObject.Rotation - 1.5707963705062866);
+                    var rotation1 = (float)(gameObject.Rotation + HalfPi);
+                    var rotation2 = (float)(gameObject.Rotation - HalfPi);
                     DrawRectWorld(gameObject, rotation1, length, 5f, ColourGreen);
                     DrawRectWorld(gameObject, rotation2, length, 5f, ColourGreen);
                     break;
@@ -110,19 +66,17 @@ internal static class SliceIsRightModule
             }
         }
         else
-        {
             ObjectsAndSpawnTime.Add(gameObject.GameObjectId, DateTime.Now);
-        }
     }
-    
-    private static void DrawRectWorld(IGameObject gameObject, float rotation, float length, float width, uint colour)
+
+    private void DrawRectWorld(IGameObject gameObject, float rotation, float length, float width, uint colour)
     {
         BeginRender(gameObject.Address + gameObject.Rotation.ToString(CultureInfo.InvariantCulture));
         var position = gameObject.Position;
         var io = ImGui.GetIO();
         var vector21 = io.DisplaySize;
-        var vector31 = new Vector3(position.X + width / 2f * (float)Math.Sin(1.5707963705062866 + rotation), position.Y, position.Z + width / 2f * (float)Math.Cos(1.5707963705062866 + rotation));
-        var vector32 = new Vector3(position.X + width / 2f * (float)Math.Sin(rotation - 1.5707963705062866), position.Y, position.Z + width / 2f * (float)Math.Cos(rotation - 1.5707963705062866));
+        var vector31 = new Vector3(position.X + width / 2f * (float)Math.Sin(HalfPi + rotation), position.Y, position.Z + width / 2f * (float)Math.Cos(HalfPi + rotation));
+        var vector32 = new Vector3(position.X + width / 2f * (float)Math.Sin(rotation - HalfPi), position.Y, position.Z + width / 2f * (float)Math.Cos(rotation - HalfPi));
         var vector33 = new Vector3(position.X, position.Y, position.Z);
         const int num1 = 20;
         var num2 = length / num1;
@@ -146,20 +100,14 @@ internal static class SliceIsRightModule
             {
                 flag |= Svc.GameGui.WorldToScreen(vector37, out var vector22);
                 if (vector22.X > 0.0 & (double)vector22.X < vector21.X || vector22.Y > 0.0 & (double)vector22.Y < vector21.Y)
-                {
                     windowDrawList.PathLineTo(vector22);
-                }
             }
 
             if (flag)
-            {
                 windowDrawList.PathFillConvex(colour);
-            }
             else
-            {
                 windowDrawList.PathClear();
-            }
-            
+
             vector31 = vector34;
             vector32 = vector35;
             vector33 = vector36;
@@ -168,7 +116,7 @@ internal static class SliceIsRightModule
         EndRender();
     }
 
-    private static void DrawFilledCircleWorld(IGameObject gameObject, float radius, uint colour)
+    private void DrawFilledCircleWorld(IGameObject gameObject, float radius, uint colour)
     {
         BeginRender(gameObject.Address.ToString());
         var position = gameObject.Position;
@@ -195,7 +143,7 @@ internal static class SliceIsRightModule
         EndRender();
     }
 
-    private static void BeginRender(string name)
+    private void BeginRender(string name)
     {
         ImGui.PushID("sliceWindowI" + name);
         ImGui.PushStyleVar((ImGuiStyleVar)1, Vector2.Zero);
@@ -205,7 +153,7 @@ internal static class SliceIsRightModule
         ImGui.SetWindowSize(io.DisplaySize);
     }
 
-    private static void EndRender()
+    private void EndRender()
     {
         ImGui.End();
         ImGui.PopStyleVar();
