@@ -56,6 +56,7 @@ public sealed class Saucy : IDalamudPlugin
     {
         ECommonsMain.Init(pluginInterface, this, ECommons.Module.All);
         PunishLibMain.Init(pluginInterface, "Saucy", new AboutPlugin() { Sponsor = "https://ko-fi.com/taurenkey" });
+        EzConfig.Migrate<Configuration>();
         C = EzConfig.Init<Configuration>();
         P = this;
 
