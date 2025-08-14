@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FFXIVClientStructs.FFXIV.Client.Game.UI;
+using System;
 using System.Runtime.InteropServices;
 
 namespace TriadBuddyPlugin;
@@ -7,16 +8,13 @@ public class UnsafeReaderTriadCards
 {
     public bool HasErrors { get; private set; }
 
-    private delegate byte IsCardOwnedDelegate(IntPtr uiState, ushort cardId);
     private delegate byte IsNpcBeatenDelegate(IntPtr uiState, int triadNpcId);
 
-    private readonly IsCardOwnedDelegate? IsCardOwnedFunc;
     private readonly IsNpcBeatenDelegate? IsNpcBeatenFunc;
     private readonly IntPtr UIStatePtr;
 
     public UnsafeReaderTriadCards()
     {
-        var IsCardOwnedPtr = IntPtr.Zero;
         var IsNpcBeatenPtr = IntPtr.Zero;
 
         if (Svc.SigScanner != null)
@@ -29,13 +27,6 @@ public class UnsafeReaderTriadCards
 
                 IsNpcBeatenPtr = Svc.SigScanner.ScanText("E8 ?? ?? ?? ?? 84 C0 0F 94 C0 88 43 58 45 33 FF");
 
-                // IsTriadCardOwned(void* uiState, ushort cardId)
-                //   used by GSInfoCardList's agent, function preparing card lists
-                //   +0x30 ptr to end of list, +0x10c used filter (all, only owned, only missing)
-                //   break on end of list write, check loops counting cards at function start in filter == 1 scope
-
-                IsCardOwnedPtr = Svc.SigScanner.ScanText("40 53 48 83 ec 20 48 8b d9 66 85 d2 74 3b 0f");
-
                 // UIState addr, use LEA opcode before calling IsTriadCardOwned, same function as described above
                 UIStatePtr = Svc.SigScanner.GetStaticAddressFromSig("E8 ?? ?? ?? ?? EB 35 8B FD");
             }
@@ -45,10 +36,9 @@ public class UnsafeReaderTriadCards
             }
         }
 
-        HasErrors = (IsNpcBeatenPtr == IntPtr.Zero) || (IsCardOwnedPtr == IntPtr.Zero) || (UIStatePtr == IntPtr.Zero);
+        HasErrors = (IsNpcBeatenPtr == IntPtr.Zero) || (UIStatePtr == IntPtr.Zero);
         if (!HasErrors)
         {
-            IsCardOwnedFunc = Marshal.GetDelegateForFunctionPointer<IsCardOwnedDelegate>(IsCardOwnedPtr);
             IsNpcBeatenFunc = Marshal.GetDelegateForFunctionPointer<IsNpcBeatenDelegate>(IsNpcBeatenPtr);
         }
         else
@@ -57,14 +47,14 @@ public class UnsafeReaderTriadCards
         }
     }
 
-    public bool IsCardOwned(int cardId)
+    public unsafe bool IsCardOwned(int cardId)
     {
         if (HasErrors || cardId <= 0 || cardId > 65535)
         {
             return false;
         }
 
-        return (IsCardOwnedFunc != null) && IsCardOwnedFunc(UIStatePtr, (ushort)cardId) != 0;
+        return UIState.Instance()->IsTripleTriadCardUnlocked((ushort)cardId);
     }
 
     public bool IsNpcBeaten(int npcId)
