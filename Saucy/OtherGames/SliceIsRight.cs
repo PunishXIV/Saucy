@@ -32,14 +32,12 @@ public class SliceIsRight : Module
         foreach (var gameObject in Svc.Objects)
         {
             if (!(Player.DistanceTo(gameObject) <= MaxDistance)) continue;
-
-            var model = Marshal.ReadInt32(gameObject.Address + 132);
-            if (gameObject.ObjectKind == ObjectKind.EventObj && model is >= 2010777 and <= 2010779)
-                RenderObject(gameObject, model);
+            if (gameObject.ObjectKind == ObjectKind.EventObj && gameObject.DataId is >= 2010777 and <= 2010779)
+                RenderObject(gameObject, gameObject.DataId);
         }
     }
 
-    private void RenderObject(IGameObject gameObject, int model, float? radius = null)
+    private void RenderObject(IGameObject gameObject, uint model, float? radius = null)
     {
         if (ObjectsAndSpawnTime.TryGetValue(gameObject.GameObjectId, out var dateTime))
         {

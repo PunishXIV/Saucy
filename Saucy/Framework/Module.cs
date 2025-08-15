@@ -1,9 +1,6 @@
 ﻿using ECommons.Automation.NeoTaskManager;
 using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
-using FFXIVClientStructs.FFXIV.Client.System.Memory;
-using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
-using System.Collections.Generic;
 
 namespace Saucy.Framework;
 public abstract partial class Module : IModule
@@ -11,7 +8,7 @@ public abstract partial class Module : IModule
     public Module()
     {
         InternalName = GetType().Name;
-        TaskManager = new();
+        TaskManager = new(new() { ShowDebug = true });
     }
 
     public string InternalName { get; init; }
@@ -21,18 +18,7 @@ public abstract partial class Module : IModule
     public virtual void Disable() { }
 
     protected TaskManager TaskManager;
-
-    public void ExecuteTask(Action action)
-    {
-        if (C.LittleBitchDelay > 0)
-        {
-            TaskManager.EnqueueDelay(C.LittleBitchDelay);
-            TaskManager.Enqueue(action);
-        }
-        else
-            action();
-    }
-
+    protected TaskManagerConfiguration TaskManagerConfiguration = new() { ShowDebug = true, TimeLimitMS = 5000, AbortOnTimeout = true };
     public bool InSaucer => Svc.ClientState.TerritoryType is 144;
 
     public unsafe bool PlayerOnStage
