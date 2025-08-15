@@ -1,5 +1,4 @@
 using Dalamud.Configuration;
-using Dalamud.Plugin;
 using ECommons.Configuration;
 using Newtonsoft.Json;
 using Saucy.OutOnALimb;
@@ -33,8 +32,6 @@ public class Configuration : IPluginConfiguration
     public bool EnableAutoMiniCactpot = false;
 
     public LimbConfig LimbConfig { get; set; } = new();
-
-    public int LittleBitchDelay = 250;
 
     public void UpdateStats(Action<Stats> updateAction)
     {
