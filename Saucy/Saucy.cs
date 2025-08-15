@@ -417,27 +417,25 @@ public sealed class Saucy : IDalamudPlugin
 
                 if (args[1].ToLower() == "play")
                 {
-                    TriadAutomater.PlayXTimes = true;
-                    Svc.Chat.Print("[Saucy] Play X Amount of Times Enabled!");
 
                     if (int.TryParse(args[2], out var val))
                     {
+                        TriadAutomater.PlayXTimes = true;
+                        Svc.Chat.Print("[Saucy] Play X Amount of Times Enabled!");
                         TriadAutomater.NumberOfTimes = val;
-                        return;
                     }
-
-                    if (args[1].ToLower() == "stop")
+                    else
                     {
-                        TriadAutomater.ModuleEnabled = false;
-                        Svc.Chat.Print("[Saucy] Triad Module Disabled!");
-                        return;
+                        Svc.Chat.Print($"[Saucy] Incorrect value specified: {args[2]}");
                     }
+                    return;
+                }
 
-                    if (args[1].ToLower() == "play")
-
-                    {
-                        return;
-                    }
+                if (args[1].ToLower() == "stop")
+                {
+                    TriadAutomater.ModuleEnabled = false;
+                    Svc.Chat.Print("[Saucy] Triad Module Disabled!");
+                    return;
                 }
 
                 if (args[1].ToLower() == "cards")
