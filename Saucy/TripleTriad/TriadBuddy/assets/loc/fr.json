@@ -1,4 +1,5 @@
 {
+	"CFG_DeckEditHighlights": { "message": "Afficher les surlignements dans l'édition du deck" },
 	"CFG_GameToggleHints": { "message": "Afficher les indices du solveur durant une partie" },
 	"CFG_OptimizerParallelLoad": { "message": "Utilisation du CPU pour l'optimisation des decks" },
 	"CFG_OptimizerParallelLoadHint": { "message": "Contrôle le nombre de processeurs logiques utilisés pour les calculs. Ne réduit pas la charge des processeurs individuels !" },

@@ -1,12 +1,18 @@
 {
   "version": 1,
   "dependencies": {
-    "net7.0-windows7.0": {
+    "net9.0-windows7.0": {
       "DalamudPackager": {
         "type": "Direct",
-        "requested": "[2.1.10, )",
-        "resolved": "2.1.10",
-        "contentHash": "S6NrvvOnLgT4GDdgwuKVJjbFo+8ZEj+JsEYk9ojjOR/MMfv1dIFpT8aRJQfI24rtDcw1uF+GnSSMN4WW1yt7fw=="
+        "requested": "[13.0.0, )",
+        "resolved": "13.0.0",
+        "contentHash": "Mb3cUDSK/vDPQ8gQIeuCw03EMYrej1B4J44a1AvIJ9C759p9XeqdU9Hg4WgOmlnlPe0G7ILTD32PKSUpkQNa8w=="
+      },
+      "ECommons": {
+        "type": "Direct",
+        "requested": "[3.0.1.7, )",
+        "resolved": "3.0.1.7",
+        "contentHash": "xJZnp4dlnGGlmIU7z0851tpmZjVlBSOLC/OOuT2bJoj5+5/gMCO4/DhORensmlR2/dNyn/c5ZrNBSCVI/3aJHg=="
       },
       "NAudio": {
         "type": "Direct",
@@ -30,11 +36,6 @@
         "dependencies": {
           "NAudio.Core": "2.0.0"
         }
-      },
-      "ILRepack": {
-        "type": "Transitive",
-        "resolved": "2.0.18",
-        "contentHash": "sR5Aj3JLDbA8JwESfWYfigSz5k1oNSHPN434W1LX8sboWJYEOSQP/KkvZGmJKPgajzSUKkl2jDar3LPZiMFU4Q=="
       },
       "Microsoft.NETCore.Platforms": {
         "type": "Transitive",
@@ -97,11 +98,6 @@
           "NAudio.Core": "2.1.0"
         }
       },
-      "Reloaded.Memory": {
-        "type": "Transitive",
-        "resolved": "7.1.0",
-        "contentHash": "4Y5tCsRWdW/shj9W7RqJq37LStuW1VVtjxsBp4LKZilPcjudeQg9k+u+6fnDgacCEJiG3S2EtcaiNtVMTdaSnQ=="
-      },
       "System.Security.AccessControl": {
         "type": "Transitive",
         "resolved": "4.7.0",
@@ -116,20 +112,10 @@
         "resolved": "4.7.0",
         "contentHash": "ojD0PX0XhneCsUbAZVKdb7h/70vyYMDYs85lwEI+LngEONe/17A0cFaRFqZU+sOEidcVswYWikYOQ9PPfjlbtQ=="
       },
-      "clicklib": {
-        "type": "Project",
-        "dependencies": {
-          "ILRepack": "[2.0.18, )",
-          "Reloaded.Memory": "[7.1.0, )"
-        }
-      },
-      "ecommons": {
-        "type": "Project"
-      },
       "punishlib": {
         "type": "Project",
         "dependencies": {
-          "ECommons": "[2.0.0.7, )"
+          "ECommons": "[3.0.1.7, )"
         }
       }
     }

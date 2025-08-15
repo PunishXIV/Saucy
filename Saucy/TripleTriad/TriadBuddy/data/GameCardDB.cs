@@ -2,218 +2,184 @@
 using System;
 using System.Collections.Generic;
 
-namespace TriadBuddyPlugin
+namespace TriadBuddyPlugin;
+
+public enum GameCardCollectionFilter
 {
-    public enum GameCardCollectionFilter
+    All,
+    OnlyOwned,
+    OnlyMissing,
+    DeckEditDefault,
+}
+
+public class GameCardInfo
+{
+    public struct CollectionPos
     {
-        All,
-        OnlyOwned,
-        OnlyMissing,
-        DeckEditDefault,
+        public int PageIndex;
+        public int CellIndex;
     }
 
-    public class GameCardInfo
+    public int CardId;
+    public int SortKey;
+    public int SaleValue;
+
+    // available only when it's an NPC fight reward
+    public uint ItemId;
+
+    public List<int> RewardNpcs = [];
+
+    // call GameCardDB.Refresh() before reading fields below
+    public bool IsOwned;
+    public CollectionPos[] Collection = new CollectionPos[4];
+}
+
+// aguments TriadCardDB with stuff not related to game logic
+public class GameCardDB
+{
+    private static readonly GameCardDB instance = new();
+    public static readonly int MaxGridPages = 15;
+    public static readonly int MaxGridCells = 30;
+
+    public UnsafeReaderTriadCards? memReader;
+    public Dictionary<int, GameCardInfo> mapCards = [];
+    public List<int> ownedCardIds = [];
+    private int maxCardId = 0;
+
+    public static GameCardDB Get() { return instance; }
+
+    public GameCardInfo? FindById(int cardId)
     {
-        public struct CollectionPos
+        if (mapCards.TryGetValue(cardId, out var cardInfo))
         {
-            public int PageIndex;
-            public int CellIndex;
+            return cardInfo;
         }
 
-        public int CardId;
-        public int SortKey;
-        public int SaleValue;
-
-        // available only when it's an NPC fight reward
-        public uint ItemId;
-
-        public List<int> RewardNpcs = new();
-
-        // call GameCardDB.Refresh() before reading fields below
-        public bool IsOwned;
-        public CollectionPos[] Collection = new CollectionPos[4];
+        return null;
     }
 
-    // aguments TriadCardDB with stuff not related to game logic
-    public class GameCardDB
+    public GameCardInfo? FindByGridLocation(int pageIdx, int cellIdx, int filterMode)
     {
-        private static GameCardDB instance = new();
-        public static readonly int MaxGridPages = 15;
-        public static readonly int MaxGridCells = 30;
-
-        public UnsafeReaderTriadCards memReader;
-        public Dictionary<int, GameCardInfo> mapCards = new();
-        public List<int> ownedCardIds = new();
-        private int maxCardId = 0;
-
-        public static GameCardDB Get() { return instance; }
-
-        public GameCardInfo FindById(int cardId)
+        if (pageIdx < 0 || cellIdx < 0 || filterMode < 0 || filterMode > 2)
         {
-            if (mapCards.TryGetValue(cardId, out var cardInfo))
-            {
-                return cardInfo;
-            }
-
             return null;
         }
 
-        public void OnLoaded()
+        foreach (var kvp in mapCards)
         {
-            // find & cache max available card Id
-            // can't trust number of entries since list is no longer continuous
-            maxCardId = 0;
-            foreach (var kvp in mapCards)
+            if (kvp.Value != null)
             {
-                if (maxCardId < kvp.Key)
+                var pos = kvp.Value.Collection[filterMode];
+                if (pos.PageIndex == pageIdx && pos.CellIndex == cellIdx)
                 {
-                    maxCardId = kvp.Key;
+                    return kvp.Value;
                 }
             }
         }
 
-        public void Refresh()
+        return null;
+    }
+
+    public void OnLoaded()
+    {
+        // find & cache max available card Id
+        // can't trust number of entries since list is no longer continuous
+        maxCardId = 0;
+        foreach (var kvp in mapCards)
         {
-            ownedCardIds.Clear();
-
-            if (memReader == null || memReader.HasErrors || maxCardId <= 0)
+            if (maxCardId < kvp.Key)
             {
-                return;
+                maxCardId = kvp.Key;
             }
+        }
+    }
 
-            // consider switching to memory read for bulk checks? not that UI itself cares about it...
-            // check IsTriadCardOwned() for details, uiState+0x15ce5 is a byte array of szie 0x29 used as a bitmask with cardId => buffer[id / 8] & (1 << (id % 8))
+    public void Refresh()
+    {
+        ownedCardIds.Clear();
 
-            for (int id = 1; id <= maxCardId; id++)
-            {
-                bool isOwned = memReader.IsCardOwned(id);
-                if (isOwned)
-                {
-                    ownedCardIds.Add(id);
-                }
-            }
-
-            // update list for game logic classes
-            var cardDB = TriadCardDB.Get();
-            var settingsDB = PlayerSettingsDB.Get();
-
-            settingsDB.ownedCards.Clear();
-            foreach (var cardOb in cardDB.cards)
-            {
-                if (cardOb != null && ownedCardIds.Contains(cardOb.Id))
-                {
-                    settingsDB.ownedCards.Add(cardOb);
-                }
-            }
-
-            foreach (var kvp in mapCards)
-            {
-                kvp.Value.IsOwned = ownedCardIds.Contains(kvp.Value.CardId);
-            }
-
-            RebuildCollectionPages();
-            RebuildDeckEditPages();
+        if (memReader == null || memReader.HasErrors || maxCardId <= 0)
+        {
+            return;
         }
 
-        private void RebuildCollectionPages()
+        // consider switching to memory read for bulk checks? not that UI itself cares about it...
+        // check IsTriadCardOwned() for details, uiState+0x15ce5 is a byte array of szie 0x29 used as a bitmask with cardId => buffer[id / 8] & (1 << (id % 8))
+
+        for (var id = 1; id <= maxCardId; id++)
         {
-            var cardsDB = TriadCardDB.Get();
-
-            var sortedTriadCards = new List<TriadCard>();
-            sortedTriadCards.AddRange(cardsDB.cards);
-            sortedTriadCards.RemoveAll(x => (x == null) || !x.IsValid());
-            sortedTriadCards.Sort((a, b) => a.SortOrder.CompareTo(b.SortOrder));
-
-            var noCollectionData = new GameCardInfo.CollectionPos() { PageIndex = -1, CellIndex = -1 };
-
-            for (int filterIdx = 0; filterIdx < 3; filterIdx++)
+            var isOwned = memReader.IsCardOwned(id);
+            if (isOwned)
             {
-                int groupIdx = 0;
-                int pageIdx = 0;
-                int cellIdx = 0;
+                ownedCardIds.Add(id);
+            }
+        }
 
-                foreach (var cardOb in sortedTriadCards)
+        // update list for game logic classes
+        var cardDB = TriadCardDB.Get();
+        var settingsDB = PlayerSettingsDB.Get();
+
+        settingsDB.ownedCards.Clear();
+        foreach (var cardOb in cardDB.cards)
+        {
+            if (cardOb != null && ownedCardIds.Contains(cardOb.Id))
+            {
+                settingsDB.ownedCards.Add(cardOb);
+            }
+        }
+
+        foreach (var kvp in mapCards)
+        {
+            kvp.Value.IsOwned = ownedCardIds.Contains(kvp.Value.CardId);
+        }
+
+        RebuildCollectionPages();
+        RebuildDeckEditPages();
+    }
+
+    private void RebuildCollectionPages()
+    {
+        var cardsDB = TriadCardDB.Get();
+
+        var sortedTriadCards = new List<TriadCard>();
+        foreach (var cardOb in cardsDB.cards)
+        {
+            if (cardOb != null && cardOb.IsValid())
+            {
+                sortedTriadCards.Add(cardOb);
+            }
+        }
+
+        sortedTriadCards.Sort((a, b) => a.SortOrder.CompareTo(b.SortOrder));
+
+        var noCollectionData = new GameCardInfo.CollectionPos() { PageIndex = -1, CellIndex = -1 };
+
+        for (var filterIdx = 0; filterIdx < 3; filterIdx++)
+        {
+            var groupIdx = 0;
+            var pageIdx = 0;
+            var cellIdx = 0;
+
+            foreach (var cardOb in sortedTriadCards)
+            {
+                var isValid = mapCards.TryGetValue(cardOb.Id, out var cardInfoOb);
+                if (isValid && cardInfoOb != null)
                 {
-                    bool isValid = mapCards.TryGetValue(cardOb.Id, out var cardInfoOb);
-                    if (isValid)
+                    var isOwned = ownedCardIds.Contains(cardOb.Id);
+                    var isMatchingFilter =
+                        ((GameCardCollectionFilter)filterIdx == GameCardCollectionFilter.All) ||
+                        ((GameCardCollectionFilter)filterIdx == GameCardCollectionFilter.OnlyOwned && isOwned) ||
+                        ((GameCardCollectionFilter)filterIdx == GameCardCollectionFilter.OnlyMissing && !isOwned);
+
+                    if (isMatchingFilter)
                     {
-                        bool isOwned = ownedCardIds.Contains(cardOb.Id);
-                        bool isMatchingFilter =
-                            ((GameCardCollectionFilter)filterIdx == GameCardCollectionFilter.All) ||
-                            ((GameCardCollectionFilter)filterIdx == GameCardCollectionFilter.OnlyOwned && isOwned) ||
-                            ((GameCardCollectionFilter)filterIdx == GameCardCollectionFilter.OnlyMissing && !isOwned);
-
-                        if (isMatchingFilter)
+                        if (groupIdx != cardOb.Group)
                         {
-                            if (groupIdx != cardOb.Group)
-                            {
-                                groupIdx = cardOb.Group;
-                                pageIdx++;
-                                cellIdx = 0;
-                            }
-
-                            if (cellIdx >= MaxGridCells)
-                            {
-                                cellIdx = 0;
-                                pageIdx++;
-                            }
-
-                            cardInfoOb.Collection[filterIdx] = new GameCardInfo.CollectionPos() { PageIndex = pageIdx, CellIndex = cellIdx };
-                            cellIdx++;
+                            groupIdx = cardOb.Group;
+                            pageIdx++;
+                            cellIdx = 0;
                         }
-                        else
-                        {
-                            cardInfoOb.Collection[filterIdx] = new GameCardInfo.CollectionPos() { PageIndex = -1, CellIndex = -1 };
-                        }
-                    }
-                }
-            }
-        }
 
-        private void RebuildDeckEditPages()
-        {
-            var cardsDB = TriadCardDB.Get();
-
-            var sortedDeckEditCards = new List<Tuple<TriadCard, GameCardInfo>>();
-            foreach (var kvp in mapCards)
-            {
-                var cardOb = cardsDB.FindById(kvp.Key);
-                if (cardOb != null && cardOb.IsValid())
-                {
-                    var entry = new Tuple<TriadCard, GameCardInfo>(cardOb, kvp.Value);
-                    sortedDeckEditCards.Add(entry);
-                }
-            }
-
-            sortedDeckEditCards.Sort((a, b) =>
-            {
-                if (a.Item1.Rarity != b.Item1.Rarity)
-                {
-                    return a.Item1.Rarity.CompareTo(b.Item1.Rarity);
-                }
-
-                if (a.Item2.SortKey != b.Item2.SortKey)
-                {
-                    return a.Item2.SortKey.CompareTo(b.Item2.SortKey);
-                }
-
-                return a.Item1.SortOrder.CompareTo(b.Item1.SortOrder);
-            });
-
-            var noCollectionData = new GameCardInfo.CollectionPos() { PageIndex = -1, CellIndex = -1 };
-
-            int filterIdx = (int)GameCardCollectionFilter.DeckEditDefault;
-            int pageIdx = 0;
-            int cellIdx = 0;
-
-            foreach (var entry in sortedDeckEditCards)
-            {
-                var cardOb = entry.Item1;
-                var cardInfoOb = entry.Item2;
-                if (cardOb != null && cardInfoOb != null)
-                {
-                    if (ownedCardIds.Contains(cardOb.Id))
-                    {
                         if (cellIdx >= MaxGridCells)
                         {
                             cellIdx = 0;
@@ -227,6 +193,67 @@ namespace TriadBuddyPlugin
                     {
                         cardInfoOb.Collection[filterIdx] = new GameCardInfo.CollectionPos() { PageIndex = -1, CellIndex = -1 };
                     }
+                }
+            }
+        }
+    }
+
+    private void RebuildDeckEditPages()
+    {
+        var cardsDB = TriadCardDB.Get();
+
+        var sortedDeckEditCards = new List<Tuple<TriadCard, GameCardInfo>>();
+        foreach (var kvp in mapCards)
+        {
+            var cardOb = cardsDB.FindById(kvp.Key);
+            if (cardOb != null && cardOb.IsValid())
+            {
+                var entry = new Tuple<TriadCard, GameCardInfo>(cardOb, kvp.Value);
+                sortedDeckEditCards.Add(entry);
+            }
+        }
+
+        sortedDeckEditCards.Sort((a, b) =>
+        {
+            if (a.Item1.Rarity != b.Item1.Rarity)
+            {
+                return a.Item1.Rarity.CompareTo(b.Item1.Rarity);
+            }
+
+            if (a.Item2.SortKey != b.Item2.SortKey)
+            {
+                return a.Item2.SortKey.CompareTo(b.Item2.SortKey);
+            }
+
+            return a.Item1.SortOrder.CompareTo(b.Item1.SortOrder);
+        });
+
+        var noCollectionData = new GameCardInfo.CollectionPos() { PageIndex = -1, CellIndex = -1 };
+
+        var filterIdx = (int)GameCardCollectionFilter.DeckEditDefault;
+        var pageIdx = 0;
+        var cellIdx = 0;
+
+        foreach (var entry in sortedDeckEditCards)
+        {
+            var cardOb = entry.Item1;
+            var cardInfoOb = entry.Item2;
+            if (cardOb != null && cardInfoOb != null)
+            {
+                if (ownedCardIds.Contains(cardOb.Id))
+                {
+                    if (cellIdx >= MaxGridCells)
+                    {
+                        cellIdx = 0;
+                        pageIdx++;
+                    }
+
+                    cardInfoOb.Collection[filterIdx] = new GameCardInfo.CollectionPos() { PageIndex = pageIdx, CellIndex = cellIdx };
+                    cellIdx++;
+                }
+                else
+                {
+                    cardInfoOb.Collection[filterIdx] = new GameCardInfo.CollectionPos() { PageIndex = -1, CellIndex = -1 };
                 }
             }
         }

@@ -1,117 +1,110 @@
 ﻿using FFTriadBuddy;
 
-namespace TriadBuddyPlugin
+namespace TriadBuddyPlugin;
+
+public class StatTracker
 {
-    public class StatTracker
+    private static readonly Configuration.NpcStatInfo EmptyStats = new();
+
+    public void OnMatchFinished(SolverGame solver, UIStateTriadResults uiState)
     {
-        private readonly static Configuration.NpcStatInfo EmptyStats = new();
-        private readonly Configuration config;
-
-        public StatTracker(Configuration config)
+        if (!GameNpcDB.Get().mapNpcs.TryGetValue(solver.lastGameNpc?.Id ?? -1, out var npcInfo))
         {
-            this.config = config;
+            return;
         }
 
-        public void OnMatchFinished(Solver solver, UIStateTriadResults uiState)
+        var savedStats = GetNpcStats(npcInfo);
+        if (savedStats == null)
         {
-            if (!GameNpcDB.Get().mapNpcs.TryGetValue(solver.lastGameNpc?.Id ?? -1, out var npcInfo))
+            savedStats = new();
+            Service.pluginConfig.NpcStats.Add(npcInfo.triadId, savedStats);
+        }
+
+        savedStats.NumCoins += uiState.numMGP;
+        savedStats.NumWins += uiState.isWin ? 1 : 0;
+        savedStats.NumDraws += uiState.isDraw ? 1 : 0;
+        savedStats.NumLosses += uiState.isLose ? 1 : 0;
+
+        if (uiState.cardItemId != 0)
+        {
+            var cardId = -1;
+
+            var gameCardDB = GameCardDB.Get();
+            foreach (var kvp in gameCardDB.mapCards)
             {
-                return;
+                if (kvp.Value.ItemId == uiState.cardItemId)
+                {
+                    cardId = kvp.Value.CardId;
+                    break;
+                }
             }
 
-            var savedStats = GetNpcStats(npcInfo);
-            if (savedStats == null)
+            if (cardId > 0)
             {
-                savedStats = new();
-                config.NpcStats.Add(npcInfo.triadId, savedStats);
+                if (savedStats.Cards.TryGetValue(cardId, out var _))
+                {
+                    savedStats.Cards[cardId] += 1;
+                }
+                else
+                {
+                    savedStats.Cards.Add(cardId, 1);
+                }
             }
+        }
 
-            savedStats.NumCoins += uiState.numMGP;
-            savedStats.NumWins += uiState.isWin ? 1 : 0;
-            savedStats.NumDraws += uiState.isDraw ? 1 : 0;
-            savedStats.NumLosses += uiState.isLose ? 1 : 0;
+        Service.pluginConfig.Save();
 
-            if (uiState.cardItemId != 0)
+        // consume value to avoid counting if next match is against player
+        solver.lastGameNpc = null;
+    }
+
+    public Configuration.NpcStatInfo? GetNpcStats(GameNpcInfo npcInfo)
+    {
+        if (Service.pluginConfig.NpcStats.TryGetValue(npcInfo.triadId, out var savedStats))
+        {
+            return savedStats;
+        }
+
+        return null;
+    }
+
+    public Configuration.NpcStatInfo GetNpcStatsOrDefault(GameNpcInfo npcInfo) => GetNpcStats(npcInfo) ?? EmptyStats;
+
+    public void RemoveNpcStats(GameNpcInfo npcInfo)
+    {
+        Service.pluginConfig.NpcStats.Remove(npcInfo.triadId);
+        Service.pluginConfig.Save();
+    }
+
+    public static bool GetAverageRewardPerMatchDesc(Configuration config, GameNpcInfo npcInfo, out float avgMGP)
+    {
+        if (config.NpcStats.TryGetValue(npcInfo.triadId, out var savedStats))
+        {
+            var numMatches = savedStats.GetNumMatches();
+            if (numMatches > 0)
             {
-                int cardId = -1;
-
+                var cardDB = TriadCardDB.Get();
                 var gameCardDB = GameCardDB.Get();
-                foreach (var kvp in gameCardDB.mapCards)
+                var sumNetGain = savedStats.NumCoins - (numMatches * npcInfo.matchFee);
+
+                foreach (var kvp in savedStats.Cards)
                 {
-                    if (kvp.Value.ItemId == uiState.cardItemId)
+                    if (kvp.Key >= 0 && kvp.Key < cardDB.cards.Count && kvp.Value > 0)
                     {
-                        cardId = kvp.Value.CardId;
-                        break;
-                    }
-                }
-
-                if (cardId > 0)
-                {
-                    if (savedStats.Cards.TryGetValue(cardId, out var _))
-                    {
-                        savedStats.Cards[cardId] += 1;
-                    }
-                    else
-                    {
-                        savedStats.Cards.Add(cardId, 1);
-                    }
-                }
-            }
-
-            config.Save();
-
-            // consume value to avoid counting if next match is against player
-            solver.lastGameNpc = null;
-        }
-
-        public Configuration.NpcStatInfo GetNpcStats(GameNpcInfo npcInfo)
-        {
-            if (config.NpcStats.TryGetValue(npcInfo.triadId, out var savedStats))
-            {
-                return savedStats;
-            }
-
-            return null;
-        }
-
-        public Configuration.NpcStatInfo GetNpcStatsOrDefault(GameNpcInfo npcInfo) => GetNpcStats(npcInfo) ?? EmptyStats;
-
-        public void RemoveNpcStats(GameNpcInfo npcInfo)
-        {
-            config.NpcStats.Remove(npcInfo.triadId);
-            config.Save();
-        }
-
-        public static bool GetAverageRewardPerMatchDesc(Configuration config, GameNpcInfo npcInfo, out float avgMGP)
-        {
-            if (config.NpcStats.TryGetValue(npcInfo.triadId, out var savedStats))
-            {
-                int numMatches = savedStats.GetNumMatches();
-                if (numMatches > 0)
-                {
-                    var cardDB = TriadCardDB.Get();
-                    var gameCardDB = GameCardDB.Get();
-                    int sumNetGain = savedStats.NumCoins - (numMatches * npcInfo.matchFee);
-
-                    foreach (var kvp in savedStats.Cards)
-                    {
-                        if (kvp.Key >= 0 && kvp.Key < cardDB.cards.Count && kvp.Value > 0)
+                        var cardOb = cardDB.FindById(kvp.Key);
+                        if (cardOb != null && cardOb.IsValid() && gameCardDB.mapCards.TryGetValue(kvp.Key, out var cardInfo))
                         {
-                            var cardOb = cardDB.FindById(kvp.Key);
-                            if (cardOb.IsValid() && gameCardDB.mapCards.TryGetValue(kvp.Key, out var cardInfo))
-                            {
-                                sumNetGain += kvp.Value * cardInfo.SaleValue;
-                            }
+                            sumNetGain += kvp.Value * cardInfo.SaleValue;
                         }
                     }
-
-                    avgMGP = (1.0f * sumNetGain / numMatches);
-                    return true;
                 }
-            }
 
-            avgMGP = 0;
-            return false;
+                avgMGP = (1.0f * sumNetGain / numMatches);
+                return true;
+            }
         }
+
+        avgMGP = 0;
+        return false;
     }
 }

@@ -6,10 +6,11 @@
   "InternalName": "Saucy",
   "IconUrl": "https://love.puni.sh/resources/saucy.png",
   "RepoUrl": "https://github.com/PunishXIV/Saucy",
-  "DalamudApiLevel": 9,
+  "DalamudApiLevel": 13,
   "Tags": [
     "gold saucer",
     "mgp",
     "automation"
-  ]
+  ],
+  "ChangeLog":  "- Patch update"
 }

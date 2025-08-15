@@ -2,108 +2,107 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace FFTriadBuddy
+namespace FFTriadBuddy;
+
+public class TriadNpc
 {
-    public class TriadNpc
+    public int Id;
+    public LocString Name;
+    public List<TriadGameModifier> Rules;
+    public TriadDeck Deck;
+
+    public Regex? NameRegex;
+    public Regex? NamePartialRegex;
+
+    // sometimes (German client only?) npc names from game data will be using tags for handling inflections
+    // those will show up as:
+    //   [marker]
+    // in the middle of string and require special handling
+    public bool hasLocMarkup;
+
+    public TriadNpc(int id, List<TriadGameModifier> rules, int[] cardsAlways, int[] cardsPool)
     {
-        public int Id;
-        public LocString Name;
-        public List<TriadGameModifier> Rules;
-        public TriadDeck Deck;
+        Id = id;
+        Name = LocalizationDB.Get().FindOrAddLocString(ELocStringType.NpcName, id);
+        Rules = rules;
+        Deck = new TriadDeck(cardsAlways, cardsPool);
+        hasLocMarkup = false;
+    }
 
-        public Regex NameRegex;
-        public Regex NamePartialRegex;
+    public TriadNpc(int id, List<TriadGameModifier> rules, List<TriadCard> rewards, TriadDeck deck)
+    {
+        Id = id;
+        Name = LocalizationDB.Get().FindOrAddLocString(ELocStringType.NpcName, id);
+        Rules = rules;
+        Deck = deck;
+        hasLocMarkup = false;
+    }
 
-        // sometimes (German client only?) npc names from game data will be using tags for handling inflections
-        // those will show up as:
-        //   [marker]
-        // in the middle of string and require special handling
-        public bool hasLocMarkup;
-
-        public TriadNpc(int id, List<TriadGameModifier> rules, int[] cardsAlways, int[] cardsPool)
+    public void OnNameUpdated()
+    {
+        hasLocMarkup = Name.GetCodeName().Contains('[');
+        if (hasLocMarkup)
         {
-            Id = id;
-            Name = LocalizationDB.Get().FindOrAddLocString(ELocStringType.NpcName, id);
-            Rules = rules;
-            Deck = new TriadDeck(cardsAlways, cardsPool);
-            hasLocMarkup = false;
-        }
+            var namePattern = Regex.Replace(Name.GetCodeName().ToLower(), "\\[[a-z]\\]", ".*");
+            NameRegex = new Regex(namePattern);
 
-        public TriadNpc(int id, List<TriadGameModifier> rules, List<TriadCard> rewards, TriadDeck deck)
-        {
-            Id = id;
-            Name = LocalizationDB.Get().FindOrAddLocString(ELocStringType.NpcName, id);
-            Rules = rules;
-            Deck = deck;
-            hasLocMarkup = false;
-        }
-
-        public void OnNameUpdated()
-        {
-            hasLocMarkup = Name.GetCodeName().Contains('[');
-            if (hasLocMarkup)
-            {
-                string namePattern = Regex.Replace(Name.GetCodeName().ToLower(), "\\[[a-z]\\]", ".*");
-                NameRegex = new Regex(namePattern);
-
-                // not really a partial regex match, but good enough for GameUIParser.ParseNpcNameStart
-                int maxMatchLen = 15;
-                string partialPattern = (namePattern.Length < maxMatchLen) ? namePattern : namePattern.Substring(0, maxMatchLen).TrimEnd('*').TrimEnd('.');
-                NamePartialRegex = new Regex(partialPattern);
-            }
-        }
-
-        public override string ToString()
-        {
-            return Name.GetCodeName();
-        }
-
-        public bool IsMatchingName(string testName)
-        {
-            if (NameRegex != null)
-            {
-                return NameRegex.IsMatch(testName);
-            }
-
-            return Name.GetCodeName().Equals(testName, StringComparison.OrdinalIgnoreCase);
-        }
-
-        public bool IsMatchingNameStart(string testName)
-        {
-            if (NamePartialRegex != null)
-            {
-                return NamePartialRegex.IsMatch(testName);
-            }
-
-            return Name.GetCodeName().StartsWith(testName, StringComparison.OrdinalIgnoreCase);
+            // not really a partial regex match, but good enough for GameUIParser.ParseNpcNameStart
+            var maxMatchLen = 15;
+            var partialPattern = (namePattern.Length < maxMatchLen) ? namePattern : namePattern[..maxMatchLen].TrimEnd('*').TrimEnd('.');
+            NamePartialRegex = new Regex(partialPattern);
         }
     }
 
-    public class TriadNpcDB
+    public override string ToString()
     {
-        private static TriadNpcDB instance = new TriadNpcDB();
-        public List<TriadNpc> npcs = new List<TriadNpc>();
+        return Name.GetCodeName();
+    }
 
-        public static TriadNpcDB Get()
+    public bool IsMatchingName(string testName)
+    {
+        if (NameRegex != null)
         {
-            return instance;
+            return NameRegex.IsMatch(testName);
         }
 
-        public TriadNpc Find(string Name)
+        return Name.GetCodeName().Equals(testName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public bool IsMatchingNameStart(string testName)
+    {
+        if (NamePartialRegex != null)
         {
-            string nameLower = Name.ToLower();
-            return npcs.Find(x => (x != null) && x.IsMatchingName(nameLower));
+            return NamePartialRegex.IsMatch(testName);
         }
 
-        public TriadNpc FindByNameStart(string Name)
-        {
-            string nameLower = Name.ToLower();
-            return npcs.Find(x => (x != null) && x.IsMatchingNameStart(nameLower));
-        }
+        return Name.GetCodeName().StartsWith(testName, StringComparison.OrdinalIgnoreCase);
+    }
+}
 
-        public TriadNpc FindByID(int id)
-        {
-            return npcs.Find(x => x.Id == id);
-        }
+public class TriadNpcDB
+{
+    private static readonly TriadNpcDB instance = new();
+    public List<TriadNpc> npcs = [];
+
+    public static TriadNpcDB Get()
+    {
+        return instance;
+    }
+
+    public TriadNpc? Find(string Name)
+    {
+        var nameLower = Name.ToLower();
+        return npcs.Find(x => (x != null) && x.IsMatchingName(nameLower));
+    }
+
+    public TriadNpc? FindByNameStart(string Name)
+    {
+        var nameLower = Name.ToLower();
+        return npcs.Find(x => (x != null) && x.IsMatchingNameStart(nameLower));
+    }
+
+    public TriadNpc FindByID(int id)
+    {
+        return npcs.Find(x => x.Id == id);
     }
 }
