@@ -577,9 +577,6 @@ public unsafe class PluginUI : Window
 
     private void DrawDebugTab()
     {
-        if (ImGui.SliderInt("Module Delay", ref C.LittleBitchDelay, 0, 10000))
-            C.Save();
-
         if (GoldSaucerManager.Instance() != null && GoldSaucerManager.Instance()->CurrentGFateDirector != null)
         {
             var dir = GoldSaucerManager.Instance()->CurrentGFateDirector;
