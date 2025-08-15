@@ -425,7 +425,16 @@ public sealed class Saucy : IDalamudPlugin
                         TriadAutomater.NumberOfTimes = val;
                         return;
                     }
-                    else
+
+                    if (args[1].ToLower() == "stop")
+                    {
+                        TriadAutomater.ModuleEnabled = false;
+                        Svc.Chat.Print("[Saucy] Triad Module Disabled!");
+                        return;
+                    }
+
+                    if (args[1].ToLower() == "play")
+
                     {
                         return;
                     }
