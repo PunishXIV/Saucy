@@ -13,6 +13,11 @@ Automates certain Gold Saucer mini-games.
 <ul>
 <li>Cuff-a-cur</li>
 <li>Triple Triad</li>
-</ul>
+<li>Out on a Limb</li>
+<li>Slice is Right</li>
+<li>Auto Cactpot</li> # Requires [ezMiniCactpot
+](https://github.com/MidoriKami/EzMiniCactpot)</ul>
+
+Tracks Stats for Lifetime and Sessions and more!
 
 <!-- Repository Header End -->
