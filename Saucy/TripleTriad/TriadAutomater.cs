@@ -119,7 +119,7 @@ internal static unsafe class TriadAutomater
         {
             if (TryGetAddonByName<AtkUnitBase>("TripleTriadRequest", out var addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
             {
-                var button = (AtkComponentButton*)addon->UldManager.NodeList[4];
+                var button = (AtkComponentButton*)addon->GetNodeById(41);
                 button->ClickAddonButton((AtkComponentBase*)addon, 1, EventType.CHANGE);
             }
         }

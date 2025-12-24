@@ -237,13 +237,13 @@ public sealed class Saucy : IDalamudPlugin
     {
         double multiplier = 1;
         //Jackpot
-        if (Svc.ClientState.LocalPlayer.StatusList.Any(x => x.StatusId == 902))
+        if (Svc.Objects.LocalPlayer.StatusList.Any(x => x.StatusId == 902))
         {
-            multiplier += (double)Svc.ClientState.LocalPlayer.StatusList.First(x => x.StatusId == 902).Param / 100;
+            multiplier += (double)Svc.Objects.LocalPlayer.StatusList.First(x => x.StatusId == 902).Param / 100;
         }
 
         //MGP Card
-        if (Svc.ClientState.LocalPlayer.StatusList.Any(x => x.StatusId == 1079))
+        if (Svc.Objects.LocalPlayer.StatusList.Any(x => x.StatusId == 1079))
         {
             multiplier += 0.15;
         }

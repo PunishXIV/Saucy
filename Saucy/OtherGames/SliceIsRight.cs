@@ -32,8 +32,8 @@ public class SliceIsRight : Module
         foreach (var gameObject in Svc.Objects)
         {
             if (!(Player.DistanceTo(gameObject) <= MaxDistance)) continue;
-            if (gameObject.ObjectKind == ObjectKind.EventObj && gameObject.DataId is >= 2010777 and <= 2010779)
-                RenderObject(gameObject, gameObject.DataId);
+            if (gameObject.ObjectKind == ObjectKind.EventObj && gameObject.BaseId is >= 2010777 and <= 2010779)
+                RenderObject(gameObject, gameObject.BaseId);
         }
     }
 

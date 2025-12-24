@@ -31,7 +31,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="DalamudPackager" Version="14.0.1" />
-		<PackageReference Include="ECommons" Version="3.1.0.5" />
+		<PackageReference Include="ECommons" Version="3.1.0.10" />
 		<PackageReference Include="NAudio" Version="2.1.0" />
 		<PackageReference Include="NAudio.Lame" Version="2.0.1" />
 		<ProjectReference Include="..\PunishLib\PunishLib\PunishLib.csproj" />
