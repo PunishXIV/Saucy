@@ -12,5 +12,5 @@
     "mgp",
     "automation"
   ],
-  "ChangeLog":  "- Patch update"
+  "ChangeLog":  "- Fix Triple Triad challenge not auto-accepting."
 }
