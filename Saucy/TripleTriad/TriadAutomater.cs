@@ -16,7 +16,6 @@ namespace Saucy.TripleTriad;
 
 internal static unsafe class TriadAutomater
 {
-
     public delegate int PlaceCardDelegate(nint addon);
 
     public static Hook<PlaceCardDelegate> PlaceCardHook;
@@ -29,10 +28,7 @@ internal static unsafe class TriadAutomater
     public static bool LogOutAfterCompletion = false;
     public static bool PlayUntilAllCardsDropOnce = false;
 
-    public static int PlaceCardDetour(nint a1)
-    {
-        return PlaceCardHook.Original(a1);
-    }
+    public static int PlaceCardDetour(nint a1) => PlaceCardHook.Original(a1);
     public static void PlaceCard(int which, int slot)
     {
         try
@@ -44,83 +40,76 @@ internal static unsafe class TriadAutomater
                 addon->TurnState = 0;
             }
         }
-        catch
-        {
-
-        }
+        catch { }
     }
 
     public static void RunModule()
     {
-        if (Saucy.TTSolver.preGameDecks.Count > 0)
+        if (TTSolver.preGameDecks.Count > 0)
         {
             var selectedDeck = C.SelectedDeckIndex;
-            if (selectedDeck >= 0 && !Saucy.TTSolver.preGameDecks.ContainsKey(selectedDeck))
+            if (selectedDeck >= 0 && !TTSolver.preGameDecks.ContainsKey(selectedDeck))
             {
                 C.SelectedDeckIndex = -1;
             }
         }
 
-        if (Saucy.TTSolver.hasMove)
+        if (TTSolver.hasMove)
         {
-            PlaceCard(Saucy.TTSolver.moveCardIdx, Saucy.TTSolver.moveBoardIdx);
+            PlaceCard(TTSolver.moveCardIdx, TTSolver.moveBoardIdx);
             return;
         }
 
-        if (Saucy.uiReaderPrep.HasMatchRequestUI)
+        if (uiReaderPrep.HasMatchRequestUI)
         {
             AcceptTriadMatch();
         }
 
-        if (Saucy.uiReaderPrep.HasDeckSelectionUI)
+        if (uiReaderPrep.HasDeckSelectionUI)
         {
             DeckSelect();
         }
     }
 
-    private static unsafe void DeckSelect()
+    private static void DeckSelect()
     {
         try
         {
             if (TryGetAddonByName("TripleTriadSelDeck", out AtkUnitBase* addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
             {
-
                 if (C.SelectedDeckIndex == -1 && !C.UseRecommendedDeck)
                 {
                     var button = addon->UldManager.NodeList[3]->GetAsAtkComponentButton();
                     button->ClickAddonButton(addon);
-                    return;
                 }
                 else
                 {
-                    var deck = C.UseRecommendedDeck ? Saucy.TTSolver.preGameBestId : C.SelectedDeckIndex;
+                    var deck = C.UseRecommendedDeck ? TTSolver.preGameBestId : C.SelectedDeckIndex;
                     var values = stackalloc AtkValue[1];
                     //Deck Index
                     values[0] = new()
                     {
-                        Type = ValueType.Int,
-                        Int = deck,
+                        Type = ValueType.Int, Int = deck
                     };
                     addon->FireCallback(1, values);
                     addon->Close(true);
-                    return;
                 }
             }
         }
-        catch
-        {
-
-        }
+        catch { }
     }
 
-    private static unsafe void AcceptTriadMatch()
+    private static void AcceptTriadMatch()
     {
         try
         {
-            if (TryGetAddonByName<AtkUnitBase>("TripleTriadRequest", out var addon) && addon->IsVisible && !TryGetAddonByName<AtkUnitBase>("TripleTriad", out var _))
+            if (TryGetAddonByName<AtkUnitBase>("TripleTriadRequest", out var addon) && IsAddonReady(addon))
             {
-                var button = (AtkComponentButton*)addon->UldManager.NodeList[4];
-                button->ClickAddonButton((AtkComponentBase*)addon, 1, EventType.CHANGE);
+                var button = addon->GetComponentButtonById(41);
+                if (button->IsEnabled && button->AtkResNode->IsVisible())
+                {
+                    button->ClickAddonButton(addon);
+                }
             }
         }
         catch { }
@@ -129,7 +118,10 @@ internal static unsafe class TriadAutomater
     public static bool Logout()
     {
         var isLoggedIn = Svc.Condition.Any();
-        if (!isLoggedIn) return true;
+        if (!isLoggedIn)
+        {
+            return true;
+        }
 
         Chat.SendMessage("/logout");
         return true;
@@ -138,7 +130,10 @@ internal static unsafe class TriadAutomater
     public static bool SelectYesLogout()
     {
         var addon = GetSpecificYesno(Svc.Data.GetExcelSheet<Addon>().GetRow(115).Text.ToDalamudString().GetText());
-        if (addon == null) return false;
+        if (addon == null)
+        {
+            return false;
+        }
         new AddonMaster.SelectYesno(addon).Yes();
         return true;
     }
@@ -150,7 +145,10 @@ internal static unsafe class TriadAutomater
             try
             {
                 var addon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("SelectYesno", i).Address;
-                if (addon == null) return null;
+                if (addon == null)
+                {
+                    return null;
+                }
                 if (IsAddonReady(addon))
                 {
                     var textNode = addon->UldManager.NodeList[15]->GetAsAtkTextNode();

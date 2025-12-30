@@ -111,7 +111,7 @@ public unsafe class CufModule
 
             if (!Svc.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.OccupiedInQuestEvent] && !Saucy.uiReaderGamesResults.HasResultsUI)
             {
-                var cuf = (GameObject*)Svc.Objects.Where(x => (x.DataId == 2005029 && GetTargetDistance(x) <= 1f) || (x.DataId == 197370 && GetTargetDistance(x) <= 4f)).OrderByDescending(GetTargetDistance).FirstOrDefault()?.Address;
+                var cuf = (GameObject*)Svc.Objects.Where(x => (x.BaseId == 2005029 && GetTargetDistance(x) <= 1f) || (x.BaseId == 197370 && GetTargetDistance(x) <= 4f)).OrderByDescending(GetTargetDistance).FirstOrDefault()?.Address;
                 if ((IntPtr)cuf == IntPtr.Zero)
                     return;
 
@@ -128,7 +128,7 @@ public unsafe class CufModule
 
     public static float GetTargetDistance(Dalamud.Game.ClientState.Objects.Types.IGameObject target)
     {
-        var LocalPlayer = Svc.ClientState.LocalPlayer;
+        var LocalPlayer = Svc.Objects.LocalPlayer;
 
         if (LocalPlayer is null)
             return 0;
