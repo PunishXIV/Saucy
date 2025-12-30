@@ -15,8 +15,7 @@ Automates certain Gold Saucer mini-games.
 <li>Triple Triad</li>
 <li>Out on a Limb</li>
 <li>Slice is Right</li>
-<li>Auto Cactpot</li> # Requires [ezMiniCactpot
-](https://github.com/MidoriKami/EzMiniCactpot)</ul>
+<li>Auto Cactpot</li>
 
 Tracks Stats for Lifetime and Sessions and more!
 
