@@ -4,9 +4,9 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Memory;
 using ECommons;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 
 namespace Saucy.OutOnALimb.ECEmbedded;
+
 public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 0)
 {
     public List<T> Loop<T>(int Offset, int Size, int MaxLength) where T : AtkReader
@@ -43,7 +43,7 @@ public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 
         {
             return null;
         }
-        if (value.Type != ValueType.UInt) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as uint but it was {value.Type}");
+        if (value.Type != AtkValueType.UInt) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as uint but it was {value.Type}");
         return value.UInt;
     }
 
@@ -56,7 +56,7 @@ public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 
         {
             return null;
         }
-        if (value.Type != ValueType.Int) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as int but it was {value.Type}");
+        if (value.Type != AtkValueType.Int) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as int but it was {value.Type}");
         return value.Int;
     }
 
@@ -69,7 +69,7 @@ public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 
         {
             return null;
         }
-        if (value.Type != ValueType.Bool) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as bool but it was {value.Type}");
+        if (value.Type != AtkValueType.Bool) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as bool but it was {value.Type}");
         return value.Byte != 0;
     }
 
@@ -82,7 +82,7 @@ public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 
         {
             return null;
         }
-        if (!value.Type.EqualsAny(ValueType.String, ValueType.ManagedString)) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as SeString but it was {value.Type}");
+        if (!value.Type.EqualsAny(AtkValueType.String, AtkValueType.ManagedString)) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as SeString but it was {value.Type}");
         return MemoryHelper.ReadSeStringNullTerminated((nint)value.String.Value);
     }
 
@@ -95,7 +95,7 @@ public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 
         {
             return null;
         }
-        if (!value.Type.EqualsAny(ValueType.String, ValueType.ManagedString, ValueType.String8)) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as String but it was {value.Type}");
+        if (!value.Type.EqualsAny(AtkValueType.String, AtkValueType.ManagedString, AtkValueType.String8)) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as String but it was {value.Type}");
         return MemoryHelper.ReadStringNullTerminated((nint)value.String.Value);
     }
 

@@ -336,7 +336,7 @@ public unsafe class PluginUI : Window
 
         var selectedDeck = C.SelectedDeckIndex;
 
-        if (Saucy.TTSolver.profileGS.GetPlayerDecks().Count() > 0)
+        if (TTSolver.profileGS.GetPlayerDecks().Count() > 0)
         {
             var useAutoDeck = C.UseRecommendedDeck;
             if (ImGui.Checkbox("Automatically choose your deck with the best win chance", ref useAutoDeck))
@@ -349,13 +349,13 @@ public unsafe class PluginUI : Window
             {
                 ImGui.PushItemWidth(200);
                 string preview;
-                if (selectedDeck == -1 || Saucy.TTSolver.profileGS.GetPlayerDecks()[selectedDeck] is null)
+                if (selectedDeck == -1 || TTSolver.profileGS.GetPlayerDecks()[selectedDeck] is null)
                 {
                     preview = "";
                 }
                 else
                 {
-                    preview = selectedDeck >= 0 ? Saucy.TTSolver.profileGS.GetPlayerDecks()[selectedDeck].name : string.Empty;
+                    preview = selectedDeck >= 0 ? TTSolver.profileGS.GetPlayerDecks()[selectedDeck].name : string.Empty;
                 }
 
                 if (ImGui.BeginCombo("Select Deck", preview))
@@ -365,7 +365,7 @@ public unsafe class PluginUI : Window
                         C.SelectedDeckIndex = -1;
                     }
 
-                    foreach (var deck in Saucy.TTSolver.profileGS.GetPlayerDecks())
+                    foreach (var deck in TTSolver.profileGS.GetPlayerDecks())
                     {
                         if (deck is null) continue;
                         var index = deck.id;
@@ -400,7 +400,7 @@ public unsafe class PluginUI : Window
             TriadAutomater.PlayUntilAllCardsDropOnce = false;
         }
 
-        if (GameNpcDB.Get().mapNpcs.TryGetValue(Saucy.TTSolver.preGameNpc?.Id ?? -1, out var npcInfo))
+        if (GameNpcDB.Get().mapNpcs.TryGetValue(TTSolver.preGameNpc?.Id ?? -1, out var npcInfo))
         {
             CurrentNPC = npcInfo;
         }
@@ -583,8 +583,6 @@ public unsafe class PluginUI : Window
             ImGui.Text($"GateType: {dir->GateType}");
             ImGui.Text($"GatePositionType: {dir->GatePositionType}");
             ImGui.Text($"Flags: {dir->Flags}");
-            ImGui.Text($"IsRunningGate: {dir->IsRunningGate()}");
-            ImGui.Text($"IsAcceptingGate: {dir->IsAcceptingGate()}");
         }
     }
 }

@@ -102,14 +102,14 @@ public unsafe class CufModule
 
                             FuncHook ??= Svc.Hook.HookFromAddress<UnknownFunction>(Svc.SigScanner.ScanText("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 30 0F B7 FA"), FuncDetour);
                             FuncHook.Original((nint)addon, 0x17, 0, evt);
-                            Saucy.uiReaderGamesResults.SetIsResultsUI(true);
+                            uiReaderGamesResults.SetIsResultsUI(true);
 
                         }
                     }
                 }
             }
 
-            if (!Svc.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.OccupiedInQuestEvent] && !Saucy.uiReaderGamesResults.HasResultsUI)
+            if (!Svc.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.OccupiedInQuestEvent] && !uiReaderGamesResults.HasResultsUI)
             {
                 var cuf = (GameObject*)Svc.Objects.Where(x => (x.BaseId == 2005029 && GetTargetDistance(x) <= 1f) || (x.BaseId == 197370 && GetTargetDistance(x) <= 4f)).OrderByDescending(GetTargetDistance).FirstOrDefault()?.Address;
                 if ((IntPtr)cuf == IntPtr.Zero)

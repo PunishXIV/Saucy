@@ -3,6 +3,7 @@ using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
 using System;
 
 namespace Saucy.Framework;
+
 public abstract partial class Module : IModule
 {
     public Module()
