@@ -7,6 +7,7 @@ using System.Linq;
 using System.Numerics;
 
 namespace Saucy.OtherGames;
+
 public class AnyWayTheWindBlows : Module
 {
     // from https://github.com/img02/Fungah-Totally-Safe-Spot/

@@ -49,7 +49,7 @@ public class Solver
     public TriadNpc preGameNpc;
     public List<TriadGameModifier> preGameMods = [];
     public Dictionary<int, DeckData> preGameDecks = [];
-    public float preGameProgress => (preGameDecks.Count > 0) ? (1.0f * preGameSolved / preGameDecks.Count) : 0.0f;
+    public float PreGameProgress => (preGameDecks.Count > 0) ? (1.0f * preGameSolved / preGameDecks.Count) : 0.0f;
     public int preGameBestId = -1;
     private int preGameId = 0;
     private int preGameSolved = 0;

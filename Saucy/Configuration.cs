@@ -6,6 +6,7 @@ using System;
 using System.Collections.ObjectModel;
 
 namespace Saucy;
+
 [Serializable]
 public class Configuration : IPluginConfiguration
 {

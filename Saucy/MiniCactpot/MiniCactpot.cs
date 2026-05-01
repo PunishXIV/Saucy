@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Saucy.MiniCactpot;
+
 public unsafe class MiniCactpot : Module
 {
     public override string Name => "Mini Cactpot";

@@ -267,12 +267,12 @@ public sealed class Saucy : IDalamudPlugin
                 var values = stackalloc AtkValue[2];
                 values[0] = new()
                 {
-                    Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
+                    Type = AtkValueType.Int,
                     Int = 0,
                 };
                 values[1] = new()
                 {
-                    Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.UInt,
+                    Type = AtkValueType.UInt,
                     UInt = 1,
                 };
                 addon->FireCallback(2, values);
