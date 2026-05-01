@@ -3,6 +3,7 @@ using Dalamud.Game;
 using Dalamud.Game.Chat;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.Text;
 using Dalamud.Interface.Colors;
 using Dalamud.Memory;
 using ECommons.Automation.UIInput;
@@ -113,7 +114,7 @@ public unsafe class LimbManager : IDisposable
         if (!Svc.Condition[ConditionFlag.OccupiedInQuestEvent]) return;
         var text = message.Message.TextValue.RemoveSpaces();
         PluginLog.Information($"{message.LogKind}/{text}");
-        if ((ushort)message.LogKind == 2105)
+        if (message.LogKind is XivChatType.SystemMessage && message.SourceKind is XivChatRelationKind.LocalPlayer) // old value was 2105
         {
             if (HitPowerText.TryGetValue(text, out var hitPower))
             {
