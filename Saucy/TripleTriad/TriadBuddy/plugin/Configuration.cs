@@ -1,10 +1,11 @@
-﻿using System;
+using Dalamud.Configuration;
+using System;
 using System.Collections.Generic;
 
 namespace TriadBuddyPlugin;
 
 [Serializable]
-public class Configuration
+public class Configuration : IPluginConfiguration
 {
     public int Version { get; set; } = 0;
 
@@ -37,13 +38,13 @@ public class Configuration
 
         public int NumLosses { get; set; } = 0;
 
-        public int GetNumMatches() => (NumWins + NumDraws + NumLosses);
+        public int GetNumMatches() => NumWins + NumDraws + NumLosses;
     }
 
     public Dictionary<int, NpcStatInfo> NpcStats { get; set; } = [];
 
     public void Save()
     {
-        //Service.pluginInterface.SavePluginConfig(this);
+        Service.pluginInterface.SavePluginConfig(this);
     }
 }

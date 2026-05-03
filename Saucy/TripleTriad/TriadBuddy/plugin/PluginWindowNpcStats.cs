@@ -28,11 +28,14 @@ public class PluginWindowNpcStats : Window, IDisposable
     private string? locDropCard;
     private string? locEstMGP;
     private string? locEstMGPHint;
+    private string? locCopySummary;
+    private string? locNoCardDrops;
     private bool hasCachedLocStrings;
 
     public PluginWindowNpcStats(StatTracker statTracker) : base("NPC stats")
     {
         this.statTracker = statTracker;
+        WindowName = Localization.Localize("NS_Title", "NPC stats");
 
         IsOpen = false;
 
@@ -70,6 +73,10 @@ public class PluginWindowNpcStats : Window, IDisposable
         locDropCard = Localization.Localize("NS_DropCardName", "{0} card: {1}");
         locEstMGP = Localization.Localize("NS_DropPerMatch", "MGP per match:");
         locEstMGPHint = Localization.Localize("NS_DropIncludesSelling", "Includes MGP from selling cards");
+        locCopySummary = Localization.Localize("NS_CopySummary", "{0} stats:\n{1} matches (W:{2}/D:{3}/L:{4})");
+        locNoCardDrops = Localization.Localize("NS_NoCardDrops", "no card drops");
+
+        WindowName = locTitle;
     }
 
     public void SetupAndOpen(TriadNpc? triadNpc)
@@ -188,7 +195,7 @@ public class PluginWindowNpcStats : Window, IDisposable
 
     private void CopyStatstoClipboard(Configuration.NpcStatInfo savedStats)
     {
-        var desc = $"{npcName} stats:\n{savedStats.GetNumMatches()} matches (W:{savedStats.NumWins}/D:{savedStats.NumDraws}/L:{savedStats.NumLosses})";
+        var desc = string.Format(locCopySummary ?? "", npcName, savedStats.GetNumMatches(), savedStats.NumWins, savedStats.NumDraws, savedStats.NumLosses);
         if (savedStats.Cards.Count > 0)
         {
             var cardDB = TriadCardDB.Get();
@@ -206,7 +213,7 @@ public class PluginWindowNpcStats : Window, IDisposable
         }
         else
         {
-            desc += "\nno card drops";
+            desc += "\n" + (locNoCardDrops ?? "");
         }
 
         ImGui.SetClipboardText(desc);

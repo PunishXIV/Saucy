@@ -17,17 +17,18 @@ public class UnsafeReaderTriadDeck
     {
         var SetSelectedCardPtr = IntPtr.Zero;
         var RefreshUIPtr = IntPtr.Zero;
+        var sigScanner = Service.sigScanner;
 
-        if (Svc.SigScanner != null)
+        if (sigScanner != null)
         {
             try
             {
-                SetSelectedCardPtr = Svc.SigScanner.ScanText("E8 ?? ?? ?? ?? BE ?? ?? ?? ?? 40 84 FF");
+                SetSelectedCardPtr = sigScanner.ScanText("E8 ?? ?? ?? ?? BE ?? ?? ?? ?? 40 84 FF");
 
                 // Client::UI::Agent::AgentGoldSaucer.ReceiveEvent msg:6 -> FUN_140b973b0 msg:7
                 //  writes to agent +0x100 and calls refresh
 
-                RefreshUIPtr = Svc.SigScanner.ScanText("e8 ?? ?? ?? ?? 84 c0 0f 94 c0 88 43 58");
+                RefreshUIPtr = sigScanner.ScanText("e8 ?? ?? ?? ?? 84 c0 0f 94 c0 88 43 58");
             }
             catch (Exception ex)
             {

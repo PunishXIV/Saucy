@@ -1,9 +1,9 @@
 ﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Game;
-using Dalamud.Game.Chat;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.Text;
+using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Interface.Colors;
 using Dalamud.Memory;
 using ECommons.Automation.UIInput;
@@ -21,6 +21,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using static ECommons.GenericHelpers;
 
@@ -40,6 +41,8 @@ public unsafe class LimbManager : IDisposable
     public int GamesToPlay = 0;
     public LimbConfig Cfg;
     private bool Exit = false;
+    private EventInfo? chatMessageEvent;
+    private Delegate? chatMessageHandler;
 
     private static bool TidyChat => DalamudReflector.TryGetDalamudPlugin("TidyChat", out var _, false, true);
 
@@ -47,12 +50,59 @@ public unsafe class LimbManager : IDisposable
     {
         Cfg = conf;
         new EzFrameworkUpdate(Tick);
-        Svc.Chat.ChatMessage += Chat_ChatMessage;
+        SubscribeChatMessage();
     }
 
     public void Dispose()
     {
-        Svc.Chat.ChatMessage -= Chat_ChatMessage;
+        UnsubscribeChatMessage();
+    }
+
+    private void SubscribeChatMessage()
+    {
+        try
+        {
+            chatMessageEvent = Svc.Chat.GetType().GetEvent("ChatMessage");
+            if (chatMessageEvent is null)
+            {
+                PluginLog.Error("Failed to find chat message event, turning reader off");
+                return;
+            }
+
+            var method = GetType().GetMethod(nameof(Chat_ChatMessage), BindingFlags.Instance | BindingFlags.NonPublic);
+            if (method is null)
+            {
+                PluginLog.Error("Failed to bind chat message handler, turning reader off");
+                return;
+            }
+
+            chatMessageHandler = Delegate.CreateDelegate(chatMessageEvent.EventHandlerType!, this, method);
+            chatMessageEvent.AddEventHandler(Svc.Chat, chatMessageHandler);
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Error($"Failed to subscribe chat message event, turning reader off: {ex}");
+        }
+    }
+
+    private void UnsubscribeChatMessage()
+    {
+        try
+        {
+            if (chatMessageEvent != null && chatMessageHandler != null)
+            {
+                chatMessageEvent.RemoveEventHandler(Svc.Chat, chatMessageHandler);
+            }
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Error($"Failed to unsubscribe chat message event: {ex}");
+        }
+        finally
+        {
+            chatMessageHandler = null;
+            chatMessageEvent = null;
+        }
     }
 
     private void InteractWithClosestLimb()
@@ -76,21 +126,14 @@ public unsafe class LimbManager : IDisposable
             //2005423	Out on a Limb	0	Out on a Limb machines	0	1	1	0	0
             //30425	Out on a Limb machine	0	Out on a Limb machines	0	1	1	0	0	Experience the heart-exploding excitement of the Gold Saucer in your own home with this authentic Out on a Limb machine.	Out on a Limb Machine	ui/icon/052000/052680.tex	1	1	14	Out on a Limb Machine	Furnishing		EquipSlotCategory#0	125	18740	1	False	True	False	False	2	0	False	False	False	ItemAction#0	2	0	adventurer	ItemRepairResource#0		0	False	False	0	1	0	0		None		0	0, 0, 0, 0	0, 0, 0, 0	adventurer	0	0	0	0	0	0	0	0	0		0		0		0		0		0		0		0		0		0		0		0		0		0	0	0	False	False	0	False
 
-            if (x.Name.GetText().EqualsIgnoreCaseAny(Svc.Data.GetExcelSheet<EObjName>().GetRow(2005423).Singular.GetText(), Svc.Data.GetExcelSheet<Item>().GetRow(30425).Singular.GetText()) && x.ObjectKind.EqualsAny(ObjectKind.EventObj, ObjectKind.HousingEventObject) && Vector3.Distance(Player.Object.Position, x.Position) < 4)
+            if (x.Name.GetText().EqualsIgnoreCaseAny(Svc.Data.GetExcelSheet<EObjName>().GetRow(2005423).Singular.GetText(), Svc.Data.GetExcelSheet<Item>().GetRow(30425).Singular.GetText()) && x.ObjectKind.EqualsAny(ObjectKind.EventObj, ObjectKind.Housing) && Vector3.Distance(Player.Object.Position, x.Position) < 4)
             {
                 found = true;
                 if (EzThrottler.Throttle("TargetAndInteract"))
                 {
-                    if (Svc.Targets.Target?.Address == x.Address)
-                    {
-                        TargetSystem.Instance()->InteractWithObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)x.Address, false);
-                        EzThrottler.Throttle("TargetAndInteract", 10000, true);
-                        GamesToPlay--;
-                    }
-                    else
-                    {
-                        Svc.Targets.Target = x;
-                    }
+                    TargetSystem.Instance()->InteractWithObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)x.Address, false);
+                    EzThrottler.Throttle("TargetAndInteract", 10000, true);
+                    GamesToPlay--;
                 }
             }
         }
@@ -108,13 +151,19 @@ public unsafe class LimbManager : IDisposable
         [Svc.Data.GetExcelSheet<Addon>().GetRow(9713).Text.GetText().RemoveSpaces()] = HitPower.Maximum,
     };
 
-    private void Chat_ChatMessage(IHandleableChatMessage message)
+    private void Chat_ChatMessage(object message)
     {
         if (!Cfg.EnableLimb) return;
         if (!Svc.Condition[ConditionFlag.OccupiedInQuestEvent]) return;
-        var text = message.Message.TextValue.RemoveSpaces();
-        PluginLog.Information($"{message.LogKind}/{text}");
-        if (message.LogKind is XivChatType.SystemMessage && message.SourceKind is XivChatRelationKind.LocalPlayer) // old value was 2105
+        if (message is null) return;
+
+        var messageType = message.GetType();
+        var logKind = messageType.GetProperty("LogKind")?.GetValue(message)?.ToString();
+        var seString = messageType.GetProperty("Message")?.GetValue(message) as SeString;
+        var text = seString?.TextValue.RemoveSpaces() ?? string.Empty;
+
+        PluginLog.Information($"{logKind}/{text}");
+        if (logKind == nameof(XivChatType.SystemMessage))
         {
             if (HitPowerText.TryGetValue(text, out var hitPower))
             {

@@ -2,11 +2,21 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
 	<PropertyGroup>
 		<Authors>Puni.sh</Authors>
-		<Version>1.5.0.0</Version>
-	</PropertyGroup>
-
-	<PropertyGroup>
+		<Version>1.4.2.9</Version>
+		<DalamudApiLevel>15</DalamudApiLevel>
+		<TargetFramework>net10.0-windows7.0</TargetFramework>
+		<Platforms>x64</Platforms>
 		<LangVersion>preview</LangVersion>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+		<ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+		<AssemblyName>Saucy</AssemblyName>
+		<PackageId>Saucy</PackageId>
+		<Product>Saucy</Product>
+		<RootNamespace>Saucy</RootNamespace>
+		<Nullable>disable</Nullable>
+		<NoWarn>CS1591;CS8632</NoWarn>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(OS)' != 'Windows_NT' OR '$(CI)' == 'true'">
@@ -14,7 +24,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="DalamudPackager" Version="15.0.0" />
 		<PackageReference Include="ECommons" Version="3.2.0.6" />
 		<PackageReference Include="NAudio" Version="2.1.0" />
 		<PackageReference Include="NAudio.Lame" Version="2.0.1" />

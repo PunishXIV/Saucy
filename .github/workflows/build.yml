@@ -1,0 +1,83 @@
+name: build
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          include-prerelease: true
+
+      - name: Download Dalamud
+        shell: pwsh
+        run: |
+          $dalamudRoot = Join-Path $env:RUNNER_TEMP "dalamud"
+          New-Item -ItemType Directory -Path $dalamudRoot | Out-Null
+          $zipPath = Join-Path $dalamudRoot "dalamud.zip"
+          Invoke-WebRequest -UseBasicParsing "https://raw.githubusercontent.com/goatcorp/dalamud-distrib/main/api14/latest.zip" -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath $dalamudRoot
+          $dll = Get-ChildItem -Path $dalamudRoot -Recurse -Filter Dalamud.dll | Select-Object -First 1
+          if (-not $dll) { throw "Dalamud.dll not found in downloaded archive." }
+          "DALAMUD_HOME=$($dll.Directory.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding ascii
+
+      - name: Build
+        run: dotnet build Saucy.sln -c Release
+
+      - name: Collect zip
+        shell: pwsh
+        run: |
+          $outDir = Join-Path $env:RUNNER_TEMP "artifacts"
+          New-Item -ItemType Directory -Path $outDir | Out-Null
+          $zip = Get-ChildItem -Path "Saucy\\bin" -Recurse -Filter latest.zip | Select-Object -First 1
+          if (-not $zip) { throw "No latest.zip found under Saucy\\bin." }
+          Copy-Item -Path $zip.FullName -Destination (Join-Path $outDir "SaucyCN.zip")
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SaucyCN
+          path: ${{ runner.temp }}/artifacts/SaucyCN.zip
+
+      - name: Update latest tag
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+        shell: pwsh
+        run: |
+          git tag -f latest
+          git push -f origin latest
+
+      - name: Create/Update latest release
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+        uses: ncipollo/release-action@v1
+        with:
+          tag: latest
+          name: latest
+          artifacts: ${{ runner.temp }}/artifacts/SaucyCN.zip
+          allowUpdates: true
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          artifacts: ${{ runner.temp }}/artifacts/SaucyCN.zip
+          allowUpdates: true

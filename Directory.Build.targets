@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT' and '$(DALAMUD_HOME)' == ''">
+    <_XivLauncherCnRoot>$(appdata)\XIVLauncherCN\</_XivLauncherCnRoot>
+    <DalamudLibPath Condition="Exists('$(_XivLauncherCnRoot)addon\Hooks\dev\')">$(_XivLauncherCnRoot)addon\Hooks\dev\</DalamudLibPath>
+    <DalamudDevPlugins Condition="Exists('$(_XivLauncherCnRoot)devPlugins\')">$(_XivLauncherCnRoot)devPlugins\$(AssemblyName)\</DalamudDevPlugins>
+    <DalamudPluginPath Condition="Exists('$(_XivLauncherCnRoot)installedPlugins\')">$(_XivLauncherCnRoot)installedPlugins\$(AssemblyName)\$(Version)</DalamudPluginPath>
+  </PropertyGroup>
+</Project>

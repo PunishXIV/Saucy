@@ -57,6 +57,7 @@ public class PluginWindowStatus : Window, IDisposable
     {
         this.uiReaderGame = uiReaderGame;
         this.uiReaderPrep = uiReaderPrep;
+        WindowName = Localization.Localize("Plugin_Name", "Triad Buddy");
 
         IsOpen = false;
 
@@ -104,6 +105,7 @@ public class PluginWindowStatus : Window, IDisposable
         locConfigDeckEditHighlights = Localization.Localize("CFG_DeckEditHighlights", "Show highlights in deck edit");
         locConfigOptimizerCPU = Localization.Localize("CFG_OptimizerParallelLoad", "CPU usage for Deck Optimizer");
         locConfigOptimizerCPUHint = Localization.Localize("CFG_OptimizerParallelLoadHint", "Controls number of logical processors used for calculations. Does not reduce load of individual CPUs!");
+        WindowName = Localization.Localize("Plugin_Name", "Triad Buddy");
     }
 
     public override void OnOpen()
