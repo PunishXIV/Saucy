@@ -2,7 +2,6 @@
 using Saucy.OutOnALimb.ECEmbedded;
 
 namespace Saucy.OutOnALimb;
-
 public unsafe class ReaderMiniGameBotanist(AtkUnitBase* UnitBase, int BeginOffset = 0) : AtkReader(UnitBase, BeginOffset)
 {
     public uint State => ReadUInt(0) ?? 0;

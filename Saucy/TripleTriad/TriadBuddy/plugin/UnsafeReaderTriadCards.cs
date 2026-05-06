@@ -16,8 +16,9 @@ public class UnsafeReaderTriadCards
     public UnsafeReaderTriadCards()
     {
         var IsNpcBeatenPtr = IntPtr.Zero;
+        var sigScanner = Service.sigScanner;
 
-        if (Svc.SigScanner != null)
+        if (sigScanner != null)
         {
             try
             {
@@ -25,10 +26,10 @@ public class UnsafeReaderTriadCards
                 //   identified by pretty unique rowId from TripleTriad sheet: 0x230002
                 //   looking for negative of that number (0xFFDCFFFE) gives pretty much only npc access functions (set + get)
 
-                IsNpcBeatenPtr = Svc.SigScanner.ScanText("E8 ?? ?? ?? ?? 84 C0 0F 94 C0 88 43 58 45 33 FF");
+                IsNpcBeatenPtr = sigScanner.ScanText("E8 ?? ?? ?? ?? 84 C0 0F 94 C0 88 43 58 45 33 FF");
 
                 // UIState addr, use LEA opcode before calling IsTriadCardOwned, same function as described above
-                UIStatePtr = Svc.SigScanner.GetStaticAddressFromSig("E8 ?? ?? ?? ?? EB 35 8B FD");
+                UIStatePtr = sigScanner.GetStaticAddressFromSig("E8 ?? ?? ?? ?? EB 35 8B FD");
             }
             catch (Exception ex)
             {

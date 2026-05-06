@@ -10,7 +10,7 @@ namespace TriadBuddyPlugin;
 
 public class Plugin
 {
-    public string Name => "Triad Buddy";
+    public string Name => Localization.Localize("Plugin_Name", "Triad Buddy");
 
     private readonly WindowSystem windowSystem = new("TriadBuddy");
 
@@ -38,7 +38,7 @@ public class Plugin
 
         Service.plugin = this;
         Service.pluginInterface = pluginInterface;
-        //Service.pluginConfig = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        Service.pluginConfig = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
         // prep utils
         var myAssemblyName = GetType().Assembly.GetName().Name;

@@ -47,12 +47,14 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
     private string? locNoAvail;
     private string? locNpcStats;
     private string? locEstMGP;
+    private string? locWindowTitle;
     private bool hasCachedLocStrings;
 
     public PluginWindowCardSearch(UIReaderTriadCardList uiReaderCardList, PluginWindowNpcStats statsWindow) : base("Card Search")
     {
         this.uiReaderCardList = uiReaderCardList;
         this.statsWindow = statsWindow;
+        WindowName = Localization.Localize("CS_Title", "Card Search");
 
         var searchFilterCardPtr = ImGuiNative.ImGuiTextFilter(null);
         searchFilterCard = new ImGuiTextFilterPtr(searchFilterCardPtr);
@@ -107,6 +109,8 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         if (hasCachedLocStrings) { return; }
         hasCachedLocStrings = true;
 
+        locWindowTitle = Localization.Localize("CS_Title", "Card Search");
+        WindowName = locWindowTitle;
         locNpcOnly = Localization.Localize("CS_NpcOnly", "NPC matches only");
         locNotOwnedOnly = Localization.Localize("CS_NotOwnedOnly", "Not owned only");
         locFilterActive = Localization.Localize("CS_FilterActive", "(Collection filtering is active)");

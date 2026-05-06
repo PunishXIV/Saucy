@@ -10,12 +10,12 @@ using Saucy.OutOnALimb.ECEmbedded;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static Saucy.UiText;
 
 namespace Saucy.MiniCactpot;
-
 public unsafe class MiniCactpot : Module
 {
-    public override string Name => "Mini Cactpot";
+    public override string Name => GameMiniCactpot;
 
     private readonly CactpotSolver _solver = new();
     private int[]? boardState;

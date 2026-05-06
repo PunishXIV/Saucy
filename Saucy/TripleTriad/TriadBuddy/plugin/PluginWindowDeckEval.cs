@@ -29,6 +29,7 @@ public class PluginWindowDeckEval : Window, IDisposable
     private string? locOptimize;
     private string? locNpcStats;
     private string? locStatusPvPMatch;
+    private string? locWindowTitle;
     private bool hasCachedLocStrings;
 
     public PluginWindowDeckEval(UIReaderTriadPrep uiReaderPrep, PluginWindowDeckOptimize optimizerWindow, PluginWindowNpcStats statsWindow) : base("Deck Eval")
@@ -37,6 +38,7 @@ public class PluginWindowDeckEval : Window, IDisposable
         this.uiReaderPrep = uiReaderPrep;
         this.optimizerWindow = optimizerWindow;
         this.statsWindow = statsWindow;
+        WindowName = Localization.Localize("DE_Title", "Deck Eval");
 
         uiReaderPrep.OnMatchRequestChanged += OnMatchRequestChanged;
         OnMatchRequestChanged(uiReaderPrep.HasMatchRequestUI);
@@ -72,6 +74,8 @@ public class PluginWindowDeckEval : Window, IDisposable
         if (hasCachedLocStrings) { return; }
         hasCachedLocStrings = true;
 
+        locWindowTitle = Localization.Localize("DE_Title", "Deck Eval");
+        WindowName = locWindowTitle;
         locEvaluating = Localization.Localize("DE_Evaluating", "Evaluating decks...");
         locWinChance = Localization.Localize("DE_WinChance", "win {0:P0}");
         locCantFind = Localization.Localize("DE_Failed", "Err.. Can't find best deck :<");

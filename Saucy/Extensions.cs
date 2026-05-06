@@ -1,7 +1,6 @@
 ﻿using Dalamud.Bindings.ImGui;
 
 namespace Saucy;
-
 public static unsafe class Extensions
 {
     public static bool PassFilterBool(this ImGuiTextFilterPtr self, ImU8String text)

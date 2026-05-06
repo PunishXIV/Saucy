@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using static ECommons.GenericHelpers;
 using static TriadBuddyPlugin.UIReaderTriadGame;
+using AtkValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 
 namespace Saucy.TripleTriad;
 

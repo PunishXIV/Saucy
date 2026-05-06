@@ -22,6 +22,7 @@ public class PluginWindowCardInfo : Window, IDisposable
     private int rewardSourceIdx = -1;
     private int numRewardSources = 0;
 
+    private string? locWindowTitle;
     private string? locNpcReward;
     private string? locShowOnMap;
     private string? locNoAvail;
@@ -30,6 +31,7 @@ public class PluginWindowCardInfo : Window, IDisposable
     public PluginWindowCardInfo(UIReaderTriadCardList uiReaderCardList) : base("Card Info")
     {
         this.uiReaderCardList = uiReaderCardList;
+        WindowName = Localization.Localize("CI_Title", "Card Info");
 
         uiReaderCardList.OnVisibilityChanged += (_) => UpdateWindowData();
         uiReaderCardList.OnUIStateChanged += (_) => UpdateWindowData();
@@ -66,6 +68,8 @@ public class PluginWindowCardInfo : Window, IDisposable
         if (hasCachedLocStrings) { return; }
         hasCachedLocStrings = true;
 
+        locWindowTitle = Localization.Localize("CI_Title", "Card Info");
+        WindowName = locWindowTitle;
         locNpcReward = Localization.Localize("CI_NpcReward", "NPC reward:");
         locShowOnMap = Localization.Localize("CI_ShowMap", "Show on map");
         locNoAvail = Localization.Localize("CI_NotAvail", "Not available");

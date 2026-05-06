@@ -1,4 +1,5 @@
-﻿using Dalamud.Bindings.ImGui;
+using Dalamud;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
 using Saucy;
@@ -22,10 +23,13 @@ public unsafe class PluginWindowDeckSearch : Window, IDisposable
 
     private int prevNumFiltered;
     private int prevNumCards;
+    private string? locWindowTitle;
+    private bool hasCachedLocStrings;
 
     public PluginWindowDeckSearch(UIReaderTriadDeckEdit uiReaderDeckEdit) : base("Deck Search")
     {
         this.uiReaderDeckEdit = uiReaderDeckEdit;
+        WindowName = Localization.Localize("DS_Title", "Deck Search");
 
         var searchFilterPtr = ImGuiNative.ImGuiTextFilter(null);
         searchFilter = new ImGuiTextFilterPtr(searchFilterPtr);
@@ -50,6 +54,11 @@ public unsafe class PluginWindowDeckSearch : Window, IDisposable
             ImGuiWindowFlags.NoDocking |
             ImGuiWindowFlags.NoFocusOnAppearing |
             ImGuiWindowFlags.NoNav;
+
+        if (Plugin.CurrentLocManager != null)
+        {
+            Plugin.CurrentLocManager.LocalizationChanged += (_) => { hasCachedLocStrings = false; };
+        }
     }
 
     public void Dispose()
@@ -104,6 +113,7 @@ public unsafe class PluginWindowDeckSearch : Window, IDisposable
 
     public override void Draw()
     {
+        UpdateLocalizationCache();
         searchFilter.Draw("", WindowContentWidth * ImGuiHelpers.GlobalScale);
 
         var filteredCards = new List<int>();
@@ -143,6 +153,15 @@ public unsafe class PluginWindowDeckSearch : Window, IDisposable
 
             uiReaderDeckEdit.SetSearchResultHighlight([.. filteredCards]);
         }
+    }
+
+    private void UpdateLocalizationCache()
+    {
+        if (hasCachedLocStrings) { return; }
+        hasCachedLocStrings = true;
+
+        locWindowTitle = Localization.Localize("DS_Title", "Deck Search");
+        WindowName = locWindowTitle;
     }
 
     private void OnCardSelectionChanged()

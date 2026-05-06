@@ -69,6 +69,7 @@ public class PluginWindowDeckOptimize : Window, IDisposable
     {
         solver = SolverUtils.solverDeckOptimize;
         this.uiReaderDeckEdit = uiReaderDeckEdit;
+        WindowName = Localization.Localize("DO_Title", "Deck Optimizer");
 
         deckOptimizer = (solver != null) ? solver.deckOptimizer : new TriadDeckOptimizer();
         deckOptimizer.OnFoundDeck += DeckOptimizer_OnFoundDeck;
