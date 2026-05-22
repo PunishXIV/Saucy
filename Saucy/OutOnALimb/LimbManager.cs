@@ -247,20 +247,16 @@ public unsafe class LimbManager : IDisposable
                         {
                             if (Request != null)
                             {
-                                if (Math.Abs(cursor - Request.Value) < Cfg.Tolerance)
-                                {
-                                    if (SafeClickButtonBotanist()) Request = null;
-                                }
+                                AtkStage.Instance()->GetNumberArrayData(NumberArrayType.GoldSaucerArcadeMachine)->IntArray[0] = Math.Clamp(Request.Value * 100 + Random.Shared.Next(200) - 100, 1, 9999);
+                                if (SafeClickButtonBotanist()) Request = null;
                             }
                         }
                         else
                         {
                             if (Next != null)
                             {
-                                if (Math.Abs(cursor - Next.Value) < Cfg.Tolerance)
-                                {
-                                    if (SafeClickButtonBotanist()) Next = null;
-                                }
+                                AtkStage.Instance()->GetNumberArrayData(NumberArrayType.GoldSaucerArcadeMachine)->IntArray[0] = Math.Clamp(Next.Value * 100 + Random.Shared.Next(200) - 100, 1, 9999);
+                                if (SafeClickButtonBotanist()) Next = null;
                             }
                         }
                     }
@@ -441,10 +437,6 @@ public unsafe class LimbManager : IDisposable
         [LimbDifficulty.Morbol] = [240, 120, 90, 60, 30],
         [LimbDifficulty.Cactuar] = [120, 90, 60, 30, 15],
     };
-    private int CalcRequiredFPS()
-    {
-        return FPSRequirements.SafeSelect(Cfg.LimbDifficulty)?.SafeSelect(Cfg.Tolerance) ?? -1;
-    }
 
     public void DrawSettings()
     {
@@ -463,15 +455,6 @@ public unsafe class LimbManager : IDisposable
         ImGui.Separator();
         ImGui.SetNextItemWidth(100f);
         save |= ImGuiEx.EnumCombo("Difficulty", ref Cfg.LimbDifficulty);
-        ImGui.SetNextItemWidth(100f);
-        save |= ImGuiEx.SliderInt($"Tolerance", ref Cfg.Tolerance.ValidateRange(1, 4), 1, 4);
-        ImGui.SameLine();
-        if (ImGui.Button("Default##1")) Cfg.Tolerance = new LimbConfig().Tolerance;
-        var req = CalcRequiredFPS();
-        var current = ImGui.GetIO().Framerate;
-        var delta = current - req;
-        ImGuiEx.TextWrapped(delta > -1 ? ImGuiColors.ParsedGreen : (delta > -(req * 0.15f) ? ImGuiColors.DalamudYellow : ImGuiColors.DalamudRed), $"Required framerate: {req}\nYour framerate: {(int)current}");
-        ImGuiEx.TextWrapped($"Reducing tolerance or difficulty will reduce required framerate.");
         ImGui.SetNextItemWidth(100f);
         save |= ImGui.DragInt($"Step", ref Cfg.Step, 0.05f);
         ImGui.SameLine();
