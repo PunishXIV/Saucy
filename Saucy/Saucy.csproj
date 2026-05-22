@@ -25,13 +25,13 @@
 	  <None Update="Saucy.json">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>
-	  <None Update="Sounds\Game Over.mp3">
+	  <None Include="Sounds\Game Over.mp3">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
-	  <None Update="Sounds\Moogle.mp3">
+	  <None Include="Sounds\Moogle.mp3">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
-	  <None Update="Sounds\Time Up.mp3">
+	  <None Include="Sounds\Time Up.mp3">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	</ItemGroup>
