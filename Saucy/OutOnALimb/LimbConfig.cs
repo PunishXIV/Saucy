@@ -8,7 +8,6 @@ namespace Saucy.OutOnALimb;
 public class LimbConfig
 {
     public bool EnableLimb = false;
-    public int Tolerance = 2;
     public int Step = 10;
     public int StopAt = 18;
     public int HardStopAt = 12;
