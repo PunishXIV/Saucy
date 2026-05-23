@@ -9,6 +9,7 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
 using NAudio.Wave;
 using PunishLib;
+using Saucy.AirForce;
 using Saucy.CuffACur;
 using Saucy.Framework;
 using Saucy.OtherGames;
@@ -294,6 +295,11 @@ public sealed class Saucy : IDalamudPlugin
         catch (Exception ex)
         {
             Svc.Log.Error(ex, "state update failed");
+        }
+
+        if (C.AirForceEnabled)
+        {
+            AirForceModule.OnUpdate();
         }
 
         if (C.OpenAutomatically && uiReaderPrep.HasMatchRequestUI && !TriadAutomater.ModuleEnabled)

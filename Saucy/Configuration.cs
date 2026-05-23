@@ -34,6 +34,8 @@ public class Configuration : IPluginConfiguration
 
     public LimbConfig LimbConfig { get; set; } = new();
 
+    public bool AirForceEnabled = false;
+
     public void UpdateStats(Action<Stats> updateAction)
     {
         updateAction(Stats);

@@ -65,7 +65,7 @@ public unsafe class PluginUI : Window
 
     private void DrawOtherGamesTab()
     {
-        //ImGui.Checkbox("Enable Air Force One Module", ref AirForceOneModule.ModuleEnabled);
+        ImGui.Checkbox("Enable Air Force One Module", ref C.AirForceEnabled);
 
         if (ImGui.Checkbox("Enable Slice is Right Module", ref C.SliceIsRightModuleEnabled))
         {
