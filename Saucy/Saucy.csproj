@@ -2,7 +2,7 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
 	<PropertyGroup>
 		<Authors>Puni.sh</Authors>
-		<Version>1.5.1.4</Version>
+		<Version>1.5.1.5</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -15,9 +15,10 @@
 
 	<ItemGroup>
 		<PackageReference Include="ECommons" Version="3.2.0.19" />
-		<PackageReference Include="NAudio" Version="2.1.0" />
-		<PackageReference Include="NAudio.Lame" Version="2.0.1" />
+		<PackageReference Include="NAudio" Version="2.3.0" />
+		<PackageReference Include="NAudio.Lame" Version="2.1.0" />
 		<ProjectReference Include="..\PunishLib\PunishLib\PunishLib.csproj" />
+		<PackageReference Update="DotNet.ReproducibleBuilds" Version="2.0.2" />
 	</ItemGroup>
 
 	<ItemGroup>
