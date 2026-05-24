@@ -38,12 +38,11 @@ public unsafe class MiniCactpot : Module
             {
                 LogVerbose($"[{nameof(MiniCactpot)}] Processing new state, TaskManager.IsBusy: {TaskManager.IsBusy}, isProcessing: {isProcessing}");
                 ProcessGameState(addon, newState);
+                boardState = newState;
             }
             else
                 LogVerbose($"[{nameof(MiniCactpot)}] Skipping state processing - isProcessing: {isProcessing}, TaskManager.IsBusy: {TaskManager.IsBusy}");
         }
-
-        boardState = newState;
     }
 
     private void ProcessGameState(AddonLotteryDaily* addon, int[] newState)
