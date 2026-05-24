@@ -3,7 +3,6 @@ using MgAl2O4.Utils;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
 namespace TriadBuddyPlugin;
 
 public class SolverGame
@@ -13,22 +12,23 @@ public class SolverGame
         NoErrors,
         FailedToParseCards,
         FailedToParseRules,
-        FailedToParseNpc,
+        FailedToParseNpc
     }
+
+    public TriadNpc? currentNpc;
+    public bool hasMove;
+
+    public TriadNpc? lastGameNpc;
+    public int moveBoardIdx;
+    public int moveCardIdx;
+    public SolverResult moveWinChance;
+
+    public Status status;
 
     public TriadGameScreenMemory? DebugScreenMemory { get; } = new();
 
     public ScannerTriad.GameState? DebugScreenState { get; private set; }
-
-    public TriadNpc? lastGameNpc;
-    public TriadNpc? currentNpc;
     public TriadCard? MoveCard => DebugScreenMemory.deckBlue?.GetCard(moveCardIdx);
-    public int moveCardIdx;
-    public int moveBoardIdx;
-    public SolverResult moveWinChance;
-    public bool hasMove;
-
-    public Status status;
     public bool HasErrors => status != Status.NoErrors;
 
     public event Action<bool>? OnMoveChanged;
@@ -133,10 +133,7 @@ public class SolverGame
         return Task.FromResult(new Tuple<int, int, SolverResult>(bestCardIdx, bestBoardPos, solverResult));
     }
 
-    public void UpdateKnownPlayerDeck(TriadDeck playerDeck)
-    {
-        DebugScreenMemory.UpdatePlayerDeck(playerDeck);
-    }
+    public void UpdateKnownPlayerDeck(TriadDeck playerDeck) => DebugScreenMemory.UpdatePlayerDeck(playerDeck);
 
     public (List<TriadCard>, List<TriadCard>) GetScreenRedDeckDebug()
     {

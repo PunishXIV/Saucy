@@ -1,7 +1,6 @@
 ﻿using MgAl2O4.Utils;
 using System;
 using System.Collections.Generic;
-
 namespace FFTriadBuddy;
 
 public enum ETriadGameState
@@ -10,24 +9,23 @@ public enum ETriadGameState
     InProgressRed,
     BlueWins,
     BlueDraw,
-    BlueLost,
+    BlueLost
 }
 
 public class TriadGameSimulationState
 {
+    public const int boardSize = 3;
+    public const int boardSizeSq = boardSize * boardSize;
+    public bool bDebugRules;
     public TriadCardInstance[] board;
     public TriadDeckInstance deckBlue;
     public TriadDeckInstance deckRed;
-    public ETriadGameState state;
-    public ETriadGameSpecialMod resolvedSpecial;
-    public int[] typeMods;
+    public int forcedCardIdx;
     public int numCardsPlaced;
     public int numRestarts;
-    public int forcedCardIdx;
-    public bool bDebugRules;
-
-    public const int boardSize = 3;
-    public const int boardSizeSq = boardSize * boardSize;
+    public ETriadGameSpecialMod resolvedSpecial;
+    public ETriadGameState state;
+    public int[] typeMods;
 
     public TriadGameSimulationState()
     {
@@ -72,11 +70,10 @@ public class TriadGameSimulationState
 
 public class TriadGameSimulation
 {
+    public static int[][] cachedNeis = new int[9][];
+    public TriadGameModifier.EFeature modFeatures = TriadGameModifier.EFeature.None;
     public List<TriadGameModifier> modifiers = [];
     public ETriadGameSpecialMod specialRules;
-    public TriadGameModifier.EFeature modFeatures = TriadGameModifier.EFeature.None;
-
-    public static int[][] cachedNeis = new int[9][];
 
     public TriadGameSimulationState StartGame(TriadDeck deckBlue, TriadDeck deckRed, ETriadGameState state)
     {
@@ -85,11 +82,9 @@ public class TriadGameSimulation
             mod.OnMatchInit();
         }
 
-        return new TriadGameSimulationState()
+        return new()
         {
-            state = state,
-            deckBlue = new TriadDeckInstanceManual(deckBlue),
-            deckRed = new TriadDeckInstanceManual(deckRed)
+            state = state, deckBlue = new TriadDeckInstanceManual(deckBlue), deckRed = new TriadDeckInstanceManual(deckRed)
         };
     }
 
@@ -129,10 +124,7 @@ public class TriadGameSimulation
         }
     }
 
-    public bool HasSpecialRule(ETriadGameSpecialMod specialRule)
-    {
-        return (specialRules & specialRule) != ETriadGameSpecialMod.None;
-    }
+    public bool HasSpecialRule(ETriadGameSpecialMod specialRule) => (specialRules & specialRule) != ETriadGameSpecialMod.None;
 
     public bool PlaceCard(TriadGameSimulationState gameState, int cardIdx, TriadDeckInstance cardDeck, ETriadCardOwner owner, int boardPos)
     {
@@ -145,7 +137,7 @@ public class TriadGameSimulation
         var card = cardDeck.GetCard(cardIdx);
         if (bIsAllowedOwner && (boardPos >= 0) && (gameState.board[boardPos] == null) && (card != null))
         {
-            gameState.board[boardPos] = new TriadCardInstance(card, owner);
+            gameState.board[boardPos] = new(card, owner);
             gameState.numCardsPlaced++;
 
             if (owner == ETriadCardOwner.Blue)
@@ -215,10 +207,7 @@ public class TriadGameSimulation
         return PlaceCard(gameState, cardIdx, useDeck, owner, boardPos);
     }
 
-    public static int GetBoardPos(int x, int y)
-    {
-        return x + (y * TriadGameSimulationState.boardSize);
-    }
+    public static int GetBoardPos(int x, int y) => x + (y * TriadGameSimulationState.boardSize);
 
     public static void GetBoardXY(int pos, out int x, out int y)
     {

@@ -3,68 +3,58 @@ using MgAl2O4.Utils;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
 namespace TriadBuddyPlugin;
 
 public class Solver
 {
+    public delegate void SolveDeckDelegate(SolverResult winChance);
+
     public enum Status
     {
         NoErrors,
         FailedToParseCards,
         FailedToParseRules,
-        FailedToParseNpc,
+        FailedToParseNpc
     }
 
-    public UnsafeReaderProfileGS profileGS;
+    private readonly object preGameLock = new();
+
+    public ScannerTriad.GameState cachedScreenState;
+    public TriadNpc currentNpc;
 
     // optimizer
     public TriadDeckOptimizer deckOptimizer = new();
-    private bool pauseOptimizerForSolver = false;
-    private bool pauseOptimizerForOptimizedEval = false;
-    private bool pauseOptimizerForDeckEval = false;
-
-    public TriadGameScreenMemory DebugScreenMemory { get; } = new();
-
-    public ScannerTriad.GameState cachedScreenState;
-    public ScannerTriad.GameState DebugScreenState => cachedScreenState;
-
-    public TriadNpc lastGameNpc;
-    public TriadNpc currentNpc;
-    public TriadCard MoveCard => DebugScreenMemory.deckBlue?.GetCard(moveCardIdx);
-    public int moveCardIdx;
-    public int moveBoardIdx;
-    public SolverResult moveWinChance;
     public bool hasMove;
 
-    // deck selection
-    public class DeckData
-    {
-        public string name;
-        public int id;
-        public TriadDeck solverDeck;
-        public SolverResult chance;
-    }
+    public TriadNpc lastGameNpc;
+    public int moveBoardIdx;
+    public int moveCardIdx;
+    public SolverResult moveWinChance;
+    private bool pauseOptimizerForDeckEval;
+    private bool pauseOptimizerForOptimizedEval;
+    private bool pauseOptimizerForSolver;
+    public int preGameBestId = -1;
+    public Dictionary<int, DeckData> preGameDecks = [];
+    private int preGameId;
+    public List<TriadGameModifier> preGameMods = [];
 
     public TriadNpc preGameNpc;
-    public List<TriadGameModifier> preGameMods = [];
-    public Dictionary<int, DeckData> preGameDecks = [];
-    public float PreGameProgress => (preGameDecks.Count > 0) ? (1.0f * preGameSolved / preGameDecks.Count) : 0.0f;
-    public int preGameBestId = -1;
-    private int preGameId = 0;
-    private int preGameSolved = 0;
-    private readonly object preGameLock = new();
+    private int preGameSolved;
+
+    public UnsafeReaderProfileGS profileGS;
 
     public Status status;
+
+    public Solver() => TriadGameSimulation.StaticInitialize();
+
+    public TriadGameScreenMemory DebugScreenMemory { get; } = new();
+    public ScannerTriad.GameState DebugScreenState => cachedScreenState;
+    public TriadCard MoveCard => DebugScreenMemory.deckBlue?.GetCard(moveCardIdx);
+    public float PreGameProgress => (preGameDecks.Count > 0) ? (1.0f * preGameSolved / preGameDecks.Count) : 0.0f;
     public bool HasErrors => status != Status.NoErrors;
     public bool HasAllProfileDecksEmpty { get; private set; }
 
     public event Action<bool> OnMoveChanged;
-
-    public Solver()
-    {
-        TriadGameSimulation.StaticInitialize();
-    }
 
     public async void UpdateGame(UIStateTriadGame stateOb)
     {
@@ -212,17 +202,6 @@ public class Solver
         return (knownCards, unknownCards);
     }
 
-    public delegate void SolveDeckDelegate(SolverResult winChance);
-
-    private class DeckSolverContext
-    {
-        public TriadGameSolver solver;
-        public TriadGameSimulationState gameState;
-        public SolveDeckDelegate callback;
-        public int deckId;
-        public int passId;
-    }
-
     public void UpdateDecks(UIStateTriadPrep state)
     {
         // don't report status here, just log stuff out
@@ -248,10 +227,10 @@ public class Solver
 
         var canReadFromProfile = profileGS != null && !profileGS.HasErrors;
         var canProcessDecks = !parseCtx.HasErrors &&
-            // case 1: it's play request screen, no deck info in ui, proceed only if profile reader is available
-            ((state.decks.Count == 0 && canReadFromProfile) ||
-            // case 2: it's deck selection screen, ui has deck info, proceed only if solved already (profile reader not available)
-            (state.decks.Count > 0 && !canReadFromProfile));
+                              // case 1: it's play request screen, no deck info in ui, proceed only if profile reader is available
+                              ((state.decks.Count == 0 && canReadFromProfile) ||
+                               // case 2: it's deck selection screen, ui has deck info, proceed only if solved already (profile reader not available)
+                               (state.decks.Count > 0 && !canReadFromProfile));
 
         if (canProcessDecks)
         {
@@ -294,7 +273,7 @@ public class Solver
 
             // initialize screenMemory.playerDeck, see comment in OnSolvedDeck() for details
             HasAllProfileDecksEmpty = (profileDecks != null) && (anyDeckOb == null);
-            anyDeckOb ??= new TriadDeck(PlayerSettingsDB.Get().starterCards);
+            anyDeckOb ??= new(PlayerSettingsDB.Get().starterCards);
             DebugScreenMemory.UpdatePlayerDeck(anyDeckOb);
 
             foreach (var kvp in preGameDecks)
@@ -303,12 +282,15 @@ public class Solver
                 deckSolver.InitializeSimulation(preGameMods);
 
                 var gameState = deckSolver.StartSimulation(kvp.Value.solverDeck, preGameNpc.Deck, ETriadGameState.InProgressBlue);
-                var calcContext = new DeckSolverContext() { solver = deckSolver, gameState = gameState, deckId = kvp.Value.id, passId = preGameId };
+                var calcContext = new DeckSolverContext
+                {
+                    solver = deckSolver, gameState = gameState, deckId = kvp.Value.id, passId = preGameId
+                };
 
                 void solverAction(object ctxOb)
                 {
                     var ctx = ctxOb as DeckSolverContext;
-                    ctx.solver.FindNextMove(ctx.gameState, out _, out _, out var solverResult);
+                    ctx.solver.FindNextMove(ctx.gameState, out var _, out var _, out var solverResult);
                     OnSolvedDeck(ctx.passId, ctx.deckId, solverResult);
                 }
 
@@ -369,7 +351,10 @@ public class Solver
             return null;
         }
 
-        var deckData = new DeckData() { id = deckOb.id, name = deckOb.name };
+        var deckData = new DeckData
+        {
+            id = deckOb.id, name = deckOb.name
+        };
 
         var cards = new TriadCard[5];
         for (var cardIdx = 0; cardIdx < 5; cardIdx++)
@@ -401,7 +386,10 @@ public class Solver
         DeckData deckData = null;
         if (numValidCards == 5)
         {
-            deckData = new DeckData() { id = deckOb.id, name = deckOb.name };
+            deckData = new()
+            {
+                id = deckOb.id, name = deckOb.name
+            };
 
             var cards = new TriadCard[5];
             for (var cardIdx = 0; cardIdx < 5; cardIdx++)
@@ -476,7 +464,10 @@ public class Solver
         deckSolver.InitializeSimulation(npc.Rules, regionMods);
 
         var gameState = deckSolver.StartSimulation(deck, npc.Deck, ETriadGameState.InProgressBlue);
-        var calcContext = new DeckSolverContext() { solver = deckSolver, gameState = gameState, callback = callback };
+        var calcContext = new DeckSolverContext
+        {
+            solver = deckSolver, gameState = gameState, callback = callback
+        };
 
         pauseOptimizerForOptimizedEval = true;
         UpdateDeckOptimizerPause();
@@ -484,7 +475,7 @@ public class Solver
         void solverAction(object ctxOb)
         {
             var ctx = ctxOb as DeckSolverContext;
-            ctx.solver.FindNextMove(ctx.gameState, out _, out _, out var solverResult);
+            ctx.solver.FindNextMove(ctx.gameState, out var _, out var _, out var solverResult);
             callback?.Invoke(solverResult);
 
             pauseOptimizerForOptimizedEval = false;
@@ -494,8 +485,23 @@ public class Solver
         new TaskFactory().StartNew(solverAction, calcContext);
     }
 
-    private void UpdateDeckOptimizerPause()
+    private void UpdateDeckOptimizerPause() => deckOptimizer.SetPaused(pauseOptimizerForSolver || pauseOptimizerForDeckEval || pauseOptimizerForOptimizedEval);
+
+    // deck selection
+    public class DeckData
     {
-        deckOptimizer.SetPaused(pauseOptimizerForSolver || pauseOptimizerForDeckEval || pauseOptimizerForOptimizedEval);
+        public SolverResult chance;
+        public int id;
+        public string name;
+        public TriadDeck solverDeck;
+    }
+
+    private class DeckSolverContext
+    {
+        public SolveDeckDelegate callback;
+        public int deckId;
+        public TriadGameSimulationState gameState;
+        public int passId;
+        public TriadGameSolver solver;
     }
 }

@@ -1,7 +1,6 @@
 ﻿using FFTriadBuddy;
 using System;
 using System.Collections.Generic;
-
 namespace TriadBuddyPlugin;
 
 public enum GameCardCollectionFilter
@@ -9,29 +8,29 @@ public enum GameCardCollectionFilter
     All,
     OnlyOwned,
     OnlyMissing,
-    DeckEditDefault,
+    DeckEditDefault
 }
 
 public class GameCardInfo
 {
-    public struct CollectionPos
-    {
-        public int PageIndex;
-        public int CellIndex;
-    }
-
     public int CardId;
-    public int SortKey;
-    public int SaleValue;
+    public CollectionPos[] Collection = new CollectionPos[4];
+
+    // call GameCardDB.Refresh() before reading fields below
+    public bool IsOwned;
 
     // available only when it's an NPC fight reward
     public uint ItemId;
 
     public List<int> RewardNpcs = [];
+    public int SaleValue;
+    public int SortKey;
 
-    // call GameCardDB.Refresh() before reading fields below
-    public bool IsOwned;
-    public CollectionPos[] Collection = new CollectionPos[4];
+    public struct CollectionPos
+    {
+        public int PageIndex;
+        public int CellIndex;
+    }
 }
 
 // aguments TriadCardDB with stuff not related to game logic
@@ -40,13 +39,13 @@ public class GameCardDB
     private static readonly GameCardDB instance = new();
     public static readonly int MaxGridPages = 15;
     public static readonly int MaxGridCells = 30;
+    public Dictionary<int, GameCardInfo> mapCards = [];
+    private int maxCardId;
 
     public UnsafeReaderTriadCards? memReader;
-    public Dictionary<int, GameCardInfo> mapCards = [];
     public List<int> ownedCardIds = [];
-    private int maxCardId = 0;
 
-    public static GameCardDB Get() { return instance; }
+    public static GameCardDB Get() => instance;
 
     public GameCardInfo? FindById(int cardId)
     {
@@ -152,7 +151,10 @@ public class GameCardDB
 
         sortedTriadCards.Sort((a, b) => a.SortOrder.CompareTo(b.SortOrder));
 
-        var noCollectionData = new GameCardInfo.CollectionPos() { PageIndex = -1, CellIndex = -1 };
+        var noCollectionData = new GameCardInfo.CollectionPos
+        {
+            PageIndex = -1, CellIndex = -1
+        };
 
         for (var filterIdx = 0; filterIdx < 3; filterIdx++)
         {
@@ -186,12 +188,18 @@ public class GameCardDB
                             pageIdx++;
                         }
 
-                        cardInfoOb.Collection[filterIdx] = new GameCardInfo.CollectionPos() { PageIndex = pageIdx, CellIndex = cellIdx };
+                        cardInfoOb.Collection[filterIdx] = new()
+                        {
+                            PageIndex = pageIdx, CellIndex = cellIdx
+                        };
                         cellIdx++;
                     }
                     else
                     {
-                        cardInfoOb.Collection[filterIdx] = new GameCardInfo.CollectionPos() { PageIndex = -1, CellIndex = -1 };
+                        cardInfoOb.Collection[filterIdx] = new()
+                        {
+                            PageIndex = -1, CellIndex = -1
+                        };
                     }
                 }
             }
@@ -228,7 +236,10 @@ public class GameCardDB
             return a.Item1.SortOrder.CompareTo(b.Item1.SortOrder);
         });
 
-        var noCollectionData = new GameCardInfo.CollectionPos() { PageIndex = -1, CellIndex = -1 };
+        var noCollectionData = new GameCardInfo.CollectionPos
+        {
+            PageIndex = -1, CellIndex = -1
+        };
 
         var filterIdx = (int)GameCardCollectionFilter.DeckEditDefault;
         var pageIdx = 0;
@@ -248,12 +259,18 @@ public class GameCardDB
                         pageIdx++;
                     }
 
-                    cardInfoOb.Collection[filterIdx] = new GameCardInfo.CollectionPos() { PageIndex = pageIdx, CellIndex = cellIdx };
+                    cardInfoOb.Collection[filterIdx] = new()
+                    {
+                        PageIndex = pageIdx, CellIndex = cellIdx
+                    };
                     cellIdx++;
                 }
                 else
                 {
-                    cardInfoOb.Collection[filterIdx] = new GameCardInfo.CollectionPos() { PageIndex = -1, CellIndex = -1 };
+                    cardInfoOb.Collection[filterIdx] = new()
+                    {
+                        PageIndex = -1, CellIndex = -1
+                    };
                 }
             }
         }

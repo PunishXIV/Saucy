@@ -1,22 +1,21 @@
 ﻿using FFTriadBuddy;
 using System;
-
 namespace TriadBuddyPlugin;
 
 public class GameUIParser
 {
     public const int PartialNpcNameLength = 20;
 
-    public TriadCardDB cards = TriadCardDB.Get();
-    public TriadNpcDB npcs = TriadNpcDB.Get();
-    public TriadGameModifierDB mods = TriadGameModifierDB.Get();
-
-    public bool hasFailedCard = false;
-    public bool hasFailedModifier = false;
-    public bool hasFailedNpc = false;
-    public bool HasErrors => hasFailedCard || hasFailedModifier || hasFailedNpc;
-
     private static string? lastLoggedNpc;
+
+    public TriadCardDB cards = TriadCardDB.Get();
+
+    public bool hasFailedCard;
+    public bool hasFailedModifier;
+    public bool hasFailedNpc;
+    public TriadGameModifierDB mods = TriadGameModifierDB.Get();
+    public TriadNpcDB npcs = TriadNpcDB.Get();
+    public bool HasErrors => hasFailedCard || hasFailedModifier || hasFailedNpc;
 
     public void Reset()
     {

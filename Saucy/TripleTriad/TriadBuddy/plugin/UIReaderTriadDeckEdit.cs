@@ -1,40 +1,27 @@
-﻿using FFXIVClientStructs.FFXIV.Component.GUI;
-using Dalamud.Bindings.ImGui;
+﻿using Dalamud.Bindings.ImGui;
+using FFTriadBuddy;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
-
 namespace TriadBuddyPlugin;
 
 public class UIReaderTriadDeckEdit : IUIReader
 {
-    [StructLayout(LayoutKind.Explicit, Size = 0xDA0)]
-    private unsafe struct AddonTriadDeckEdit
-    {
-        [FieldOffset(0x0)] public AtkUnitBase AtkUnitBase;
-
-        [FieldOffset(0xD90)] public byte PageIndex;                 // ignores writes
-        [FieldOffset(0xD94)] public byte PageIndex2;                // ignores writes
-        [FieldOffset(0xD98)] public byte CardIndex;                 // ignores writes
-    }
+    private readonly List<string> highlightTexPaths = [];
 
     public UIStateTriadDeckEdit cachedState = new();
-    public UnsafeReaderTriadDeck? unsafeDeck;
+    private bool isOptimizerActive;
     public Action<bool>? OnVisibilityChanged;
+
+    private float searchSyncBlinkRemaining;
+    public UnsafeReaderTriadDeck? unsafeDeck;
 
     public bool IsVisible { get; private set; }
 
-    private float searchSyncBlinkRemaining;
-    private bool isOptimizerActive;
-
-    private readonly List<string> highlightTexPaths = [];
-
-    public string GetAddonName()
-    {
-        return "GSInfoEditDeck";
-    }
+    public string GetAddonName() => "GSInfoEditDeck";
 
     public void OnAddonLost()
     {
@@ -42,13 +29,13 @@ public class UIReaderTriadDeckEdit : IUIReader
         OnVisibilityChanged?.Invoke(false);
     }
 
-    public void OnAddonShown(IntPtr addonPtr)
+    public void OnAddonShown(nint addonPtr)
     {
         IsVisible = true;
         OnVisibilityChanged?.Invoke(true);
     }
 
-    public unsafe void OnAddonUpdate(IntPtr addonPtr)
+    public unsafe void OnAddonUpdate(nint addonPtr)
     {
         var addon = (AddonTriadDeckEdit*)addonPtr;
         var hasHighlights = isOptimizerActive;
@@ -120,7 +107,7 @@ public class UIReaderTriadDeckEdit : IUIReader
             foreach (var cardId in cardIds)
             {
                 // see TriadCardDB.FindByTexture for details on patterns
-                var pathPattern = string.Format("088000/{0:D6}", FFTriadBuddy.TriadCardDB.GetCardIconTextureId(cardId));
+                var pathPattern = string.Format("088000/{0:D6}", TriadCardDB.GetCardIconTextureId(cardId));
                 highlightTexPaths.Add(pathPattern);
             }
         }
@@ -162,14 +149,14 @@ public class UIReaderTriadDeckEdit : IUIReader
         // agentPtr is NOT available through deck edit addon here
         // use GSInfoCardDeck instead
 
-        IntPtr addonPtr = Svc.GameGui.GetAddonByName(GetAddonName(), 1);
-        IntPtr agentPtr = Svc.GameGui.FindAgentInterface("GSInfoCardDeck");
-        if (agentPtr == IntPtr.Zero)
+        nint addonPtr = Svc.GameGui.GetAddonByName(GetAddonName());
+        nint agentPtr = Svc.GameGui.FindAgentInterface("GSInfoCardDeck");
+        if (agentPtr == nint.Zero)
         {
             agentPtr = UIReaderTriadCardList.LoadFailsafeAgent();
         }
 
-        if (addonPtr != IntPtr.Zero && agentPtr != IntPtr.Zero)
+        if (addonPtr != nint.Zero && agentPtr != nint.Zero)
         {
             OnAddonShown(addonPtr);
 
@@ -192,13 +179,23 @@ public class UIReaderTriadDeckEdit : IUIReader
 
         return false;
     }
+
+    [StructLayout(LayoutKind.Explicit, Size = 0xDA0)]
+    private struct AddonTriadDeckEdit
+    {
+        [FieldOffset(0x0)] public AtkUnitBase AtkUnitBase;
+
+        [FieldOffset(0xD90)] public byte PageIndex; // ignores writes
+        [FieldOffset(0xD94)] public byte PageIndex2; // ignores writes
+        [FieldOffset(0xD98)] public byte CardIndex; // ignores writes
+    }
 }
 
 public class UIStateTriadDeckEdit
 {
-    public Vector2 screenPos;
-    public Vector2 screenSize;
+    public byte cardIndex;
 
     public byte pageIndex;
-    public byte cardIndex;
+    public Vector2 screenPos;
+    public Vector2 screenSize;
 }

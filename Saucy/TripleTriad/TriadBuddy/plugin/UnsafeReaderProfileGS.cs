@@ -7,13 +7,6 @@ namespace TriadBuddyPlugin;
 
 public unsafe class UnsafeReaderProfileGS
 {
-    public class PlayerDeck
-    {
-        public string name = string.Empty;
-        public int id;
-        public ushort[] cardIds = new ushort[5];
-    }
-
     public bool HasErrors { get; private set; }
 
     public PlayerDeck?[]? GetPlayerDecks()
@@ -49,10 +42,9 @@ public unsafe class UnsafeReaderProfileGS
                         deckPtr->Cards[3] != 0 &&
                         deckPtr->Cards[4] != 0)
                     {
-                        var deckOb = new PlayerDeck()
+                        var deckOb = new PlayerDeck
                         {
-                            id = deckId,
-                            name = Encoding.UTF8.GetString(deckPtr->Name).Trim('\0'),
+                            id = deckId, name = Encoding.UTF8.GetString(deckPtr->Name).Trim('\0')
                         };
 
                         for (var idx = 0; idx < 5; idx++)
@@ -85,5 +77,12 @@ public unsafe class UnsafeReaderProfileGS
         }
 
         return null;
+    }
+
+    public class PlayerDeck
+    {
+        public ushort[] cardIds = new ushort[5];
+        public int id;
+        public string name = string.Empty;
     }
 }

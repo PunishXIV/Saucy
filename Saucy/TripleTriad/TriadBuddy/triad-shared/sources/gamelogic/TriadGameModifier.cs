@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-
 namespace FFTriadBuddy;
 
 [Flags]
@@ -15,7 +14,7 @@ public enum ETriadGameSpecialMod
     RandomizeBlueDeck = 0x8,
     SwapCards = 0x10,
     BlueCardSelection = 0x20,
-    IgnoreOwnedCheck = 0x40,
+    IgnoreOwnedCheck = 0x40
 }
 
 public class TriadGameModifier : IComparable
@@ -30,26 +29,29 @@ public class TriadGameModifier : IComparable
         CaptureMath = 8,
         PostCapture = 16,
         AllPlaced = 32,
-        FilterNext = 64,
+        FilterNext = 64
     }
 
-    protected string RuleName;
-    protected LocString LocRuleName;
-    protected bool bAllowCombo = false;
-    protected bool bIsDeckOrderImportant = false;
-    protected bool bHasLastRedReminder = false;
-    protected ETriadGameSpecialMod SpecialMod = ETriadGameSpecialMod.None;
+    protected bool bAllowCombo;
+    protected bool bHasLastRedReminder;
+    protected bool bIsDeckOrderImportant;
     protected EFeature Features = EFeature.None;
+    protected LocString LocRuleName;
 
-    public virtual string GetCodeName() { return RuleName; }
-    public virtual string GetLocalizedName() { return LocRuleName.GetLocalized(); }
-    public int GetLocalizationId() { return LocRuleName.Id; }
-    public virtual bool AllowsCombo() { return bAllowCombo; }
-    public virtual bool IsDeckOrderImportant() { return bIsDeckOrderImportant; }
-    public virtual ETriadGameSpecialMod GetSpecialRules() { return SpecialMod; }
-    public virtual EFeature GetFeatures() { return Features; }
-    public virtual bool HasLastRedReminder() { return bHasLastRedReminder; }
-    public override string ToString() { return GetCodeName(); }
+    protected string RuleName;
+    protected ETriadGameSpecialMod SpecialMod = ETriadGameSpecialMod.None;
+
+    public int CompareTo(object obj) => CompareTo((TriadGameModifier)obj);
+
+    public virtual string GetCodeName() => RuleName;
+    public virtual string GetLocalizedName() => LocRuleName.GetLocalized();
+    public int GetLocalizationId() => LocRuleName.Id;
+    public virtual bool AllowsCombo() => bAllowCombo;
+    public virtual bool IsDeckOrderImportant() => bIsDeckOrderImportant;
+    public virtual ETriadGameSpecialMod GetSpecialRules() => SpecialMod;
+    public virtual EFeature GetFeatures() => Features;
+    public virtual bool HasLastRedReminder() => bHasLastRedReminder;
+    public override string ToString() => GetCodeName();
 
     public virtual void OnCardPlaced(TriadGameSimulationState gameData, int boardPos) { }
     public virtual void OnCheckCaptureNeis(TriadGameSimulationState gameData, int boardPos, int[] neiPos, List<int> captureList) { }
@@ -73,25 +75,11 @@ public class TriadGameModifier : IComparable
         return 0;
     }
 
-    public int CompareTo(object obj)
-    {
-        return CompareTo((TriadGameModifier)obj);
-    }
+    public virtual TriadGameModifier Clone() => (TriadGameModifier)MemberwiseClone();
 
-    public virtual TriadGameModifier Clone()
-    {
-        return (TriadGameModifier)MemberwiseClone();
-    }
+    public override bool Equals(object obj) => (obj is TriadGameModifier otherMod) && (GetLocalizationId() == otherMod.GetLocalizationId());
 
-    public override bool Equals(object obj)
-    {
-        return (obj is TriadGameModifier otherMod) && (GetLocalizationId() == otherMod.GetLocalizationId());
-    }
-
-    public override int GetHashCode()
-    {
-        return GetLocalizationId();
-    }
+    public override int GetHashCode() => GetLocalizationId();
 }
 
 public class TriadGameModifierNone : TriadGameModifier
@@ -115,58 +103,31 @@ public class TriadGameModifierRoulette : TriadGameModifier
         SpecialMod = ETriadGameSpecialMod.RandomizeRule;
     }
 
-    public override string GetCodeName() { return base.GetCodeName() + (RuleInst != null ? (" (" + RuleInst.GetCodeName() + ")") : ""); }
-    public override string GetLocalizedName() { return base.GetLocalizedName() + (RuleInst != null ? (" (" + RuleInst.GetLocalizedName() + ")") : ""); }
-    public override bool AllowsCombo() { return (RuleInst != null) ? RuleInst.AllowsCombo() : base.AllowsCombo(); }
-    public override bool IsDeckOrderImportant() { return (RuleInst != null) ? RuleInst.IsDeckOrderImportant() : base.IsDeckOrderImportant(); }
-    public override ETriadGameSpecialMod GetSpecialRules() { return base.GetSpecialRules() | ((RuleInst != null) ? RuleInst.GetSpecialRules() : ETriadGameSpecialMod.None); }
-    public override EFeature GetFeatures() { return (RuleInst != null) ? RuleInst.GetFeatures() : EFeature.None; }
-    public override bool HasLastRedReminder() { return (RuleInst != null) ? RuleInst.HasLastRedReminder() : base.HasLastRedReminder(); }
+    public override string GetCodeName() => base.GetCodeName() + (RuleInst != null ? (" (" + RuleInst.GetCodeName() + ")") : "");
+    public override string GetLocalizedName() => base.GetLocalizedName() + (RuleInst != null ? (" (" + RuleInst.GetLocalizedName() + ")") : "");
+    public override bool AllowsCombo() => (RuleInst != null) ? RuleInst.AllowsCombo() : base.AllowsCombo();
+    public override bool IsDeckOrderImportant() => (RuleInst != null) ? RuleInst.IsDeckOrderImportant() : base.IsDeckOrderImportant();
+    public override ETriadGameSpecialMod GetSpecialRules() => base.GetSpecialRules() | ((RuleInst != null) ? RuleInst.GetSpecialRules() : ETriadGameSpecialMod.None);
+    public override EFeature GetFeatures() => (RuleInst != null) ? RuleInst.GetFeatures() : EFeature.None;
+    public override bool HasLastRedReminder() => (RuleInst != null) ? RuleInst.HasLastRedReminder() : base.HasLastRedReminder();
 
-    public override void OnCardPlaced(TriadGameSimulationState gameData, int boardPos)
-    {
-        RuleInst?.OnCardPlaced(gameData, boardPos);
-    }
+    public override void OnCardPlaced(TriadGameSimulationState gameData, int boardPos) => RuleInst?.OnCardPlaced(gameData, boardPos);
 
-    public override void OnCheckCaptureNeis(TriadGameSimulationState gameData, int boardPos, int[] neiPos, List<int> captureList)
-    {
-        RuleInst?.OnCheckCaptureNeis(gameData, boardPos, neiPos, captureList);
-    }
+    public override void OnCheckCaptureNeis(TriadGameSimulationState gameData, int boardPos, int[] neiPos, List<int> captureList) => RuleInst?.OnCheckCaptureNeis(gameData, boardPos, neiPos, captureList);
 
-    public override void OnCheckCaptureCardWeights(TriadGameSimulationState gameData, int boardPos, int neiPos, bool isReverseActive, ref int cardNum, ref int neiNum)
-    {
-        RuleInst?.OnCheckCaptureCardWeights(gameData, boardPos, neiPos, isReverseActive, ref cardNum, ref neiNum);
-    }
+    public override void OnCheckCaptureCardWeights(TriadGameSimulationState gameData, int boardPos, int neiPos, bool isReverseActive, ref int cardNum, ref int neiNum) => RuleInst?.OnCheckCaptureCardWeights(gameData, boardPos, neiPos, isReverseActive, ref cardNum, ref neiNum);
 
-    public override void OnCheckCaptureCardMath(TriadGameSimulationState gameData, int boardPos, int neiPos, int cardNum, int neiNum, ref bool isCaptured)
-    {
-        RuleInst?.OnCheckCaptureCardMath(gameData, boardPos, neiPos, cardNum, neiNum, ref isCaptured);
-    }
+    public override void OnCheckCaptureCardMath(TriadGameSimulationState gameData, int boardPos, int neiPos, int cardNum, int neiNum, ref bool isCaptured) => RuleInst?.OnCheckCaptureCardMath(gameData, boardPos, neiPos, cardNum, neiNum, ref isCaptured);
 
-    public override void OnPostCaptures(TriadGameSimulationState gameData, int boardPos)
-    {
-        RuleInst?.OnPostCaptures(gameData, boardPos);
-    }
+    public override void OnPostCaptures(TriadGameSimulationState gameData, int boardPos) => RuleInst?.OnPostCaptures(gameData, boardPos);
 
-    public override void OnAllCardsPlaced(TriadGameSimulationState gameData)
-    {
-        RuleInst?.OnAllCardsPlaced(gameData);
-    }
+    public override void OnAllCardsPlaced(TriadGameSimulationState gameData) => RuleInst?.OnAllCardsPlaced(gameData);
 
-    public override void OnFilterNextCards(TriadGameSimulationState gameData, ref int allowedCardsMask)
-    {
-        RuleInst?.OnFilterNextCards(gameData, ref allowedCardsMask);
-    }
+    public override void OnFilterNextCards(TriadGameSimulationState gameData, ref int allowedCardsMask) => RuleInst?.OnFilterNextCards(gameData, ref allowedCardsMask);
 
-    public override void OnMatchInit()
-    {
-        SetRuleInstance(null);
-    }
+    public override void OnMatchInit() => SetRuleInstance(null);
 
-    public void SetRuleInstance(TriadGameModifier RuleInstance)
-    {
-        RuleInst = RuleInstance;
-    }
+    public void SetRuleInstance(TriadGameModifier RuleInstance) => RuleInst = RuleInstance;
 }
 
 public class TriadGameModifierAllOpen : TriadGameModifier
@@ -346,10 +307,7 @@ public class TriadGameModifierReverse : TriadGameModifier
         Features = EFeature.CaptureMath;
     }
 
-    public override void OnCheckCaptureCardMath(TriadGameSimulationState gameData, int boardPos, int neiPos, int cardNum, int neiNum, ref bool isCaptured)
-    {
-        isCaptured = cardNum < neiNum;
-    }
+    public override void OnCheckCaptureCardMath(TriadGameSimulationState gameData, int boardPos, int neiPos, int cardNum, int neiNum, ref bool isCaptured) => isCaptured = cardNum < neiNum;
 
     public override void OnScoreCard(TriadCard card, ref float score)
     {
@@ -705,7 +663,8 @@ public class TriadGameModifierOrder : TriadGameModifier
     {
         RuleName = "Order";
         LocRuleName = LocalizationDB.Get().FindOrAddLocString(ELocStringType.RuleName, 11);
-        bIsDeckOrderImportant = true; Features = EFeature.FilterNext;
+        bIsDeckOrderImportant = true;
+        Features = EFeature.FilterNext;
     }
 
     public override void OnFilterNextCards(TriadGameSimulationState gameData, ref int allowedCardsMask)
@@ -755,7 +714,7 @@ public class TriadGameModifierSwap : TriadGameModifier
             {
                 var DummyOb = new TriadGameModifierSwap();
                 Logger.WriteLine(">> " + DummyOb.RuleName + "! blue[" + blueSlotIdx + "]:" + swapFromBlue.Name.GetCodeName() +
-                    " <-> red[" + redSlotIdx + (bIsRedFromKnown ? "" : ":Opt") + "]:" + swapFromRed.Name.GetCodeName());
+                                 " <-> red[" + redSlotIdx + (bIsRedFromKnown ? "" : ":Opt") + "]:" + swapFromRed.Name.GetCodeName());
             }
 
             var blueDeckSwapped = new TriadDeck(deckBlueEx.deck.knownCards, deckBlueEx.deck.unknownCardPool);
@@ -808,10 +767,8 @@ public class TriadGameModifierDraft : TriadGameModifier
 
 public class TriadGameModifierDB
 {
-    public List<TriadGameModifier> mods;
-
     private static readonly TriadGameModifierDB instance = new();
-    public static TriadGameModifierDB Get() { return instance; }
+    public List<TriadGameModifier> mods;
 
     public TriadGameModifierDB()
     {
@@ -836,4 +793,5 @@ public class TriadGameModifierDB
             }
         }
     }
+    public static TriadGameModifierDB Get() => instance;
 }

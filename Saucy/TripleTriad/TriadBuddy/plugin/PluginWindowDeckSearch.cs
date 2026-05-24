@@ -6,56 +6,55 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using TriadBuddy;
-
 namespace TriadBuddyPlugin;
 
 public unsafe class PluginWindowDeckSearch : Window, IDisposable
 {
     private const float WindowContentWidth = 270.0f;
 
-    private readonly UIReaderTriadDeckEdit uiReaderDeckEdit;
-
     private readonly List<Tuple<TriadCard, GameCardInfo>> listCards = [];
 
-    private int selectedCardIdx;
-    private ImGuiTextFilterPtr searchFilter;
+    private readonly UIReaderTriadDeckEdit uiReaderDeckEdit;
+    private int prevNumCards;
 
     private int prevNumFiltered;
-    private int prevNumCards;
+    private ImGuiTextFilterPtr searchFilter;
+
+    private int selectedCardIdx;
 
     public PluginWindowDeckSearch(UIReaderTriadDeckEdit uiReaderDeckEdit) : base("Deck Search")
     {
         this.uiReaderDeckEdit = uiReaderDeckEdit;
 
         var searchFilterPtr = ImGuiNative.ImGuiTextFilter(null);
-        searchFilter = new ImGuiTextFilterPtr(searchFilterPtr);
+        searchFilter = new(searchFilterPtr);
 
-        uiReaderDeckEdit.OnVisibilityChanged += (_) => UpdateWindowData();
+        uiReaderDeckEdit.OnVisibilityChanged += _ => UpdateWindowData();
         UpdateWindowData();
 
         // doesn't matter will be updated on next draw
         PositionCondition = ImGuiCond.None;
         SizeCondition = ImGuiCond.Always;
 
-        SizeConstraints = new WindowSizeConstraints() { MinimumSize = new Vector2(WindowContentWidth + 20, 0), MaximumSize = new Vector2(WindowContentWidth + 20, 1000) };
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new(WindowContentWidth + 20, 0), MaximumSize = new(WindowContentWidth + 20, 1000)
+        };
 
         ForceMainWindow = true;
         RespectCloseHotkey = false;
         Flags = ImGuiWindowFlags.NoDecoration |
-            //ImGuiWindowFlags.NoResize |
-            ImGuiWindowFlags.AlwaysAutoResize |
-            ImGuiWindowFlags.NoSavedSettings |
-            ImGuiWindowFlags.NoMove |
-            //ImGuiWindowFlags.NoMouseInputs |
-            ImGuiWindowFlags.NoDocking |
-            ImGuiWindowFlags.NoFocusOnAppearing |
-            ImGuiWindowFlags.NoNav;
+                //ImGuiWindowFlags.NoResize |
+                ImGuiWindowFlags.AlwaysAutoResize |
+                ImGuiWindowFlags.NoSavedSettings |
+                ImGuiWindowFlags.NoMove |
+                //ImGuiWindowFlags.NoMouseInputs |
+                ImGuiWindowFlags.NoDocking |
+                ImGuiWindowFlags.NoFocusOnAppearing |
+                ImGuiWindowFlags.NoNav;
     }
 
-    public void Dispose()
-    {
-        ImGuiNative.Destroy(searchFilter.Handle);
-    }
+    public void Dispose() => ImGuiNative.Destroy(searchFilter.Handle);
 
     private void UpdateWindowData()
     {
@@ -84,7 +83,7 @@ public unsafe class PluginWindowDeckSearch : Window, IDisposable
                 var cardInfo = cardInfoDB.FindById(card.Id);
                 if (cardInfo != null && cardInfo.IsOwned)
                 {
-                    listCards.Add(new Tuple<TriadCard, GameCardInfo>(card, cardInfo));
+                    listCards.Add(new(card, cardInfo));
                 }
             }
         }
@@ -97,21 +96,18 @@ public unsafe class PluginWindowDeckSearch : Window, IDisposable
         selectedCardIdx = -1;
     }
 
-    public override void PreDraw()
-    {
-        Position = new Vector2(uiReaderDeckEdit.cachedState.screenPos.X + uiReaderDeckEdit.cachedState.screenSize.X + 10, uiReaderDeckEdit.cachedState.screenPos.Y);
-    }
+    public override void PreDraw() => Position = new Vector2(uiReaderDeckEdit.cachedState.screenPos.X + uiReaderDeckEdit.cachedState.screenSize.X + 10, uiReaderDeckEdit.cachedState.screenPos.Y);
 
     public override void Draw()
     {
         searchFilter.Draw("", WindowContentWidth * ImGuiHelpers.GlobalScale);
 
         var filteredCards = new List<int>();
-        if (ImGui.BeginListBox("##cards", new Vector2(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 10)))
+        if (ImGui.BeginListBox("##cards", new(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 10)))
         {
             for (var idx = 0; idx < listCards.Count; idx++)
             {
-                var (cardOb, _) = listCards[idx];
+                (var cardOb, var _) = listCards[idx];
 
                 var itemDesc = $"[{CardUtils.GetOrderDesc(cardOb)}] {CardUtils.GetRarityDesc(cardOb)} {CardUtils.GetUIDesc(cardOb)}";
                 if (searchFilter.PassFilterBool(itemDesc))
@@ -152,7 +148,7 @@ public unsafe class PluginWindowDeckSearch : Window, IDisposable
             return;
         }
 
-        var (cardOb, cardInfo) = listCards[selectedCardIdx];
+        (var cardOb, var cardInfo) = listCards[selectedCardIdx];
         if (cardOb != null && cardInfo != null)
         {
             var collectionPos = cardInfo.Collection[(int)GameCardCollectionFilter.DeckEditDefault];

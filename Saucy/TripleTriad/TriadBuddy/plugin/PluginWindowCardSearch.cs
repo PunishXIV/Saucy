@@ -9,45 +9,44 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using TriadBuddy;
-
 namespace TriadBuddyPlugin;
 
 public unsafe class PluginWindowCardSearch : Window, IDisposable
 {
     private const float WindowContentWidth = 270.0f;
 
-    private readonly UIReaderTriadCardList uiReaderCardList;
+    private readonly List<Tuple<TriadCard, GameCardInfo>> listCards = [];
+    private readonly List<Tuple<TriadCard, int>> listNpcReward = [];
+    private readonly List<Tuple<TriadNpc, GameNpcInfo>> listNpcs = [];
     private readonly PluginWindowNpcStats statsWindow;
 
-    private readonly List<Tuple<TriadCard, GameCardInfo>> listCards = [];
-    private readonly List<Tuple<TriadNpc, GameNpcInfo>> listNpcs = [];
-    private readonly List<Tuple<TriadCard, int>> listNpcReward = [];
-    private int numNotOwnedRewards = 0;
-
-    private int selectedCardIdx;
-    private int selectedNpcIdx;
+    private readonly UIReaderTriadCardList uiReaderCardList;
     private int filterMode = -1;
-    private ImGuiTextFilterPtr searchFilterCard;
-    private ImGuiTextFilterPtr searchFilterNpc;
-
-    private bool showNpcMatchesOnly = false;
-    private bool showNotOwnedOnly = false;
-    private bool hideNpcBeatenOnce = false;
-    private bool hideNpcCompleted = false;
-
-    private string? locNpcOnly;
-    private string? locNotOwnedOnly;
+    private bool hasCachedLocStrings;
+    private bool hideNpcBeatenOnce;
+    private bool hideNpcCompleted;
+    private string? locEstMGP;
     private string? locFilterActive;
     private string? locHideBeatenNpc;
     private string? locHideCompletedNpc;
+    private string? locNoAvail;
+    private string? locNotOwnedOnly;
+
+    private string? locNpcOnly;
+    private string? locNpcReward;
+    private string? locNpcStats;
+    private string? locShowOnMap;
     private string? locTabCards;
     private string? locTabNpc;
-    private string? locNpcReward;
-    private string? locShowOnMap;
-    private string? locNoAvail;
-    private string? locNpcStats;
-    private string? locEstMGP;
-    private bool hasCachedLocStrings;
+    private int numNotOwnedRewards;
+    private ImGuiTextFilterPtr searchFilterCard;
+    private ImGuiTextFilterPtr searchFilterNpc;
+
+    private int selectedCardIdx;
+    private int selectedNpcIdx;
+    private bool showNotOwnedOnly;
+
+    private bool showNpcMatchesOnly;
 
     public PluginWindowCardSearch(UIReaderTriadCardList uiReaderCardList, PluginWindowNpcStats statsWindow) : base("Card Search")
     {
@@ -55,12 +54,12 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         this.statsWindow = statsWindow;
 
         var searchFilterCardPtr = ImGuiNative.ImGuiTextFilter(null);
-        searchFilterCard = new ImGuiTextFilterPtr(searchFilterCardPtr);
+        searchFilterCard = new(searchFilterCardPtr);
 
         var searchFilterNpcPtr = ImGuiNative.ImGuiTextFilter(null);
-        searchFilterNpc = new ImGuiTextFilterPtr(searchFilterNpcPtr);
+        searchFilterNpc = new(searchFilterNpcPtr);
 
-        uiReaderCardList.OnVisibilityChanged += (_) => UpdateWindowData();
+        uiReaderCardList.OnVisibilityChanged += _ => UpdateWindowData();
         uiReaderCardList.OnUIStateChanged += OnUIStateChanged;
         UpdateWindowData();
 
@@ -76,23 +75,26 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         PositionCondition = ImGuiCond.None;
         SizeCondition = ImGuiCond.Always;
 
-        SizeConstraints = new WindowSizeConstraints() { MinimumSize = new Vector2(WindowContentWidth + 20, 0), MaximumSize = new Vector2(WindowContentWidth + 20, 1000) };
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new(WindowContentWidth + 20, 0), MaximumSize = new(WindowContentWidth + 20, 1000)
+        };
 
         ForceMainWindow = true;
         RespectCloseHotkey = false;
         Flags = ImGuiWindowFlags.NoDecoration |
-            //ImGuiWindowFlags.NoResize |
-            ImGuiWindowFlags.AlwaysAutoResize |
-            ImGuiWindowFlags.NoSavedSettings |
-            ImGuiWindowFlags.NoMove |
-            //ImGuiWindowFlags.NoMouseInputs |
-            ImGuiWindowFlags.NoDocking |
-            ImGuiWindowFlags.NoFocusOnAppearing |
-            ImGuiWindowFlags.NoNav;
+                //ImGuiWindowFlags.NoResize |
+                ImGuiWindowFlags.AlwaysAutoResize |
+                ImGuiWindowFlags.NoSavedSettings |
+                ImGuiWindowFlags.NoMove |
+                //ImGuiWindowFlags.NoMouseInputs |
+                ImGuiWindowFlags.NoDocking |
+                ImGuiWindowFlags.NoFocusOnAppearing |
+                ImGuiWindowFlags.NoNav;
 
         if (Plugin.CurrentLocManager != null)
         {
-            Plugin.CurrentLocManager.LocalizationChanged += (_) => { hasCachedLocStrings = false; };
+            Plugin.CurrentLocManager.LocalizationChanged += _ => { hasCachedLocStrings = false; };
         }
     }
 
@@ -166,7 +168,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
                     {
                         if ((includeOwned && cardInfo.IsOwned) || (includeMissing && !cardInfo.IsOwned))
                         {
-                            listCards.Add(new Tuple<TriadCard, GameCardInfo>(card, cardInfo));
+                            listCards.Add(new(card, cardInfo));
                         }
                     }
                 }
@@ -181,14 +183,11 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         }
     }
 
-    public override void PreDraw()
-    {
-        Position = new Vector2(uiReaderCardList.cachedState.screenPos.X + uiReaderCardList.cachedState.screenSize.X + 10, uiReaderCardList.cachedState.screenPos.Y);
-    }
+    public override void PreDraw() => Position = new Vector2(uiReaderCardList.cachedState.screenPos.X + uiReaderCardList.cachedState.screenSize.X + 10, uiReaderCardList.cachedState.screenPos.Y);
 
     public override void Draw()
     {
-        if (ImGui.BeginTabBar("##CollectionSearch", ImGuiTabBarFlags.None))
+        if (ImGui.BeginTabBar("##CollectionSearch"))
         {
             UpdateLocalizationCache();
 
@@ -213,11 +212,11 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         var showOwnedCheckbox = filterMode == 0;
         searchFilterCard.Draw("", WindowContentWidth * ImGuiHelpers.GlobalScale);
 
-        if (ImGui.BeginListBox("##cards", new Vector2(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 10)))
+        if (ImGui.BeginListBox("##cards", new(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 10)))
         {
             for (var idx = 0; idx < listCards.Count; idx++)
             {
-                var (cardOb, cardInfo) = listCards[idx];
+                (var cardOb, var cardInfo) = listCards[idx];
                 if ((showNpcMatchesOnly && cardInfo.RewardNpcs.Count <= 0) ||
                     (showOwnedCheckbox && showNotOwnedOnly && cardInfo.IsOwned))
                 {
@@ -274,11 +273,11 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
     {
         searchFilterNpc.Draw("", WindowContentWidth * ImGuiHelpers.GlobalScale);
 
-        if (ImGui.BeginListBox("##npcs", new Vector2(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 10)))
+        if (ImGui.BeginListBox("##npcs", new(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 10)))
         {
             for (var idx = 0; idx < listNpcs.Count; idx++)
             {
-                var (npcOb, npcInfo) = listNpcs[idx];
+                (var npcOb, var npcInfo) = listNpcs[idx];
                 if ((hideNpcBeatenOnce && (npcInfo.IsBeatenOnce || npcInfo.IsExcludedFromAchievementTracker)) ||
                     (hideNpcCompleted && npcInfo.IsCompleted))
                 {
@@ -377,10 +376,10 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
             {
                 var settingsDB = PlayerSettingsDB.Get();
 
-                ImGui.BeginListBox("##cardReward", new Vector2(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 4.5f));
+                ImGui.BeginListBox("##cardReward", new(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 4.5f));
                 for (var idx = 0; idx < listNpcReward.Count; idx++)
                 {
-                    var (cardOb, cardListIdx) = listNpcReward[idx];
+                    (var cardOb, var cardListIdx) = listNpcReward[idx];
                     var isCardOwned = settingsDB.ownedCards.Contains(cardOb);
 
                     var itemDesc = $"{CardUtils.GetOrderDesc(cardOb)} {CardUtils.GetUIDesc(cardOb)}";
@@ -424,7 +423,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
             return;
         }
 
-        var (cardOb, cardInfo) = listCards[selectedCardIdx];
+        (var cardOb, var cardInfo) = listCards[selectedCardIdx];
         if (cardOb != null && cardInfo != null)
         {
             var filterEnum = (filterMode == 1) ? GameCardCollectionFilter.OnlyOwned :
@@ -450,7 +449,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
             var npc = (kvp.Key >= 0 && kvp.Key < npcDB.npcs.Count) ? npcDB.npcs[kvp.Key] : null;
             if (npc != null)
             {
-                listNpcs.Add(new Tuple<TriadNpc, GameNpcInfo>(npc, kvp.Value));
+                listNpcs.Add(new(npc, kvp.Value));
             }
         }
 
@@ -480,7 +479,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
                     var cardOb = listCards[listIdx].Item1;
                     if (cardOb != null)
                     {
-                        listNpcReward.Add(new Tuple<TriadCard, int>(cardOb, listIdx));
+                        listNpcReward.Add(new(cardOb, listIdx));
                         numNotOwnedRewards += settingsDB.ownedCards.Contains(cardOb) ? 0 : 1;
                     }
                 }

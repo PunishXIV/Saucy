@@ -1,21 +1,16 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using System;
 using System.Runtime.InteropServices;
-
 namespace TriadBuddyPlugin;
 
 public class UnsafeReaderTriadCards
 {
-    public bool HasErrors { get; private set; }
-
-    private delegate byte IsNpcBeatenDelegate(IntPtr uiState, int triadNpcId);
-
     private readonly IsNpcBeatenDelegate? IsNpcBeatenFunc;
-    private readonly IntPtr UIStatePtr;
+    private readonly nint UIStatePtr;
 
     public UnsafeReaderTriadCards()
     {
-        var IsNpcBeatenPtr = IntPtr.Zero;
+        var IsNpcBeatenPtr = nint.Zero;
 
         if (Svc.SigScanner != null)
         {
@@ -36,7 +31,7 @@ public class UnsafeReaderTriadCards
             }
         }
 
-        HasErrors = (IsNpcBeatenPtr == IntPtr.Zero) || (UIStatePtr == IntPtr.Zero);
+        HasErrors = (IsNpcBeatenPtr == nint.Zero) || (UIStatePtr == nint.Zero);
         if (!HasErrors)
         {
             IsNpcBeatenFunc = Marshal.GetDelegateForFunctionPointer<IsNpcBeatenDelegate>(IsNpcBeatenPtr);
@@ -46,6 +41,7 @@ public class UnsafeReaderTriadCards
             Svc.Log.Error("Failed to find triad card functions, turning reader off");
         }
     }
+    public bool HasErrors { get; }
 
     public unsafe bool IsCardOwned(int cardId)
     {
@@ -66,6 +62,8 @@ public class UnsafeReaderTriadCards
 
         return (IsNpcBeatenFunc != null) && IsNpcBeatenFunc(UIStatePtr, npcId) != 0;
     }
+
+    private delegate byte IsNpcBeatenDelegate(nint uiState, int triadNpcId);
 
     /*public void TestBeatenNpcs()
     {

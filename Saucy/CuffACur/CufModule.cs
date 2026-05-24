@@ -1,4 +1,7 @@
-﻿using Dalamud.Hooking;
+﻿using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Hooking;
+using ECommons;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.UI;
@@ -12,24 +15,20 @@ namespace Saucy.CuffACur;
 
 public unsafe class CufModule
 {
-    public static bool ModuleEnabled = false;
-
     public delegate nint UnknownFunction(nint a1, ushort a2, int a3, void* a4);
+    public static bool ModuleEnabled = false;
     public static Hook<UnknownFunction>? FuncHook;
 
-    public static nint FuncDetour(nint a1, ushort a2, int a3, void* a4)
-    {
-        return FuncHook!.Original(a1, a2, a3, a4);
-    }
+    public static nint FuncDetour(nint a1, ushort a2, int a3, void* a4) => FuncHook!.Original(a1, a2, a3, a4);
 
-    public static unsafe void RunModule()
+    public static void RunModule()
     {
-        var addon = Svc.GameGui.GetAddonByName("PunchingMachine", 1);
+        var addon = Svc.GameGui.GetAddonByName("PunchingMachine");
         try
         {
-            if (Svc.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.OccupiedInQuestEvent])
+            if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent])
             {
-                if (ECommons.GenericHelpers.TryGetAddonByName<AddonSelectString>("SelectString", out var startMenu) && startMenu->AtkUnitBase.IsVisible)
+                if (GenericHelpers.TryGetAddonByName<AddonSelectString>("SelectString", out var startMenu) && startMenu->AtkUnitBase.IsVisible)
                 {
                     try
                     {
@@ -38,11 +37,10 @@ public unsafe class CufModule
                     }
                     catch
                     {
-
                     }
                 }
 
-                if (addon != IntPtr.Zero)
+                if (addon != nint.Zero)
                 {
                     var ui = (AtkUnitBase*)addon.Address;
 
@@ -56,30 +54,28 @@ public unsafe class CufModule
                             {
                                 new()
                                 {
-                                    Node = btn,
-                                    Target = (AtkEventTarget*)btn,
-                                    Param = 0,
-                                    NextEvent = null,
-                                   // Type = (AtkEventType)0x17,
-                               //    Unk29 = 0,
-                                //   Flags = 0xDD
+                                    Node = btn, Target = (AtkEventTarget*)btn, Param = 0, NextEvent = null
+                                    // Type = (AtkEventType)0x17,
+                                    //    Unk29 = 0,
+                                    //   Flags = 0xDD
                                 }
                             };
 
                             FuncHook ??= Svc.Hook.HookFromAddress<UnknownFunction>(Svc.SigScanner.ScanText("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 30 0F B7 FA"), FuncDetour);
-                            FuncHook.Original((nint)addon, 0x17, 0, evt);
+                            FuncHook.Original(addon, 0x17, 0, evt);
                             uiReaderGamesResults.SetIsResultsUI(true);
-
                         }
                     }
                 }
             }
 
-            if (!Svc.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.OccupiedInQuestEvent] && !uiReaderGamesResults.HasResultsUI)
+            if (!Svc.Condition[ConditionFlag.OccupiedInQuestEvent] && !uiReaderGamesResults.HasResultsUI)
             {
                 var cuf = (GameObject*)(Svc.Objects.Where(x => (x.BaseId == 2005029 && GetTargetDistance(x) <= 1f) || (x.BaseId == 197370 && GetTargetDistance(x) <= 4f)).OrderByDescending(GetTargetDistance).FirstOrDefault()?.Address ?? nint.Zero);
-                if ((IntPtr)cuf == IntPtr.Zero)
+                if ((nint)cuf == nint.Zero)
+                {
                     return;
+                }
 
                 var tg = TargetSystem.Instance();
                 tg->InteractWithObject(cuf);
@@ -87,19 +83,22 @@ public unsafe class CufModule
         }
         catch (Exception)
         {
-
         }
     }
 
-    public static float GetTargetDistance(Dalamud.Game.ClientState.Objects.Types.IGameObject target)
+    public static float GetTargetDistance(IGameObject target)
     {
         var LocalPlayer = Svc.Objects.LocalPlayer;
 
         if (LocalPlayer is null)
+        {
             return 0;
+        }
 
         if (target.GameObjectId == LocalPlayer.GameObjectId)
+        {
             return 0;
+        }
 
         Vector2 position = new(target.Position.X, target.Position.Z);
         Vector2 selfPosition = new(LocalPlayer.Position.X, LocalPlayer.Position.Z);

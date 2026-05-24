@@ -2,29 +2,20 @@
 using MgAl2O4.Utils;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
 namespace TriadBuddyPlugin;
 
 public class SolverPreGameDecks
 {
-    public UnsafeReaderProfileGS? profileGS;
-
-    public class DeckData
-    {
-        public string name = string.Empty;
-        public int id;
-        public TriadDeck? solverDeck;
-        public SolverResult chance;
-    }
+    private readonly object preGameLock = new();
+    public int preGameBestId = -1;
+    public Dictionary<int, DeckData> preGameDecks = [];
+    private int preGameId;
+    public List<TriadGameModifier> preGameMods = [];
 
     public TriadNpc? preGameNpc;
-    public List<TriadGameModifier> preGameMods = [];
-    public Dictionary<int, DeckData> preGameDecks = [];
+    private int preGameSolved;
+    public UnsafeReaderProfileGS? profileGS;
     public float PreGameProgress => (preGameDecks.Count > 0) ? (1.0f * preGameSolved / preGameDecks.Count) : 0.0f;
-    public int preGameBestId = -1;
-    private int preGameId = 0;
-    private int preGameSolved = 0;
-    private readonly object preGameLock = new();
 
     public bool HasAllProfileDecksEmpty { get; private set; }
 
@@ -54,10 +45,10 @@ public class SolverPreGameDecks
 
         var canReadFromProfile = profileGS != null && !profileGS.HasErrors;
         var canProcessDecks = !parseCtx.HasErrors &&
-            // case 1: it's play request screen, no deck info in ui, proceed only if profile reader is available
-            ((state.decks.Count == 0 && canReadFromProfile) ||
-            // case 2: it's deck selection screen, ui has deck info, proceed only if solved already (profile reader not available)
-            (state.decks.Count > 0 && !canReadFromProfile));
+                              // case 1: it's play request screen, no deck info in ui, proceed only if profile reader is available
+                              ((state.decks.Count == 0 && canReadFromProfile) ||
+                               // case 2: it's deck selection screen, ui has deck info, proceed only if solved already (profile reader not available)
+                               (state.decks.Count > 0 && !canReadFromProfile));
 
         if (canProcessDecks)
         {
@@ -100,7 +91,7 @@ public class SolverPreGameDecks
 
             // initialize screenMemory.playerDeck, see comment in OnSolvedDeck() for details
             HasAllProfileDecksEmpty = (profileDecks != null) && (anyDeckOb == null);
-            anyDeckOb ??= new TriadDeck(PlayerSettingsDB.Get().starterCards);
+            anyDeckOb ??= new(PlayerSettingsDB.Get().starterCards);
 
             SolverUtils.solverGame?.UpdateKnownPlayerDeck(anyDeckOb);
 
@@ -115,13 +106,16 @@ public class SolverPreGameDecks
                 }
 
                 var gameState = deckSolver.StartSimulation(kvp.Value.solverDeck, preGameNpc.Deck, ETriadGameState.InProgressBlue);
-                var calcContext = new SolverUtils.DeckSolverContext() { solver = deckSolver, gameState = gameState, deckId = kvp.Value.id, passId = preGameId };
+                var calcContext = new SolverUtils.DeckSolverContext
+                {
+                    solver = deckSolver, gameState = gameState, deckId = kvp.Value.id, passId = preGameId
+                };
 
                 void solverAction(object ctxOb)
                 {
                     if (ctxOb is SolverUtils.DeckSolverContext ctx && ctx.solver != null && ctx.gameState != null)
                     {
-                        ctx.solver.FindNextMove(ctx.gameState, out _, out _, out var solverResult);
+                        ctx.solver.FindNextMove(ctx.gameState, out var _, out var _, out var solverResult);
                         OnSolvedDeck(ctx.passId, ctx.deckId, solverResult);
                     }
                 }
@@ -184,7 +178,10 @@ public class SolverPreGameDecks
             return null;
         }
 
-        var deckData = new DeckData() { id = deckOb.id, name = deckOb.name };
+        var deckData = new DeckData
+        {
+            id = deckOb.id, name = deckOb.name
+        };
 
         var cards = new TriadCard?[5];
         for (var cardIdx = 0; cardIdx < 5; cardIdx++)
@@ -216,7 +213,10 @@ public class SolverPreGameDecks
         DeckData? deckData = null;
         if (numValidCards == 5)
         {
-            deckData = new DeckData() { id = deckOb.id, name = deckOb.name };
+            deckData = new()
+            {
+                id = deckOb.id, name = deckOb.name
+            };
 
             var cards = new TriadCard?[5];
             for (var cardIdx = 0; cardIdx < 5; cardIdx++)
@@ -280,5 +280,13 @@ public class SolverPreGameDecks
                 SolverUtils.solverDeckOptimize?.SetPauseForPreGameDecks(preGameSolved < preGameDecks.Count);
             }
         }
+    }
+
+    public class DeckData
+    {
+        public SolverResult chance;
+        public int id;
+        public string name = string.Empty;
+        public TriadDeck? solverDeck;
     }
 }

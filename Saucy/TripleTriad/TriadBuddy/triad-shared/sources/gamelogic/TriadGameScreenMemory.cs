@@ -2,7 +2,6 @@ using MgAl2O4.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 namespace FFTriadBuddy;
 
 public class TriadGameScreenMemory
@@ -16,28 +15,29 @@ public class TriadGameScreenMemory
         RedDeck = 4,
         BlueDeck = 8,
         SwapWarning = 16,
-        SwapHints = 32,
+        SwapHints = 32
     }
 
-    public TriadGameSimulationState gameState;
-    public TriadGameSolver gameSolver;
+    private readonly List<TriadCard[]> blueDeckHistory;
+    private bool bHasOpenRule;
+    private bool bHasRestartRule;
+    private bool bHasSwapRule;
     public TriadDeckInstanceScreen deckBlue;
     public TriadDeckInstanceScreen deckRed;
-    private readonly List<TriadCard[]> blueDeckHistory;
-    private TriadCard[] playerDeckPattern;
+    public TriadGameSolver gameSolver;
+
+    public TriadGameSimulationState gameState;
     private TriadNpc lastScanNpc;
-    private bool bHasSwapRule;
-    private bool bHasRestartRule;
-    private bool bHasOpenRule;
-    public int swappedBlueCardIdx;
     public bool logScan;
+    private TriadCard[] playerDeckPattern;
+    public int swappedBlueCardIdx;
 
     public TriadGameScreenMemory()
     {
-        gameSolver = new TriadGameSolver();
-        gameState = new TriadGameSimulationState();
-        deckBlue = new TriadDeckInstanceScreen();
-        deckRed = new TriadDeckInstanceScreen();
+        gameSolver = new();
+        gameState = new();
+        deckBlue = new();
+        deckRed = new();
         blueDeckHistory = [];
         bHasSwapRule = false;
         swappedBlueCardIdx = -1;
@@ -155,7 +155,7 @@ public class TriadGameScreenMemory
             if (bWasNull && !bIsNull)
             {
                 bBoardChanged = true;
-                gameState.board[Idx] = new TriadCardInstance(screenGame.board[Idx], screenGame.boardOwner[Idx]);
+                gameState.board[Idx] = new(screenGame.board[Idx], screenGame.boardOwner[Idx]);
                 if (logScan) { Logger.WriteLine("  board update: [" + Idx + "] " + gameState.board[Idx].owner + ": " + gameState.board[Idx].card.Name.GetCodeName()); }
             }
             else if (!bWasNull && bIsNull)
@@ -169,7 +169,7 @@ public class TriadGameScreenMemory
                     gameState.board[Idx].card != screenGame.board[Idx])
                 {
                     bBoardChanged = true;
-                    gameState.board[Idx] = new TriadCardInstance(screenGame.board[Idx], screenGame.boardOwner[Idx]);
+                    gameState.board[Idx] = new(screenGame.board[Idx], screenGame.boardOwner[Idx]);
                 }
             }
 
@@ -195,11 +195,11 @@ public class TriadGameScreenMemory
         if (logScan)
         {
             Logger.WriteLine("OnNewScan> board:" + (bBoardChanged ? "changed" : "same") +
-                ", blue:" + (bBlueDeckChanged ? "changed" : "same") +
-                ", red:" + (bRedDeckChanged ? "changed" : "same") +
-                ", mods:" + (bModsChanged ? "changed" : "same") +
-                ", continuePrev:" + bContinuesPrevState +
-                " => " + ((updateFlags != EUpdateFlags.None) ? ("UPDATE[" + updateFlags + "]") : "skip"));
+                             ", blue:" + (bBlueDeckChanged ? "changed" : "same") +
+                             ", red:" + (bRedDeckChanged ? "changed" : "same") +
+                             ", mods:" + (bModsChanged ? "changed" : "same") +
+                             ", continuePrev:" + bContinuesPrevState +
+                             " => " + ((updateFlags != EUpdateFlags.None) ? ("UPDATE[" + updateFlags + "]") : "skip"));
         }
 
         return updateFlags;
@@ -284,10 +284,10 @@ public class TriadGameScreenMemory
         if (bDebugMode)
         {
             Logger.WriteLine("Red deck update, diff mode check... " +
-                "bContinuePrevState:" + bContinuePrevState +
-                ", cards(screen:" + screenCardsRed.Length + ", prev:" + deckRed.cards.Length + ")=" + ((screenCardsRed.Length == deckRed.cards.Length) ? "ok" : "nope") +
-                ", other(screen:" + screenCardsBlue.Length + ", prev:" + prevCardsBlue.Length + ")=" + ((screenCardsBlue.Length == prevCardsBlue.Length) ? "ok" : "nope") +
-                ", board(screen:" + screenBoard.Length + ", prev:" + prevBoard.Length + ")=" + ((screenBoard.Length == prevBoard.Length) ? "ok" : "nope"));
+                             "bContinuePrevState:" + bContinuePrevState +
+                             ", cards(screen:" + screenCardsRed.Length + ", prev:" + deckRed.cards.Length + ")=" + ((screenCardsRed.Length == deckRed.cards.Length) ? "ok" : "nope") +
+                             ", other(screen:" + screenCardsBlue.Length + ", prev:" + prevCardsBlue.Length + ")=" + ((screenCardsBlue.Length == prevCardsBlue.Length) ? "ok" : "nope") +
+                             ", board(screen:" + screenBoard.Length + ", prev:" + prevBoard.Length + ")=" + ((screenBoard.Length == prevBoard.Length) ? "ok" : "nope"));
         }
 
         if (bCanCompareWithPrevData)
@@ -339,7 +339,7 @@ public class TriadGameScreenMemory
                         {
                             var cardOb = screenCardsRed[Idx];
                             Logger.WriteLine(" card[" + Idx + "]:" + (cardOb != null ? cardOb.Name.GetCodeName() : "??") +
-                                " => numUnknown:" + numUnknownOnHand + ", numKnown:" + numKnownOnHand + ", numHidden:" + numHidden);
+                                             " => numUnknown:" + numUnknownOnHand + ", numKnown:" + numKnownOnHand + ", numHidden:" + numHidden);
                         }
                     }
                     else
@@ -398,15 +398,15 @@ public class TriadGameScreenMemory
                 if (bDebugMode) { Logger.WriteLine("   all cards are on hand and visible"); }
             }
             else if ((deckRed.numUnknownPlaced + numUnknownOnHand) >= maxUnknownToUse ||
-                ((numKnownOnHand >= (numVisibleCards - maxUnknownToUse)) && (numHidden == 0)))
+                     ((numKnownOnHand >= (numVisibleCards - maxUnknownToUse)) && (numHidden == 0)))
             {
                 deckRed.availableCardMask &= (1 << (numVisibleCards + deckRed.deck.knownCards.Count)) - 1;
 
                 if (bDebugMode)
                 {
                     Logger.WriteLine("   removing all unknown cards, numUnknownPlaced:" + deckRed.numUnknownPlaced +
-                        ", numUnknownOnHand:" + numUnknownOnHand + ", numKnownOnHand:" + numKnownOnHand +
-                        ", numHidden:" + numHidden + ", maxUnknownToUse:" + maxUnknownToUse);
+                                     ", numUnknownOnHand:" + numUnknownOnHand + ", numKnownOnHand:" + numKnownOnHand +
+                                     ", numHidden:" + numHidden + ", maxUnknownToUse:" + maxUnknownToUse);
                 }
             }
         }
@@ -427,10 +427,7 @@ public class TriadGameScreenMemory
         }
     }
 
-    public void UpdatePlayerDeck(TriadDeck playerDeck)
-    {
-        playerDeckPattern = [.. playerDeck.knownCards];
-    }
+    public void UpdatePlayerDeck(TriadDeck playerDeck) => playerDeckPattern = [.. playerDeck.knownCards];
 
     private bool FindSwappedCard(TriadCard[] screenCards, TriadCard[] expectedCards, TriadDeckInstanceScreen otherDeck, out int swappedCardIdx, out int swappedOtherIdx, out TriadCard swappedCard)
     {
@@ -461,9 +458,9 @@ public class TriadGameScreenMemory
 
         var bHasSwapped = (numDiffs == 1) && (numPotentialSwaps == 1);
         Logger.WriteLine("FindSwappedCard: blue[" + swappedCardIdx + "]:" + (swappedBlueCard != null ? swappedBlueCard.Name.GetCodeName() : "??") +
-            " <=> red[" + swappedOtherIdx + "]:" + (swappedCard != null ? swappedCard.Name.GetCodeName() : "??") +
-            ", diffs:" + numDiffs + ", potentialSwaps:" + numPotentialSwaps +
-            " => " + (bHasSwapped ? "SWAP" : "ignore"));
+                         " <=> red[" + swappedOtherIdx + "]:" + (swappedCard != null ? swappedCard.Name.GetCodeName() : "??") +
+                         ", diffs:" + numDiffs + ", potentialSwaps:" + numPotentialSwaps +
+                         " => " + (bHasSwapped ? "SWAP" : "ignore"));
 
         return bHasSwapped;
     }
@@ -515,7 +512,7 @@ public class TriadGameScreenMemory
                     if (cardIdx < 0)
                     {
                         swappedCard = board[Idx].card;
-                        swappedOtherIdx = 100;                  // something way outside, it's not going to be used directly as card was already placed
+                        swappedOtherIdx = 100; // something way outside, it's not going to be used directly as card was already placed
 
                         for (var ScreenIdx = 0; ScreenIdx < screenCards.Length; ScreenIdx++)
                         {
@@ -534,8 +531,8 @@ public class TriadGameScreenMemory
 
         var bHasSwapped = (numDiffs == 1);
         Logger.WriteLine("FindSwappedCardVisible: blue[" + swappedCardIdx + "]:" + (swappedCardIdx >= 0 ? screenCards[swappedCardIdx].Name.GetCodeName() : "??") +
-            " <=> red[" + swappedOtherIdx + "]:" + (swappedCard != null ? swappedCard.Name.GetCodeName() : "??") +
-            ", boardMode:" + bBoardMode + ", diffs:" + numDiffs + " => " + (bHasSwapped ? "SWAP" : "ignore"));
+                         " <=> red[" + swappedOtherIdx + "]:" + (swappedCard != null ? swappedCard.Name.GetCodeName() : "??") +
+                         ", boardMode:" + bBoardMode + ", diffs:" + numDiffs + " => " + (bHasSwapped ? "SWAP" : "ignore"));
 
         return bHasSwapped;
     }

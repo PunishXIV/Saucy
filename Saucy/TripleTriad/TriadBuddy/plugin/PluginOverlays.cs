@@ -1,7 +1,6 @@
-﻿using FFTriadBuddy;
-using Dalamud.Bindings.ImGui;
+﻿using Dalamud.Bindings.ImGui;
+using FFTriadBuddy;
 using System.Numerics;
-
 namespace TriadBuddyPlugin;
 
 public class PluginOverlays
@@ -13,15 +12,15 @@ public class PluginOverlays
 
     public readonly UIReaderTriadGame uiReaderGame;
     public readonly UIReaderTriadPrep uiReaderPrep;
-
-    // overlay: game board
-    private bool hasGameOverlay;
+    private int gameBoardIdx;
     private uint gameCardColor;
     private int gameCardIdx;
-    private int gameBoardIdx;
 
     // overlay: deck selection
     private bool hasDeckSelection;
+
+    // overlay: game board
+    private bool hasGameOverlay;
 
     public PluginOverlays(UIReaderTriadGame uiReaderGame, UIReaderTriadPrep uiReaderPrep)
     {
@@ -33,7 +32,7 @@ public class PluginOverlays
             SolverUtils.solverGame.OnMoveChanged += OnSolverMove;
         }
 
-        uiReaderPrep.OnDeckSelectionChanged += (active) => hasDeckSelection = active;
+        uiReaderPrep.OnDeckSelectionChanged += active => hasDeckSelection = active;
     }
 
     public void OnSolverMove(bool foundMove)
@@ -75,8 +74,8 @@ public class PluginOverlays
 
         if (Service.pluginConfig.ShowSolverHintsInGame)
         {
-            var (deckCardPos, deckCardSize) = uiReaderGame.GetBlueCardPosAndSize(gameCardIdx);
-            var (boardCardPos, boardCardSize) = uiReaderGame.GetBoardCardPosAndSize(gameBoardIdx);
+            (var deckCardPos, var deckCardSize) = uiReaderGame.GetBlueCardPosAndSize(gameCardIdx);
+            (var boardCardPos, var boardCardSize) = uiReaderGame.GetBoardCardPosAndSize(gameBoardIdx);
 
             var drawCardPos = deckCardPos + ImGuiHelpers.MainViewport.Pos;
             var drawBoardPos = boardCardPos + ImGuiHelpers.MainViewport.Pos;
@@ -123,10 +122,8 @@ public class PluginOverlays
         }
     }
 
-    public uint GetChanceColor(SolverResult chance)
-    {
-        return (chance.expectedResult == ETriadGameState.BlueWins) ? colorWin :
-            (chance.expectedResult == ETriadGameState.BlueDraw) ? colorDraw :
-            colorLose;
-    }
+    public uint GetChanceColor(SolverResult chance) =>
+        (chance.expectedResult == ETriadGameState.BlueWins) ? colorWin :
+        (chance.expectedResult == ETriadGameState.BlueDraw) ? colorDraw :
+        colorLose;
 }

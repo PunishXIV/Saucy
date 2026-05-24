@@ -1,96 +1,100 @@
 ﻿using Dalamud;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
-using Dalamud.Bindings.ImGui;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 using TriadBuddy;
-
 namespace TriadBuddyPlugin;
 
 public class PluginWindowDeckOptimize : Window, IDisposable
 {
-    private readonly Vector4 colorSetupData = new(0.9f, 0.9f, 0.0f, 1);
+    private readonly Vector2[] cardImagePos = new Vector2[5];
     private readonly Vector4 colorResultData = new(0.0f, 0.9f, 0.9f, 1);
-
-    private readonly SolverDeckOptimize? solver;
-    private readonly UIReaderTriadDeckEdit uiReaderDeckEdit;
-
-    public Action? OnConfigRequested;
+    private readonly Vector4 colorSetupData = new(0.9f, 0.9f, 0.0f, 1);
 
     private readonly TriadDeckOptimizer deckOptimizer;
     private readonly List<TriadGameModifier> regionMods = [];
-    private TriadNpc? npc;
-    private string? regionModsDesc;
-
-    private float optimizerProgress;
-    private float optimizerElapsedTime;
-    private float optimizerWinChance;
-    private float pendingWinChance;
-    private string? optimizerTimeRemainingDesc;
-    private bool isOptimizerRunning;
-    private int[]? pendingCardIds;
-    private int[]? shownCardIds;
-    private readonly string[] shownCardTooltipsDeckEdit = new string[5];
     private readonly string[] shownCardTooltipsCollection = new string[5];
-    private float pendingCardsUpdateTimeRemaining;
-    private float optimizerStatsTimeRemaining;
+    private readonly string[] shownCardTooltipsDeckEdit = new string[5];
 
-    private bool hasDeckSolverResult;
-    private SolverResult deckWinChance;
+    private readonly SolverDeckOptimize? solver;
+    private readonly UIReaderTriadDeckEdit uiReaderDeckEdit;
+    private TriadDeck? bestDeck;
+    private SolverResult bestWinChance;
     private TriadDeck? cachedSolverDeck;
 
     private bool canUseBestDeck;
-    private TriadDeck? bestDeck;
-    private SolverResult bestWinChance;
-
-    private Vector2 cardImageSize = new(104, 128);
-    private readonly Vector2[] cardImagePos = new Vector2[5];
     private Vector2 cardImageBox = new(0.0f, 0.0f);
 
-    private string? locNpc;
-    private string? locRegionRules;
-    private string? locWinChance;
-    private string? locDeckScore;
-    private string? locTimeRemaining;
+    private Vector2 cardImageSize = new(104, 128);
+    private SolverResult deckWinChance;
+    private bool hasCachedLocStrings;
+
+    private bool hasDeckSolverResult;
+    private bool isOptimizerRunning;
     private string? locCollectionPage;
     private string? locDeckEditPage;
-    private string? locOptimizeStart;
+    private string? locDeckScore;
+
+    private string? locNpc;
     private string? locOptimizeAbort;
     private string? locOptimizeGuess;
-    private bool hasCachedLocStrings;
+    private string? locOptimizeStart;
+    private string? locRegionRules;
+    private string? locTimeRemaining;
+    private string? locWinChance;
+    private TriadNpc? npc;
+
+    public Action? OnConfigRequested;
+    private float optimizerElapsedTime;
+
+    private float optimizerProgress;
+    private float optimizerStatsTimeRemaining;
+    private string? optimizerTimeRemainingDesc;
+    private float optimizerWinChance;
+    private int[]? pendingCardIds;
+    private float pendingCardsUpdateTimeRemaining;
+    private float pendingWinChance;
+    private string? regionModsDesc;
+    private int[]? shownCardIds;
 
     public PluginWindowDeckOptimize(UIReaderTriadDeckEdit uiReaderDeckEdit) : base("Deck Optimizer")
     {
         solver = SolverUtils.solverDeckOptimize;
         this.uiReaderDeckEdit = uiReaderDeckEdit;
 
-        deckOptimizer = (solver != null) ? solver.deckOptimizer : new TriadDeckOptimizer();
+        deckOptimizer = (solver != null) ? solver.deckOptimizer : new();
         deckOptimizer.OnFoundDeck += DeckOptimizer_OnFoundDeck;
 
-        cardImagePos[0] = new Vector2(0, 0);
-        cardImagePos[1] = new Vector2(cardImageSize.X + 5, 0);
-        cardImagePos[2] = new Vector2((cardImageSize.X + 5) * 2, 0);
-        cardImagePos[3] = new Vector2((cardImageSize.X + 5) / 2, cardImageSize.Y + 5);
-        cardImagePos[4] = new Vector2((cardImageSize.X + 5) / 2 + cardImageSize.X + 5, cardImageSize.Y + 5);
+        cardImagePos[0] = new(0, 0);
+        cardImagePos[1] = new(cardImageSize.X + 5, 0);
+        cardImagePos[2] = new((cardImageSize.X + 5) * 2, 0);
+        cardImagePos[3] = new((cardImageSize.X + 5) / 2, cardImageSize.Y + 5);
+        cardImagePos[4] = new((cardImageSize.X + 5) / 2 + cardImageSize.X + 5, cardImageSize.Y + 5);
         cardImageBox.X = cardImagePos[2].X + cardImageSize.X;
         cardImageBox.Y = cardImagePos[4].Y + cardImageSize.Y;
 
         SizeCondition = ImGuiCond.None;
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(cardImageSize.X * 4, (cardImageSize.Y * 2) + ImGui.GetTextLineHeight() * 8),
+            MinimumSize = new(cardImageSize.X * 4, (cardImageSize.Y * 2) + ImGui.GetTextLineHeight() * 8)
         };
 
         if (Plugin.CurrentLocManager != null)
         {
-            Plugin.CurrentLocManager.LocalizationChanged += (langCode) => { hasCachedLocStrings = false; };
+            Plugin.CurrentLocManager.LocalizationChanged += langCode => { hasCachedLocStrings = false; };
         }
+    }
+
+    public void Dispose()
+    {
+        // ...
     }
 
     private void DeckOptimizer_OnFoundDeck(TriadDeck deck, float estWinChance)
@@ -107,11 +111,6 @@ public class PluginWindowDeckOptimize : Window, IDisposable
                 pendingCardIds[idx] = deck.knownCards[idx].Id;
             }
         }
-    }
-
-    public void Dispose()
-    {
-        // ...
     }
 
     private void UpdateLocalizationCache()
@@ -132,12 +131,10 @@ public class PluginWindowDeckOptimize : Window, IDisposable
         locOptimizeGuess = Localization.Localize("DO_Guess", "Guess");
     }
 
-    public bool CanRunOptimizer()
-    {
+    public bool CanRunOptimizer() =>
         // needs access to list of currently owned cards, provided by UnsafeReaderTriadCard class
         // any errors there (outdated signatures) will disable deck optimizer
-        return PlayerSettingsDB.Get().ownedCards.Count > 0;
-    }
+        PlayerSettingsDB.Get().ownedCards.Count > 0;
 
     public void SetupAndOpen(TriadNpc? npc, List<TriadGameModifier> gameRules)
     {
@@ -204,7 +201,7 @@ public class PluginWindowDeckOptimize : Window, IDisposable
         var resource = Svc.Texture.GetFromGameIcon(iconLookup);
         if (resource != null)
         {
-            var hasWrap = resource.TryGetWrap(out var resultOb, out _);
+            var hasWrap = resource.TryGetWrap(out var resultOb, out var _);
             if (hasWrap)
             {
                 return resultOb;
@@ -219,7 +216,7 @@ public class PluginWindowDeckOptimize : Window, IDisposable
         var resource = Svc.Texture.GetFromGame("ui/uld/CardTripleTriad.tex");
         if (resource != null)
         {
-            var hasWrap = resource.TryGetWrap(out var resultOb, out _);
+            var hasWrap = resource.TryGetWrap(out var resultOb, out var _);
             if (hasWrap)
             {
                 return resultOb;
@@ -260,7 +257,7 @@ public class PluginWindowDeckOptimize : Window, IDisposable
         var currentPos = ImGui.GetCursorPos();
         var availRegionWidth = ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMin().X;
 
-        ImGui.SetCursorPos(new Vector2(availRegionWidth - (20 * ImGuiHelpers.GlobalScale), orgPos.Y));
+        ImGui.SetCursorPos(new(availRegionWidth - (20 * ImGuiHelpers.GlobalScale), orgPos.Y));
         if (ImGuiComponents.IconButton(FontAwesomeIcon.Cog))
         {
             OnConfigRequested?.Invoke();
@@ -269,7 +266,7 @@ public class PluginWindowDeckOptimize : Window, IDisposable
         // card images are not scaled and neither is dummy filler!
         ImGui.Dummy(cardImageBox);
         ImGui.SameLine();
-        ImGui.Dummy(new Vector2(75 * 2, 1));
+        ImGui.Dummy(new(75 * 2, 1));
 
         var centerOffset = new Vector2((availRegionWidth - cardImageBox.X) / 2, 10 * ImGuiHelpers.GlobalScale);
         var footerPosY = currentPos.Y + cardImageBox.Y + (20 * ImGuiHelpers.GlobalScale);
@@ -284,7 +281,7 @@ public class PluginWindowDeckOptimize : Window, IDisposable
         }
 
         // stat block
-        ImGui.SetCursorPos(new Vector2(currentPos.X, currentPos.Y + cardImagePos[3].Y + ImGui.GetTextLineHeight()));
+        ImGui.SetCursorPos(new(currentPos.X, currentPos.Y + cardImagePos[3].Y + ImGui.GetTextLineHeight()));
         if (isOptimizerRunning || hasDeckSolverResult || optimizerWinChance >= 0.0f)
         {
             if (hasDeckSolverResult)
@@ -331,19 +328,19 @@ public class PluginWindowDeckOptimize : Window, IDisposable
         }
 
         // footer
-        ImGui.SetCursorPos(new Vector2(currentPos.X, footerPosY));
+        ImGui.SetCursorPos(new(currentPos.X, footerPosY));
         if (!isOptimizerRunning)
         {
             var textSize = ImGui.CalcTextSize(locOptimizeGuess);
             textSize.X += 75.0f * ImGuiHelpers.GlobalScale;
-            if (ImGui.Button(locOptimizeGuess, new Vector2(textSize.X, 0)))
+            if (ImGui.Button(locOptimizeGuess, new(textSize.X, 0)))
             {
                 OptimizerGuess();
             }
 
             ImGui.SameLine();
 
-            if (ImGui.Button(locOptimizeStart, new Vector2(-1, 0)))
+            if (ImGui.Button(locOptimizeStart, new(-1, 0)))
             {
                 StartOptimizer();
             }
@@ -354,7 +351,7 @@ public class PluginWindowDeckOptimize : Window, IDisposable
             ImGui.ProgressBar(optimizerProgress, Vector2.Zero);
             ImGui.SameLine();
 
-            if (ImGui.Button(locOptimizeAbort, new Vector2(-1, 0)))
+            if (ImGui.Button(locOptimizeAbort, new(-1, 0)))
             {
                 AbortOptimizer();
             }
@@ -408,20 +405,20 @@ public class PluginWindowDeckOptimize : Window, IDisposable
 
                 drawOffset -= drawPos;
                 ImGui.GetWindowDrawList().AddRectFilled(
-                    new Vector2(drawOffset.X + useCenterX - padding - textSizePadding.X * 2, drawOffset.Y + useCenterY - padding - textSizePadding.Y),
-                    new Vector2(drawOffset.X + useCenterX + padding + textSizePadding.X * 2, drawOffset.Y + useCenterY + padding + textSizePadding.Y),
+                    new(drawOffset.X + useCenterX - padding - textSizePadding.X * 2, drawOffset.Y + useCenterY - padding - textSizePadding.Y),
+                    new(drawOffset.X + useCenterX + padding + textSizePadding.X * 2, drawOffset.Y + useCenterY + padding + textSizePadding.Y),
                     0x80000000);
 
-                ImGui.SetCursorPos(new Vector2(useCenterX - (textSizeU.X * 0.5f), useCenterY - padding - textSizeU.Y));
+                ImGui.SetCursorPos(new(useCenterX - (textSizeU.X * 0.5f), useCenterY - padding - textSizeU.Y));
                 ImGui.Text(textU);
 
-                ImGui.SetCursorPos(new Vector2(useCenterX - (textSizeD.X * 0.5f), useCenterY + padding));
+                ImGui.SetCursorPos(new(useCenterX - (textSizeD.X * 0.5f), useCenterY + padding));
                 ImGui.Text(textD);
 
-                ImGui.SetCursorPos(new Vector2(useCenterX + padding + textSizePadding.X, useCenterY - (textSizeL.Y * 0.5f)));
+                ImGui.SetCursorPos(new(useCenterX + padding + textSizePadding.X, useCenterY - (textSizeL.Y * 0.5f)));
                 ImGui.Text(textL);
 
-                ImGui.SetCursorPos(new Vector2(useCenterX - padding - textSizePadding.X - textSizeR.X, useCenterY - (textSizeR.Y * 0.5f)));
+                ImGui.SetCursorPos(new(useCenterX - padding - textSizePadding.X - textSizeR.X, useCenterY - (textSizeR.Y * 0.5f)));
                 ImGui.Text(textR);
             }
         }
@@ -556,12 +553,12 @@ public class PluginWindowDeckOptimize : Window, IDisposable
 
         if (solver != null && cachedSolverDeck != null)
         {
-            solver.SolveOptimizedDeck(cachedSolverDeck, npc, regionMods, (chance) =>
+            solver.SolveOptimizedDeck(cachedSolverDeck, npc, regionMods, chance =>
             {
                 // this is invoked from worker thread!
                 if (bestDeck == null || chance.IsBetterThan(bestWinChance))
                 {
-                    bestDeck = new TriadDeck(cachedSolverDeck.knownCards);
+                    bestDeck = new(cachedSolverDeck.knownCards);
                     bestWinChance = deckWinChance;
                 }
 

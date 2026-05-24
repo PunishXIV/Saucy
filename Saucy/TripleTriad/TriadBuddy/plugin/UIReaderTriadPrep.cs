@@ -3,29 +3,28 @@ using MgAl2O4.Utils;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-
 namespace TriadBuddyPlugin;
 
 public class UIReaderTriadPrep
 {
     public UIStateTriadPrep cachedState = new();
-    public bool shouldScanDeckData = false;
-
-    public bool HasMatchRequestUI { get; private set; }
-    public bool HasDeckSelectionUI { get; private set; }
+    public Action<bool>? OnDeckSelectionChanged;
+    public Action<bool>? OnMatchRequestChanged;
 
     public Action<UIStateTriadPrep>? OnUIStateChanged;
-    public Action<bool>? OnMatchRequestChanged;
-    public Action<bool>? OnDeckSelectionChanged;
+    public bool shouldScanDeckData = false;
+    public UIReaderTriadPrepDeckSelect uiReaderDeckSelect = new();
 
     public UIReaderTriadPrepMatchRequest uiReaderMatchRequest = new();
-    public UIReaderTriadPrepDeckSelect uiReaderDeckSelect = new();
 
     public UIReaderTriadPrep()
     {
         uiReaderMatchRequest.parentReader = this;
         uiReaderDeckSelect.parentReader = this;
     }
+
+    public bool HasMatchRequestUI { get; private set; }
+    public bool HasDeckSelectionUI { get; private set; }
 
     public void OnAddonLost()
     {
@@ -39,7 +38,7 @@ public class UIReaderTriadPrep
         }
     }
 
-    public unsafe void OnAddonUpdateMatchRequest(IntPtr addonPtr)
+    public unsafe void OnAddonUpdateMatchRequest(nint addonPtr)
     {
         var baseNode = (AtkUnitBase*)addonPtr;
         if (baseNode == null)
@@ -59,7 +58,7 @@ public class UIReaderTriadPrep
         (cachedState.screenPos, cachedState.screenSize) = GUINodeUtils.GetNodePosAndSize(baseNode->RootNode);
     }
 
-    public unsafe void OnAddonUpdateDeckSelect(IntPtr addonPtr)
+    public unsafe void OnAddonUpdateDeckSelect(nint addonPtr)
     {
         var baseNode = (AtkUnitBase*)addonPtr;
         if (baseNode == null)
@@ -157,8 +156,7 @@ public class UIReaderTriadPrep
                 {
                     var deckOb = new UIStateTriadPrepDeck
                     {
-                        id = cachedState.decks.Count,
-                        rootNodeAddr = (ulong)nodeB
+                        id = cachedState.decks.Count, rootNodeAddr = (ulong)nodeB
                     };
 
                     if (shouldScanDeckData)
@@ -214,25 +212,16 @@ public class UIReaderTriadPrepMatchRequest : IUIReader
 {
     public UIReaderTriadPrep? parentReader;
 
-    public string GetAddonName()
-    {
-        return "TripleTriadRequest";
-    }
+    public string GetAddonName() => "TripleTriadRequest";
 
-    public void OnAddonLost()
-    {
-        parentReader?.OnAddonLost();
-    }
+    public void OnAddonLost() => parentReader?.OnAddonLost();
 
-    public void OnAddonShown(IntPtr addonPtr)
+    public void OnAddonShown(nint addonPtr)
     {
         // nothing to cache
     }
 
-    public void OnAddonUpdate(IntPtr addonPtr)
-    {
-        parentReader?.OnAddonUpdateMatchRequest(addonPtr);
-    }
+    public void OnAddonUpdate(nint addonPtr) => parentReader?.OnAddonUpdateMatchRequest(addonPtr);
 }
 
 // helper class for scheduler: handles three octaves performance UI and passes all notifies to parent
@@ -240,34 +229,25 @@ public class UIReaderTriadPrepDeckSelect : IUIReader
 {
     public UIReaderTriadPrep? parentReader;
 
-    public string GetAddonName()
-    {
-        return "TripleTriadSelDeck";
-    }
+    public string GetAddonName() => "TripleTriadSelDeck";
 
-    public void OnAddonLost()
-    {
-        parentReader?.OnAddonLost();
-    }
+    public void OnAddonLost() => parentReader?.OnAddonLost();
 
-    public void OnAddonShown(IntPtr addonPtr)
+    public void OnAddonShown(nint addonPtr)
     {
         // nothing to cache
     }
 
-    public void OnAddonUpdate(IntPtr addonPtr)
-    {
-        parentReader?.OnAddonUpdateDeckSelect(addonPtr);
-    }
+    public void OnAddonUpdate(nint addonPtr) => parentReader?.OnAddonUpdateDeckSelect(addonPtr);
 }
 
 public class UIStateTriadPrepDeck
 {
     public string[] cardTexPaths = new string[5];
+    public int id;
     public string name = string.Empty;
 
     public ulong rootNodeAddr;
-    public int id;
 
     public Vector2 screenPos;
     public Vector2 screenSize;
@@ -275,11 +255,10 @@ public class UIStateTriadPrepDeck
 
 public class UIStateTriadPrep
 {
-    public string[] rules = new string[4];
+    public List<UIStateTriadPrepDeck> decks = [];
     public string npc = string.Empty;
+    public string[] rules = new string[4];
 
     public Vector2 screenPos;
     public Vector2 screenSize;
-
-    public List<UIStateTriadPrepDeck> decks = [];
 }

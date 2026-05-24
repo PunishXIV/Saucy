@@ -30,14 +30,14 @@ namespace FFTriadBuddy
         RuleName,
         CardType,
         CardName,
-        NpcName,
+        NpcName
     }
 
     public class LocString
     {
+        public int Id;
         public string Text = string.Empty;
         public ELocStringType Type;
-        public int Id;
 
         public LocString(ELocStringType Type, int Id)
         {
@@ -52,22 +52,15 @@ namespace FFTriadBuddy
             Text = DefaultText;
         }
 
-        public override string ToString()
-        {
-            return string.Format("{0}:{1} '{2}'", Type, Id, GetCodeName());
-        }
+        public override string ToString() => string.Format("{0}:{1} '{2}'", Type, Id, GetCodeName());
 
-        public string GetLocalized()
-        {
+        public string GetLocalized() =>
             // nope
-            return Text;
-        }
+            Text;
 
-        public string GetCodeName()
-        {
+        public string GetCodeName() =>
             // nope
-            return Text;
-        }
+            Text;
     }
 
     public class LocalizationDB
@@ -75,30 +68,35 @@ namespace FFTriadBuddy
         public static readonly string[] Languages = ["de", "en", "fr", "ja", "cn", "ko"];
         public static int UserLanguageIdx = 1;
         private static readonly LocalizationDB instance = new();
+        public List<LocString> LocCardNames = [];
+        public List<LocString> LocCardTypes = [];
+        public List<LocString> LocNpcNames = [];
+        public List<LocString> LocRuleNames = [];
 
         public List<LocString> LocUnknown = [];
-        public List<LocString> LocRuleNames = [];
-        public List<LocString> LocCardTypes = [];
-        public List<LocString> LocCardNames = [];
-        public List<LocString> LocNpcNames = [];
-
-        public Dictionary<ELocStringType, List<LocString>> mapLocStrings;
         public Dictionary<ETriadCardType, LocString> mapCardTypes;
 
-        public static LocalizationDB Get()
-        {
-            return instance;
-        }
+        public Dictionary<ELocStringType, List<LocString>> mapLocStrings;
 
         public LocalizationDB()
         {
-            mapLocStrings = new Dictionary<ELocStringType, List<LocString>>
+            mapLocStrings = new()
             {
-                { ELocStringType.Unknown, LocUnknown },
-                { ELocStringType.RuleName, LocRuleNames },
-                { ELocStringType.CardType, LocCardTypes },
-                { ELocStringType.CardName, LocCardNames },
-                { ELocStringType.NpcName, LocNpcNames }
+                {
+                    ELocStringType.Unknown, LocUnknown
+                },
+                {
+                    ELocStringType.RuleName, LocRuleNames
+                },
+                {
+                    ELocStringType.CardType, LocCardTypes
+                },
+                {
+                    ELocStringType.CardName, LocCardNames
+                },
+                {
+                    ELocStringType.NpcName, LocNpcNames
+                }
             };
 
             mapCardTypes = [];
@@ -111,6 +109,8 @@ namespace FFTriadBuddy
             }
         }
 
+        public static LocalizationDB Get() => instance;
+
         public LocString FindOrAddLocString(ELocStringType Type, int Id)
         {
             var list = mapLocStrings[Type];
@@ -118,7 +118,7 @@ namespace FFTriadBuddy
             // so far those ids are continuous from 0, switch to dictionaries when it changes
             while (list.Count <= Id)
             {
-                list.Add(new LocString(Type, list.Count));
+                list.Add(new(Type, list.Count));
             }
 
             return list[Id];
@@ -130,11 +130,6 @@ namespace FFTriadBuddy
         private static readonly PlayerSettingsDB instance = new();
         public List<TriadCard> ownedCards = [];
         public TriadCard?[] starterCards;
-
-        public static PlayerSettingsDB Get()
-        {
-            return instance;
-        }
 
         public PlayerSettingsDB()
         {
@@ -149,6 +144,8 @@ namespace FFTriadBuddy
             starterCards[3] = cardDB.FindById(7); // Mandragora
             starterCards[4] = cardDB.FindById(10); // Coeurl
         }
+
+        public static PlayerSettingsDB Get() => instance;
     }
 
     public class ScannerTriad
@@ -157,17 +154,17 @@ namespace FFTriadBuddy
         {
             MissingTimer,
             Waiting,
-            Active,
+            Active
         }
 
         public class GameState
         {
+            public TriadCard?[] blueDeck = new TriadCard[5];
             public TriadCard?[] board = new TriadCard[9];
             public ETriadCardOwner[] boardOwner = new ETriadCardOwner[9];
-            public TriadCard?[] blueDeck = new TriadCard[5];
-            public TriadCard?[] redDeck = new TriadCard[5];
             public TriadCard? forcedBlueCard = null;
             public List<TriadGameModifier> mods = [];
+            public TriadCard?[] redDeck = new TriadCard[5];
             public ETurnState turnState = ETurnState.MissingTimer;
         }
     }

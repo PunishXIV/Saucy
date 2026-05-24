@@ -3,7 +3,6 @@ using MgAl2O4.Utils;
 using Saucy.CuffACur;
 using System;
 using System.Linq;
-
 namespace TriadBuddyPlugin;
 
 public class UIReaderGamesResults(IGameGui gameGui) : IUIReader
@@ -11,32 +10,26 @@ public class UIReaderGamesResults(IGameGui gameGui) : IUIReader
     private readonly IGameGui gameGui = gameGui;
     private UIStateCuffResults cuffResults = new();
     private UIStateLimbResults limbResults = new();
+
+    private bool needsNotify;
     public Action<UIStateCuffResults> OnCuffUpdated;
     public Action<UIStateLimbResults> OnLimbUpdated;
     public Action<bool> OnResultsUIChanged;
 
-    private bool needsNotify = false;
-
     public bool HasResultsUI { get; private set; }
 
-    public string GetAddonName()
-    {
-        return "GoldSaucerReward";
-    }
+    public string GetAddonName() => "GoldSaucerReward";
 
-    public void OnAddonLost()
-    {
-        SetIsResultsUI(false);
-    }
+    public void OnAddonLost() => SetIsResultsUI(false);
 
-    public void OnAddonShown(IntPtr addonPtr)
+    public void OnAddonShown(nint addonPtr)
     {
         needsNotify = true;
         cuffResults = new();
         limbResults = new();
     }
 
-    public unsafe void OnAddonUpdate(IntPtr addonPtr)
+    public unsafe void OnAddonUpdate(nint addonPtr)
     {
         var baseNode = (AtkUnitBase*)addonPtr;
         if (baseNode == null)
@@ -95,7 +88,7 @@ public class UIReaderGamesResults(IGameGui gameGui) : IUIReader
 
         if (P.LimbManager.Cfg.EnableLimb)
         {
-            if (!int.TryParse(number->NodeText.ToString().Where(Char.IsDigit).ToArray(), out limbResults.numMGP))
+            if (!int.TryParse(number->NodeText.ToString().Where(char.IsDigit).ToArray(), out limbResults.numMGP))
             {
                 limbResults.numMGP = -1;
             }
@@ -107,10 +100,10 @@ public class UIReaderGamesResults(IGameGui gameGui) : IUIReader
 
 public class UIStateCuffResults
 {
-    public int numMGP;
     public bool isBruising;
-    public bool isPunishing;
     public bool isBrutal;
+    public bool isPunishing;
+    public int numMGP;
 }
 
 public class UIStateLimbResults

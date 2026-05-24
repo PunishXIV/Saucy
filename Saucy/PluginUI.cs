@@ -15,7 +15,6 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using TriadBuddyPlugin;
-
 namespace Saucy;
 
 // It is good to have this be disposable in general, in case you ever need it
@@ -58,7 +57,7 @@ public unsafe class PluginUI : Window
 #if DEBUG
             , ("Debug", DrawDebugTab, null, false)
 #endif
-            );
+        );
     }
 
     private void DrawOtherGamesTab()
@@ -68,27 +67,39 @@ public unsafe class PluginUI : Window
         if (ImGui.Checkbox("Enable Slice is Right Module", ref C.SliceIsRightModuleEnabled))
         {
             if (C.SliceIsRightModuleEnabled)
+            {
                 C.EnabledModules.Add(ModuleManager.GetModule<SliceIsRight>()!.InternalName);
+            }
             else
+            {
                 C.EnabledModules.Remove(ModuleManager.GetModule<SliceIsRight>()!.InternalName);
+            }
             C.Save();
         }
 
         if (ImGui.Checkbox("Enable Auto Mini-Cactpot", ref C.EnableAutoMiniCactpot))
         {
             if (C.EnableAutoMiniCactpot)
+            {
                 C.EnabledModules.Add(ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName);
+            }
             else
+            {
                 C.EnabledModules.Remove(ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName);
+            }
             C.Save();
         }
 
         if (ImGui.Checkbox("Enable Any Way the Wind Blows Module", ref C.AnyWayTheWindBlowsModuleEnabled))
         {
             if (C.AnyWayTheWindBlowsModuleEnabled)
+            {
                 C.EnabledModules.Add(ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName);
+            }
             else
+            {
                 C.EnabledModules.Remove(ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName);
+            }
             C.Save();
         }
     }
@@ -113,7 +124,9 @@ public unsafe class PluginUI : Window
             {
                 DrawStatsTab(C.SessionStats, out var reset);
                 if (reset)
+                {
                     C.SessionStats = new();
+                }
                 ImGui.EndTabItem();
             }
 
@@ -147,12 +160,12 @@ public unsafe class PluginUI : Window
         }
 
         ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
-        reset = ImGui.Button("RESET STATS (Hold Ctrl)", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y)) && ImGui.GetIO().KeyCtrl;
+        reset = ImGui.Button("RESET STATS (Hold Ctrl)", new(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y)) && ImGui.GetIO().KeyCtrl;
     }
 
     private void DrawLimbStats(Stats stat)
     {
-        ImGui.BeginChild("Limb Stats", new Vector2(0, ImGui.GetContentRegionAvail().Y - 30f), true);
+        ImGui.BeginChild("Limb Stats", new(0, ImGui.GetContentRegionAvail().Y - 30f), true);
         ImGui.Columns(3, default, false);
         ImGui.NextColumn();
         ImGuiEx.CenterColumnText(ImGuiColors.DalamudRed, "Out on a Limb", true);
@@ -173,7 +186,7 @@ public unsafe class PluginUI : Window
 
     private void DrawCuffStats(Stats stat)
     {
-        ImGui.BeginChild("Cuff Stats", new Vector2(0, ImGui.GetContentRegionAvail().Y - 30f), true);
+        ImGui.BeginChild("Cuff Stats", new(0, ImGui.GetContentRegionAvail().Y - 30f), true);
         ImGui.Columns(3, default, false);
         ImGui.NextColumn();
         ImGuiEx.CenterColumnText(ImGuiColors.DalamudRed, "Cuff-a-cur", true);
@@ -213,7 +226,7 @@ public unsafe class PluginUI : Window
 
     private void DrawTTStats(Stats stat)
     {
-        ImGui.BeginChild("TT Stats", new Vector2(0, ImGui.GetContentRegionAvail().Y - 30f), true);
+        ImGui.BeginChild("TT Stats", new(0, ImGui.GetContentRegionAvail().Y - 30f), true);
         ImGui.Columns(3, default, false);
         ImGui.NextColumn();
         ImGuiEx.CenterColumnText(ImGuiColors.DalamudRed, "Triple Triad", true);
@@ -301,7 +314,7 @@ public unsafe class PluginUI : Window
             ImGuiEx.CenterColumnText($"{topCard.Value:N0} times");
         }
 
-        ImGui.Columns(1);
+        ImGui.Columns();
         ImGui.EndChild();
     }
 
@@ -309,7 +322,9 @@ public unsafe class PluginUI : Window
     {
         var output = 0;
         foreach (var card in stat.CardsWon)
+        {
             output += GameCardDB.Get().FindById((int)card.Key)!.SaleValue * stat.CardsWon[card.Key];
+        }
 
         return output;
     }
@@ -326,7 +341,9 @@ public unsafe class PluginUI : Window
             TriadAutomater.ModuleEnabled = enabled;
 
             if (enabled)
+            {
                 CufModule.ModuleEnabled = false;
+            }
         }
 
         var autoOpen = C.OpenAutomatically;
@@ -370,7 +387,10 @@ public unsafe class PluginUI : Window
 
                     foreach (var deck in TTSolver.profileGS.GetPlayerDecks()!)
                     {
-                        if (deck is null) continue;
+                        if (deck is null)
+                        {
+                            continue;
+                        }
                         var index = deck.id;
                         //var index = Saucy.TTSolver.preGameDecks.Where(x => x.Value == deck).First().Key;
                         if (ImGui.Selectable(deck.name, index == selectedDeck))
@@ -464,7 +484,9 @@ public unsafe class PluginUI : Window
             if (ImGui.InputInt("###NumberOfTimes", ref TriadAutomater.NumberOfTimes))
             {
                 if (TriadAutomater.NumberOfTimes <= 0)
+                {
                     TriadAutomater.NumberOfTimes = 1;
+                }
             }
 
             ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
@@ -483,11 +505,11 @@ public unsafe class PluginUI : Window
                 ImGui.NextColumn();
                 DrawSoundPicker();
             }
-            ImGui.Columns(1);
+            ImGui.Columns();
         }
     }
 
-    public unsafe void DrawCufTab()
+    public void DrawCufTab()
     {
         var enabled = CufModule.ModuleEnabled;
 
@@ -498,7 +520,9 @@ public unsafe class PluginUI : Window
         {
             CufModule.ModuleEnabled = enabled;
             if (enabled && TriadAutomater.ModuleEnabled)
+            {
                 TriadAutomater.ModuleEnabled = false;
+            }
         }
 
         if (ImGui.Checkbox("Play X Amount of Times", ref TriadAutomater.PlayXTimes) && TriadAutomater.NumberOfTimes <= 0)
@@ -515,7 +539,9 @@ public unsafe class PluginUI : Window
             if (ImGui.InputInt("###NumberOfTimes", ref TriadAutomater.NumberOfTimes))
             {
                 if (TriadAutomater.NumberOfTimes <= 0)
+                {
                     TriadAutomater.NumberOfTimes = 1;
+                }
             }
 
             ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
@@ -534,7 +560,7 @@ public unsafe class PluginUI : Window
                 ImGui.NextColumn();
                 DrawSoundPicker();
             }
-            ImGui.Columns(1);
+            ImGui.Columns();
         }
     }
 

@@ -1,38 +1,37 @@
 ﻿using Dalamud;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
-using Dalamud.Bindings.ImGui;
 using System;
 using System.Numerics;
 using TriadBuddy;
-
 namespace TriadBuddyPlugin;
 
 public class PluginWindowCardInfo : Window, IDisposable
 {
     private readonly UIReaderTriadCardList uiReaderCardList;
-
-    private TriadCard? selectedCard;
-    private GameCardInfo? selectedCardInfo;
-    private GameNpcInfo? rewardNpcInfo;
-    private TriadNpc? rewardNpc;
-    private string rewardNpcRules = string.Empty;
-    private int rewardSourceIdx = -1;
-    private int numRewardSources = 0;
+    private bool hasCachedLocStrings;
+    private string? locNoAvail;
 
     private string? locNpcReward;
     private string? locShowOnMap;
-    private string? locNoAvail;
-    private bool hasCachedLocStrings;
+    private int numRewardSources;
+    private TriadNpc? rewardNpc;
+    private GameNpcInfo? rewardNpcInfo;
+    private string rewardNpcRules = string.Empty;
+    private int rewardSourceIdx = -1;
+
+    private TriadCard? selectedCard;
+    private GameCardInfo? selectedCardInfo;
 
     public PluginWindowCardInfo(UIReaderTriadCardList uiReaderCardList) : base("Card Info")
     {
         this.uiReaderCardList = uiReaderCardList;
 
-        uiReaderCardList.OnVisibilityChanged += (_) => UpdateWindowData();
-        uiReaderCardList.OnUIStateChanged += (_) => UpdateWindowData();
+        uiReaderCardList.OnVisibilityChanged += _ => UpdateWindowData();
+        uiReaderCardList.OnUIStateChanged += _ => UpdateWindowData();
         UpdateWindowData();
 
         // doesn't matter will be updated on next draw
@@ -42,17 +41,17 @@ public class PluginWindowCardInfo : Window, IDisposable
         ForceMainWindow = true;
 
         Flags = ImGuiWindowFlags.NoDecoration |
-            ImGuiWindowFlags.NoResize |
-            ImGuiWindowFlags.NoSavedSettings |
-            ImGuiWindowFlags.NoMove |
-            //ImGuiWindowFlags.NoMouseInputs |
-            ImGuiWindowFlags.NoDocking |
-            ImGuiWindowFlags.NoFocusOnAppearing |
-            ImGuiWindowFlags.NoNav;
+                ImGuiWindowFlags.NoResize |
+                ImGuiWindowFlags.NoSavedSettings |
+                ImGuiWindowFlags.NoMove |
+                //ImGuiWindowFlags.NoMouseInputs |
+                ImGuiWindowFlags.NoDocking |
+                ImGuiWindowFlags.NoFocusOnAppearing |
+                ImGuiWindowFlags.NoNav;
 
         if (Plugin.CurrentLocManager != null)
         {
-            Plugin.CurrentLocManager.LocalizationChanged += (_) => { hasCachedLocStrings = false; };
+            Plugin.CurrentLocManager.LocalizationChanged += _ => { hasCachedLocStrings = false; };
         }
     }
 

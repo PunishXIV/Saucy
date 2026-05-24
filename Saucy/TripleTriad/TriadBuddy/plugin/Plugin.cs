@@ -5,32 +5,27 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using MgAl2O4.Utils;
 using System;
-
 namespace TriadBuddyPlugin;
 
 public class Plugin
 {
-    public string Name => "Triad Buddy";
-
-    private readonly WindowSystem windowSystem = new("TriadBuddy");
+    public static Localization? CurrentLocManager;
+    private readonly GameDataLoader dataLoader;
+    private readonly Localization locManager;
+    private readonly PluginOverlays overlays;
+    private readonly StatTracker statTracker;
+    private readonly CommandInfo statusCommand;
 
     private readonly PluginWindowStatus statusWindow;
-    private readonly CommandInfo statusCommand;
+    private readonly string[] supportedLangCodes = ["de", "en", "es", "fr", "ja", "ko", "zh"];
+    private readonly UIReaderTriadCardList uiReaderCardList;
+    private readonly UIReaderTriadDeckEdit uiReaderDeckEdit;
 
     private readonly UIReaderTriadGame uiReaderGame;
     private readonly UIReaderTriadPrep uiReaderPrep;
-    private readonly UIReaderTriadCardList uiReaderCardList;
-    private readonly UIReaderTriadDeckEdit uiReaderDeckEdit;
-    private readonly StatTracker statTracker;
-    private readonly GameDataLoader dataLoader;
     private readonly UIReaderScheduler uiReaderScheduler;
-    private readonly PluginOverlays overlays;
-    private readonly Localization locManager;
 
-    public static Localization? CurrentLocManager;
-    private readonly string[] supportedLangCodes = ["de", "en", "es", "fr", "ja", "ko", "zh"];
-
-    [PluginService] internal static IDalamudPluginInterface pluginInterface { get; private set; } = null!;
+    private readonly WindowSystem windowSystem = new("TriadBuddy");
 
     public Plugin()
     {
@@ -42,38 +37,44 @@ public class Plugin
 
         // prep utils
         var myAssemblyName = GetType().Assembly.GetName().Name;
-        locManager = new Localization($"{myAssemblyName}.assets.loc.", "", true);            // res stream format: TriadBuddy.assets.loc.en.json
+        locManager = new($"{myAssemblyName}.assets.loc.", "", true); // res stream format: TriadBuddy.assets.loc.en.json
         locManager.SetupWithLangCode(pluginInterface.UiLanguage);
         CurrentLocManager = locManager;
 
-        dataLoader = new GameDataLoader();
+        dataLoader = new();
         dataLoader.StartAsyncWork();
 
         SolverUtils.CreateSolvers();
         if (Service.pluginConfig != null && Service.pluginConfig.CanUseProfileReader && SolverUtils.solverPreGameDecks != null)
         {
-            SolverUtils.solverPreGameDecks.profileGS = new UnsafeReaderProfileGS();
+            SolverUtils.solverPreGameDecks.profileGS = new();
         }
 
-        statTracker = new StatTracker();
+        statTracker = new();
 
         // prep data scrapers
-        uiReaderGame = new UIReaderTriadGame();
-        uiReaderGame.OnUIStateChanged += (state) => { if (state != null) { SolverUtils.solverGame?.UpdateGame(state); } };
+        uiReaderGame = new();
+        uiReaderGame.OnUIStateChanged += state =>
+        {
+            if (state != null) { SolverUtils.solverGame?.UpdateGame(state); }
+        };
 
-        uiReaderPrep = new UIReaderTriadPrep
+        uiReaderPrep = new()
         {
             shouldScanDeckData = (SolverUtils.solverPreGameDecks?.profileGS == null) || SolverUtils.solverPreGameDecks.profileGS.HasErrors
         };
-        uiReaderPrep.OnUIStateChanged += (state) => SolverUtils.solverPreGameDecks?.UpdateDecks(state);
+        uiReaderPrep.OnUIStateChanged += state => SolverUtils.solverPreGameDecks?.UpdateDecks(state);
 
-        uiReaderCardList = new UIReaderTriadCardList();
-        uiReaderDeckEdit = new UIReaderTriadDeckEdit();
+        uiReaderCardList = new();
+        uiReaderDeckEdit = new();
 
         var uiReaderMatchResults = new UIReaderTriadResults();
-        uiReaderMatchResults.OnUpdated += (state) => { if (SolverUtils.solverGame != null) { statTracker.OnMatchFinished(SolverUtils.solverGame, state); } };
+        uiReaderMatchResults.OnUpdated += state =>
+        {
+            if (SolverUtils.solverGame != null) { statTracker.OnMatchFinished(SolverUtils.solverGame, state); }
+        };
 
-        uiReaderScheduler = new UIReaderScheduler(Svc.GameGui);
+        uiReaderScheduler = new(Svc.GameGui);
         uiReaderScheduler.AddObservedAddon(uiReaderGame);
         uiReaderScheduler.AddObservedAddon(uiReaderPrep.uiReaderMatchRequest);
         uiReaderScheduler.AddObservedAddon(uiReaderPrep.uiReaderDeckSelect);
@@ -85,11 +86,11 @@ public class Plugin
         GameCardDB.Get().memReader = memReaderTriadFunc;
         GameNpcDB.Get().memReader = memReaderTriadFunc;
 
-        uiReaderDeckEdit.unsafeDeck = new UnsafeReaderTriadDeck();
+        uiReaderDeckEdit.unsafeDeck = new();
 
         // prep UI
-        overlays = new PluginOverlays(uiReaderGame, uiReaderPrep);
-        statusWindow = new PluginWindowStatus(uiReaderGame, uiReaderPrep);
+        overlays = new(uiReaderGame, uiReaderPrep);
+        statusWindow = new(uiReaderGame, uiReaderPrep);
         windowSystem.AddWindow(statusWindow);
 
         var npcStatsWindow = new PluginWindowNpcStats(statTracker);
@@ -105,7 +106,10 @@ public class Plugin
         windowSystem.AddWindow(new PluginWindowDeckSearch(uiReaderDeckEdit));
 
         // prep plugin hooks
-        statusCommand = new(OnCommand) { HelpMessage = string.Format(Localization.Localize("Cmd_Status", "Show state of {0} plugin"), Name) };
+        statusCommand = new(OnCommand)
+        {
+            HelpMessage = string.Format(Localization.Localize("Cmd_Status", "Show state of {0} plugin"), Name)
+        };
         Svc.Commands.AddHandler("/triadbuddy", statusCommand);
 
         pluginInterface.LanguageChanged += OnLanguageChanged;
@@ -115,6 +119,9 @@ public class Plugin
 
         Svc.Framework.Update += Framework_Update;
     }
+    public string Name => "Triad Buddy";
+
+    [PluginService] internal static IDalamudPluginInterface pluginInterface { get; } = null!;
 
     private void OnLanguageChanged(string langCode)
     {

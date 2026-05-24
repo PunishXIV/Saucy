@@ -1,47 +1,16 @@
 ﻿using ECommons.Automation.NeoTaskManager;
 using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
 using System;
-
 namespace Saucy.Framework;
 
 public abstract partial class Module : IModule
 {
-    public Module()
+    public enum GatePositionType : byte
     {
-        InternalName = GetType().Name;
-        TaskManager = new(new() { ShowDebug = true });
-    }
-
-    public string InternalName { get; init; }
-    public abstract string Name { get; }
-    public virtual bool IsEnabled { get; protected set; }
-    public virtual void Enable() { }
-    public virtual void Disable() { }
-
-    protected TaskManager TaskManager;
-    protected TaskManagerConfiguration TaskManagerConfiguration = new() { ShowDebug = true, TimeLimitMS = 5000, AbortOnTimeout = true };
-    public bool InSaucer => Svc.ClientState.TerritoryType is 144;
-
-    public unsafe bool PlayerOnStage
-    {
-        get
-        {
-            var mgr = GoldSaucerManager.Instance();
-            if (mgr is null) return false;
-            var dir = mgr->CurrentGFateDirector;
-            return dir is not null && dir->Flags.HasFlag(GFateDirectorFlag.IsJoined) && !dir->Flags.HasFlag(GFateDirectorFlag.IsFinished);
-        }
-    }
-
-    public unsafe GateType CurrentGate
-    {
-        get
-        {
-            var mgr = GoldSaucerManager.Instance();
-            if (mgr is null) return GateType.None;
-            var dir = mgr->CurrentGFateDirector;
-            return dir is not null ? (GateType)dir->GateType : GateType.None;
-        }
+        WonderSquareEast = 1,
+        EventSquare = 2,
+        RoundSquare = 3,
+        TheCactpotBoard = 4
     }
 
     public enum GateType : byte
@@ -54,16 +23,57 @@ public abstract partial class Module : IModule
         AnyWayTheWindBlows = 5,
         LeapOfFaith = 6,
         AirForceOne = 7,
-        SliceIsRight = 8,
+        SliceIsRight = 8
     }
 
-    public enum GatePositionType : byte
+    protected TaskManager TaskManager;
+    protected TaskManagerConfiguration TaskManagerConfiguration = new()
     {
-        WonderSquareEast = 1,
-        EventSquare = 2,
-        RoundSquare = 3,
-        TheCactpotBoard = 4,
+        ShowDebug = true, TimeLimitMS = 5000, AbortOnTimeout = true
+    };
+    public Module()
+    {
+        InternalName = GetType().Name;
+        TaskManager = new(new()
+        {
+            ShowDebug = true
+        });
     }
+    public bool InSaucer => Svc.ClientState.TerritoryType is 144;
+
+    public unsafe bool PlayerOnStage
+    {
+        get
+        {
+            var mgr = GoldSaucerManager.Instance();
+            if (mgr is null)
+            {
+                return false;
+            }
+            var dir = mgr->CurrentGFateDirector;
+            return dir is not null && dir->Flags.HasFlag(GFateDirectorFlag.IsJoined) && !dir->Flags.HasFlag(GFateDirectorFlag.IsFinished);
+        }
+    }
+
+    public unsafe GateType CurrentGate
+    {
+        get
+        {
+            var mgr = GoldSaucerManager.Instance();
+            if (mgr is null)
+            {
+                return GateType.None;
+            }
+            var dir = mgr->CurrentGFateDirector;
+            return dir is not null ? (GateType)dir->GateType : GateType.None;
+        }
+    }
+
+    public string InternalName { get; init; }
+    public abstract string Name { get; }
+    public virtual bool IsEnabled { get; protected set; }
+    public virtual void Enable() { }
+    public virtual void Disable() { }
 }
 
 public abstract partial class Module

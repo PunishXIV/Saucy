@@ -1,16 +1,15 @@
 ﻿using FFTriadBuddy;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
 namespace TriadBuddyPlugin;
 
 public class SolverDeckOptimize
 {
     public TriadDeckOptimizer deckOptimizer = new();
+    private bool pauseOptimizerForDeckEval;
+    private bool pauseOptimizerForOptimizedEval;
 
-    private bool pauseOptimizerForSolver = false;
-    private bool pauseOptimizerForOptimizedEval = false;
-    private bool pauseOptimizerForDeckEval = false;
+    private bool pauseOptimizerForSolver;
 
     public void SolveOptimizedDeck(TriadDeck? deck, TriadNpc? npc, List<TriadGameModifier> regionMods, SolverUtils.SolveDeckDelegate callback)
     {
@@ -23,7 +22,10 @@ public class SolverDeckOptimize
         deckSolver.InitializeSimulation(npc.Rules, regionMods);
 
         var gameState = deckSolver.StartSimulation(deck, npc.Deck, ETriadGameState.InProgressBlue);
-        var calcContext = new SolverUtils.DeckSolverContext() { solver = deckSolver, gameState = gameState, callback = callback };
+        var calcContext = new SolverUtils.DeckSolverContext
+        {
+            solver = deckSolver, gameState = gameState, callback = callback
+        };
 
         SetPauseForOptimizedDeck(true);
 
@@ -31,7 +33,7 @@ public class SolverDeckOptimize
         {
             if (ctxOb is SolverUtils.DeckSolverContext ctx && ctx.solver != null && ctx.gameState != null)
             {
-                ctx.solver.FindNextMove(ctx.gameState, out _, out _, out var solverResult);
+                ctx.solver.FindNextMove(ctx.gameState, out var _, out var _, out var solverResult);
                 callback?.Invoke(solverResult);
             }
 
@@ -59,8 +61,5 @@ public class SolverDeckOptimize
         UpdateDeckOptimizerPause();
     }
 
-    private void UpdateDeckOptimizerPause()
-    {
-        deckOptimizer.SetPaused(pauseOptimizerForSolver || pauseOptimizerForDeckEval || pauseOptimizerForOptimizedEval);
-    }
+    private void UpdateDeckOptimizerPause() => deckOptimizer.SetPaused(pauseOptimizerForSolver || pauseOptimizerForDeckEval || pauseOptimizerForOptimizedEval);
 }

@@ -1,5 +1,4 @@
 ﻿using FFTriadBuddy;
-
 namespace TriadBuddyPlugin;
 
 public class StatTracker

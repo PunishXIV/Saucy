@@ -1,34 +1,33 @@
 ﻿using Dalamud;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
-using Dalamud.Bindings.ImGui;
 using System;
 using System.Numerics;
-
 namespace TriadBuddyPlugin;
 
 public class PluginWindowNpcStats : Window, IDisposable
 {
     private readonly StatTracker statTracker;
+    private bool hasCachedLocStrings;
+    private string? locBtnCopy;
+    private string? locBtnReset;
+    private string? locDropCard;
+    private string? locDropMGP;
+    private string? locDropStats;
+    private string? locEstMGP;
+    private string? locEstMGPHint;
+    private string? locGameDraws;
+    private string? locGameLosses;
+    private string? locGameStats;
+    private string? locGameWins;
+    private string? locNumTracked;
+
+    private string? locTitle;
 
     private GameNpcInfo? npcInfo;
     private string? npcName;
-
-    private string? locTitle;
-    private string? locNumTracked;
-    private string? locBtnReset;
-    private string? locBtnCopy;
-    private string? locGameStats;
-    private string? locGameWins;
-    private string? locGameDraws;
-    private string? locGameLosses;
-    private string? locDropStats;
-    private string? locDropMGP;
-    private string? locDropCard;
-    private string? locEstMGP;
-    private string? locEstMGPHint;
-    private bool hasCachedLocStrings;
 
     public PluginWindowNpcStats(StatTracker statTracker) : base("NPC stats")
     {
@@ -36,14 +35,17 @@ public class PluginWindowNpcStats : Window, IDisposable
 
         IsOpen = false;
 
-        SizeConstraints = new WindowSizeConstraints() { MinimumSize = new Vector2(350, 0), MaximumSize = new Vector2(700, 800) };
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new(350, 0), MaximumSize = new(700, 800)
+        };
 
         Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar;
         RespectCloseHotkey = false;
 
         if (Plugin.CurrentLocManager != null)
         {
-            Plugin.CurrentLocManager.LocalizationChanged += (_) => { hasCachedLocStrings = false; };
+            Plugin.CurrentLocManager.LocalizationChanged += _ => { hasCachedLocStrings = false; };
         }
     }
 

@@ -10,16 +10,14 @@ using Saucy.OutOnALimb.ECEmbedded;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 namespace Saucy.MiniCactpot;
 
 public unsafe class MiniCactpot : Module
 {
-    public override string Name => "Mini Cactpot";
-
-    private readonly CactpotSolver _solver = new();
+    private readonly CactpotSolver solver = new();
     private int[]? boardState;
-    private bool isProcessing = false;
+    private bool isProcessing;
+    public override string Name => "Mini Cactpot";
 
     public override void Enable() => Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "LotteryDaily", OnUpdate);
     public override void Disable() => Svc.AddonLifecycle.UnregisterListener(OnUpdate);
@@ -28,8 +26,12 @@ public unsafe class MiniCactpot : Module
     {
         var addon = (AddonLotteryDaily*)args.Addon.Address;
         if (new Reader((AtkUnitBase*)args.Addon.Address).Stage == 5)
-            if (EzThrottler.Throttle("CloseGame", 500))
+        {
+            if (EzThrottler.Throttle("CloseGame"))
+            {
                 ClickConfirmClose((AddonLotteryDaily*)args.Addon.Address, 5);
+            }
+        }
 
         var newState = Enumerable.Range(0, 9).Select(i => addon->GameNumbers[i]).ToArray();
         if (!boardState?.SequenceEqual(newState) ?? true)
@@ -41,7 +43,9 @@ public unsafe class MiniCactpot : Module
                 boardState = newState;
             }
             else
+            {
                 LogVerbose($"[{nameof(MiniCactpot)}] Skipping state processing - isProcessing: {isProcessing}, TaskManager.IsBusy: {TaskManager.IsBusy}");
+            }
         }
     }
 
@@ -51,9 +55,12 @@ public unsafe class MiniCactpot : Module
 
         try
         {
-            var solution = _solver.Solve(newState);
+            var solution = solver.Solve(newState);
             var activeIndexes = solution
-                .Select((value, index) => new { value, index })
+                .Select((value, index) => new
+                {
+                    value, index
+                })
                 .Where(item => item.value)
                 .Select(item => item.index)
                 .ToArray();
@@ -61,9 +68,13 @@ public unsafe class MiniCactpot : Module
             LogDebug($"[{nameof(MiniCactpot)}] Board state: [{string.Join(", ", newState)}], Revealed: {newState.Count(x => x > 0)}, Solution length: {solution.Length}, Active indexes: [{string.Join(", ", activeIndexes)}], Solution: [{string.Join(", ", solution)}]");
 
             if (solution.Length is 8)
+            {
                 ExecuteLaneSelection(addon, activeIndexes);
+            }
             else
+            {
                 ExecuteButtonSelection(addon, activeIndexes);
+            }
         }
         catch (Exception ex)
         {
@@ -82,28 +93,37 @@ public unsafe class MiniCactpot : Module
             LogDebug($"[{nameof(MiniCactpot)}] Clicking lane at index #{SolverLaneToCsLane(first)} [{string.Join(", ", activeIndexes)}]");
 
             TaskManager.Enqueue(() =>
-            {
-                if (addon == null) return true;
-
-                var lane = addon->LaneSelector[SolverLaneToCsLane(first)];
-                if (lane == null) return true;
-
-                if (EzThrottler.Throttle($"ClickLane_{first}", 100))
                 {
-                    LogDebug($"[{nameof(MiniCactpot)}] Executing click for lane {first}");
-                    lane->ClickRadioButton((AtkUnitBase*)addon);
-                }
-                else
-                    LogDebug($"[{nameof(MiniCactpot)}] Skipping click for lane {first} due to throttling");
-                return true;
-            }, $"Click lane {first}");
+                    if (addon == null)
+                    {
+                        return true;
+                    }
+
+                    var lane = addon->LaneSelector[SolverLaneToCsLane(first)];
+                    if (lane == null)
+                    {
+                        return true;
+                    }
+
+                    if (EzThrottler.Throttle($"ClickLane_{first}", 100))
+                    {
+                        LogDebug($"[{nameof(MiniCactpot)}] Executing click for lane {first}");
+                        lane->ClickRadioButton((AtkUnitBase*)addon);
+                    }
+                    else
+                    {
+                        LogDebug($"[{nameof(MiniCactpot)}] Skipping click for lane {first} due to throttling");
+                    }
+                    return true;
+                }, $"Click lane {first}");
 
             TaskManager.Enqueue(() =>
             {
                 if (EzThrottler.Throttle("ConfirmLane", 300))
+                {
                     return ClickConfirmClose(addon, -1);
-                else
-                    LogDebug($"[{nameof(MiniCactpot)}] Skipping lane confirmation due to throttling");
+                }
+                LogDebug($"[{nameof(MiniCactpot)}] Skipping lane confirmation due to throttling");
                 return true;
             }, "Confirm lane selection");
         }
@@ -116,46 +136,60 @@ public unsafe class MiniCactpot : Module
             LogDebug($"[{nameof(MiniCactpot)}] Clicking button at index #{first} [{string.Join(", ", activeIndexes)}]");
 
             TaskManager.Enqueue(() =>
-            {
-                if (addon == null) return true;
-
-                if (EzThrottler.Throttle($"ClickButton_{first}", 100))
                 {
-                    LogDebug($"[{nameof(MiniCactpot)}] Executing click for button #{first}");
-                    Callback.Fire((AtkUnitBase*)addon, true, 1, first);
-                }
-                else
-                    LogDebug($"[{nameof(MiniCactpot)}] Skipping click for button #{first} due to throttling");
-                return true;
-            }, $"Click button {first}");
+                    if (addon == null)
+                    {
+                        return true;
+                    }
+
+                    if (EzThrottler.Throttle($"ClickButton_{first}", 100))
+                    {
+                        LogDebug($"[{nameof(MiniCactpot)}] Executing click for button #{first}");
+                        Callback.Fire((AtkUnitBase*)addon, true, 1, first);
+                    }
+                    else
+                    {
+                        LogDebug($"[{nameof(MiniCactpot)}] Skipping click for button #{first} due to throttling");
+                    }
+                    return true;
+                }, $"Click button {first}");
         }
     }
 
     private bool ClickConfirmClose(AddonLotteryDaily* addon, int stage)
     {
-        if (addon == null) return false;
+        if (addon == null)
+        {
+            return false;
+        }
 
         var confirm = addon->GetComponentButtonById(67);
-        if (confirm == null || !confirm->IsEnabled) return false;
+        if (confirm == null || !confirm->IsEnabled)
+        {
+            return false;
+        }
 
         LogDebug($"[{nameof(MiniCactpot)}] Clicking {(stage == 5 ? "close" : "confirm")}");
 
         TaskManager.Enqueue(() =>
-        {
-            if (addon == null) return true;
-
-            var confirmBtn = addon->GetComponentButtonById(67);
-            if (confirmBtn == null || !confirmBtn->IsEnabled) return true;
-
-            if (EzThrottler.Throttle("ClickConfirm", 100))
             {
-                LogDebug($"[{nameof(MiniCactpot)}] Executing {(stage == 5 ? "close" : "confirm")} click");
-                confirmBtn->ClickAddonButton((AtkUnitBase*)addon);
-            }
-            else
-                LogDebug($"[{nameof(MiniCactpot)}] Skipping {(stage == 5 ? "close" : "confirm")} click due to throttling");
-            return true;
-        }, $"Click {(stage == 5 ? "close" : "confirm")}");
+                var confirmBtn = addon->GetComponentButtonById(67);
+                if (confirmBtn == null || !confirmBtn->IsEnabled)
+                {
+                    return true;
+                }
+
+                if (EzThrottler.Throttle("ClickConfirm", 100))
+                {
+                    LogDebug($"[{nameof(MiniCactpot)}] Executing {(stage == 5 ? "close" : "confirm")} click");
+                    confirmBtn->ClickAddonButton((AtkUnitBase*)addon);
+                }
+                else
+                {
+                    LogDebug($"[{nameof(MiniCactpot)}] Skipping {(stage == 5 ? "close" : "confirm")} click due to throttling");
+                }
+                return true;
+            }, $"Click {(stage == 5 ? "close" : "confirm")}");
 
         return true;
     }
@@ -171,10 +205,10 @@ public unsafe class MiniCactpot : Module
             5 => 3,
             6 => 0,
             7 => 4,
-            _ => throw new ArgumentOutOfRangeException($"{nameof(lane)}", lane, "Must be between 0 and 8 (inclusive)"),
+            var _ => throw new ArgumentOutOfRangeException($"{nameof(lane)}", lane, "Must be between 0 and 8 (inclusive)")
         };
 
-    public class Reader(AtkUnitBase* UnitBase, int BeginOffset = 0) : AtkReader(UnitBase, BeginOffset)
+    public class Reader(AtkUnitBase* unitBase, int beginOffset = 0) : AtkReader(unitBase, beginOffset)
     {
         public int Stage => ReadInt(0) ?? -1;
         public string State => ReadString(3)!;
@@ -183,7 +217,9 @@ public unsafe class MiniCactpot : Module
             get
             {
                 for (var i = 6; i <= 14; i++)
+                {
                     yield return ReadInt(i) ?? -1;
+                }
             }
         }
     }

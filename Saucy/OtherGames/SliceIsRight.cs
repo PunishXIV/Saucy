@@ -7,33 +7,39 @@ using Saucy.Framework;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Runtime.InteropServices;
-
 namespace Saucy.OtherGames;
 
 public class SliceIsRight : Module
 {
-    public override string Name => "Slice is Right";
-
-    public override void Enable() => Svc.PluginInterface.UiBuilder.Draw += Draw;
-    public override void Disable() => Svc.PluginInterface.UiBuilder.Draw -= Draw;
-
-    private static float HalfPi => MathF.PI / 2;
     private const float MaxDistance = 30f;
 
     private static readonly uint ColourBlue = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 1f, 0.15f)));
     private static readonly uint ColourGreen = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 1f, 0.0f, 0.15f)));
     private static readonly uint ColourRed = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 0.0f, 0.0f, 0.4f)));
     private static readonly Dictionary<ulong, DateTime> ObjectsAndSpawnTime = [];
+    public override string Name => "Slice is Right";
+
+    private static float HalfPi => MathF.PI / 2;
+
+    public override void Enable() => Svc.PluginInterface.UiBuilder.Draw += Draw;
+    public override void Disable() => Svc.PluginInterface.UiBuilder.Draw -= Draw;
 
     public void Draw()
     {
-        if (!InSaucer || CurrentGate is not GateType.SliceIsRight) return;
+        if (!InSaucer || CurrentGate is not GateType.SliceIsRight)
+        {
+            return;
+        }
         foreach (var gameObject in Svc.Objects)
         {
-            if (!(Player.DistanceTo(gameObject) <= MaxDistance)) continue;
+            if (!(Player.DistanceTo(gameObject) <= MaxDistance))
+            {
+                continue;
+            }
             if (gameObject.ObjectKind == ObjectKind.EventObj && gameObject.BaseId is >= 2010777 and <= 2010779)
+            {
                 RenderObject(gameObject, gameObject.BaseId);
+            }
         }
     }
 
@@ -41,7 +47,10 @@ public class SliceIsRight : Module
     {
         if (ObjectsAndSpawnTime.TryGetValue(gameObject.GameObjectId, out var dateTime))
         {
-            if (dateTime.AddSeconds(5) > DateTime.Now) return;
+            if (dateTime.AddSeconds(5) > DateTime.Now)
+            {
+                return;
+            }
             float length;
             switch (model)
             {
@@ -52,8 +61,8 @@ public class SliceIsRight : Module
                     break;
                 case 2010778:
                     length = (float)((double?)radius ?? 25.0);
-                    var rotation1 = (float)(gameObject.Rotation + HalfPi);
-                    var rotation2 = (float)(gameObject.Rotation - HalfPi);
+                    var rotation1 = gameObject.Rotation + HalfPi;
+                    var rotation2 = gameObject.Rotation - HalfPi;
                     DrawRectWorld(gameObject, rotation1, length, 5f, ColourGreen);
                     DrawRectWorld(gameObject, rotation2, length, 5f, ColourGreen);
                     break;
@@ -64,7 +73,9 @@ public class SliceIsRight : Module
             }
         }
         else
+        {
             ObjectsAndSpawnTime.Add(gameObject.GameObjectId, DateTime.Now);
+        }
     }
 
     private void DrawRectWorld(IGameObject gameObject, float rotation, float length, float width, uint colour)
@@ -87,24 +98,25 @@ public class SliceIsRight : Module
             var flag = false;
             var vector3Array = new[]
             {
-                vector35,
-                vector36,
-                vector34,
-                vector31,
-                vector33,
-                vector32
+                vector35, vector36, vector34, vector31, vector33, vector32
             };
             foreach (var vector37 in vector3Array)
             {
                 flag |= Svc.GameGui.WorldToScreen(vector37, out var vector22);
                 if (vector22.X > 0.0 & (double)vector22.X < vector21.X || vector22.Y > 0.0 & (double)vector22.Y < vector21.Y)
+                {
                     windowDrawList.PathLineTo(vector22);
+                }
             }
 
             if (flag)
+            {
                 windowDrawList.PathFillConvex(colour);
+            }
             else
+            {
                 windowDrawList.PathClear();
+            }
 
             vector31 = vector34;
             vector32 = vector35;

@@ -1,41 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
-	<PropertyGroup>
-		<Authors>Puni.sh</Authors>
-		<Version>1.5.1.5</Version>
-	</PropertyGroup>
+    <PropertyGroup>
+        <Authors>Puni.sh</Authors>
+        <Version>1.5.1.5</Version>
+    </PropertyGroup>
 
-	<PropertyGroup>
-		<LangVersion>preview</LangVersion>
-	</PropertyGroup>
+    <PropertyGroup>
+        <LangVersion>preview</LangVersion>
+    </PropertyGroup>
 
-	<PropertyGroup Condition="'$(OS)' != 'Windows_NT' OR '$(CI)' == 'true'">
-		<DalamudLibPath>$(DALAMUD_HOME)/</DalamudLibPath>
-	</PropertyGroup>
+    <PropertyGroup Condition="'$(OS)' != 'Windows_NT' OR '$(CI)' == 'true'">
+        <DalamudLibPath>$(DALAMUD_HOME)/</DalamudLibPath>
+    </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="ECommons" Version="3.2.0.19" />
-		<PackageReference Include="NAudio" Version="2.3.0" />
-		<PackageReference Include="NAudio.Lame" Version="2.1.0" />
-		<ProjectReference Include="..\PunishLib\PunishLib\PunishLib.csproj" />
-		<PackageReference Update="DotNet.ReproducibleBuilds" Version="2.0.2" />
-	</ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="ECommons" Version="3.2.0.19"/>
+        <PackageReference Include="NAudio" Version="2.3.0"/>
+        <PackageReference Include="NAudio.Lame" Version="2.1.0"/>
+        <ProjectReference Include="..\PunishLib\PunishLib\PunishLib.csproj"/>
+        <PackageReference Update="DotNet.ReproducibleBuilds" Version="2.0.2"/>
+    </ItemGroup>
 
-	<ItemGroup>
-	  <None Update="Saucy.json">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </None>
-	  <None Include="Icon.png" Link="images\icon.png">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </None>
-	  <None Include="Sounds\Game Over.mp3">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	  <None Include="Sounds\Moogle.mp3">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	  <None Include="Sounds\Time Up.mp3">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	</ItemGroup>
+    <ItemGroup>
+        <None Update="Saucy.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Include="Icon.png" Link="images\icon.png">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Include="Sounds\Game Over.mp3">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Include="Sounds\Moogle.mp3">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Include="Sounds\Time Up.mp3">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 </Project>

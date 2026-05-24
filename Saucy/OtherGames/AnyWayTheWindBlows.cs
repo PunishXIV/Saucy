@@ -5,7 +5,6 @@ using ECommons.ImGuiMethods;
 using Saucy.Framework;
 using System.Linq;
 using System.Numerics;
-
 namespace Saucy.OtherGames;
 
 public class AnyWayTheWindBlows : Module
@@ -16,33 +15,15 @@ public class AnyWayTheWindBlows : Module
     public override void Enable() => Svc.PluginInterface.UiBuilder.Draw += Draw;
     public override void Disable() => Svc.PluginInterface.UiBuilder.Draw -= Draw;
 
-    public class Stage
-    {
-        public const float North = -50.76f;
-        public const float South = -21f;
-        public const float East = 85.45f;
-        public const float West = 55.6f;
-        public static SafeSpotWrapper SafeSpot => new(66.96f, -4.48f, -24.69f);
-
-        public class SafeSpotWrapper
-        {
-            public SafeSpotWrapper(Vector3 position) => Position = position;
-            public SafeSpotWrapper(float x, float y, float z) => Position = new(x, y, z);
-            public Vector3 Position { get; private set; }
-            public bool On => Player.DistanceTo(Position) < 0.00025;
-            public bool Near => Player.DistanceTo(Position) < 0.05;
-        }
-
-        public static bool PlayerOnStage => Player.Position.X is > West and < East && Player.Position.Z is < South and > North;
-        public static bool FungahPresent => Svc.Objects.Any(o => o.BaseId == 1010476);
-    }
-
     public void Draw()
     {
-        if (!InSaucer || !PlayerOnStage || CurrentGate is not GateType.AnyWayTheWindBlows) return;
+        if (!InSaucer || !PlayerOnStage || CurrentGate is not GateType.AnyWayTheWindBlows)
+        {
+            return;
+        }
         if (Svc.GameGui.WorldToScreen(Stage.SafeSpot.Position, out var pos))
         {
-            ImGuiHelpers.SetNextWindowPosRelativeMainViewport(new Vector2(pos.X - 15, pos.Y - 15));
+            ImGuiHelpers.SetNextWindowPosRelativeMainViewport(new(pos.X - 15, pos.Y - 15));
             ImGui.SetNextWindowSize(new Vector2(90, 50) * ImGuiHelpers.GlobalScale);
             if (ImGui.Begin("Pointer", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoInputs))
             {
@@ -54,14 +35,47 @@ public class AnyWayTheWindBlows : Module
                     using var _ = ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0, 0, 0, 0.8f));
                     ImGui.SetCursorPosX(4f * ImGuiHelpers.GlobalScale);
 
-                    if (Player.Position.X - Stage.SafeSpot.Position.X > 0.015) ImGui.Text("move left");
-                    else if (Stage.SafeSpot.Position.X - Player.Position.X > 0.015) ImGui.Text("move right");
-                    else if (Player.Position.Z < Stage.SafeSpot.Position.Z) ImGui.Text("move down");
-                    else if (Player.Position.Z > Stage.SafeSpot.Position.Z) ImGui.Text("move up");
+                    if (Player.Position.X - Stage.SafeSpot.Position.X > 0.015)
+                    {
+                        ImGui.Text("move left");
+                    }
+                    else if (Stage.SafeSpot.Position.X - Player.Position.X > 0.015)
+                    {
+                        ImGui.Text("move right");
+                    }
+                    else if (Player.Position.Z < Stage.SafeSpot.Position.Z)
+                    {
+                        ImGui.Text("move down");
+                    }
+                    else if (Player.Position.Z > Stage.SafeSpot.Position.Z)
+                    {
+                        ImGui.Text("move up");
+                    }
                 }
 
                 ImGui.End();
             }
+        }
+    }
+
+    public class Stage
+    {
+        public const float North = -50.76f;
+        public const float South = -21f;
+        public const float East = 85.45f;
+        public const float West = 55.6f;
+        public static SafeSpotWrapper SafeSpot => new(66.96f, -4.48f, -24.69f);
+
+        public static bool PlayerOnStage => Player.Position.X is > West and < East && Player.Position.Z is < South and > North;
+        public static bool FungahPresent => Svc.Objects.Any(o => o.BaseId == 1010476);
+
+        public class SafeSpotWrapper
+        {
+            public SafeSpotWrapper(Vector3 position) => Position = position;
+            public SafeSpotWrapper(float x, float y, float z) => Position = new(x, y, z);
+            public Vector3 Position { get; }
+            public bool On => Player.DistanceTo(Position) < 0.00025;
+            public bool Near => Player.DistanceTo(Position) < 0.05;
         }
     }
 }

@@ -1,57 +1,56 @@
 ﻿using Dalamud;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
-using Dalamud.Bindings.ImGui;
 using System;
 using System.Numerics;
-
 namespace TriadBuddyPlugin;
 
 public class PluginWindowStatus : Window, IDisposable
 {
+    private const float debugCellSize = 30.0f;
+    private const float debugCellPading = 4.0f;
     private readonly UIReaderTriadGame uiReaderGame;
     private readonly UIReaderTriadPrep uiReaderPrep;
 
-    public bool showConfigs = false;
-    private bool showDebugDetails;
-    private float orgDrawPosX;
-    private const float debugCellSize = 30.0f;
-    private const float debugCellPading = 4.0f;
-
     private Vector4 colorErr = new(0.9f, 0.2f, 0.2f, 1);
+    private Vector4 colorInactive = new(0.5f, 0.5f, 0.5f, 1);
     private Vector4 colorOk = new(0.2f, 0.9f, 0.2f, 1);
     private Vector4 colorYellow = new(0.9f, 0.9f, 0.2f, 1);
-    private Vector4 colorInactive = new(0.5f, 0.5f, 0.5f, 1);
-
-    private string? locStatus;
-    private string? locStatusNotActive;
-    private string? locStatusPvPMatch;
-    private string? locStatusActive;
-    private string? locGameData;
-    private string? locGameDataError;
-    private string? locGameDataLog;
-    private string? locPrepNpc;
-    private string? locPrepRule;
-    private string? locGameNpc;
-    private string? locGameMove;
-    private string? locGameMoveDisabled;
+    private bool hasCachedLocStrings;
+    private string? locBoardCenter;
     private string? locBoardX0;
     private string? locBoardX1;
     private string? locBoardX2;
     private string? locBoardY0;
     private string? locBoardY1;
     private string? locBoardY2;
-    private string? locBoardCenter;
-    private string? locDebugMode;
-    private string? locConfigSolverHints;
     private string? locConfigDeckEditHighlights;
     private string? locConfigOptimizerCPU;
     private string? locConfigOptimizerCPUHint;
-    private bool hasCachedLocStrings;
+    private string? locConfigSolverHints;
+    private string? locDebugMode;
+    private string? locGameData;
+    private string? locGameDataError;
+    private string? locGameDataLog;
+    private string? locGameMove;
+    private string? locGameMoveDisabled;
+    private string? locGameNpc;
+    private string? locPrepNpc;
+    private string? locPrepRule;
+
+    private string? locStatus;
+    private string? locStatusActive;
+    private string? locStatusNotActive;
+    private string? locStatusPvPMatch;
+    private float orgDrawPosX;
+
+    public bool showConfigs;
+    private bool showDebugDetails;
 
     public PluginWindowStatus(UIReaderTriadGame uiReaderGame, UIReaderTriadPrep uiReaderPrep) : base("Triad Buddy")
     {
@@ -60,13 +59,16 @@ public class PluginWindowStatus : Window, IDisposable
 
         IsOpen = false;
 
-        SizeConstraints = new WindowSizeConstraints() { MinimumSize = new Vector2(350, 0), MaximumSize = new Vector2(700, 3000) };
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new(350, 0), MaximumSize = new(700, 3000)
+        };
 
         Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar;
 
         if (Plugin.CurrentLocManager != null)
         {
-            Plugin.CurrentLocManager.LocalizationChanged += (_) => { hasCachedLocStrings = false; };
+            Plugin.CurrentLocManager.LocalizationChanged += _ => { hasCachedLocStrings = false; };
         }
     }
 
@@ -106,10 +108,7 @@ public class PluginWindowStatus : Window, IDisposable
         locConfigOptimizerCPUHint = Localization.Localize("CFG_OptimizerParallelLoadHint", "Controls number of logical processors used for calculations. Does not reduce load of individual CPUs!");
     }
 
-    public override void OnOpen()
-    {
-        showDebugDetails = false;
-    }
+    public override void OnOpen() => showDebugDetails = false;
 
     public override void OnClose()
     {
@@ -379,7 +378,7 @@ public class PluginWindowStatus : Window, IDisposable
 
         // - red: unknown cards
         _ = SolverUtils.solverGame.DebugScreenMemory.deckRed;
-        var (redKnownCards, redUnknownCards) = SolverUtils.solverGame.GetScreenRedDeckDebug();
+        (var redKnownCards, var redUnknownCards) = SolverUtils.solverGame.GetScreenRedDeckDebug();
 
         pos = linePos[0] + new Vector2(redDeckOffsetX, 0);
         var posDeckStartX = pos.X;
@@ -427,7 +426,7 @@ public class PluginWindowStatus : Window, IDisposable
 
         // - blue: known cards
         DrawPaddedNewline(ref pos);
-        pos = new Vector2(posDeckStartX, pos.Y + 10);
+        pos = new(posDeckStartX, pos.Y + 10);
         DrawPaddedIcon(ref pos, FontAwesomeIcon.Check, colorBlue);
         if (SolverUtils.solverGame.DebugScreenMemory.deckBlue != null)
         {
@@ -439,7 +438,7 @@ public class PluginWindowStatus : Window, IDisposable
             }
         }
 
-        ImGui.Dummy(new Vector2(400, 180));
+        ImGui.Dummy(new(400, 180));
     }
 
     private void DrawPaddedCardHelper(ref Vector2 pos, TriadCard? cardOb, uint cellColor)
@@ -500,7 +499,7 @@ public class PluginWindowStatus : Window, IDisposable
         var resource = Svc.Texture.GetFromGameIcon(iconLookup);
         if (resource != null)
         {
-            var hasWrap = resource.TryGetWrap(out var resultOb, out _);
+            var hasWrap = resource.TryGetWrap(out var resultOb, out var _);
             if (hasWrap)
             {
                 return resultOb;

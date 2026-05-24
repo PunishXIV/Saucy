@@ -1,7 +1,6 @@
 ﻿using MgAl2O4.Utils;
 using System;
 using System.Collections.Generic;
-
 namespace FFTriadBuddy;
 
 public enum ETriadDeckState
@@ -10,14 +9,14 @@ public enum ETriadDeckState
     MissingCards,
     HasDuplicates,
     TooMany4Star,
-    TooMany5Star,
-};
+    TooMany5Star
+}
 
 public class TriadDeck
 {
+    public string deckId;
     public List<TriadCard> knownCards;
     public List<TriadCard> unknownCardPool;
-    public string deckId;
 
     public TriadDeck()
     {
@@ -121,7 +120,7 @@ public class TriadDeck
         {
             return ETriadDeckState.TooMany5Star;
         }
-        else if (numRare45 > 2)
+        if (numRare45 > 2)
         {
             return ETriadDeckState.TooMany4Star;
         }
@@ -135,7 +134,7 @@ public class TriadDeck
         {
             return knownCards[Idx];
         }
-        else if (Idx < (knownCards.Count + unknownCardPool.Count))
+        if (Idx < (knownCards.Count + unknownCardPool.Count))
         {
             return unknownCardPool[Idx - knownCards.Count];
         }
@@ -222,10 +221,7 @@ public class TriadDeck
         }
     }
 
-    public override bool Equals(object obj)
-    {
-        return Equals(obj as TriadDeck);
-    }
+    public override bool Equals(object obj) => Equals(obj as TriadDeck);
 
     public bool Equals(TriadDeck otherDeck)
     {
@@ -259,10 +255,7 @@ public class TriadDeck
         return true;
     }
 
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(knownCards, unknownCardPool);
-    }
+    public override int GetHashCode() => HashCode.Combine(knownCards, unknownCardPool);
 
     public override string ToString()
     {
@@ -305,26 +298,22 @@ public class TriadDeckNamed : TriadDeck
 
 public abstract class TriadDeckInstance
 {
+    // manual, player = 5
+    // manual, npc = (up to 5 fixed) + (up to 5 variable)
+    // screen, npc = (up to 5 hidden) + (up to 5 fixed) + (up to 5 variable)
+    public const int maxAvailableCards = 15;
+    public int availableCardMask;
+
+    public TriadDeck deck;
+    public int numPlaced;
+    public int numUnknownPlaced;
     public abstract void OnCardPlacedFast(int Idx);
     public abstract int GetFirstAvailableCardFast();
     public abstract TriadCard GetCard(int Idx);
     public abstract int GetCardIndex(TriadCard card);
     public abstract TriadDeckInstance CreateCopy();
 
-    public TriadDeck deck;
-    public int availableCardMask;
-    public int numUnknownPlaced;
-    public int numPlaced;
-
-    // manual, player = 5
-    // manual, npc = (up to 5 fixed) + (up to 5 variable)
-    // screen, npc = (up to 5 hidden) + (up to 5 fixed) + (up to 5 variable)
-    public const int maxAvailableCards = 15;
-
-    public bool IsPlaced(int cardIdx)
-    {
-        return (availableCardMask & (1 << cardIdx)) == 0;
-    }
+    public bool IsPlaced(int cardIdx) => (availableCardMask & (1 << cardIdx)) == 0;
 
     public TriadCard GetFirstAvailableCard()
     {
@@ -405,10 +394,7 @@ public class TriadDeckInstanceManual : TriadDeckInstance
         return -1;
     }
 
-    public override TriadCard GetCard(int Idx)
-    {
-        return deck.GetCard(Idx);
-    }
+    public override TriadCard GetCard(int Idx) => deck.GetCard(Idx);
 
     public override int GetCardIndex(TriadCard card)
     {
@@ -452,8 +438,8 @@ public class TriadDeckInstanceScreen : TriadDeckInstance
 {
     public TriadCard[] cards;
     public TriadCard swappedCard;
-    public int unknownPoolMask;
     public int swappedCardIdx;
+    public int unknownPoolMask;
 
     public TriadDeckInstanceScreen()
     {
@@ -556,13 +542,11 @@ public class TriadDeckInstanceScreen : TriadDeckInstance
         }
     }
 
-    public override TriadCard GetCard(int Idx)
-    {
-        return (Idx < 0) ? null :
-            (Idx == swappedCardIdx) ? swappedCard :
-            (Idx < cards.Length) ? cards[Idx] :
-            deck?.GetCard(Idx - cards.Length);
-    }
+    public override TriadCard GetCard(int Idx) =>
+        (Idx < 0) ? null :
+        (Idx == swappedCardIdx) ? swappedCard :
+        (Idx < cards.Length) ? cards[Idx] :
+        deck?.GetCard(Idx - cards.Length);
 
     public override int GetCardIndex(TriadCard card)
     {
@@ -646,8 +630,8 @@ public class TriadDeckInstanceScreen : TriadDeckInstance
             var card = GetCard(Idx);
 
             Logger.WriteLine("   [" + Idx + "]:" + (card != null ? card.Name.GetCodeName() : "??") +
-                (Idx == swappedCardIdx ? " (SWAP)" : bIsUnknown ? " (U)" : "") +
-                " => " + (bIsAvailable ? "available" : "nope"));
+                             (Idx == swappedCardIdx ? " (SWAP)" : bIsUnknown ? " (U)" : "") +
+                             " => " + (bIsAvailable ? "available" : "nope"));
         }
     }
 }

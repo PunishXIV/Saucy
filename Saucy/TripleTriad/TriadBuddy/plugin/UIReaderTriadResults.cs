@@ -2,39 +2,29 @@
 using MgAl2O4.Utils;
 using System;
 using System.Runtime.InteropServices;
-
 namespace TriadBuddyPlugin;
 
 public class UIReaderTriadResults : IUIReader
 {
-    [StructLayout(LayoutKind.Explicit, Size = 0x1d0)]
-    private unsafe struct AgentTripleTriad
-    {
-        [FieldOffset(0x1c8)] public uint rewardItemId;
-    }
-
     private UIStateTriadResults cachedState = new();
+
+    private bool needsNotify;
     public Action<UIStateTriadResults>? OnUpdated;
 
-    private bool needsNotify = false;
-
-    public string GetAddonName()
-    {
-        return "TripleTriadResult";
-    }
+    public string GetAddonName() => "TripleTriadResult";
 
     public void OnAddonLost()
     {
         // meh
     }
 
-    public void OnAddonShown(IntPtr addonPtr)
+    public void OnAddonShown(nint addonPtr)
     {
         needsNotify = true;
         cachedState = new();
     }
 
-    public unsafe void OnAddonUpdate(IntPtr addonPtr)
+    public unsafe void OnAddonUpdate(nint addonPtr)
     {
         var baseNode = (AtkUnitBase*)addonPtr;
         if (baseNode == null)
@@ -44,8 +34,8 @@ public class UIReaderTriadResults : IUIReader
 
         if (needsNotify)
         {
-            IntPtr agentPtr = Svc.GameGui.FindAgentInterface(addonPtr);
-            if (agentPtr != IntPtr.Zero)
+            nint agentPtr = Svc.GameGui.FindAgentInterface(addonPtr);
+            if (agentPtr != nint.Zero)
             {
                 var agent = (AgentTripleTriad*)agentPtr;
                 cachedState.cardItemId = agent->rewardItemId;
@@ -100,13 +90,19 @@ public class UIReaderTriadResults : IUIReader
             cachedState.isWin = (nodeArrResult0[2] != null) && nodeArrResult0[2]->IsVisible();
         }
     }
+
+    [StructLayout(LayoutKind.Explicit, Size = 0x1d0)]
+    private struct AgentTripleTriad
+    {
+        [FieldOffset(0x1c8)] public uint rewardItemId;
+    }
 }
 
 public class UIStateTriadResults
 {
-    public int numMGP;
-    public bool isWin;
+    public uint cardItemId;
     public bool isDraw;
     public bool isLose;
-    public uint cardItemId;
+    public bool isWin;
+    public int numMGP;
 }

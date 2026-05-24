@@ -1,39 +1,28 @@
 ﻿using FFXIVClientStructs.FFXIV.Component.GUI;
-using System;
 using System.Collections.Generic;
-
 namespace MgAl2O4.Utils;
 
 public interface IUIReader
 {
     string GetAddonName();
     void OnAddonLost();
-    void OnAddonShown(IntPtr addonPtr);
-    void OnAddonUpdate(IntPtr addonPtr);
+    void OnAddonShown(nint addonPtr);
+    void OnAddonUpdate(nint addonPtr);
 }
 
 public class UIReaderScheduler(IGameGui gameGui)
 {
-    private class AddonInfo
-    {
-        public string? name;
-        public IUIReader? reader;
-        public bool isActive;
-
-        public IntPtr addonPtr;
-    }
-
-    private readonly IGameGui gameGui = gameGui;
+    private const float slowCheckInterval = 0.5f;
     private readonly List<AddonInfo> addons = [];
 
-    private const float slowCheckInterval = 0.5f;
-    private float slowCheckRemaining = 0.0f;
-    private bool hasActiveAddons = false;
+    private readonly IGameGui gameGui = gameGui;
+    private bool hasActiveAddons;
+    private float slowCheckRemaining;
 
-    public void AddObservedAddon(IUIReader uiReader)
+    public void AddObservedAddon(IUIReader uiReader) => addons.Add(new()
     {
-        addons.Add(new AddonInfo() { name = uiReader.GetAddonName(), reader = uiReader });
-    }
+        name = uiReader.GetAddonName(), reader = uiReader
+    });
 
     public void Update(float deltaSeconds)
     {
@@ -55,7 +44,7 @@ public class UIReaderScheduler(IGameGui gameGui)
                         }
 
                         var addonPtr = GetAddonPtrIfValid(addon.name);
-                        if (addonPtr != IntPtr.Zero)
+                        if (addonPtr != nint.Zero)
                         {
                             addon.addonPtr = addonPtr;
                             addon.isActive = true;
@@ -86,7 +75,7 @@ public class UIReaderScheduler(IGameGui gameGui)
                             addon.isActive = false;
                             addon.reader.OnAddonLost();
 
-                            if (addonPtr != IntPtr.Zero)
+                            if (addonPtr != nint.Zero)
                             {
                                 addon.isActive = true;
                                 addon.reader.OnAddonShown(addonPtr);
@@ -94,7 +83,7 @@ public class UIReaderScheduler(IGameGui gameGui)
                         }
 
                         addon.addonPtr = addonPtr;
-                        if (addonPtr != IntPtr.Zero)
+                        if (addonPtr != nint.Zero)
                         {
                             addon.reader.OnAddonUpdate(addonPtr);
                             hasActiveAddons = true;
@@ -105,10 +94,10 @@ public class UIReaderScheduler(IGameGui gameGui)
         }
     }
 
-    private unsafe IntPtr GetAddonPtrIfValid(string name)
+    private unsafe nint GetAddonPtrIfValid(string name)
     {
-        IntPtr addonPtr = (gameGui == null) ? IntPtr.Zero : gameGui.GetAddonByName(name, 1);
-        if (addonPtr != IntPtr.Zero)
+        nint addonPtr = (gameGui == null) ? nint.Zero : gameGui.GetAddonByName(name);
+        if (addonPtr != nint.Zero)
         {
             var baseNode = (AtkUnitBase*)addonPtr;
             if (baseNode->RootNode != null && baseNode->RootNode->IsVisible())
@@ -117,6 +106,14 @@ public class UIReaderScheduler(IGameGui gameGui)
             }
         }
 
-        return IntPtr.Zero;
+        return nint.Zero;
+    }
+
+    private class AddonInfo
+    {
+        public nint addonPtr;
+        public bool isActive;
+        public string? name;
+        public IUIReader? reader;
     }
 }

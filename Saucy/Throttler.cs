@@ -1,10 +1,9 @@
 ﻿using System;
-
 namespace Saucy;
 
 internal static class Throttler
 {
-    static long NextCommandAt = 0;
+    private static long NextCommandAt;
     internal static bool Throttle(int ms)
     {
         if (Environment.TickCount64 > NextCommandAt)

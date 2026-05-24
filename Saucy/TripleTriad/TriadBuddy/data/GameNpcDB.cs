@@ -1,22 +1,21 @@
 ﻿using Dalamud.Game.Text.SeStringHandling.Payloads;
 using System.Collections.Generic;
-
 namespace TriadBuddyPlugin;
 
 public class GameNpcInfo
 {
-    public int npcId;
-    public int triadId;
     public int achievementId;
-
-    public int matchFee;
-
-    public MapLinkPayload? Location;
-    public List<int> rewardCards = [];
 
     // call GameNpcDB.Refresh() before reading fields below
     public bool IsBeatenOnce;
     public bool IsCompleted;
+
+    public MapLinkPayload? Location;
+
+    public int matchFee;
+    public int npcId;
+    public List<int> rewardCards = [];
+    public int triadId;
 
     public bool IsExcludedFromAchievementTracker => (achievementId == 0xffff);
 }
@@ -24,14 +23,11 @@ public class GameNpcInfo
 public class GameNpcDB
 {
     private static readonly GameNpcDB instance = new();
-
-    public UnsafeReaderTriadCards? memReader;
     public Dictionary<int, GameNpcInfo> mapNpcs = [];
 
-    public static GameNpcDB Get()
-    {
-        return instance;
-    }
+    public UnsafeReaderTriadCards? memReader;
+
+    public static GameNpcDB Get() => instance;
 
     public void Refresh()
     {

@@ -1,41 +1,22 @@
 ﻿using FFTriadBuddy;
+using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-
 namespace TriadBuddyPlugin;
 
 public class GameDataLoader
 {
-    public bool IsDataReady { get; private set; } = false;
-
     // hardcoded maps between game enums and my own. having own ones was bad idea :<
     private static readonly ETriadCardType[] cardTypeMap = [ETriadCardType.None, ETriadCardType.Primal, ETriadCardType.Scion, ETriadCardType.Beastman, ETriadCardType.Garlean];
     private static readonly ETriadCardRarity[] cardRarityMap = [ETriadCardRarity.Common, ETriadCardRarity.Common, ETriadCardRarity.Uncommon, ETriadCardRarity.Rare, ETriadCardRarity.Epic, ETriadCardRarity.Legendary];
     private static readonly uint[] ruleLogicToLuminaMap = [0, 1, 2, 3, 5, 10, 11, 4, 6, 12, 13, 8, 9, 14, 7, 15];
-
-    private class ENpcCachedData
-    {
-        public uint triadId;                // TripleTriad sheet
-        public int gameLogicIdx = -1;       // TriadNpcDB
-        public TriadNpc? gameLogicOb;
-
-        public float[]? mapRawCoords;
-        public float[]? mapCoords;
-        public uint mapId;
-        public uint territoryId;
-
-        public uint[]? rewardItems;
-        public List<int> rewardCardIds = [];
-
-        public int matchFee;
-    }
     private readonly Dictionary<uint, ENpcCachedData> mapENpcCache = [];
     private readonly Dictionary<uint, int> mapNpcAchievementId = [];
+    public bool IsDataReady { get; private set; }
 
-    public void StartAsyncWork()
-    {
+    public void StartAsyncWork() =>
         Task.Run(async () =>
         {
             // there are some rare and weird concurrency issues reported on plugin reinstall
@@ -69,7 +50,6 @@ public class GameDataLoader
                 }
             }
         });
-    }
 
     private void ParseGameData()
     {
@@ -123,7 +103,7 @@ public class GameDataLoader
         var modDB = TriadGameModifierDB.Get();
         var locDB = LocalizationDB.Get();
 
-        var rulesSheet = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.TripleTriadRule>();
+        var rulesSheet = Svc.Data.GetExcelSheet<TripleTriadRule>();
         if (rulesSheet == null || rulesSheet.Count != modDB.mods.Count)
         {
             Svc.Log.Fatal($"Failed to parse rules (got:{rulesSheet?.Count ?? 0}, expected:{modDB.mods.Count})");
@@ -145,7 +125,7 @@ public class GameDataLoader
     {
         var locDB = LocalizationDB.Get();
 
-        var typesSheet = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.TripleTriadCardType>();
+        var typesSheet = Svc.Data.GetExcelSheet<TripleTriadCardType>();
         if (typesSheet == null || typesSheet.Count != locDB.LocCardTypes.Count)
         {
             Svc.Log.Fatal($"Failed to parse rules (got:{typesSheet?.Count ?? 0}, expected:{locDB.LocCardTypes.Count})");
@@ -166,13 +146,13 @@ public class GameDataLoader
         var cardDB = TriadCardDB.Get();
         var cardInfoDB = GameCardDB.Get();
 
-        var cardDataSheet = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.TripleTriadCardResident>();
-        var cardNameSheet = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.TripleTriadCard>();
+        var cardDataSheet = Svc.Data.GetExcelSheet<TripleTriadCardResident>();
+        var cardNameSheet = Svc.Data.GetExcelSheet<TripleTriadCard>();
 
         if (cardDataSheet != null && cardNameSheet != null && cardDataSheet.Count == cardNameSheet.Count)
         {
-            var cardTypesSheet = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.TripleTriadCardType>();
-            var cardRaritySheet = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.TripleTriadCardRarity>();
+            var cardTypesSheet = Svc.Data.GetExcelSheet<TripleTriadCardType>();
+            var cardRaritySheet = Svc.Data.GetExcelSheet<TripleTriadCardRarity>();
             if (cardTypesSheet == null || cardTypesSheet.Count != cardTypeMap.Length)
             {
                 Svc.Log.Fatal($"Failed to parse card types (got:{cardTypesSheet?.Count ?? 0}, expected:{cardTypeMap.Length})");
@@ -216,7 +196,10 @@ public class GameDataLoader
                     cardDB.cards.Add(cardOb);
 
                     // create matching entry in extended card info db
-                    var cardInfo = new GameCardInfo() { CardId = cardOb.Id, SortKey = rowData.Value.SortKey, SaleValue = rowData.Value.SaleValue };
+                    var cardInfo = new GameCardInfo
+                    {
+                        CardId = cardOb.Id, SortKey = rowData.Value.SortKey, SaleValue = rowData.Value.SaleValue
+                    };
                     cardInfoDB.mapCards.Add(cardOb.Id, cardInfo);
                 }
             }
@@ -231,13 +214,6 @@ public class GameDataLoader
         return true;
     }
 
-    private struct NpcIds
-    {
-        public uint TriadNpcId;
-        public uint ENpcId;
-        public string Name;
-    }
-
     private bool ParseNpcs()
     {
         var npcDB = TriadNpcDB.Get();
@@ -249,7 +225,7 @@ public class GameDataLoader
         // name is a bit more annoying to get
         var listTriadIds = new List<uint>();
 
-        var npcDataSheet = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.TripleTriad>();
+        var npcDataSheet = Svc.Data.GetExcelSheet<TripleTriad>();
         if (npcDataSheet != null)
         {
             // rowIds are not going from 0 here!
@@ -267,8 +243,8 @@ public class GameDataLoader
         }
 
         var mapTriadNpcData = new Dictionary<uint, NpcIds>();
-        var sheetNpcNames = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.ENpcResident>();
-        var sheetENpcBase = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.ENpcBase>();
+        var sheetNpcNames = Svc.Data.GetExcelSheet<ENpcResident>();
+        var sheetENpcBase = Svc.Data.GetExcelSheet<ENpcBase>();
         if (sheetNpcNames != null && sheetENpcBase != null)
         {
             foreach (var rowData in sheetENpcBase)
@@ -279,7 +255,10 @@ public class GameDataLoader
                     var rowName = sheetNpcNames.GetRowOrDefault(rowData.RowId);
                     if (rowName != null)
                     {
-                        mapTriadNpcData.Add(triadId.RowId, new NpcIds() { ENpcId = rowData.RowId, TriadNpcId = triadId.RowId, Name = rowName.Value.Singular.ToString() });
+                        mapTriadNpcData.Add(triadId.RowId, new()
+                        {
+                            ENpcId = rowData.RowId, TriadNpcId = triadId.RowId, Name = rowName.Value.Singular.ToString()
+                        });
                     }
                 }
             }
@@ -395,7 +374,10 @@ public class GameDataLoader
 
             // don't add to noc lists just yet, there are some entries with missing locations that need to be filtered out first!
 
-            var newCachedData = new ENpcCachedData() { triadId = npcIdData.TriadNpcId, gameLogicOb = npcOb, matchFee = rowData.Fee };
+            var newCachedData = new ENpcCachedData
+            {
+                triadId = npcIdData.TriadNpcId, gameLogicOb = npcOb, matchFee = rowData.Fee
+            };
             if (rowData.ItemPossibleReward.Count > 0)
             {
                 newCachedData.rewardItems = new uint[rowData.ItemPossibleReward.Count];
@@ -413,7 +395,7 @@ public class GameDataLoader
 
     private bool ParseNpcAchievements()
     {
-        var npcDataSheet = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.TripleTriadResident>();
+        var npcDataSheet = Svc.Data.GetExcelSheet<TripleTriadResident>();
         if (npcDataSheet != null)
         {
             // rowIds are not going from 0 here!
@@ -428,7 +410,7 @@ public class GameDataLoader
 
     private bool ParseNpcLocations()
     {
-        var sheetLevel = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.Level>();
+        var sheetLevel = Svc.Data.GetExcelSheet<Level>();
         if (sheetLevel != null)
         {
             const byte TypeNpc = 8;
@@ -446,7 +428,7 @@ public class GameDataLoader
             }
         }
 
-        var sheetMap = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.Map>();
+        var sheetMap = Svc.Data.GetExcelSheet<Map>();
         if (sheetMap != null)
         {
             foreach (var kvp in mapENpcCache)
@@ -473,7 +455,7 @@ public class GameDataLoader
 
     private bool ParseCardRewards()
     {
-        var sheetItems = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.Item>();
+        var sheetItems = Svc.Data.GetExcelSheet<Item>();
         if (sheetItems != null)
         {
             var cardsDB = TriadCardDB.Get();
@@ -548,12 +530,9 @@ public class GameDataLoader
                     cacheOb.gameLogicIdx = npcDB.npcs.Count;
                     npcDB.npcs.Add(cacheOb.gameLogicOb);
                 }
-                else
-                {
-                    // normal and annoying.
-                    // Svc.Log.Info($"Failed to add triad[{cacheOb.triadId}], enpc[{kvp.Key}], name:{cacheOb.gameLogicOb.Name.GetLocalized()} - no location found!");
-                }
 
+                // normal and annoying.
+                // Svc.Log.Info($"Failed to add triad[{cacheOb.triadId}], enpc[{kvp.Key}], name:{cacheOb.gameLogicOb.Name.GetLocalized()} - no location found!");
                 // npc.Id is their index in data array, refresh it
                 cacheOb.gameLogicOb.Id = (cacheOb.mapId != 0) ? cacheOb.gameLogicIdx : -1;
             }
@@ -574,8 +553,7 @@ public class GameDataLoader
 
             var gameNpcOb = new GameNpcInfo
             {
-                npcId = kvp.Value.gameLogicIdx,
-                triadId = (int)kvp.Value.triadId
+                npcId = kvp.Value.gameLogicIdx, triadId = (int)kvp.Value.triadId
             };
             if (!mapNpcAchievementId.TryGetValue(kvp.Value.triadId, out gameNpcOb.achievementId))
             {
@@ -585,7 +563,7 @@ public class GameDataLoader
             gameNpcOb.matchFee = kvp.Value.matchFee;
             if (kvp.Value.mapCoords != null)
             {
-                gameNpcOb.Location = new Dalamud.Game.Text.SeStringHandling.Payloads.MapLinkPayload(kvp.Value.territoryId, kvp.Value.mapId, kvp.Value.mapCoords[0], kvp.Value.mapCoords[1]);
+                gameNpcOb.Location = new(kvp.Value.territoryId, kvp.Value.mapId, kvp.Value.mapCoords[0], kvp.Value.mapCoords[1]);
             }
 
             foreach (var cardId in kvp.Value.rewardCardIds)
@@ -617,9 +595,15 @@ public class GameDataLoader
     private void FixLocalizedNameCasing()
     {
         var locDB = LocalizationDB.Get();
-        var excludedList = new string[] { "the", "goe", "van", "des", "sas", "yae", "tol", "der", "rem" };
+        var excludedList = new[]
+        {
+            "the", "goe", "van", "des", "sas", "yae", "tol", "der", "rem"
+        };
 
-        var fixLists = new List<LocString>[] { locDB.LocCardNames, locDB.LocNpcNames };
+        var fixLists = new[]
+        {
+            locDB.LocCardNames, locDB.LocNpcNames
+        };
         foreach (var list in fixLists)
         {
             foreach (var entry in list)
@@ -662,13 +646,31 @@ public class GameDataLoader
         }
     }
 
-    public static ETriadCardType ConvertToTriadType(byte rawType)
+    public static ETriadCardType ConvertToTriadType(byte rawType) => (rawType < cardTypeMap.Length) ? cardTypeMap[rawType] : ETriadCardType.None;
+
+    public static ETriadCardRarity ConvertToTriadRarity(byte rawRarity) => (rawRarity < cardRarityMap.Length) ? cardRarityMap[rawRarity] : ETriadCardRarity.Common;
+
+    private class ENpcCachedData
     {
-        return (rawType < cardTypeMap.Length) ? cardTypeMap[rawType] : ETriadCardType.None;
+        public int gameLogicIdx = -1; // TriadNpcDB
+        public TriadNpc? gameLogicOb;
+        public float[]? mapCoords;
+        public uint mapId;
+
+        public float[]? mapRawCoords;
+
+        public int matchFee;
+        public List<int> rewardCardIds = [];
+
+        public uint[]? rewardItems;
+        public uint territoryId;
+        public uint triadId; // TripleTriad sheet
     }
 
-    public static ETriadCardRarity ConvertToTriadRarity(byte rawRarity)
+    private struct NpcIds
     {
-        return (rawRarity < cardRarityMap.Length) ? cardRarityMap[rawRarity] : ETriadCardRarity.Common;
+        public uint TriadNpcId;
+        public uint ENpcId;
+        public string Name;
     }
 }

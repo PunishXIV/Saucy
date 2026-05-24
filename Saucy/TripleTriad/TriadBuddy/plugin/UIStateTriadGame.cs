@@ -1,36 +1,36 @@
 ﻿using FFTriadBuddy;
 using System;
 using System.Collections.Generic;
-
 namespace TriadBuddyPlugin;
 
 public class UIStateTriadCard : IEquatable<UIStateTriadCard>
 {
-    public byte numU;
-    public byte numL;
-    public byte numD;
-    public byte numR;
-    public byte rarity;
-    public byte type;
-    public byte owner;
-    public bool isPresent;
     public bool isLocked;
+    public bool isPresent;
+    public byte numD;
+    public byte numL;
+    public byte numR;
+    public byte numU;
+    public byte owner;
+    public byte rarity;
     public string? texturePath;
+    public byte type;
 
     public bool IsHidden => isPresent && (numU == 0);
 
-    public bool Equals(UIStateTriadCard? other)
-    {
-        return (other != null) &&
-            (isPresent == other.isPresent) &&
-            (isLocked == other.isLocked) &&
-            (owner == other.owner) &&
-            (texturePath == other.texturePath);
-    }
+    public bool Equals(UIStateTriadCard? other) =>
+        (other != null) &&
+        (isPresent == other.isPresent) &&
+        (isLocked == other.isLocked) &&
+        (owner == other.owner) &&
+        (texturePath == other.texturePath);
 
     public override string ToString()
     {
-        if (!isPresent) return "(empty)";
+        if (!isPresent)
+        {
+            return "(empty)";
+        }
 
         var desc = $"[{numU:X}-{numL:X}-{numD:X}-{numR:X}], tex:{texturePath}, owner:{owner}";
         if (isLocked)
@@ -41,23 +41,21 @@ public class UIStateTriadCard : IEquatable<UIStateTriadCard>
         return desc;
     }
 
-    public TriadCard? ToTriadCard(GameUIParser ctx)
-    {
-        return !isPresent ? null :
-            IsHidden ? ctx.cards.hiddenCard :
-            ctx.ParseCard(numU, numL, numD, numR, texturePath ?? "");
-    }
+    public TriadCard? ToTriadCard(GameUIParser ctx) =>
+        !isPresent ? null :
+        IsHidden ? ctx.cards.hiddenCard :
+        ctx.ParseCard(numU, numL, numD, numR, texturePath ?? "");
 }
 
 public class UIStateTriadGame : IEquatable<UIStateTriadGame>
 {
-    public List<string> rules = [];
-    public List<string> redPlayerDesc = [];
     public UIStateTriadCard[] blueDeck = new UIStateTriadCard[5];
-    public UIStateTriadCard[] redDeck = new UIStateTriadCard[5];
     public UIStateTriadCard[] board = new UIStateTriadCard[9];
     public bool isPvP;
     public byte move;
+    public UIStateTriadCard[] redDeck = new UIStateTriadCard[5];
+    public List<string> redPlayerDesc = [];
+    public List<string> rules = [];
 
     public bool Equals(UIStateTriadGame? other)
     {
@@ -171,8 +169,7 @@ public class UIStateTriadGame : IEquatable<UIStateTriadGame>
     {
         var screenOb = new ScannerTriad.GameState
         {
-            mods = ToTriadModifier(ctx),
-            turnState = (move == 0) ? ScannerTriad.ETurnState.Waiting : ScannerTriad.ETurnState.Active
+            mods = ToTriadModifier(ctx), turnState = (move == 0) ? ScannerTriad.ETurnState.Waiting : ScannerTriad.ETurnState.Active
         };
 
         for (var idx = 0; idx < board.Length; idx++)
@@ -181,7 +178,7 @@ public class UIStateTriadGame : IEquatable<UIStateTriadGame>
             screenOb.boardOwner[idx] =
                 (board[idx].owner == 1) ? ETriadCardOwner.Blue :
                 (board[idx].owner == 2) ? ETriadCardOwner.Red :
-                 ETriadCardOwner.Unknown;
+                ETriadCardOwner.Unknown;
         }
 
         var hasForcedMove = (move == 2);

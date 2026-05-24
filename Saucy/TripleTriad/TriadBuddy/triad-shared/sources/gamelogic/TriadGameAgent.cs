@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-
 namespace FFTriadBuddy;
 
 public abstract class TriadGameAgent
@@ -14,21 +13,22 @@ public abstract class TriadGameAgent
         ShowMoveResult = 0x2,
         ShowMoveStart = 0x4,
         ShowMoveDetails = 0x8,
-        ShowMoveDetailsRng = 0x10,
+        ShowMoveDetailsRng = 0x10
     }
-    public DebugFlags debugFlags;
+
     public string agentName = "??";
+    public DebugFlags debugFlags;
 
     public virtual void Initialize(TriadGameSolver solver, int sessionSeed) { }
-    public virtual bool IsInitialized() { return true; }
-    public virtual float GetProgress() { return 0.0f; }
+    public virtual bool IsInitialized() => true;
+    public virtual float GetProgress() => 0.0f;
     public virtual void OnSimulationStart() { }
 
     public abstract bool FindNextMove(TriadGameSolver solver, TriadGameSimulationState gameState, out int cardIdx, out int boardPos, out SolverResult solverResult);
 }
 
 /// <summary>
-/// Random pick from all possible actions 
+///     Random pick from all possible actions
 /// </summary>
 public class TriadGameAgentRandom : TriadGameAgent
 {
@@ -36,21 +36,15 @@ public class TriadGameAgentRandom : TriadGameAgent
     private Random randGen;
 
     public TriadGameAgentRandom() { }
-    public TriadGameAgentRandom(TriadGameSolver solver, int sessionSeed)
-    {
-        Initialize(solver, sessionSeed);
-    }
+    public TriadGameAgentRandom(TriadGameSolver solver, int sessionSeed) => Initialize(solver, sessionSeed);
 
     public override void Initialize(TriadGameSolver solver, int sessionSeed)
     {
-        randGen = new Random(sessionSeed);
+        randGen = new(sessionSeed);
         agentName = "Random";
     }
 
-    public override bool IsInitialized()
-    {
-        return randGen != null;
-    }
+    public override bool IsInitialized() => randGen != null;
 
     public override bool FindNextMove(TriadGameSolver solver, TriadGameSimulationState gameState, out int cardIdx, out int boardPos, out SolverResult solverResult)
     {
@@ -145,23 +139,17 @@ public class TriadGameAgentRandom : TriadGameAgent
 }
 
 /// <summary>
-/// Base class for agents recursively exploring action graph
+///     Base class for agents recursively exploring action graph
 /// </summary>
 public abstract class TriadGameAgentGraphExplorer : TriadGameAgent
 {
-    protected float currentProgress = 0;
-    protected int sessionSeed = 0;
-    private Random failsafeRandStream = null;
+    protected float currentProgress;
+    private Random failsafeRandStream;
+    protected int sessionSeed;
 
-    public override float GetProgress()
-    {
-        return currentProgress;
-    }
+    public override float GetProgress() => currentProgress;
 
-    public override void Initialize(TriadGameSolver solver, int sessionSeed)
-    {
-        this.sessionSeed = sessionSeed;
-    }
+    public override void Initialize(TriadGameSolver solver, int sessionSeed) => this.sessionSeed = sessionSeed;
 
     public override bool FindNextMove(TriadGameSolver solver, TriadGameSimulationState gameState, out int cardIdx, out int boardPos, out SolverResult solverResult)
     {
@@ -183,18 +171,16 @@ public abstract class TriadGameAgentGraphExplorer : TriadGameAgent
         switch (gameState.state)
         {
             case ETriadGameState.BlueWins:
-                gameResult = new SolverResult(1, 0, 1);
+                gameResult = new(1, 0, 1);
                 return true;
 
             case ETriadGameState.BlueDraw:
-                gameResult = new SolverResult(0, 1, 1);
+                gameResult = new(0, 1, 1);
                 return true;
 
             case ETriadGameState.BlueLost:
-                gameResult = new SolverResult(0, 0, 1);
+                gameResult = new(0, 0, 1);
                 return true;
-
-            default: break;
         }
 
         gameResult = SolverResult.Zero;
@@ -261,7 +247,7 @@ public abstract class TriadGameAgentGraphExplorer : TriadGameAgent
                         if (!isFinished)
                         {
                             gameStateCopy.forcedCardIdx = -1;
-                            branchResult = SearchActionSpace(solver, gameStateCopy, searchLevel + 1, out _, out _, out _);
+                            branchResult = SearchActionSpace(solver, gameStateCopy, searchLevel + 1, out var _, out var _, out var _);
                         }
 
                         if (branchResult.IsBetterThan(bestActionResult) || !hasValidPlacements)
@@ -282,7 +268,7 @@ public abstract class TriadGameAgentGraphExplorer : TriadGameAgent
             if (!hasValidPlacements)
             {
                 // failsafe in case simulation runs into any issues
-                failsafeRandStream ??= new Random(sessionSeed);
+                failsafeRandStream ??= new(sessionSeed);
 
                 bestCardIdx = TriadGameAgentRandom.PickRandomBitFromMask(availCardsMask, failsafeRandStream.Next(numAvailCards));
                 bestBoardPos = TriadGameAgentRandom.PickRandomBitFromMask(availBoardMask, failsafeRandStream.Next(numAvailBoard));
@@ -298,12 +284,12 @@ public abstract class TriadGameAgentGraphExplorer : TriadGameAgent
         //   - result of processing this level is AVG, use total counters to create chance data
 
         var isOwnerTurn = (searchLevel % 2) == 0;
-        return isOwnerTurn ? bestActionResult : new SolverResult(numWinsTotal, numDrawsTotal, numGamesTotal);
+        return isOwnerTurn ? bestActionResult : new(numWinsTotal, numDrawsTotal, numGamesTotal);
     }
 }
 
 /// <summary>
-/// Single level MCTS, each available action spins 2000 random games and best one is selected 
+///     Single level MCTS, each available action spins 2000 random games and best one is selected
 /// </summary>
 public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
 {
@@ -319,14 +305,11 @@ public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
         workerAgents = new TriadGameAgentRandom[numWorkers];
         for (var idx = 0; idx < numWorkers; idx++)
         {
-            workerAgents[idx] = new TriadGameAgentRandom(solver, sessionSeed + idx);
+            workerAgents[idx] = new(solver, sessionSeed + idx);
         }
     }
 
-    public override bool IsInitialized()
-    {
-        return workerAgents != null;
-    }
+    public override bool IsInitialized() => workerAgents != null;
 
     protected override SolverResult SearchActionSpace(TriadGameSolver solver, TriadGameSimulationState gameState, int searchLevel, out int bestCardIdx, out int bestBoardPos, out SolverResult bestActionResult)
     {
@@ -345,10 +328,7 @@ public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
         return result;
     }
 
-    protected virtual bool CanRunRandomExploration(TriadGameSolver solver, TriadGameSimulationState gameState, int searchLevel)
-    {
-        return searchLevel > 0;
-    }
+    protected virtual bool CanRunRandomExploration(TriadGameSolver solver, TriadGameSimulationState gameState, int searchLevel) => searchLevel > 0;
 
     protected virtual SolverResult FindWinningProbability(TriadGameSolver solver, TriadGameSimulationState gameState)
     {
@@ -356,7 +336,7 @@ public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
         var numDrawingWorkers = 0;
 
         _ = Parallel.For(0, numWorkers, workerIdx =>
-        //for (int workerIdx = 0; workerIdx < solverWorkers; workerIdx++)
+            //for (int workerIdx = 0; workerIdx < solverWorkers; workerIdx++)
         {
             var gameStateCopy = new TriadGameSimulationState(gameState);
             var agent = workerAgents[workerIdx];
@@ -374,12 +354,12 @@ public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
         });
 
         // return normalized score so it can be compared 
-        return new SolverResult(1.0f * numWinningWorkers / numWorkers, 1.0f * numDrawingWorkers / numWorkers, 1);
+        return new(1.0f * numWinningWorkers / numWorkers, 1.0f * numDrawingWorkers / numWorkers, 1);
     }
 }
 
 /// <summary>
-/// Switches between derpy MCTS and full exploration depending on size of game space 
+///     Switches between derpy MCTS and full exploration depending on size of game space
 /// </summary>
 public class TriadGameAgentCarloTheExplorer : TriadGameAgentDerpyCarlo
 {
@@ -440,7 +420,7 @@ public class TriadGameAgentCarloTheExplorer : TriadGameAgentDerpyCarlo
 }
 
 /// <summary>
-/// Aguments random search phase with score of game state to increase diffs between probability of initial steps
+///     Aguments random search phase with score of game state to increase diffs between probability of initial steps
 /// </summary>
 public class TriadGameAgentCarloScored : TriadGameAgentCarloTheExplorer
 {
@@ -464,12 +444,12 @@ public class TriadGameAgentCarloScored : TriadGameAgentCarloTheExplorer
         var useWeight = Math.Max(0.0f, StateWeight - ((gameState.deckBlue.numPlaced - 1) * StateWeightDecay));
 
         var numWinsModified = ((result.numWins / result.numGames) * (1.0f - useWeight)) + (stateScore * useWeight);
-        return new SolverResult(Math.Min(1.0f, numWinsModified), result.numDraws / result.numGames, 1);
+        return new(Math.Min(1.0f, numWinsModified), result.numDraws / result.numGames, 1);
     }
 
     public float CalculateStateScore(TriadGameSolver solver, TriadGameSimulationState gameState)
     {
-        var (blueDefenseScore, blueCaptureScore) = CalculateBoardScore(solver, gameState);
+        (var blueDefenseScore, var blueCaptureScore) = CalculateBoardScore(solver, gameState);
         var deckScore = CalculateBlueDeckScore(solver, gameState);
 
         return ((blueDefenseScore * PriorityDefense) + (blueCaptureScore * PriorityCapture) + (deckScore * PriorityDeck)) / (PriorityDefense + PriorityDeck + PriorityCapture);

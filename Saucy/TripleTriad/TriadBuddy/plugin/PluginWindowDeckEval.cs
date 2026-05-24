@@ -1,35 +1,34 @@
 ﻿using Dalamud;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
-using Dalamud.Bindings.ImGui;
 using System;
 using System.Numerics;
-
 namespace TriadBuddyPlugin;
 
 public class PluginWindowDeckEval : Window, IDisposable
 {
-    private readonly Vector4 colorWin = new(0.2f, 0.9f, 0.2f, 1);
     private readonly Vector4 colorDraw = new(0.9f, 0.9f, 0.2f, 1);
+    private readonly Vector4 colorGray = new(0.6f, 0.6f, 0.6f, 1);
     private readonly Vector4 colorLose = new(0.9f, 0.2f, 0.2f, 1);
     private readonly Vector4 colorTxt = new(1, 1, 1, 1);
-    private readonly Vector4 colorGray = new(0.6f, 0.6f, 0.6f, 1);
-
-    private readonly UIReaderTriadPrep uiReaderPrep;
-    private readonly SolverPreGameDecks? solver;
+    private readonly Vector4 colorWin = new(0.2f, 0.9f, 0.2f, 1);
     private readonly PluginWindowDeckOptimize optimizerWindow;
+    private readonly SolverPreGameDecks? solver;
     private readonly PluginWindowNpcStats statsWindow;
 
-    private string? locEvaluating;
-    private string? locWinChance;
-    private string? locCantFind;
-    private string? locNoProfileDecks;
-    private string? locOptimize;
-    private string? locNpcStats;
-    private string? locStatusPvPMatch;
+    private readonly UIReaderTriadPrep uiReaderPrep;
     private bool hasCachedLocStrings;
+    private string? locCantFind;
+
+    private string? locEvaluating;
+    private string? locNoProfileDecks;
+    private string? locNpcStats;
+    private string? locOptimize;
+    private string? locStatusPvPMatch;
+    private string? locWinChance;
 
     public PluginWindowDeckEval(UIReaderTriadPrep uiReaderPrep, PluginWindowDeckOptimize optimizerWindow, PluginWindowNpcStats statsWindow) : base("Deck Eval")
     {
@@ -48,17 +47,17 @@ public class PluginWindowDeckEval : Window, IDisposable
         ForceMainWindow = true;
 
         Flags = ImGuiWindowFlags.NoDecoration |
-            ImGuiWindowFlags.NoResize |
-            ImGuiWindowFlags.NoSavedSettings |
-            ImGuiWindowFlags.NoMove |
-            // ImGuiWindowFlags.NoMouseInputs |
-            ImGuiWindowFlags.NoDocking |
-            ImGuiWindowFlags.NoFocusOnAppearing |
-            ImGuiWindowFlags.NoNav;
+                ImGuiWindowFlags.NoResize |
+                ImGuiWindowFlags.NoSavedSettings |
+                ImGuiWindowFlags.NoMove |
+                // ImGuiWindowFlags.NoMouseInputs |
+                ImGuiWindowFlags.NoDocking |
+                ImGuiWindowFlags.NoFocusOnAppearing |
+                ImGuiWindowFlags.NoNav;
 
         if (Plugin.CurrentLocManager != null)
         {
-            Plugin.CurrentLocManager.LocalizationChanged += (_) => { hasCachedLocStrings = false; };
+            Plugin.CurrentLocManager.LocalizationChanged += _ => { hasCachedLocStrings = false; };
         }
     }
 
@@ -172,7 +171,7 @@ public class PluginWindowDeckEval : Window, IDisposable
         }
 
         // use TextUnformatted here, hint text contains user created string (deck name) and can blow up imgui (e.g. deadly '%' chars)
-        ImGui.SetCursorPos(new Vector2(hintPosX, hintPosY));
+        ImGui.SetCursorPos(new(hintPosX, hintPosY));
         ImGui.PushStyleColor(ImGuiCol.Text, hintColor);
         ImGui.TextUnformatted(hintText);
         ImGui.PopStyleColor();
@@ -182,10 +181,10 @@ public class PluginWindowDeckEval : Window, IDisposable
             var framePaddingY = ImGui.GetStyle().FramePadding.Y;
             if (optimizerWindow.CanRunOptimizer())
             {
-                ImGui.SetCursorPos(new Vector2(optimizeStartX, btnStartY + framePaddingY));
+                ImGui.SetCursorPos(new(optimizeStartX, btnStartY + framePaddingY));
                 ImGui.TextColored(colorGray, locOptimize);
 
-                ImGui.SetCursorPos(new Vector2(btnStartX, btnStartY));
+                ImGui.SetCursorPos(new(btnStartX, btnStartY));
                 if (ImGuiComponents.IconButton(FontAwesomeIcon.Search))
                 {
                     optimizerWindow.SetupAndOpen(solver.preGameNpc, solver.preGameMods);
@@ -195,10 +194,10 @@ public class PluginWindowDeckEval : Window, IDisposable
                 btnStartY += framePaddingY;
             }
 
-            ImGui.SetCursorPos(new Vector2(statsStartX, btnStartY + framePaddingY));
+            ImGui.SetCursorPos(new(statsStartX, btnStartY + framePaddingY));
             ImGui.TextColored(colorGray, locNpcStats);
 
-            ImGui.SetCursorPos(new Vector2(btnStartX, btnStartY));
+            ImGui.SetCursorPos(new(btnStartX, btnStartY));
             if (ImGuiComponents.IconButton(FontAwesomeIcon.ChartLine))
             {
                 statsWindow.SetupAndOpen(solver.preGameNpc);
@@ -206,10 +205,8 @@ public class PluginWindowDeckEval : Window, IDisposable
         }
     }
 
-    public Vector4 GetChanceColor(SolverResult chance)
-    {
-        return (chance.expectedResult == ETriadGameState.BlueWins) ? colorWin :
-            (chance.expectedResult == ETriadGameState.BlueDraw) ? colorDraw :
-            colorLose;
-    }
+    public Vector4 GetChanceColor(SolverResult chance) =>
+        (chance.expectedResult == ETriadGameState.BlueWins) ? colorWin :
+        (chance.expectedResult == ETriadGameState.BlueDraw) ? colorDraw :
+        colorLose;
 }

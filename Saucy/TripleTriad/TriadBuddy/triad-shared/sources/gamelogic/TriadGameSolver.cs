@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-
 namespace FFTriadBuddy;
 
 public struct SolverResult
@@ -41,30 +40,21 @@ public struct SolverResult
         }
     }
 
-    public readonly bool IsBetterThan(SolverResult other)
-    {
-        return score > other.score;
-    }
+    public readonly bool IsBetterThan(SolverResult other) => score > other.score;
 
-    public override readonly string ToString()
-    {
-        return $"{expectedResult}, score:{score}, win:{winChance:P0} ({numWins:0.##}/{numGames}), draw:{drawChance:P0} ({numDraws:0.##}/{numGames})";
-    }
+    public override readonly string ToString() => $"{expectedResult}, score:{score}, win:{winChance:P0} ({numWins:0.##}/{numGames}), draw:{drawChance:P0} ({numDraws:0.##}/{numGames})";
 }
 
 public class TriadGameSolver
 {
-    public TriadGameSimulation simulation = new();
     public TriadGameAgent agent = new TriadGameAgentCarloTheExplorer();
     public string name;
+    public TriadGameSimulation simulation = new();
 
-    public TriadGameSolver()
-    {
-        agent.Initialize(this, 0);
-    }
+    public TriadGameSolver() => agent.Initialize(this, 0);
 
     public void InitializeSimulation(IEnumerable<TriadGameModifier> modsA, IEnumerable<TriadGameModifier> modsB) => simulation.Initialize(modsA, modsB);
-    public void InitializeSimulation(IEnumerable<TriadGameModifier> mods) => simulation.Initialize(mods, null);
+    public void InitializeSimulation(IEnumerable<TriadGameModifier> mods) => simulation.Initialize(mods);
 
     public TriadGameSimulationState StartSimulation(TriadDeck deckBlue, TriadDeck deckRed, ETriadGameState state)
     {
@@ -85,7 +75,7 @@ public class TriadGameSolver
         {
             if (gameState.state == ETriadGameState.InProgressBlue)
             {
-                keepPlaying = agentBlue.FindNextMove(this, gameState, out var cardIdx, out var boardPos, out _);
+                keepPlaying = agentBlue.FindNextMove(this, gameState, out var cardIdx, out var boardPos, out var _);
                 if (keepPlaying)
                 {
                     keepPlaying = simulation.PlaceCard(gameState, cardIdx, gameState.deckBlue, ETriadCardOwner.Blue, boardPos);
@@ -93,7 +83,7 @@ public class TriadGameSolver
             }
             else if (gameState.state == ETriadGameState.InProgressRed)
             {
-                keepPlaying = agentRed.FindNextMove(this, gameState, out var cardIdx, out var boardPos, out _);
+                keepPlaying = agentRed.FindNextMove(this, gameState, out var cardIdx, out var boardPos, out var _);
                 if (keepPlaying)
                 {
                     keepPlaying = simulation.PlaceCard(gameState, cardIdx, gameState.deckRed, ETriadCardOwner.Red, boardPos);

@@ -1,7 +1,5 @@
-﻿using Dalamud.Game;
-using Dalamud.IoC;
+﻿using Dalamud.IoC;
 using Dalamud.Plugin;
-
 namespace TriadBuddyPlugin;
 
 internal class Service

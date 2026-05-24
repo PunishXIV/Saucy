@@ -1,6 +1,4 @@
-﻿using Dalamud.Hooking;
-using Dalamud.Memory;
-using Dalamud.Utility;
+﻿using Dalamud.Utility;
 using ECommons.Automation;
 using ECommons.Automation.UIInput;
 using ECommons.UIHelpers.AddonMasterImplementations;
@@ -86,8 +84,7 @@ internal static unsafe class TriadAutomater
                     //Deck Index
                     values[0] = new()
                     {
-                        Type = AtkValueType.Int,
-                        Int = deck
+                        Type = AtkValueType.Int, Int = deck
                     };
                     addon->FireCallback(1, values);
                     addon->Close(true);

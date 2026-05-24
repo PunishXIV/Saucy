@@ -4,58 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
-
 namespace TriadBuddyPlugin;
 
 public class UIReaderTriadGame : IUIReader
 {
-    [StructLayout(LayoutKind.Explicit, Size = 0x1000)]              // no idea what size, last entries seems to be around +0xfc0? 
-    internal unsafe struct AddonTripleTriad
-    {
-        [FieldOffset(0x0)] public AtkUnitBase AtkUnitBase;
-        [FieldOffset(0x238)] public byte TurnState;                 // 0: waiting, 1: normal move, 2: masked move (order/chaos)
-
-        [FieldOffset(0x240)] public AddonTripleTriadCard BlueDeck0; // 2be = end of numbers
-        [FieldOffset(0x2e8)] public AddonTripleTriadCard BlueDeck1; // 366 = end of numbers
-        [FieldOffset(0x390)] public AddonTripleTriadCard BlueDeck2;
-        [FieldOffset(0x438)] public AddonTripleTriadCard BlueDeck3;
-        [FieldOffset(0x4e0)] public AddonTripleTriadCard BlueDeck4;
-
-        [FieldOffset(0x588)] public AddonTripleTriadCard RedDeck0;
-        [FieldOffset(0x630)] public AddonTripleTriadCard RedDeck1;
-        [FieldOffset(0x6d8)] public AddonTripleTriadCard RedDeck2;
-        [FieldOffset(0x780)] public AddonTripleTriadCard RedDeck3;
-        [FieldOffset(0x828)] public AddonTripleTriadCard RedDeck4;
-
-        [FieldOffset(0x8d0)] public AddonTripleTriadCard Board0;
-        [FieldOffset(0x978)] public AddonTripleTriadCard Board1;
-        [FieldOffset(0xa20)] public AddonTripleTriadCard Board2;
-        [FieldOffset(0xac8)] public AddonTripleTriadCard Board3;
-        [FieldOffset(0xb70)] public AddonTripleTriadCard Board4;
-        [FieldOffset(0xc18)] public AddonTripleTriadCard Board5;
-        [FieldOffset(0xcc0)] public AddonTripleTriadCard Board6;
-        [FieldOffset(0xd68)] public AddonTripleTriadCard Board7;
-        [FieldOffset(0xe10)] public AddonTripleTriadCard Board8;
-    }
-
-    [StructLayout(LayoutKind.Explicit, Size = 0xA8)]
-    internal unsafe struct AddonTripleTriadCard
-    {
-        [FieldOffset(0x8)] public AtkComponentBase* CardDropControl;
-        [FieldOffset(0x80)] public byte CardRarity;                 // 1..5
-        [FieldOffset(0x81)] public byte CardType;                   // 0: no type, 1: primal, 2: scion, 3: beastman, 4: garland
-        [FieldOffset(0x82)] public byte CardOwner;                  // 0: empty, 1: blue, 2: red
-        [FieldOffset(0x83)] public byte NumSideU;
-        [FieldOffset(0x84)] public byte NumSideD;
-        [FieldOffset(0x85)] public byte NumSideR;
-        [FieldOffset(0x86)] public byte NumSideL;
-        [FieldOffset(0xA4)] public bool HasCard;
-
-        // 0x87 - constant per card, changes between npcs
-        // 0x88 - fixed per card, not ID
-        // 0x89 - fixed per card, 40/41 ?
-    }
-
     public enum Status
     {
         NoErrors,
@@ -65,36 +17,28 @@ public class UIReaderTriadGame : IUIReader
         FailedToReadMove,
         FailedToReadRules,
         FailedToReadRedPlayer,
-        FailedToReadCards,
+        FailedToReadCards
     }
+
+    private nint addonPtr;
 
     public UIStateTriadGame? currentState;
     public Status status = Status.AddonNotFound;
     public bool HasErrors => status >= Status.FailedToReadMove;
     public bool IsVisible => status is not Status.AddonNotFound and not Status.AddonNotVisible;
 
-    public event Action<UIStateTriadGame?>? OnUIStateChanged;
-
-    private IntPtr addonPtr;
-
-    public string GetAddonName()
-    {
-        return "TripleTriad";
-    }
+    public string GetAddonName() => "TripleTriad";
 
     public void OnAddonLost()
     {
         SetStatus(Status.AddonNotFound);
         SetCurrentState(null);
-        addonPtr = IntPtr.Zero;
+        addonPtr = nint.Zero;
     }
 
-    public void OnAddonShown(IntPtr addonPtr)
-    {
-        this.addonPtr = addonPtr;
-    }
+    public void OnAddonShown(nint addonPtr) => this.addonPtr = addonPtr;
 
-    public unsafe void OnAddonUpdate(IntPtr addonPtr)
+    public unsafe void OnAddonUpdate(nint addonPtr)
     {
         var addon = (AddonTripleTriad*)addonPtr;
         if (addon == null)
@@ -153,6 +97,8 @@ public class UIReaderTriadGame : IUIReader
             SetStatus(Status.PvPMatch);
         }
     }
+
+    public event Action<UIStateTriadGame?>? OnUIStateChanged;
 
     private void SetStatus(Status newStatus)
     {
@@ -282,7 +228,7 @@ public class UIReaderTriadGame : IUIReader
         return (texPath ?? "", isLocked);
     }
 
-    private unsafe UIStateTriadCard GetCardData(AddonTripleTriadCard addonCard)
+    private UIStateTriadCard GetCardData(AddonTripleTriadCard addonCard)
     {
         var resultOb = new UIStateTriadCard();
         if (addonCard.HasCard)
@@ -320,7 +266,7 @@ public class UIReaderTriadGame : IUIReader
 
     public unsafe (Vector2, Vector2) GetBlueCardPosAndSize(int idx)
     {
-        if (addonPtr != IntPtr.Zero)
+        if (addonPtr != nint.Zero)
         {
             var addon = (AddonTripleTriad*)addonPtr;
             switch (idx)
@@ -330,7 +276,6 @@ public class UIReaderTriadGame : IUIReader
                 case 2: return GetCardPosAndSize(addon->BlueDeck2);
                 case 3: return GetCardPosAndSize(addon->BlueDeck3);
                 case 4: return GetCardPosAndSize(addon->BlueDeck4);
-                default: break;
             }
         }
 
@@ -339,7 +284,7 @@ public class UIReaderTriadGame : IUIReader
 
     public unsafe (Vector2, Vector2) GetBoardCardPosAndSize(int idx)
     {
-        if (addonPtr != IntPtr.Zero)
+        if (addonPtr != nint.Zero)
         {
             var addon = (AddonTripleTriad*)addonPtr;
             switch (idx)
@@ -353,10 +298,56 @@ public class UIReaderTriadGame : IUIReader
                 case 6: return GetCardPosAndSize(addon->Board6);
                 case 7: return GetCardPosAndSize(addon->Board7);
                 case 8: return GetCardPosAndSize(addon->Board8);
-                default: break;
             }
         }
 
         return (Vector2.Zero, Vector2.Zero);
+    }
+
+    [StructLayout(LayoutKind.Explicit, Size = 0x1000)] // no idea what size, last entries seems to be around +0xfc0? 
+    internal struct AddonTripleTriad
+    {
+        [FieldOffset(0x0)] public AtkUnitBase AtkUnitBase;
+        [FieldOffset(0x238)] public byte TurnState; // 0: waiting, 1: normal move, 2: masked move (order/chaos)
+
+        [FieldOffset(0x240)] public AddonTripleTriadCard BlueDeck0; // 2be = end of numbers
+        [FieldOffset(0x2e8)] public AddonTripleTriadCard BlueDeck1; // 366 = end of numbers
+        [FieldOffset(0x390)] public AddonTripleTriadCard BlueDeck2;
+        [FieldOffset(0x438)] public AddonTripleTriadCard BlueDeck3;
+        [FieldOffset(0x4e0)] public AddonTripleTriadCard BlueDeck4;
+
+        [FieldOffset(0x588)] public AddonTripleTriadCard RedDeck0;
+        [FieldOffset(0x630)] public AddonTripleTriadCard RedDeck1;
+        [FieldOffset(0x6d8)] public AddonTripleTriadCard RedDeck2;
+        [FieldOffset(0x780)] public AddonTripleTriadCard RedDeck3;
+        [FieldOffset(0x828)] public AddonTripleTriadCard RedDeck4;
+
+        [FieldOffset(0x8d0)] public AddonTripleTriadCard Board0;
+        [FieldOffset(0x978)] public AddonTripleTriadCard Board1;
+        [FieldOffset(0xa20)] public AddonTripleTriadCard Board2;
+        [FieldOffset(0xac8)] public AddonTripleTriadCard Board3;
+        [FieldOffset(0xb70)] public AddonTripleTriadCard Board4;
+        [FieldOffset(0xc18)] public AddonTripleTriadCard Board5;
+        [FieldOffset(0xcc0)] public AddonTripleTriadCard Board6;
+        [FieldOffset(0xd68)] public AddonTripleTriadCard Board7;
+        [FieldOffset(0xe10)] public AddonTripleTriadCard Board8;
+    }
+
+    [StructLayout(LayoutKind.Explicit, Size = 0xA8)]
+    internal unsafe struct AddonTripleTriadCard
+    {
+        [FieldOffset(0x8)] public AtkComponentBase* CardDropControl;
+        [FieldOffset(0x80)] public byte CardRarity; // 1..5
+        [FieldOffset(0x81)] public byte CardType; // 0: no type, 1: primal, 2: scion, 3: beastman, 4: garland
+        [FieldOffset(0x82)] public byte CardOwner; // 0: empty, 1: blue, 2: red
+        [FieldOffset(0x83)] public byte NumSideU;
+        [FieldOffset(0x84)] public byte NumSideD;
+        [FieldOffset(0x85)] public byte NumSideR;
+        [FieldOffset(0x86)] public byte NumSideL;
+        [FieldOffset(0xA4)] public bool HasCard;
+
+        // 0x87 - constant per card, changes between npcs
+        // 0x88 - fixed per card, not ID
+        // 0x89 - fixed per card, 40/41 ?
     }
 }

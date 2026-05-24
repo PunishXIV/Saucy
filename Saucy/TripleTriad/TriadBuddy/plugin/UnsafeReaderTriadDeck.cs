@@ -1,22 +1,16 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-
 namespace TriadBuddyPlugin;
 
 public class UnsafeReaderTriadDeck
 {
-    public bool HasErrors { get; private set; }
-
-    private delegate void SetSelectedCardDelegate(IntPtr addonPtr, int cellIdx);
-    private readonly SetSelectedCardDelegate? SetSelectedCardFunc;
-
-    private delegate void RefreshUIDelegate(IntPtr agentPtr);
     private readonly RefreshUIDelegate? RefreshUIFunc;
+    private readonly SetSelectedCardDelegate? SetSelectedCardFunc;
 
     public UnsafeReaderTriadDeck()
     {
-        var SetSelectedCardPtr = IntPtr.Zero;
-        var RefreshUIPtr = IntPtr.Zero;
+        var SetSelectedCardPtr = nint.Zero;
+        var RefreshUIPtr = nint.Zero;
 
         if (Svc.SigScanner != null)
         {
@@ -35,7 +29,7 @@ public class UnsafeReaderTriadDeck
             }
         }
 
-        HasErrors = (SetSelectedCardPtr == IntPtr.Zero) || (RefreshUIPtr == IntPtr.Zero);
+        HasErrors = (SetSelectedCardPtr == nint.Zero) || (RefreshUIPtr == nint.Zero);
         if (!HasErrors)
         {
             SetSelectedCardFunc = Marshal.GetDelegateForFunctionPointer<SetSelectedCardDelegate>(SetSelectedCardPtr);
@@ -46,8 +40,9 @@ public class UnsafeReaderTriadDeck
             Svc.Log.Error("Failed to find triad deck functions, turning reader off");
         }
     }
+    public bool HasErrors { get; }
 
-    public void SetSelectedCard(IntPtr addonPtr, int cellIdx)
+    public void SetSelectedCard(nint addonPtr, int cellIdx)
     {
         if (SetSelectedCardFunc == null || cellIdx < 0 || cellIdx >= 30)
         {
@@ -57,8 +52,9 @@ public class UnsafeReaderTriadDeck
         SetSelectedCardFunc(addonPtr, cellIdx);
     }
 
-    public void RefreshUI(IntPtr agentPtr)
-    {
-        RefreshUIFunc?.Invoke(agentPtr);
-    }
+    public void RefreshUI(nint agentPtr) => RefreshUIFunc?.Invoke(agentPtr);
+
+    private delegate void SetSelectedCardDelegate(nint addonPtr, int cellIdx);
+
+    private delegate void RefreshUIDelegate(nint agentPtr);
 }

@@ -1,9 +1,7 @@
 ﻿using FFXIVClientStructs.FFXIV.Component.GUI;
-using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
-
 namespace MgAl2O4.Utils;
 
 // Dalamud.Interface.UIDebug is amazing
@@ -114,10 +112,7 @@ public class GUINodeUtils
         return null;
     }
 
-    public static unsafe AtkResNode* GetChildNode(AtkResNode* node)
-    {
-        return node != null ? node->ChildNode : null;
-    }
+    public static unsafe AtkResNode* GetChildNode(AtkResNode* node) => node != null ? node->ChildNode : null;
 
     public static unsafe string? GetNodeTexturePath(AtkResNode* maybeImageNode)
     {
@@ -132,8 +127,8 @@ public class GUINodeUtils
                 {
                     var texFileNameStdString = &textureInfo->AtkTexture.Resource->TexFileResourceHandle->ResourceHandle.FileName;
                     var texString = texFileNameStdString->Length < 16
-                        ? Marshal.PtrToStringAnsi((IntPtr)texFileNameStdString->Buffer)
-                        : Marshal.PtrToStringAnsi((IntPtr)texFileNameStdString->BufferPtr);
+                        ? Marshal.PtrToStringAnsi((nint)texFileNameStdString->Buffer)
+                        : Marshal.PtrToStringAnsi((nint)texFileNameStdString->BufferPtr);
 
                     return texString;
                 }
@@ -148,7 +143,7 @@ public class GUINodeUtils
         if (maybeTextNode != null && maybeTextNode->Type == NodeType.Text)
         {
             var textNode = (AtkTextNode*)maybeTextNode;
-            var text = Marshal.PtrToStringUTF8(new IntPtr(textNode->NodeText.StringPtr));
+            var text = Marshal.PtrToStringUTF8(new(textNode->NodeText.StringPtr));
             return text;
         }
 
@@ -171,7 +166,10 @@ public class GUINodeUtils
 
     public static unsafe Vector2 GetNodeScale(AtkResNode* node)
     {
-        if (node == null) return new Vector2(1, 1);
+        if (node == null)
+        {
+            return new(1, 1);
+        }
         var scale = new Vector2(node->ScaleX, node->ScaleY);
         while (node->ParentNode != null)
         {
@@ -256,7 +254,16 @@ public class GUINodeUtils
 
             if (hasParsableChildNodes || hasContent)
             {
-                list.Insert(insertIdx, new ParsableNode() { nodeAddr = (ulong)node, content = content, childIdx = childIdx, numChildren = numChildNodes, depth = depth, debugPath = debugPath, type = node->Type });
+                list.Insert(insertIdx, new ParsableNode()
+                {
+                    nodeAddr = (ulong)node,
+                    content = content,
+                    childIdx = childIdx,
+                    numChildren = numChildNodes,
+                    depth = depth,
+                    debugPath = debugPath,
+                    type = node->Type
+                });
             }
         }
 

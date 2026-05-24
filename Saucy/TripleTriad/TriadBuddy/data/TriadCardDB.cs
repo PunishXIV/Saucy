@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-
 namespace FFTriadBuddy;
 
 public class TriadCardDB
@@ -8,39 +7,30 @@ public class TriadCardDB
     private static readonly TriadCardDB instance = new();
 
     public List<TriadCard?> cards = [];
-    public Dictionary<int, List<TriadCard>> sameNumberMap = [];
     public TriadCard hiddenCard;
+    public Dictionary<int, List<TriadCard>> sameNumberMap = [];
 
     public TriadCardDB()
     {
-        hiddenCard = new TriadCard(0, ETriadCardRarity.Common, ETriadCardType.None, 0, 0, 0, 0, 0, 0);
+        hiddenCard = new(0, ETriadCardRarity.Common, ETriadCardType.None, 0, 0, 0, 0, 0, 0);
         hiddenCard.Name.Text = "(hidden)"; // debug only, ignore localization
     }
 
-    public static TriadCardDB Get()
-    {
-        return instance;
-    }
+    public static TriadCardDB Get() => instance;
 
-    public TriadCard? Find(string Name)
-    {
-        return cards.Find(x => (x != null) && x.Name.GetCodeName().Equals(Name, StringComparison.OrdinalIgnoreCase));
-    }
+    public TriadCard? Find(string Name) => cards.Find(x => (x != null) && x.Name.GetCodeName().Equals(Name, StringComparison.OrdinalIgnoreCase));
 
-    public TriadCard? Find(int numUp, int numLeft, int numDown, int numRight)
-    {
+    public TriadCard? Find(int numUp, int numLeft, int numDown, int numRight) =>
         // side number may be ambiguous! returns first match
-        return cards.Find(x =>
+        cards.Find(x =>
             (x != null) &&
             (x.Sides[(int)ETriadGameSide.Up] == numUp) &&
             (x.Sides[(int)ETriadGameSide.Down] == numDown) &&
             (x.Sides[(int)ETriadGameSide.Left] == numLeft) &&
             (x.Sides[(int)ETriadGameSide.Right] == numRight));
-    }
 
-    public TriadCard? Find(int numUp, int numLeft, int numDown, int numRight, ETriadCardType type, ETriadCardRarity rarity)
-    {
-        return cards.Find(x =>
+    public TriadCard? Find(int numUp, int numLeft, int numDown, int numRight, ETriadCardType type, ETriadCardRarity rarity) =>
+        cards.Find(x =>
             (x != null) &&
             (x.Sides[(int)ETriadGameSide.Up] == numUp) &&
             (x.Sides[(int)ETriadGameSide.Down] == numDown) &&
@@ -48,7 +38,6 @@ public class TriadCardDB
             (x.Sides[(int)ETriadGameSide.Right] == numRight) &&
             (x.Rarity == rarity) &&
             (x.Type == type));
-    }
 
     public TriadCard? FindById(int cardId)
     {
@@ -119,15 +108,9 @@ public class TriadCardDB
         return null;
     }
 
-    public static uint GetCardTextureId(int cardId)
-    {
-        return (cardId is < 0 or >= 1000) ? 87000 : (uint)cardId + 87000;
-    }
+    public static uint GetCardTextureId(int cardId) => (cardId is < 0 or >= 1000) ? 87000 : (uint)cardId + 87000;
 
-    public static uint GetCardIconTextureId(int cardId)
-    {
-        return (cardId is < 0 or >= 1000) ? 88000 : (uint)cardId + 88000;
-    }
+    public static uint GetCardIconTextureId(int cardId) => (cardId is < 0 or >= 1000) ? 88000 : (uint)cardId + 88000;
 
     public void ProcessSameSideLists()
     {

@@ -1,38 +1,45 @@
-﻿using System;
-using System.Collections.Generic;
-using Dalamud.Game.Text.SeStringHandling;
+﻿using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Memory;
 using ECommons;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-
+using System;
+using System.Collections.Generic;
 namespace Saucy.OutOnALimb.ECEmbedded;
 
 public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 0)
 {
-    public List<T> Loop<T>(int Offset, int Size, int MaxLength) where T : AtkReader
-    {
-        var ret = new List<T>();
-        for (var i = 0; i < MaxLength; i++)
-        {
-            var r = (AtkReader)Activator.CreateInstance(typeof(T), [(nint)UnitBase, Offset + (i * Size)])!;
-            if (r.IsNull) break;
-            ret.Add((T)r);
-        }
-        return ret;
-    }
-
     public AtkReader(nint UnitBasePtr, int BeginOffset = 0) : this((AtkUnitBase*)UnitBasePtr, BeginOffset) { }
 
     public bool IsNull
     {
         get
         {
-            if (UnitBase->AtkValuesCount == 0) return true;
+            if (UnitBase->AtkValuesCount == 0)
+            {
+                return true;
+            }
             var num = 0 + BeginOffset;
             EnsureCount(UnitBase, num);
-            if (UnitBase->AtkValues[num].Type == 0) return true;
+            if (UnitBase->AtkValues[num].Type == 0)
+            {
+                return true;
+            }
             return false;
         }
+    }
+    public List<T> Loop<T>(int Offset, int Size, int MaxLength) where T : AtkReader
+    {
+        var ret = new List<T>();
+        for (var i = 0; i < MaxLength; i++)
+        {
+            var r = (AtkReader)Activator.CreateInstance(typeof(T), (nint)UnitBase, Offset + (i * Size))!;
+            if (r.IsNull)
+            {
+                break;
+            }
+            ret.Add((T)r);
+        }
+        return ret;
     }
     protected uint? ReadUInt(int n)
     {
@@ -43,7 +50,10 @@ public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 
         {
             return null;
         }
-        if (value.Type != AtkValueType.UInt) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as uint but it was {value.Type}");
+        if (value.Type != AtkValueType.UInt)
+        {
+            throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as uint but it was {value.Type}");
+        }
         return value.UInt;
     }
 
@@ -56,7 +66,10 @@ public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 
         {
             return null;
         }
-        if (value.Type != AtkValueType.Int) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as int but it was {value.Type}");
+        if (value.Type != AtkValueType.Int)
+        {
+            throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as int but it was {value.Type}");
+        }
         return value.Int;
     }
 
@@ -69,7 +82,10 @@ public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 
         {
             return null;
         }
-        if (value.Type != AtkValueType.Bool) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as bool but it was {value.Type}");
+        if (value.Type != AtkValueType.Bool)
+        {
+            throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as bool but it was {value.Type}");
+        }
         return value.Byte != 0;
     }
 
@@ -82,7 +98,10 @@ public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 
         {
             return null;
         }
-        if (!value.Type.EqualsAny(AtkValueType.String, AtkValueType.ManagedString)) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as SeString but it was {value.Type}");
+        if (!value.Type.EqualsAny(AtkValueType.String, AtkValueType.ManagedString))
+        {
+            throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as SeString but it was {value.Type}");
+        }
         return MemoryHelper.ReadSeStringNullTerminated((nint)value.String.Value);
     }
 
@@ -95,12 +114,18 @@ public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 
         {
             return null;
         }
-        if (!value.Type.EqualsAny(AtkValueType.String, AtkValueType.ManagedString, AtkValueType.String8)) throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as String but it was {value.Type}");
+        if (!value.Type.EqualsAny(AtkValueType.String, AtkValueType.ManagedString, AtkValueType.String8))
+        {
+            throw new InvalidCastException($"Value {num} from Addon {UnitBase->NameString} was requested as String but it was {value.Type}");
+        }
         return MemoryHelper.ReadStringNullTerminated((nint)value.String.Value);
     }
 
-    void EnsureCount(AtkUnitBase* Addon, int num)
+    private void EnsureCount(AtkUnitBase* Addon, int num)
     {
-        if (num >= Addon->AtkValuesCount) throw new ArgumentOutOfRangeException(nameof(num));
+        if (num >= Addon->AtkValuesCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(num));
+        }
     }
 }
