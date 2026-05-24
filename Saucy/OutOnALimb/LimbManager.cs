@@ -79,7 +79,7 @@ public unsafe class LimbManager : IDisposable
         var found = false;
         foreach (var x in Svc.Objects)
         {
-            if (x.ObjectKind.EqualsAny(ObjectKind.EventObj, ObjectKind.HousingEventObject) && x.Name.GetText().RemoveSpaces().EqualsIgnoreCaseAny(machineNameGS, machineNameHousing) && Vector3.Distance(Player.Object.Position, x.Position) < 4)
+            if (x.ObjectKind.EqualsAny(ObjectKind.EventObj, ObjectKind.HousingEventObject) && x.Name.GetText()!.RemoveSpaces().EqualsIgnoreCaseAny(machineNameGS, machineNameHousing) && Vector3.Distance(Player.Object!.Position, x.Position) < 4)
             {
                 found = true;
                 if (EzThrottler.Throttle("TargetAndInteract"))

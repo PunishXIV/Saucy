@@ -14,7 +14,7 @@ public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 
         var ret = new List<T>();
         for (var i = 0; i < MaxLength; i++)
         {
-            var r = (AtkReader)Activator.CreateInstance(typeof(T), [(nint)UnitBase, Offset + (i * Size)]);
+            var r = (AtkReader)Activator.CreateInstance(typeof(T), [(nint)UnitBase, Offset + (i * Size)])!;
             if (r.IsNull) break;
             ret.Add((T)r);
         }
@@ -73,7 +73,7 @@ public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 
         return value.Byte != 0;
     }
 
-    protected SeString ReadSeString(int n)
+    protected SeString? ReadSeString(int n)
     {
         var num = n + BeginOffset;
         EnsureCount(UnitBase, num);
@@ -86,7 +86,7 @@ public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 
         return MemoryHelper.ReadSeStringNullTerminated((nint)value.String.Value);
     }
 
-    protected string ReadString(int n)
+    protected string? ReadString(int n)
     {
         var num = n + BeginOffset;
         EnsureCount(UnitBase, num);

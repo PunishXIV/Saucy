@@ -28,7 +28,7 @@ public unsafe class PluginUI : Window
         SizeCondition = ImGuiCond.FirstUseEver;
     }
 
-    public GameNpcInfo CurrentNPC
+    public GameNpcInfo? CurrentNPC
     {
         get;
         set
@@ -70,25 +70,25 @@ public unsafe class PluginUI : Window
         if (ImGui.Checkbox("Enable Slice is Right Module", ref C.SliceIsRightModuleEnabled))
         {
             if (C.SliceIsRightModuleEnabled)
-                C.EnabledModules.Add(ModuleManager.GetModule<SliceIsRight>().InternalName);
+                C.EnabledModules.Add(ModuleManager.GetModule<SliceIsRight>()!.InternalName);
             else
-                C.EnabledModules.Remove(ModuleManager.GetModule<SliceIsRight>().InternalName);
+                C.EnabledModules.Remove(ModuleManager.GetModule<SliceIsRight>()!.InternalName);
         }
 
         if (ImGui.Checkbox("Enable Auto Mini-Cactpot", ref C.EnableAutoMiniCactpot))
         {
             if (C.EnableAutoMiniCactpot)
-                C.EnabledModules.Add(ModuleManager.GetModule<MiniCactpot.MiniCactpot>().InternalName);
+                C.EnabledModules.Add(ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName);
             else
-                C.EnabledModules.Remove(ModuleManager.GetModule<MiniCactpot.MiniCactpot>().InternalName);
+                C.EnabledModules.Remove(ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName);
         }
 
         if (ImGui.Checkbox("Enable Any Way the Wind Blows Module", ref C.AnyWayTheWindowBlowsModuleEnabled))
         {
             if (C.AnyWayTheWindowBlowsModuleEnabled)
-                C.EnabledModules.Add(ModuleManager.GetModule<AnyWayTheWindBlows>().InternalName);
+                C.EnabledModules.Add(ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName);
             else
-                C.EnabledModules.Remove(ModuleManager.GetModule<AnyWayTheWindBlows>().InternalName);
+                C.EnabledModules.Remove(ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName);
         }
     }
 
@@ -291,7 +291,7 @@ public unsafe class PluginUI : Window
         ImGui.NextColumn();
         if (stat.CardsWon.Count > 0)
         {
-            ImGuiEx.CenterColumnText($"{TriadCardDB.Get().FindById((int)stat.CardsWon.OrderByDescending(x => x.Value).First().Key).Name.GetLocalized()}");
+            ImGuiEx.CenterColumnText($"{TriadCardDB.Get().FindById((int)stat.CardsWon.OrderByDescending(x => x.Value).First().Key)!.Name.GetLocalized()}");
             ImGui.NextColumn();
             ImGui.NextColumn();
             ImGui.NextColumn();
@@ -306,7 +306,7 @@ public unsafe class PluginUI : Window
     {
         var output = 0;
         foreach (var card in stat.CardsWon)
-            output += GameCardDB.Get().FindById((int)card.Key).SaleValue * stat.CardsWon[card.Key];
+            output += GameCardDB.Get().FindById((int)card.Key)!.SaleValue * stat.CardsWon[card.Key];
 
         return output;
     }
@@ -336,7 +336,7 @@ public unsafe class PluginUI : Window
 
         var selectedDeck = C.SelectedDeckIndex;
 
-        if (TTSolver.profileGS.GetPlayerDecks().Count() > 0)
+        if (TTSolver.profileGS.GetPlayerDecks()!.Count() > 0)
         {
             var useAutoDeck = C.UseRecommendedDeck;
             if (ImGui.Checkbox("Automatically choose your deck with the best win chance", ref useAutoDeck))
@@ -349,13 +349,13 @@ public unsafe class PluginUI : Window
             {
                 ImGui.PushItemWidth(200);
                 string preview;
-                if (selectedDeck == -1 || TTSolver.profileGS.GetPlayerDecks()[selectedDeck] is null)
+                if (selectedDeck == -1 || TTSolver.profileGS.GetPlayerDecks()![selectedDeck] is null)
                 {
                     preview = "";
                 }
                 else
                 {
-                    preview = selectedDeck >= 0 ? TTSolver.profileGS.GetPlayerDecks()[selectedDeck].name : string.Empty;
+                    preview = selectedDeck >= 0 ? TTSolver.profileGS.GetPlayerDecks()![selectedDeck]!.name : string.Empty;
                 }
 
                 if (ImGui.BeginCombo("Select Deck", preview))
@@ -365,7 +365,7 @@ public unsafe class PluginUI : Window
                         C.SelectedDeckIndex = -1;
                     }
 
-                    foreach (var deck in TTSolver.profileGS.GetPlayerDecks())
+                    foreach (var deck in TTSolver.profileGS.GetPlayerDecks()!)
                     {
                         if (deck is null) continue;
                         var index = deck.id;
@@ -436,10 +436,10 @@ public unsafe class PluginUI : Window
             GameCardDB.Get().Refresh();
             foreach (var card in CurrentNPC.rewardCards)
             {
-                if ((C.OnlyUnobtainedCards && !GameCardDB.Get().FindById(card).IsOwned) || !C.OnlyUnobtainedCards)
+                if ((C.OnlyUnobtainedCards && !GameCardDB.Get().FindById(card)!.IsOwned) || !C.OnlyUnobtainedCards)
                 {
                     TriadAutomater.TempCardsWonList.TryAdd((uint)card, 0);
-                    ImGui.Text($"- {TriadCardDB.Get().FindById(GameCardDB.Get().FindById(card).CardId).Name.GetLocalized()} {TriadAutomater.TempCardsWonList[(uint)card]}/{TriadAutomater.NumberOfTimes}");
+                    ImGui.Text($"- {TriadCardDB.Get().FindById(GameCardDB.Get().FindById(card)!.CardId)!.Name.GetLocalized()} {TriadAutomater.TempCardsWonList[(uint)card]}/{TriadAutomater.NumberOfTimes}");
                 }
             }
 
@@ -483,7 +483,7 @@ public unsafe class PluginUI : Window
                 ImGui.SetNextItemWidth(200f);
                 if (ImGui.BeginCombo("###SelectSound", C.SelectedSound))
                 {
-                    var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory.FullName, "Sounds");
+                    var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds");
                     Directory.CreateDirectory(path);
                     foreach (var file in new DirectoryInfo(path).GetFiles())
                     {
@@ -500,7 +500,7 @@ public unsafe class PluginUI : Window
                 ImGui.SameLine();
                 if (ImGui.Button("Open Sound Folder"))
                 {
-                    Process.Start("explorer.exe", @$"{Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory.FullName, "Sounds")}");
+                    Process.Start("explorer.exe", @$"{Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds")}");
                 }
                 ImGuiComponents.HelpMarker("Drop any MP3 files into the sound folder to add your own custom sounds.");
             }
@@ -556,7 +556,7 @@ public unsafe class PluginUI : Window
                 ImGui.Text("Select Sound");
                 if (ImGui.BeginCombo("###SelectSound", C.SelectedSound))
                 {
-                    var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory.FullName, "Sounds");
+                    var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds");
                     foreach (var file in new DirectoryInfo(path).GetFiles())
                     {
                         if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", C.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
@@ -571,7 +571,7 @@ public unsafe class PluginUI : Window
 
                 if (ImGui.Button("Open Sound Folder"))
                 {
-                    Process.Start("explorer.exe", @$"{Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory.FullName, "Sounds")}");
+                    Process.Start("explorer.exe", @$"{Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds")}");
                 }
                 ImGuiComponents.HelpMarker("Drop any MP3 files into the sound folder to add your own custom sounds.");
             }

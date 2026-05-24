@@ -18,6 +18,6 @@ public unsafe class ReaderMiniGameBotanist(AtkUnitBase* UnitBase, int BeginOffse
     public uint Health => ReadUInt(12) ?? 0;
     public uint MaxHealth => ReadUInt(13) ?? 0;
     public uint Unk14 => ReadUInt(14) ?? 0;
-    public string TimeRemaining => ReadString(15);
+    public string TimeRemaining => ReadString(15)!;
     public int SecondsRemaining => int.Parse(TimeRemaining.Split(":")[1]);
 }

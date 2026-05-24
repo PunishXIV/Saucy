@@ -178,7 +178,7 @@ public unsafe class MiniCactpot : Module
     public class Reader(AtkUnitBase* UnitBase, int BeginOffset = 0) : AtkReader(UnitBase, BeginOffset)
     {
         public int Stage => ReadInt(0) ?? -1;
-        public string State => ReadString(3);
+        public string State => ReadString(3)!;
         public IEnumerable<int> Numbers
         {
             get

@@ -30,28 +30,28 @@ public sealed class Saucy : IDalamudPlugin
 {
     public string Name => "Saucy";
     public static Configuration C { get; private set; } = null!;
-    public static Saucy P;
+    public static Saucy P = null!;
 
     private const string commandName = "/saucy";
 
     public static Solver TTSolver = new();
 
-    public static UIReaderTriadGame uiReaderGame;
-    public static UIReaderTriadPrep uiReaderPrep;
-    public static UIReaderTriadCardList uiReaderCardList;
-    public static UIReaderTriadDeckEdit uiReaderDeckEdit;
-    public static UIReaderScheduler uiReaderScheduler;
-    public static UIReaderGamesResults uiReaderGamesResults;
-    public static StatTracker statTracker;
-    public static GameDataLoader dataLoader;
+    public static UIReaderTriadGame uiReaderGame = null!;
+    public static UIReaderTriadPrep uiReaderPrep = null!;
+    public static UIReaderTriadCardList uiReaderCardList = null!;
+    public static UIReaderTriadDeckEdit uiReaderDeckEdit = null!;
+    public static UIReaderScheduler uiReaderScheduler = null!;
+    public static UIReaderGamesResults uiReaderGamesResults = null!;
+    public static StatTracker statTracker = null!;
+    public static GameDataLoader dataLoader = null!;
     public static List<Task> AirForceOneTask = [];
     public static CancellationTokenSource AirForceOneToken = new();
 
     public static bool GameFinished => TTSolver.cachedScreenState == null;
     internal static bool openTT = false;
 
-    public LimbManager LimbManager;
-    public static ModuleManager ModuleManager;
+    public LimbManager LimbManager = null!;
+    public static ModuleManager ModuleManager = null!;
     public Saucy(IDalamudPluginInterface pluginInterface)
     {
         ECommonsMain.Init(pluginInterface, this, ECommons.Module.All);
@@ -73,7 +73,9 @@ public sealed class Saucy : IDalamudPlugin
         TTSolver.profileGS = new UnsafeReaderProfileGS();
 
         uiReaderGame = new UIReaderTriadGame();
+#pragma warning disable CS8622 // Nullability mismatch in vendored delegate
         uiReaderGame.OnUIStateChanged += TTSolver.UpdateGame;
+#pragma warning restore CS8622
 
         uiReaderPrep = new UIReaderTriadPrep
         {
@@ -108,7 +110,7 @@ public sealed class Saucy : IDalamudPlugin
         C.EnabledModules.CollectionChanged += OnChange;
     }
 
-    private void OnChange(object sender, NotifyCollectionChangedEventArgs e)
+    private void OnChange(object? sender, NotifyCollectionChangedEventArgs e)
     {
         foreach (var m in ModuleManager.Modules)
         {
@@ -243,14 +245,17 @@ public sealed class Saucy : IDalamudPlugin
     private int GetBonusMGP(int numMGP)
     {
         double multiplier = 1;
+        var localPlayer = Svc.Objects.LocalPlayer;
+        if (localPlayer == null) return numMGP;
+
         //Jackpot
-        if (Svc.Objects.LocalPlayer.StatusList.Any(x => x.StatusId == 902))
+        if (localPlayer.StatusList.Any(x => x.StatusId == 902))
         {
-            multiplier += (double)Svc.Objects.LocalPlayer.StatusList.First(x => x.StatusId == 902).Param / 100;
+            multiplier += (double)localPlayer.StatusList.First(x => x.StatusId == 902).Param / 100;
         }
 
         //MGP Card
-        if (Svc.Objects.LocalPlayer.StatusList.Any(x => x.StatusId == 1079))
+        if (localPlayer.StatusList.Any(x => x.StatusId == 1079))
         {
             multiplier += 0.15;
         }
@@ -375,8 +380,8 @@ public sealed class Saucy : IDalamudPlugin
     }
 
     private readonly object _lockObj = new();
-    private WaveOutEvent _currentWaveOut;
-    private Mp3FileReader _currentReader;
+    private WaveOutEvent? _currentWaveOut;
+    private Mp3FileReader? _currentReader;
 
     private void PlaySound()
     {
@@ -385,7 +390,7 @@ public sealed class Saucy : IDalamudPlugin
             DisposeAudio();
 
             var sound = C.SelectedSound;
-            var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory.FullName, "Sounds", $"{sound}.mp3");
+            var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds", $"{sound}.mp3");
             if (!File.Exists(path)) return;
 
             _currentReader = new Mp3FileReader(path);
@@ -396,7 +401,7 @@ public sealed class Saucy : IDalamudPlugin
         }
     }
 
-    private void OnPlaybackStopped(object sender, StoppedEventArgs e)
+    private void OnPlaybackStopped(object? sender, StoppedEventArgs e)
     {
         lock (_lockObj)
         {
@@ -428,7 +433,7 @@ public sealed class Saucy : IDalamudPlugin
         LimbManager.Dispose();
         ModuleManager.Dispose();
         ECommonsMain.Dispose(); //Don't forget!
-        P = null; //necessary to free the reference for GC
+        P = null!; //necessary to free the reference for GC
     }
 
     private void OnCommand(string command, string arguments)
