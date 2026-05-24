@@ -29,7 +29,7 @@ public class Configuration : IPluginConfiguration
     public ObservableCollection<string> EnabledModules = [];
 
     public bool SliceIsRightModuleEnabled = false;
-    public bool AnyWayTheWindowBlowsModuleEnabled = false;
+    public bool AnyWayTheWindBlowsModuleEnabled = false;
     public bool EnableAutoMiniCactpot = false;
 
     public LimbConfig LimbConfig { get; set; } = new();

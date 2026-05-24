@@ -15,11 +15,9 @@ using Saucy.OtherGames;
 using Saucy.OutOnALimb;
 using Saucy.TripleTriad;
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using TriadBuddyPlugin;
 using static ECommons.GenericHelpers;
@@ -44,8 +42,6 @@ public sealed class Saucy : IDalamudPlugin
     public static UIReaderGamesResults uiReaderGamesResults = null!;
     public static StatTracker statTracker = null!;
     public static GameDataLoader dataLoader = null!;
-    public static List<Task> AirForceOneTask = [];
-    public static CancellationTokenSource AirForceOneToken = new();
 
     public static bool GameFinished => TTSolver.cachedScreenState == null;
     internal static bool openTT = false;
@@ -166,10 +162,7 @@ public sealed class Saucy : IDalamudPlugin
                     }
 
                     if (TriadAutomater.LogOutAfterCompletion)
-                    {
-                        await Svc.Framework.RunOnTick(TriadAutomater.Logout, TimeSpan.FromMilliseconds(2000));
-                        await Svc.Framework.RunOnTick(TriadAutomater.SelectYesLogout, TimeSpan.FromMilliseconds(3500));
-                    }
+                        await PerformLogout();
                 }
 
                 uiReaderGamesResults.SetIsResultsUI(false);
@@ -191,10 +184,11 @@ public sealed class Saucy : IDalamudPlugin
                 stats.GamesPlayedWithSaucy++;
                 stats.MGPWon += GetBonusMGP(obj.numMGP);
 
-                if (stats.NPCsPlayed.TryGetValue(TTSolver.lastGameNpc.Name.GetLocalized(), out var plays))
-                    stats.NPCsPlayed[TTSolver.lastGameNpc.Name.GetLocalized()] += 1;
+                var npcName = TTSolver.lastGameNpc.Name.GetLocalized();
+                if (stats.NPCsPlayed.TryGetValue(npcName, out var plays))
+                    stats.NPCsPlayed[npcName] += 1;
                 else
-                    stats.NPCsPlayed.TryAdd(TTSolver.lastGameNpc.Name.GetLocalized(), 1);
+                    stats.NPCsPlayed.TryAdd(npcName, 1);
 
                 if (obj.isLose)
                     stats.GamesLostWithSaucy++;
@@ -237,9 +231,8 @@ public sealed class Saucy : IDalamudPlugin
             }
 
             Rematch();
+            C.Save();
         }
-        C.Save();
-
     }
 
     private int GetBonusMGP(int numMGP)
@@ -249,9 +242,10 @@ public sealed class Saucy : IDalamudPlugin
         if (localPlayer == null) return numMGP;
 
         //Jackpot
-        if (localPlayer.StatusList.Any(x => x.StatusId == 902))
+        var jackpot = localPlayer.StatusList.FirstOrDefault(x => x.StatusId == 902);
+        if (jackpot != null)
         {
-            multiplier += (double)localPlayer.StatusList.First(x => x.StatusId == 902).Param / 100;
+            multiplier += (double)jackpot.Param / 100;
         }
 
         //MGP Card
@@ -347,10 +341,7 @@ public sealed class Saucy : IDalamudPlugin
                         TriadAutomater.NumberOfTimes = 1;
 
                         if (TriadAutomater.LogOutAfterCompletion)
-                        {
-                            await Svc.Framework.RunOnTick(TriadAutomater.Logout, TimeSpan.FromMilliseconds(2000));
-                            await Svc.Framework.RunOnTick(TriadAutomater.SelectYesLogout, TimeSpan.FromMilliseconds(3500));
-                        }
+                            await PerformLogout();
                     }
 
                     return;
@@ -377,6 +368,12 @@ public sealed class Saucy : IDalamudPlugin
             new AddonMaster.Talk(talk).Click();
         }
         catch { }
+    }
+
+    private static async Task PerformLogout()
+    {
+        await Svc.Framework.RunOnTick(TriadAutomater.Logout, TimeSpan.FromMilliseconds(2000));
+        await Svc.Framework.RunOnTick(TriadAutomater.SelectYesLogout, TimeSpan.FromMilliseconds(3500));
     }
 
     private readonly object _lockObj = new();
@@ -439,66 +436,62 @@ public sealed class Saucy : IDalamudPlugin
     private void OnCommand(string command, string arguments)
     {
         if (arguments.Length == 0)
+        {
             EzConfigGui.Toggle();
+            return;
+        }
 
         var args = arguments.Split();
-        if (args.Length > 0)
+        if (args.Length < 2 || args[0].ToLower() != "tt")
+            return;
+
+        var subCommand = args[1].ToLower();
+
+        if (subCommand == "go")
         {
-            if (args[0].ToLower() == "tt")
+            TriadAutomater.ModuleEnabled = true;
+            Svc.Chat.Print("[Saucy] Triad Module Enabled!");
+            return;
+        }
+
+        if (subCommand == "stop")
+        {
+            TriadAutomater.ModuleEnabled = false;
+            Svc.Chat.Print("[Saucy] Triad Module Disabled!");
+            return;
+        }
+
+        if (subCommand == "play" && args.Length >= 3)
+        {
+            if (int.TryParse(args[2], out var val))
             {
-                if (args[1].ToLower() == "go")
-                {
-                    TriadAutomater.ModuleEnabled = true;
-                    Svc.Chat.Print("[Saucy] Triad Module Enabled!");
-                    return;
-                }
+                TriadAutomater.PlayXTimes = true;
+                Svc.Chat.Print("[Saucy] Play X Amount of Times Enabled!");
+                TriadAutomater.NumberOfTimes = val;
+            }
+            else
+            {
+                Svc.Chat.Print($"[Saucy] Incorrect value specified: {args[2]}");
+            }
+            return;
+        }
 
-                if (args[1].ToLower() == "play")
-                {
+        if (subCommand == "cards" && args.Length >= 3)
+        {
+            if (args[2].ToLower() == "any")
+            {
+                TriadAutomater.PlayUntilCardDrops = true;
+                Svc.Chat.Print("[Saucy] Play Until Any Cards Drop Enabled!");
+            }
+            if (args[2].ToLower() == "all")
+            {
+                TriadAutomater.PlayUntilAllCardsDropOnce = true;
+                Svc.Chat.Print("[Saucy] Play Until All Cards Drop from NPC at Least X Times Enabled!");
+            }
 
-                    if (int.TryParse(args[2], out var val))
-                    {
-                        TriadAutomater.PlayXTimes = true;
-                        Svc.Chat.Print("[Saucy] Play X Amount of Times Enabled!");
-                        TriadAutomater.NumberOfTimes = val;
-                    }
-                    else
-                    {
-                        Svc.Chat.Print($"[Saucy] Incorrect value specified: {args[2]}");
-                    }
-                    return;
-                }
-
-                if (args[1].ToLower() == "stop")
-                {
-                    TriadAutomater.ModuleEnabled = false;
-                    Svc.Chat.Print("[Saucy] Triad Module Disabled!");
-                    return;
-                }
-
-                if (args[1].ToLower() == "cards")
-                {
-                    if (args[2].ToLower() == "any")
-                    {
-                        TriadAutomater.PlayUntilCardDrops = true;
-                        Svc.Chat.Print("[Saucy] Play Until Any Cards Drop Enabled!");
-                    }
-                    if (args[2].ToLower() == "all")
-                    {
-                        TriadAutomater.PlayUntilAllCardsDropOnce = true;
-                        Svc.Chat.Print("[Saucy] Play Until All Cards Drop from NPC at Least X Times Enabled!");
-                    }
-
-                    if (int.TryParse(args[3], out var val))
-                    {
-                        TriadAutomater.NumberOfTimes = val;
-                        return;
-                    }
-                    else
-                    {
-                        return;
-                    }
-                }
+            if (args.Length >= 4 && int.TryParse(args[3], out var val))
+            {
+                TriadAutomater.NumberOfTimes = val;
             }
         }
     }

@@ -41,8 +41,6 @@ public unsafe class PluginUI : Window
         }
     }
 
-    public bool Enabled { get; set; } = false;
-
     public override void Draw()
     {
         ImGuiEx.EzTabBar("###Games",
@@ -73,6 +71,7 @@ public unsafe class PluginUI : Window
                 C.EnabledModules.Add(ModuleManager.GetModule<SliceIsRight>()!.InternalName);
             else
                 C.EnabledModules.Remove(ModuleManager.GetModule<SliceIsRight>()!.InternalName);
+            C.Save();
         }
 
         if (ImGui.Checkbox("Enable Auto Mini-Cactpot", ref C.EnableAutoMiniCactpot))
@@ -81,14 +80,16 @@ public unsafe class PluginUI : Window
                 C.EnabledModules.Add(ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName);
             else
                 C.EnabledModules.Remove(ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName);
+            C.Save();
         }
 
-        if (ImGui.Checkbox("Enable Any Way the Wind Blows Module", ref C.AnyWayTheWindowBlowsModuleEnabled))
+        if (ImGui.Checkbox("Enable Any Way the Wind Blows Module", ref C.AnyWayTheWindBlowsModuleEnabled))
         {
-            if (C.AnyWayTheWindowBlowsModuleEnabled)
+            if (C.AnyWayTheWindBlowsModuleEnabled)
                 C.EnabledModules.Add(ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName);
             else
                 C.EnabledModules.Remove(ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName);
+            C.Save();
         }
     }
 
@@ -268,8 +269,9 @@ public unsafe class PluginUI : Window
 
         if (stat.NPCsPlayed.Count > 0)
         {
-            ImGuiEx.CenterColumnText($"{stat.NPCsPlayed.OrderByDescending(x => x.Value).First().Key}");
-            ImGuiEx.CenterColumnText($"{stat.NPCsPlayed.OrderByDescending(x => x.Value).First().Value:N0} times");
+            var topNpc = stat.NPCsPlayed.OrderByDescending(x => x.Value).First();
+            ImGuiEx.CenterColumnText($"{topNpc.Key}");
+            ImGuiEx.CenterColumnText($"{topNpc.Value:N0} times");
             ImGui.NextColumn();
             ImGui.NextColumn();
             ImGui.NextColumn();
@@ -291,11 +293,12 @@ public unsafe class PluginUI : Window
         ImGui.NextColumn();
         if (stat.CardsWon.Count > 0)
         {
-            ImGuiEx.CenterColumnText($"{TriadCardDB.Get().FindById((int)stat.CardsWon.OrderByDescending(x => x.Value).First().Key)!.Name.GetLocalized()}");
+            var topCard = stat.CardsWon.OrderByDescending(x => x.Value).First();
+            ImGuiEx.CenterColumnText($"{TriadCardDB.Get().FindById((int)topCard.Key)!.Name.GetLocalized()}");
             ImGui.NextColumn();
             ImGui.NextColumn();
             ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{stat.CardsWon.OrderByDescending(x => x.Value).First().Value:N0} times");
+            ImGuiEx.CenterColumnText($"{topCard.Value:N0} times");
         }
 
         ImGui.Columns(1);
@@ -478,31 +481,7 @@ public unsafe class PluginUI : Window
             if (playSound)
             {
                 ImGui.NextColumn();
-                ImGui.Text("Select Sound");
-                ImGui.SameLine();
-                ImGui.SetNextItemWidth(200f);
-                if (ImGui.BeginCombo("###SelectSound", C.SelectedSound))
-                {
-                    var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds");
-                    Directory.CreateDirectory(path);
-                    foreach (var file in new DirectoryInfo(path).GetFiles())
-                    {
-                        if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", C.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
-                        {
-                            C.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
-                            C.Save();
-                        }
-                    }
-
-                    ImGui.EndCombo();
-                }
-
-                ImGui.SameLine();
-                if (ImGui.Button("Open Sound Folder"))
-                {
-                    Process.Start("explorer.exe", @$"{Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds")}");
-                }
-                ImGuiComponents.HelpMarker("Drop any MP3 files into the sound folder to add your own custom sounds.");
+                DrawSoundPicker();
             }
             ImGui.Columns(1);
         }
@@ -553,30 +532,39 @@ public unsafe class PluginUI : Window
             if (playSound)
             {
                 ImGui.NextColumn();
-                ImGui.Text("Select Sound");
-                if (ImGui.BeginCombo("###SelectSound", C.SelectedSound))
-                {
-                    var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds");
-                    foreach (var file in new DirectoryInfo(path).GetFiles())
-                    {
-                        if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", C.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
-                        {
-                            C.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
-                            C.Save();
-                        }
-                    }
-
-                    ImGui.EndCombo();
-                }
-
-                if (ImGui.Button("Open Sound Folder"))
-                {
-                    Process.Start("explorer.exe", @$"{Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds")}");
-                }
-                ImGuiComponents.HelpMarker("Drop any MP3 files into the sound folder to add your own custom sounds.");
+                DrawSoundPicker();
             }
             ImGui.Columns(1);
         }
+    }
+
+    private void DrawSoundPicker()
+    {
+        ImGui.Text("Select Sound");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(200f);
+        if (ImGui.BeginCombo("###SelectSound", C.SelectedSound))
+        {
+            var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds");
+            Directory.CreateDirectory(path);
+            foreach (var file in new DirectoryInfo(path).GetFiles())
+            {
+                if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", C.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
+                {
+                    C.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
+                    C.Save();
+                }
+            }
+
+            ImGui.EndCombo();
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("Open Sound Folder"))
+        {
+            Process.Start("explorer.exe", @$"{Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds")}");
+        }
+        ImGuiComponents.HelpMarker("Drop any MP3 files into the sound folder to add your own custom sounds.");
     }
 
     private void DrawDebugTab()

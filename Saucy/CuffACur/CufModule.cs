@@ -24,7 +24,6 @@ public unsafe class CufModule
 
     public static unsafe void RunModule()
     {
-        var prizeMenu = Svc.GameGui.GetAddonByName("GoldSaucerReward", 1);
         var addon = Svc.GameGui.GetAddonByName("PunchingMachine", 1);
         try
         {
@@ -51,38 +50,6 @@ public unsafe class CufModule
                     {
                         var slidingNode = ui->UldManager.NodeList[18];
                         var btn = ui->UldManager.NodeList[10];
-                        var img = btn->GetComponent()->UldManager.NodeList[2];
-
-                        //if (img->Y == -2)
-                        //{
-                        //    slidingNode->SetWidth(225);
-                        //    var values = stackalloc AtkValue[3];
-                        //    values[0] = new()
-                        //    {
-                        //        Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
-                        //        Int = 11,
-                        //    };
-                        //    values[1] = new()
-                        //    {
-                        //        Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
-                        //        Int = 3,
-                        //    };
-                        //    values[2] = new()
-                        //    {
-                        //        Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int,
-                        //        Int = 1500,
-                        //    };
-
-                        //    if (!ShotFired)
-                        //    {
-                        //        Dalamud.Logging.PluginLog.Debug($"FIRE");
-                        //        ui->FireCallback(3, values);
-                        //        ShotFired = true;
-
-                        //        return;
-                        //    }
-                        //}
-
                         if (slidingNode->Width is >= 210 and <= 240)
                         {
                             var evt = stackalloc AtkEvent[]
