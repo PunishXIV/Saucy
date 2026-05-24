@@ -57,6 +57,7 @@ public sealed class Saucy : IDalamudPlugin
         P = this;
 
         EzConfigGui.Init(new PluginUI());
+        Svc.PluginInterface.UiBuilder.OpenMainUi += EzConfigGui.Open;
 
         Svc.Commands.AddHandler(commandName, new CommandInfo(OnCommand)
         {
@@ -424,6 +425,7 @@ public sealed class Saucy : IDalamudPlugin
     public void Dispose()
     {
         Svc.Commands.RemoveHandler(commandName);
+        Svc.PluginInterface.UiBuilder.OpenMainUi -= EzConfigGui.Open;
         Svc.Framework.Update -= RunBot;
         lock (_lockObj) { DisposeAudio(); }
         CufModule.FuncHook?.Dispose();
