@@ -7,6 +7,7 @@ using FFTriadBuddy;
 using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
 using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
+using Saucy.Framework;
 using Saucy.OtherGames;
 using Saucy.TripleTriad;
 using System;
@@ -68,11 +69,11 @@ public unsafe class PluginUI : Window
         {
             if (C.SliceIsRightModuleEnabled)
             {
-                C.EnabledModules.Add(ModuleManager.GetModule<SliceIsRight>()!.InternalName);
+                C.EnabledModules.Add(Saucy.ModuleManager.GetModule<SliceIsRight>()!.InternalName);
             }
             else
             {
-                C.EnabledModules.Remove(ModuleManager.GetModule<SliceIsRight>()!.InternalName);
+                C.EnabledModules.Remove(Saucy.ModuleManager.GetModule<SliceIsRight>()!.InternalName);
             }
             C.Save();
         }
@@ -81,11 +82,11 @@ public unsafe class PluginUI : Window
         {
             if (C.EnableAutoMiniCactpot)
             {
-                C.EnabledModules.Add(ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName);
+                C.EnabledModules.Add(Saucy.ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName);
             }
             else
             {
-                C.EnabledModules.Remove(ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName);
+                C.EnabledModules.Remove(Saucy.ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName);
             }
             C.Save();
         }
@@ -94,11 +95,11 @@ public unsafe class PluginUI : Window
         {
             if (C.AnyWayTheWindBlowsModuleEnabled)
             {
-                C.EnabledModules.Add(ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName);
+                C.EnabledModules.Add(Saucy.ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName);
             }
             else
             {
-                C.EnabledModules.Remove(ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName);
+                C.EnabledModules.Remove(Saucy.ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName);
             }
             C.Save();
         }
@@ -342,7 +343,8 @@ public unsafe class PluginUI : Window
 
             if (enabled)
             {
-                CufModule.ModuleEnabled = false;
+                SetModuleEnabled<CuffACurModule>(false);
+                C.EnableCuffModule = false;
             }
         }
 
@@ -356,7 +358,9 @@ public unsafe class PluginUI : Window
 
         var selectedDeck = C.SelectedDeckIndex;
 
-        if (TTSolver.profileGS.GetPlayerDecks()!.Count() > 0)
+        var playerDecks = TTSolver.profileGS.GetPlayerDecks();
+
+        if (playerDecks is not null && playerDecks.Count() > 0)
         {
             var useAutoDeck = C.UseRecommendedDeck;
             if (ImGui.Checkbox("Automatically choose your deck with the best win chance", ref useAutoDeck))
@@ -369,13 +373,13 @@ public unsafe class PluginUI : Window
             {
                 ImGui.PushItemWidth(200);
                 string preview;
-                if (selectedDeck == -1 || TTSolver.profileGS.GetPlayerDecks()![selectedDeck] is null)
+                if (selectedDeck == -1 || playerDecks[selectedDeck] is null)
                 {
                     preview = "";
                 }
                 else
                 {
-                    preview = selectedDeck >= 0 ? TTSolver.profileGS.GetPlayerDecks()![selectedDeck]!.name : string.Empty;
+                    preview = selectedDeck >= 0 ? playerDecks[selectedDeck]!.name : string.Empty;
                 }
 
                 if (ImGui.BeginCombo("Select Deck", preview))
@@ -385,14 +389,13 @@ public unsafe class PluginUI : Window
                         C.SelectedDeckIndex = -1;
                     }
 
-                    foreach (var deck in TTSolver.profileGS.GetPlayerDecks()!)
+                    foreach (var deck in playerDecks)
                     {
                         if (deck is null)
                         {
                             continue;
                         }
                         var index = deck.id;
-                        //var index = Saucy.TTSolver.preGameDecks.Where(x => x.Value == deck).First().Key;
                         if (ImGui.Selectable(deck.name, index == selectedDeck))
                         {
                             C.SelectedDeckIndex = index;
@@ -475,93 +478,94 @@ public unsafe class PluginUI : Window
             ImGui.Unindent();
         }
 
-        if (TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops || TriadAutomater.PlayUntilAllCardsDropOnce)
-        {
-            ImGui.PushItemWidth(150f);
-            ImGui.Text("How many times:");
-            ImGui.SameLine();
-
-            if (ImGui.InputInt("###NumberOfTimes", ref TriadAutomater.NumberOfTimes))
-            {
-                if (TriadAutomater.NumberOfTimes <= 0)
-                {
-                    TriadAutomater.NumberOfTimes = 1;
-                }
-            }
-
-            ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
-
-            var playSound = C.PlaySound;
-
-            ImGui.Columns(2, default, false);
-            if (ImGui.Checkbox("Play sound upon completion", ref playSound))
-            {
-                C.PlaySound = playSound;
-                C.Save();
-            }
-
-            if (playSound)
-            {
-                ImGui.NextColumn();
-                DrawSoundPicker();
-            }
-            ImGui.Columns();
-        }
+        DrawSessionCompletionSettings(showPlayXTimesCheckbox: false);
     }
 
     public void DrawCufTab()
     {
-        var enabled = CufModule.ModuleEnabled;
-
         ImGui.TextWrapped(@"How to use: Click ""Enable Cuff Module"" then walk up to a Cuff-a-cur machine.");
         ImGui.Separator();
 
-        if (ImGui.Checkbox("Enable Cuff Module", ref enabled))
+        if (ImGui.Checkbox("Enable Cuff Module", ref C.EnableCuffModule))
         {
-            CufModule.ModuleEnabled = enabled;
-            if (enabled && TriadAutomater.ModuleEnabled)
+            SetModuleEnabled<CuffACurModule>(C.EnableCuffModule);
+            if (C.EnableCuffModule && TriadAutomater.ModuleEnabled)
             {
                 TriadAutomater.ModuleEnabled = false;
             }
+            C.Save();
         }
 
-        if (ImGui.Checkbox("Play X Amount of Times", ref TriadAutomater.PlayXTimes) && TriadAutomater.NumberOfTimes <= 0)
+        DrawSessionCompletionSettings(showPlayXTimesCheckbox: true);
+    }
+
+    private static void SetModuleEnabled<T>(bool enabled) where T : Module
+    {
+        var module = Saucy.ModuleManager.GetModule<T>();
+        if (module is null)
+        {
+            return;
+        }
+
+        if (enabled)
+        {
+            if (!C.EnabledModules.Contains(module.InternalName))
+            {
+                C.EnabledModules.Add(module.InternalName);
+            }
+        }
+        else if (C.EnabledModules.Contains(module.InternalName))
+        {
+            C.EnabledModules.Remove(module.InternalName);
+        }
+    }
+
+    private void DrawSessionCompletionSettings(bool showPlayXTimesCheckbox)
+    {
+        if (showPlayXTimesCheckbox)
+        {
+            if (ImGui.Checkbox("Play X Amount of Times", ref TriadAutomater.PlayXTimes) && TriadAutomater.NumberOfTimes <= 0)
+            {
+                TriadAutomater.NumberOfTimes = 1;
+            }
+        }
+
+        var showOptions = showPlayXTimesCheckbox
+            ? TriadAutomater.PlayXTimes
+            : TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops || TriadAutomater.PlayUntilAllCardsDropOnce;
+
+        if (!showOptions)
+        {
+            return;
+        }
+
+        ImGui.PushItemWidth(150f);
+        ImGui.Text("How many times:");
+        ImGui.SameLine();
+
+        if (ImGui.InputInt("###NumberOfTimes", ref TriadAutomater.NumberOfTimes) && TriadAutomater.NumberOfTimes <= 0)
         {
             TriadAutomater.NumberOfTimes = 1;
         }
 
-        if (TriadAutomater.PlayXTimes)
+        ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
+
+        var playSound = C.PlaySound;
+
+        ImGui.Columns(2, default, false);
+        if (ImGui.Checkbox("Play sound upon completion", ref playSound))
         {
-            ImGui.PushItemWidth(150f);
-            ImGui.Text("How many times:");
-            ImGui.SameLine();
-
-            if (ImGui.InputInt("###NumberOfTimes", ref TriadAutomater.NumberOfTimes))
-            {
-                if (TriadAutomater.NumberOfTimes <= 0)
-                {
-                    TriadAutomater.NumberOfTimes = 1;
-                }
-            }
-
-            ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
-
-            var playSound = C.PlaySound;
-
-            ImGui.Columns(2, default, false);
-            if (ImGui.Checkbox("Play sound upon completion", ref playSound))
-            {
-                C.PlaySound = playSound;
-                C.Save();
-            }
-
-            if (playSound)
-            {
-                ImGui.NextColumn();
-                DrawSoundPicker();
-            }
-            ImGui.Columns();
+            C.PlaySound = playSound;
+            C.Save();
         }
+
+        if (playSound)
+        {
+            ImGui.NextColumn();
+            DrawSoundPicker();
+        }
+
+        ImGui.Columns();
     }
 
     private void DrawSoundPicker()

@@ -11,6 +11,7 @@ public class Configuration : IPluginConfiguration
 {
     public bool AnyWayTheWindBlowsModuleEnabled = false;
     public bool EnableAutoMiniCactpot = false;
+    public bool EnableCuffModule = false;
 
     public ObservableCollection<string> EnabledModules = [];
 
@@ -43,21 +44,38 @@ public class Configuration : IPluginConfiguration
 
     public void MigrateModuleSettings()
     {
-        if (Version >= 1)
+        var changed = false;
+
+        if (Version < 1)
         {
-            return;
+            SyncModuleFlag(EnableAutoMiniCactpot, "MiniCactpot");
+            SyncModuleFlag(SliceIsRightModuleEnabled, "SliceIsRight");
+            SyncModuleFlag(AnyWayTheWindBlowsModuleEnabled, "AnyWayTheWindBlows");
+
+            EnableAutoMiniCactpot = EnabledModules.Contains("MiniCactpot");
+            SliceIsRightModuleEnabled = EnabledModules.Contains("SliceIsRight");
+            AnyWayTheWindBlowsModuleEnabled = EnabledModules.Contains("AnyWayTheWindBlows");
+
+            Version = 1;
+            changed = true;
         }
 
-        SyncModuleFlag(EnableAutoMiniCactpot, "MiniCactpot");
-        SyncModuleFlag(SliceIsRightModuleEnabled, "SliceIsRight");
-        SyncModuleFlag(AnyWayTheWindBlowsModuleEnabled, "AnyWayTheWindBlows");
+        if (Version < 2)
+        {
+            SyncModuleFlag(LimbConfig.EnableLimb, "OutOnALimbModule");
+            SyncModuleFlag(EnableCuffModule, "CuffACurModule");
 
-        EnableAutoMiniCactpot = EnabledModules.Contains("MiniCactpot");
-        SliceIsRightModuleEnabled = EnabledModules.Contains("SliceIsRight");
-        AnyWayTheWindBlowsModuleEnabled = EnabledModules.Contains("AnyWayTheWindBlows");
+            LimbConfig.EnableLimb = EnabledModules.Contains("OutOnALimbModule");
+            EnableCuffModule = EnabledModules.Contains("CuffACurModule");
 
-        Version = 1;
-        Save();
+            Version = 2;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            Save();
+        }
     }
 
     private void SyncModuleFlag(bool enabled, string moduleName)

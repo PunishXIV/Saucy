@@ -133,6 +133,12 @@ public unsafe class MiniCactpot : Module
         try
         {
             LogStep("Step 6", "Running solver");
+            if (CountRevealed(newState) == 0)
+            {
+                LogStep("Step 6", "Skipping solver - no tiles revealed yet");
+                return;
+            }
+
             var solution = solver.Solve(newState);
             var activeIndexes = CollectActiveIndexes(solution);
 

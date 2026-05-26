@@ -16,6 +16,7 @@ using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel.Sheets;
+using Saucy.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -506,6 +507,17 @@ public unsafe class LimbManager : IDisposable
         }
         ImGui.Separator();
         save |= ImGui.Checkbox($"Enable", ref Cfg.EnableLimb);
+        if (save && Saucy.ModuleManager.GetModule<OutOnALimbModule>() is { } limbModule)
+        {
+            if (Cfg.EnableLimb && !C.EnabledModules.Contains(limbModule.InternalName))
+            {
+                C.EnabledModules.Add(limbModule.InternalName);
+            }
+            else if (!Cfg.EnableLimb && C.EnabledModules.Contains(limbModule.InternalName))
+            {
+                C.EnabledModules.Remove(limbModule.InternalName);
+            }
+        }
         ImGui.SetNextItemWidth(100f);
         ImGui.InputInt("Games to play", ref GamesToPlay.ValidateRange(0, 9999));
         ImGui.SameLine();

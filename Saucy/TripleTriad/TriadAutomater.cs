@@ -1,4 +1,5 @@
 ﻿using Dalamud.Utility;
+using ECommons;
 using ECommons.Automation;
 using ECommons.Automation.UIInput;
 using ECommons.UIHelpers.AddonMasterImplementations;
@@ -35,7 +36,10 @@ internal static unsafe class TriadAutomater
                 addon->TurnState = 0;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Svc.Log.Error(ex, "[TriadAutomater] PlaceCard failed");
+        }
     }
 
     public static void RunModule()
@@ -91,7 +95,10 @@ internal static unsafe class TriadAutomater
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Svc.Log.Error(ex, "[TriadAutomater] DeckSelect failed");
+        }
     }
 
     private static void AcceptTriadMatch()
@@ -107,7 +114,10 @@ internal static unsafe class TriadAutomater
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Svc.Log.Error(ex, "[TriadAutomater] AcceptTriadMatch failed");
+        }
     }
 
     public static bool Logout()

@@ -402,7 +402,7 @@ public sealed class CactpotSolver
                     }
                     options[i] = true;
                 }
-                else if (Math.Abs(totWin[i] - currentMax) < 0.1f)
+                else if (Math.Abs(totWin[i] - currentMax) < EPS)
                 {
                     // For a tie, mark the current one as TRUE, and leave the previous ones intact
                     options[i] = true;
@@ -492,14 +492,13 @@ public sealed class CactpotSolver
 
     private static void Reverse<T>(List<T> list, int begin, int end)
     {
-        var count = end - begin;
-
-        var reversedSlice = list.GetRange(begin, count);
-        reversedSlice.Reverse();
-
-        for (var i = 0; i < reversedSlice.Count; i++)
+        var i = begin;
+        var j = end - 1;
+        while (i < j)
         {
-            list[begin + i] = reversedSlice[i];
+            Swap(list, i, j);
+            i++;
+            j--;
         }
     }
 

@@ -7,7 +7,6 @@ using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
-using System.Linq;
 using System.Numerics;
 using GameObject = FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject;
 
@@ -35,8 +34,9 @@ public unsafe class CufModule
                         new AddonMaster.SelectString(startMenu).Entries[0].Select();
                         return;
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        Svc.Log.Error(ex, "[CufModule] Failed to select start menu entry");
                     }
                 }
 
@@ -55,9 +55,6 @@ public unsafe class CufModule
                                 new()
                                 {
                                     Node = btn, Target = (AtkEventTarget*)btn, Param = 0, NextEvent = null
-                                    // Type = (AtkEventType)0x17,
-                                    //    Unk29 = 0,
-                                    //   Flags = 0xDD
                                 }
                             };
 
@@ -71,7 +68,7 @@ public unsafe class CufModule
 
             if (!Svc.Condition[ConditionFlag.OccupiedInQuestEvent] && !uiReaderGamesResults.HasResultsUI)
             {
-                var cuf = (GameObject*)(Svc.Objects.Where(x => (x.BaseId == 2005029 && GetTargetDistance(x) <= 1f) || (x.BaseId == 197370 && GetTargetDistance(x) <= 4f)).OrderByDescending(GetTargetDistance).FirstOrDefault()?.Address ?? nint.Zero);
+                var cuf = FindNearestCuffMachine();
                 if ((nint)cuf == nint.Zero)
                 {
                     return;
@@ -81,9 +78,36 @@ public unsafe class CufModule
                 tg->InteractWithObject(cuf);
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Svc.Log.Error(ex, "[CufModule] RunModule failed");
         }
+    }
+
+    private static GameObject* FindNearestCuffMachine()
+    {
+        GameObject* nearest = null;
+        var nearestDistance = float.MaxValue;
+
+        foreach (var obj in Svc.Objects)
+        {
+            if (obj.BaseId is not (2005029 or 197370))
+            {
+                continue;
+            }
+
+            var maxDistance = obj.BaseId == 2005029 ? 1f : 4f;
+            var distance = GetTargetDistance(obj);
+            if (distance > maxDistance || distance >= nearestDistance)
+            {
+                continue;
+            }
+
+            nearestDistance = distance;
+            nearest = (GameObject*)obj.Address;
+        }
+
+        return nearest;
     }
 
     public static float GetTargetDistance(IGameObject target)

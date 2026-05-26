@@ -13,6 +13,7 @@ using Saucy.Framework;
 using Saucy.OutOnALimb;
 using Saucy.TripleTriad;
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
@@ -36,6 +37,8 @@ public sealed class Saucy : IDalamudPlugin
     public static UIReaderGamesResults uiReaderGamesResults = null!;
     public static GameDataLoader dataLoader = null!;
     public static ModuleManager ModuleManager = null!;
+
+    private static Dictionary<uint, int>? cardIdByItemId;
 
     private readonly object _lockObj = new();
     private Mp3FileReader? _currentReader;
@@ -149,7 +152,7 @@ public sealed class Saucy : IDalamudPlugin
         }
     }
 
-    private async void CheckCuffResults(UIStateCuffResults obj)
+    private void CheckCuffResults(UIStateCuffResults obj)
     {
         try
         {
@@ -182,7 +185,7 @@ public sealed class Saucy : IDalamudPlugin
                 if (TriadAutomater.NumberOfTimes == 0 && TriadAutomater.PlayXTimes)
                 {
                     TriadAutomater.NumberOfTimes = 1;
-                    CufModule.ModuleEnabled = false;
+                    DisableCuffModule();
                     if (C.PlaySound)
                     {
                         PlaySound();
@@ -190,7 +193,7 @@ public sealed class Saucy : IDalamudPlugin
 
                     if (TriadAutomater.LogOutAfterCompletion)
                     {
-                        await PerformLogout();
+                        ScheduleLogout();
                     }
                 }
 
@@ -250,28 +253,24 @@ public sealed class Saucy : IDalamudPlugin
 
                     C.UpdateStats(stats => stats.CardsDroppedWithSaucy++);
 
-                    var cardDB = GameCardDB.Get();
-
-                    foreach ((var _, var cardInfo) in cardDB.mapCards)
+                    var cardInfo = FindCardByItemId(obj.cardItemId);
+                    if (cardInfo is not null)
                     {
-                        if (cardInfo.ItemId == obj.cardItemId)
+                        C.UpdateStats(stats =>
                         {
-                            C.UpdateStats(stats =>
+                            if (stats.CardsWon.ContainsKey((uint)cardInfo.CardId))
                             {
-                                if (stats.CardsWon.ContainsKey((uint)cardInfo.CardId))
-                                {
-                                    stats.CardsWon[(uint)cardInfo.CardId] += 1;
-                                }
-                                else
-                                {
-                                    stats.CardsWon[(uint)cardInfo.CardId] = 1;
-                                }
-                            });
-
-                            if (TriadAutomater.TempCardsWonList.ContainsKey((uint)cardInfo.CardId))
-                            {
-                                TriadAutomater.TempCardsWonList[(uint)cardInfo.CardId] += 1;
+                                stats.CardsWon[(uint)cardInfo.CardId] += 1;
                             }
+                            else
+                            {
+                                stats.CardsWon[(uint)cardInfo.CardId] = 1;
+                            }
+                        });
+
+                        if (TriadAutomater.TempCardsWonList.ContainsKey((uint)cardInfo.CardId))
+                        {
+                            TriadAutomater.TempCardsWonList[(uint)cardInfo.CardId] += 1;
                         }
                     }
                 }
@@ -332,10 +331,55 @@ public sealed class Saucy : IDalamudPlugin
                 addon->FireCallback(2, values);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Svc.Log.Error(ex, "[Saucy] Rematch failed");
+        }
     }
 
-    private async void RunBot(IFramework framework)
+    private static GameCardInfo? FindCardByItemId(uint itemId)
+    {
+        cardIdByItemId ??= BuildCardIdByItemIdLookup();
+        return cardIdByItemId.TryGetValue(itemId, out var cardId) ? GameCardDB.Get().FindById(cardId) : null;
+    }
+
+    private static Dictionary<uint, int> BuildCardIdByItemIdLookup()
+    {
+        var lookup = new Dictionary<uint, int>();
+        foreach ((var _, var cardInfo) in GameCardDB.Get().mapCards)
+        {
+            if (cardInfo.ItemId != 0)
+            {
+                lookup[(uint)cardInfo.ItemId] = cardInfo.CardId;
+            }
+        }
+
+        return lookup;
+    }
+
+    private static void DisableCuffModule()
+    {
+        C.EnableCuffModule = false;
+        if (C.EnabledModules.Contains("CuffACurModule"))
+        {
+            C.EnabledModules.Remove("CuffACurModule");
+        }
+    }
+
+    private static void ScheduleLogout()
+    {
+        _ = PerformLogout().ContinueWith(
+            task =>
+            {
+                if (task.Exception is not null)
+                {
+                    Svc.Log.Error(task.Exception, "[Saucy] Logout after completion failed");
+                }
+            },
+            TaskScheduler.Default);
+    }
+
+    private void RunBot(IFramework framework)
     {
         try
         {
@@ -389,7 +433,7 @@ public sealed class Saucy : IDalamudPlugin
 
                         if (TriadAutomater.LogOutAfterCompletion)
                         {
-                            await PerformLogout();
+                            ScheduleLogout();
                         }
                     }
 
@@ -421,7 +465,10 @@ public sealed class Saucy : IDalamudPlugin
             }
             new AddonMaster.Talk(talk).Click();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Svc.Log.Error(ex, "[Saucy] SkipDialogue failed");
+        }
     }
 
     private static async Task PerformLogout()
