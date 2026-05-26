@@ -1,4 +1,5 @@
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
@@ -25,14 +26,31 @@ public unsafe class PluginUI : Window
 {
     public PluginUI() : base("Saucy###Saucy")
     {
-        Size = new Vector2(520, 420);
+        Size = new Vector2(620, 440);
         SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(460, 320),
+            MinimumSize = new Vector2(580, 340),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue),
         };
     }
+
+    private enum NavItem
+    {
+        TripleTriad,
+        CuffACur,
+        OutOnALimb,
+        SliceIsRight,
+        AnyWayTheWindBlows,
+        MiniCactpot,
+        Stats,
+        About,
+#if DEBUG
+        Debug,
+#endif
+    }
+
+    private NavItem _selectedNav = NavItem.TripleTriad;
 
     public GameNpcInfo? CurrentNPC
     {
@@ -67,7 +85,8 @@ public unsafe class PluginUI : Window
         var showDelta = info.SessionDelta > 0
                      && Environment.TickCount64 - _lastMgpIncreaseMs < DeltaVisibleMs;
         var delta = showDelta ? $"  +{info.SessionDelta:N0}" : "";
-        WindowName = $"Saucy  \u2022  {info.ModuleStatus}  \u2022  MGP {info.Mgp:N0}{delta}###Saucy";
+        var status = info.ModuleStatus == "Idle" ? "Idle" : $"Enabled: {info.ModuleStatus}";
+        WindowName = $"Saucy  \u2022  {status}  \u2022  MGP {info.Mgp:N0}{delta}###Saucy";
     }
 
     public override void PostDraw()
@@ -79,44 +98,159 @@ public unsafe class PluginUI : Window
 
     public override void Draw()
     {
-        var startPos = new Vector2(ImGui.GetCursorPosX(), ImGui.GetCursorPosY());
-        DrawThemeToggle();
-        ImGui.SetCursorPos(startPos);
+        const float sidebarW = 132f;
+        var availY = ImGui.GetContentRegionAvail().Y;
 
-        ImGuiEx.EzTabBar("###Games",
-            ("Triple Triad", DrawTriadTab, null, false),
-            ("Out on a Limb", () =>
-            {
-                ImGuiEx.EzTabBar("Out on a Limb",
-                    ("Main", P.LimbManager.DrawSettings, null, false),
-                    ("Debug", P.LimbManager.DrawDebug, null, false));
-            }, null, false),
-            ("Other Games", DrawOtherGamesTab, null, false),
-            ("Stats", DrawStatsTab, null, false),
-            ("About", () => AboutTab.Draw("Saucy"), null, false)
-#if DEBUG
-            , ("Debug", DrawDebugTab, null, false)
-#endif
-        );
+        using (var sidebar = ImRaii.Child("##Sidebar", new Vector2(sidebarW, availY), true))
+        {
+            if (sidebar) DrawSidebar();
+        }
+
+        ImGui.SameLine();
+
+        using (var panel = ImRaii.Child("##Panel", new Vector2(0, availY), false))
+        {
+            if (panel) DrawPanel();
+        }
     }
 
-    private static void DrawThemeToggle()
+    private void DrawSidebar()
     {
-        const string label = "Saucy";
-        const float yNudge = 3f;
-        var w = ImGui.GetFrameHeight()
-            + ImGui.GetStyle().ItemInnerSpacing.X
-            + ImGui.CalcTextSize(label).X;
-        var rightX = ImGui.GetWindowContentRegionMax().X - w;
-        if (rightX > ImGui.GetCursorPosX())
-            ImGui.SetCursorPosX(rightX);
-        ImGui.SetCursorPosY(ImGui.GetCursorPosY() - yNudge);
+        DrawSidebarHeader("MACHINES");
+        NavSelectable("Out on a Limb", NavItem.OutOnALimb);
+        NavSelectable("Cuff-a-Cur", NavItem.CuffACur);
 
+        ImGui.Dummy(new Vector2(0, 6));
+        DrawSidebarHeader("GATES");
+        NavSelectable("Slice is Right", NavItem.SliceIsRight);
+        NavSelectable("Wind Blows", NavItem.AnyWayTheWindBlows);
+
+        ImGui.Dummy(new Vector2(0, 6));
+        DrawSidebarHeader("OTHER GAMES");
+        NavSelectable("Triple Triad", NavItem.TripleTriad);
+        NavSelectable("Mini-Cactpot", NavItem.MiniCactpot);
+
+        ImGui.Dummy(new Vector2(0, 6));
+        ImGui.Separator();
+        NavSelectable("Stats", NavItem.Stats);
+        NavSelectable("About", NavItem.About);
+#if DEBUG
+        NavSelectable("Debug", NavItem.Debug);
+#endif
+
+        var style = ImGui.GetStyle();
+        var checkboxH = ImGui.GetFrameHeight();
+        var bottomBlockH = style.ItemSpacing.Y + 1f + style.ItemSpacing.Y + checkboxH;
+        var targetY = ImGui.GetWindowHeight() - style.WindowPadding.Y - bottomBlockH;
+        if (targetY > ImGui.GetCursorPosY())
+            ImGui.SetCursorPosY(targetY);
+
+        ImGui.Separator();
         var on = C.SaucyThemeEnabled;
-        if (ImGui.Checkbox(label, ref on))
+        if (ImGui.Checkbox("Saucy theme", ref on))
         {
             C.SaucyThemeEnabled = on;
             C.Save();
+        }
+    }
+
+    private void NavSelectable(string label, NavItem item)
+    {
+        if (ImGui.Selectable(label, _selectedNav == item))
+            _selectedNav = item;
+    }
+
+    private static void DrawSidebarHeader(string label)
+    {
+        ImGui.TextColored(SaucyTheme.ColorOr(SaucyTheme.SectionTitle, ImGuiCol.TextDisabled), label);
+    }
+
+    private void DrawPanel()
+    {
+        switch (_selectedNav)
+        {
+            case NavItem.TripleTriad:        DrawTriadTab(); break;
+            case NavItem.CuffACur:           DrawCuffPanel(); break;
+            case NavItem.OutOnALimb:         DrawLimbPanel(); break;
+            case NavItem.SliceIsRight:       DrawSliceIsRightPanel(); break;
+            case NavItem.AnyWayTheWindBlows: DrawWindBlowsPanel(); break;
+            case NavItem.MiniCactpot:        DrawMiniCactpotPanel(); break;
+            case NavItem.Stats:              DrawStatsTab(); break;
+            case NavItem.About:              AboutTab.Draw("Saucy"); break;
+#if DEBUG
+            case NavItem.Debug:              DrawDebugTab(); break;
+#endif
+        }
+    }
+
+    private static void DrawPanelHeader(string title, string? subtitle = null)
+    {
+        ImGui.TextColored(SaucyTheme.ColorOr(SaucyTheme.SectionTitle, ImGuiCol.Text), title);
+        if (!string.IsNullOrEmpty(subtitle))
+        {
+            ImGui.SameLine();
+            ImGui.TextDisabled(" \u2014 " + subtitle);
+        }
+        ImGui.Separator();
+        ImGui.Dummy(new Vector2(0, 2));
+    }
+
+    private void DrawCuffPanel()
+    {
+        DrawPanelHeader("Cuff-a-Cur", "punch the cactuar");
+
+        var enabled = CufModule.ModuleEnabled;
+        if (ImGui.Checkbox("Enable##Cuff", ref enabled))
+        {
+            CufModule.ModuleEnabled = enabled;
+            C.EnableCuffModule = enabled;
+            ToggleEnabledModule(Saucy.ModuleManager.GetModule<CuffACur.CuffACurModule>()!.InternalName, enabled);
+            if (enabled && TriadAutomater.ModuleEnabled)
+                TriadAutomater.ModuleEnabled = false;
+        }
+
+        ImGui.Dummy(new Vector2(0, 4));
+        DrawCuffBody();
+    }
+
+    private void DrawLimbPanel()
+    {
+        DrawPanelHeader("Out on a Limb", "swing the hatchet");
+        ImGuiEx.EzTabBar("###Limb",
+            ("Main", P.LimbManager.DrawSettings, null, false),
+            ("Debug", P.LimbManager.DrawDebug, null, false));
+    }
+
+    private static void DrawSliceIsRightPanel()
+    {
+        DrawPanelHeader("Slice is Right", "dodge the falling slices");
+        var enabled = C.SliceIsRightModuleEnabled;
+        if (ImGui.Checkbox("Enable##Slice", ref enabled))
+        {
+            C.SliceIsRightModuleEnabled = enabled;
+            ToggleEnabledModule(ModuleManager.GetModule<SliceIsRight>()!.InternalName, enabled);
+        }
+    }
+
+    private static void DrawWindBlowsPanel()
+    {
+        DrawPanelHeader("Any Way the Wind Blows", "chocobo wind reader");
+        var enabled = C.AnyWayTheWindBlowsModuleEnabled;
+        if (ImGui.Checkbox("Enable##Wind", ref enabled))
+        {
+            C.AnyWayTheWindBlowsModuleEnabled = enabled;
+            ToggleEnabledModule(ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName, enabled);
+        }
+    }
+
+    private static void DrawMiniCactpotPanel()
+    {
+        DrawPanelHeader("Mini-Cactpot", "daily 3\u00d73 scratcher");
+        var enabled = C.EnableAutoMiniCactpot;
+        if (ImGui.Checkbox("Enable##Mini", ref enabled))
+        {
+            C.EnableAutoMiniCactpot = enabled;
+            ToggleEnabledModule(ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName, enabled);
         }
     }
 
@@ -126,10 +260,13 @@ public unsafe class PluginUI : Window
         var mgp = im != null ? im->GetInventoryItemCount(MgpItemId, false, false, false, 0) : 0;
 
         string status;
-        if (TriadAutomater.ModuleEnabled) status = "RUNNING TRIAD";
-        else if (CufModule.ModuleEnabled) status = "RUNNING CUFF";
-        else if (P?.LimbManager?.Cfg?.EnableLimb == true) status = "RUNNING LIMB";
-        else status = "IDLE";
+        if (TriadAutomater.ModuleEnabled) status = "Triple Triad";
+        else if (CufModule.ModuleEnabled) status = "Cuff-a-Cur";
+        else if (P?.LimbManager?.Cfg?.EnableLimb == true) status = "Out on a Limb";
+        else if (C.SliceIsRightModuleEnabled) status = "Slice is Right";
+        else if (C.AnyWayTheWindBlowsModuleEnabled) status = "Any Way the Wind Blows";
+        else if (C.EnableAutoMiniCactpot) status = "Mini-Cactpot";
+        else status = "Idle";
 
         var sessionDelta = C.SessionStats.MGPWon + C.SessionStats.CuffMGP + C.SessionStats.LimbMGP;
 
@@ -141,102 +278,11 @@ public unsafe class PluginUI : Window
         };
     }
 
-    private void DrawOtherGamesTab()
-    {
-        DrawGameSection("Cuff-a-Cur", "punch the cactuar",
-            () => CufModule.ModuleEnabled,
-            v =>
-            {
-                CufModule.ModuleEnabled = v;
-                C.EnableCuffModule = v;
-                ToggleEnabledModule(Saucy.ModuleManager.GetModule<CuffACur.CuffACurModule>()!.InternalName, v);
-                if (v && TriadAutomater.ModuleEnabled)
-                    TriadAutomater.ModuleEnabled = false;
-            },
-            DrawCuffBody);
-
-        DrawGameSection("Slice is Right", "dodge the falling slices",
-            () => C.SliceIsRightModuleEnabled,
-            v =>
-            {
-                C.SliceIsRightModuleEnabled = v;
-                ToggleEnabledModule(ModuleManager.GetModule<SliceIsRight>()!.InternalName, v);
-            });
-
-        DrawGameSection("Mini-Cactpot", "daily 3\u00d73 scratcher",
-            () => C.EnableAutoMiniCactpot,
-            v =>
-            {
-                C.EnableAutoMiniCactpot = v;
-                ToggleEnabledModule(ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName, v);
-            });
-
-        DrawGameSection("Any Way the Wind Blows", "chocobo wind reader",
-            () => C.AnyWayTheWindBlowsModuleEnabled,
-            v =>
-            {
-                C.AnyWayTheWindBlowsModuleEnabled = v;
-                ToggleEnabledModule(ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName, v);
-            });
-    }
-
     private static void ToggleEnabledModule(string internalName, bool enabled)
     {
         if (enabled) C.EnabledModules.Add(internalName);
         else C.EnabledModules.Remove(internalName);
         C.Save();
-    }
-
-    private static void DrawGameSection(string name, string subtitle,
-                                        Func<bool> getEnabled, Action<bool> setEnabled,
-                                        Action? body = null)
-    {
-        const float pad = 8f;
-        const float gapAfter = 6f;
-        var drawList = ImGui.GetWindowDrawList();
-        var avail = ImGui.GetContentRegionAvail().X;
-        var startScreen = ImGui.GetCursorScreenPos();
-
-        ImGui.Dummy(new Vector2(0, pad));
-        using var indent = ImRaii.PushIndent(pad);
-
-        ImGui.TextColored(SaucyTheme.ColorOr(SaucyTheme.SectionTitle, ImGuiCol.Text), name);
-        ImGui.SameLine();
-        ImGui.TextDisabled(" \u2014 " + subtitle);
-
-        var enabled = getEnabled();
-        const string toggleLabel = "Enable";
-        var toggleW = ImGui.GetFrameHeight()
-            + ImGui.GetStyle().ItemInnerSpacing.X
-            + ImGui.CalcTextSize(toggleLabel).X;
-        ImGui.SameLine();
-        var rightX = ImGui.GetWindowContentRegionMax().X - toggleW - pad;
-        if (rightX > ImGui.GetCursorPosX())
-            ImGui.SetCursorPosX(rightX);
-        if (ImGui.Checkbox($"{toggleLabel}##{name}", ref enabled))
-            setEnabled(enabled);
-
-        if (body != null)
-        {
-            var sepY = ImGui.GetCursorScreenPos().Y + 3f;
-            drawList.AddLine(
-                new Vector2(startScreen.X + pad, sepY),
-                new Vector2(startScreen.X + avail - pad, sepY),
-                SaucyTheme.ColorU32Or(SaucyTheme.CardSeparator, ImGuiCol.Separator), 1f);
-            ImGui.Dummy(new Vector2(0, 4));
-            body();
-        }
-
-        indent.Dispose();
-        ImGui.Dummy(new Vector2(0, pad));
-
-        var endY = ImGui.GetCursorScreenPos().Y;
-        drawList.AddRect(
-            new Vector2(startScreen.X, startScreen.Y),
-            new Vector2(startScreen.X + avail, endY),
-            SaucyTheme.ColorU32Or(SaucyTheme.CardBorder, ImGuiCol.Border), 3f);
-
-        ImGui.Dummy(new Vector2(0, gapAfter));
     }
 
     private static void DrawCuffBody()
@@ -609,18 +655,17 @@ public unsafe class PluginUI : Window
 
     private static void DrawSoundPicker()
     {
-        ImGui.Text("Select Sound");
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(200f);
+        ImGui.SetNextItemWidth(140f);
         if (ImGui.BeginCombo("###SelectSound", C.SelectedSound))
         {
             var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds");
             Directory.CreateDirectory(path);
             foreach (var file in new DirectoryInfo(path).GetFiles())
             {
-                if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", C.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
+                var name = Path.GetFileNameWithoutExtension(file.FullName);
+                if (ImGui.Selectable(name, C.SelectedSound == name))
                 {
-                    C.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
+                    C.SelectedSound = name;
                     C.Save();
                 }
             }
@@ -629,11 +674,11 @@ public unsafe class PluginUI : Window
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("Open Sound Folder"))
+        if (ImGuiComponents.IconButton(FontAwesomeIcon.FolderOpen))
         {
-            Process.Start("explorer.exe", @$"{Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds")}");
+            Process.Start("explorer.exe", Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds"));
         }
-        ImGuiComponents.HelpMarker("Drop any MP3 files into the sound folder to add your own custom sounds.");
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Open sound folder — drop MP3s here to add your own.");
     }
 
     private void DrawDebugTab()
