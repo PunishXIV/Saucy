@@ -274,6 +274,7 @@ public sealed class CactpotSolver
     {
         // Count how many are visible
         var numRevealed = state.Count(x => x > 0);
+        var stateKey = string.Join("", state);
 
         // If four are visible, we are picking between eight rows. Otherwise, we are picking
         // between nine tiles (although we'll never be picking revealed tiles)
@@ -286,10 +287,13 @@ public sealed class CactpotSolver
         double value;
         var whichToFlip = new bool[numOptions];
 
+        PluginLog.Information($"[MiniCactpot] Solver: state=[{string.Join(", ", state)}], revealed={numRevealed}, numOptions={numOptions}");
+
         switch (numRevealed)
         {
             case 0:
                 // You don't get to choose the first spot, but here's the answer anyway
+                PluginLog.Information("[MiniCactpot] Solver: branch=case0 (no tiles revealed, returning default opening)");
                 return [true, false, true, false, false, false, true, false, true];
 
             case 1:
@@ -298,17 +302,24 @@ public sealed class CactpotSolver
                     // value = SolveAny(ref state, ref tiles);
 
                     // Using our pre-calculated library, this is much faster
-                    var stateStr = string.Join("", state);
-                    (value, whichToFlip) = precalculatedOpenings[stateStr];
+                    if (!precalculatedOpenings.TryGetValue(stateKey, out var opening))
+                    {
+                        PluginLog.Error($"[MiniCactpot] Solver: branch=case1 lookup failed for stateKey={stateKey}");
+                        throw new KeyNotFoundException($"No precalculated opening for state {stateKey}");
+                    }
+
+                    (value, whichToFlip) = opening;
+                    PluginLog.Information($"[MiniCactpot] Solver: branch=case1 lookup succeeded for stateKey={stateKey}, expectedValue={value}");
                     break;
                 }
 
             default:
+                PluginLog.Information($"[MiniCactpot] Solver: branch=SolveAny for revealed={numRevealed}");
                 value = SolveAny(ref state, ref whichToFlip);
                 break;
         }
 
-        PluginLog.Verbose($"Expected value: {value} MGP");
+        PluginLog.Information($"[MiniCactpot] Solver: expectedValue={value} MGP, whichToFlip=[{string.Join(", ", whichToFlip)}]");
 
         return whichToFlip;
     }

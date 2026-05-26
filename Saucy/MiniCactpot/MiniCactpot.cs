@@ -19,42 +19,67 @@ public unsafe class MiniCactpot : Module
     private bool isProcessing;
     public override string Name => "Mini Cactpot";
 
-    public override void Enable() => Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "LotteryDaily", OnUpdate);
-    public override void Disable() => Svc.AddonLifecycle.UnregisterListener(OnUpdate);
+    public override void Enable()
+    {
+        Log("Step 0: Registering LotteryDaily PostUpdate listener");
+        Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "LotteryDaily", OnUpdate);
+    }
+
+    public override void Disable()
+    {
+        Log("Step 0: Unregistering LotteryDaily PostUpdate listener");
+        Svc.AddonLifecycle.UnregisterListener(OnUpdate);
+        boardState = null;
+    }
+
+    private void LogStep(string step, string message) => Log($"{step}: {message}");
 
     private void OnUpdate(AddonEvent type, AddonArgs args)
     {
         var addon = (AddonLotteryDaily*)args.Addon.Address;
-        if (new Reader((AtkUnitBase*)args.Addon.Address).Stage == 5)
+        var stage = new Reader((AtkUnitBase*)args.Addon.Address).Stage;
+
+        if (stage == 5)
         {
+            LogStep("Step 1", $"Game finished (stage 5), attempting close (CloseGame throttle: {!EzThrottler.Check("CloseGame")})");
             if (EzThrottler.Throttle("CloseGame"))
             {
+                LogStep("Step 2", "CloseGame throttle passed, enqueuing close click");
                 ClickConfirmClose((AddonLotteryDaily*)args.Addon.Address, 5);
+            }
+            else
+            {
+                LogStep("Step 2", "CloseGame throttled, skipping close click this tick");
             }
         }
 
         var newState = Enumerable.Range(0, 9).Select(i => addon->GameNumbers[i]).ToArray();
         if (!boardState?.SequenceEqual(newState) ?? true)
         {
+            var previousState = boardState is null ? "null" : $"[{string.Join(", ", boardState)}]";
+            LogStep("Step 3", $"Board state changed (stage={stage}): {previousState} -> [{string.Join(", ", newState)}]");
+
             if (!isProcessing && !TaskManager.IsBusy)
             {
-                LogVerbose($"[{nameof(MiniCactpot)}] Processing new state, TaskManager.IsBusy: {TaskManager.IsBusy}, isProcessing: {isProcessing}");
-                ProcessGameState(addon, newState);
+                LogStep("Step 4", $"Processing new state (isProcessing={isProcessing}, TaskManager.IsBusy={TaskManager.IsBusy})");
+                ProcessGameState(addon, newState, stage);
                 boardState = newState;
             }
             else
             {
-                LogVerbose($"[{nameof(MiniCactpot)}] Skipping state processing - isProcessing: {isProcessing}, TaskManager.IsBusy: {TaskManager.IsBusy}");
+                LogStep("Step 4", $"Deferred processing while busy (isProcessing={isProcessing}, TaskManager.IsBusy={TaskManager.IsBusy})");
             }
         }
     }
 
-    private void ProcessGameState(AddonLotteryDaily* addon, int[] newState)
+    private void ProcessGameState(AddonLotteryDaily* addon, int[] newState, int stage)
     {
         isProcessing = true;
+        LogStep("Step 5", $"ProcessGameState started (stage={stage}, revealed={newState.Count(x => x > 0)})");
 
         try
         {
+            LogStep("Step 6", "Running solver");
             var solution = solver.Solve(newState);
             var activeIndexes = solution
                 .Select((value, index) => new
@@ -65,131 +90,165 @@ public unsafe class MiniCactpot : Module
                 .Select(item => item.index)
                 .ToArray();
 
-            LogDebug($"[{nameof(MiniCactpot)}] Board state: [{string.Join(", ", newState)}], Revealed: {newState.Count(x => x > 0)}, Solution length: {solution.Length}, Active indexes: [{string.Join(", ", activeIndexes)}], Solution: [{string.Join(", ", solution)}]");
+            LogStep("Step 7", $"Solver result: solutionLength={solution.Length}, activeIndexes=[{string.Join(", ", activeIndexes)}], solution=[{string.Join(", ", solution)}]");
 
             if (solution.Length is 8)
             {
+                LogStep("Step 8", "Selecting lane (4 tiles revealed)");
                 ExecuteLaneSelection(addon, activeIndexes);
             }
             else
             {
+                LogStep("Step 8", "Selecting tile");
                 ExecuteButtonSelection(addon, activeIndexes);
             }
         }
         catch (Exception ex)
         {
-            PluginLog.Error($"Error processing game state: {ex}");
+            LogError($"Step 9: Error processing game state: {ex}");
         }
         finally
         {
             isProcessing = false;
+            LogStep("Step 10", "ProcessGameState finished");
         }
     }
 
     private void ExecuteLaneSelection(AddonLotteryDaily* addon, int[] activeIndexes)
     {
-        if (activeIndexes.First() is { } first)
+        if (activeIndexes.Length == 0)
         {
-            LogDebug($"[{nameof(MiniCactpot)}] Clicking lane at index #{SolverLaneToCsLane(first)} [{string.Join(", ", activeIndexes)}]");
-
-            TaskManager.Enqueue(() =>
-                {
-                    if (addon == null)
-                    {
-                        return true;
-                    }
-
-                    var lane = addon->LaneSelector[SolverLaneToCsLane(first)];
-                    if (lane == null)
-                    {
-                        return true;
-                    }
-
-                    if (EzThrottler.Throttle($"ClickLane_{first}", 100))
-                    {
-                        LogDebug($"[{nameof(MiniCactpot)}] Executing click for lane {first}");
-                        lane->ClickRadioButton((AtkUnitBase*)addon);
-                    }
-                    else
-                    {
-                        LogDebug($"[{nameof(MiniCactpot)}] Skipping click for lane {first} due to throttling");
-                    }
-                    return true;
-                }, $"Click lane {first}");
-
-            TaskManager.Enqueue(() =>
-            {
-                if (EzThrottler.Throttle("ConfirmLane", 300))
-                {
-                    return ClickConfirmClose(addon, -1);
-                }
-                LogDebug($"[{nameof(MiniCactpot)}] Skipping lane confirmation due to throttling");
-                return true;
-            }, "Confirm lane selection");
+            LogWarning("Step 11: No active lane index from solver, nothing to click");
+            return;
         }
+
+        var first = activeIndexes[0];
+        var csLane = SolverLaneToCsLane(first);
+        LogStep("Step 11", $"Enqueuing lane click: solverLane={first}, csLane={csLane}, activeIndexes=[{string.Join(", ", activeIndexes)}]");
+
+        TaskManager.Enqueue(() =>
+            {
+                if (addon == null)
+                {
+                    LogWarning("Step 12: Lane click task aborted - addon is null");
+                    return true;
+                }
+
+                var lane = addon->LaneSelector[csLane];
+                if (lane == null)
+                {
+                    LogWarning($"Step 12: Lane click task aborted - LaneSelector[{csLane}] is null");
+                    return true;
+                }
+
+                if (EzThrottler.Throttle($"ClickLane_{first}", 100))
+                {
+                    LogStep("Step 12", $"Executing lane click for solverLane={first}, csLane={csLane}");
+                    lane->ClickRadioButton((AtkUnitBase*)addon);
+                }
+                else
+                {
+                    LogStep("Step 12", $"Lane click throttled for solverLane={first}, csLane={csLane}");
+                }
+                return true;
+            }, $"Click lane {first}");
+
+        TaskManager.Enqueue(() =>
+        {
+            if (EzThrottler.Throttle("ConfirmLane", 300))
+            {
+                LogStep("Step 13", "ConfirmLane throttle passed, enqueuing confirm click");
+                return ClickConfirmClose(addon, -1);
+            }
+
+            LogStep("Step 13", "ConfirmLane throttled, skipping confirm this task tick");
+            return true;
+        }, "Confirm lane selection");
     }
 
     private void ExecuteButtonSelection(AddonLotteryDaily* addon, int[] activeIndexes)
     {
-        if (activeIndexes.First() is { } first)
+        if (activeIndexes.Length == 0)
         {
-            LogDebug($"[{nameof(MiniCactpot)}] Clicking button at index #{first} [{string.Join(", ", activeIndexes)}]");
-
-            TaskManager.Enqueue(() =>
-                {
-                    if (addon == null)
-                    {
-                        return true;
-                    }
-
-                    if (EzThrottler.Throttle($"ClickButton_{first}", 100))
-                    {
-                        LogDebug($"[{nameof(MiniCactpot)}] Executing click for button #{first}");
-                        Callback.Fire((AtkUnitBase*)addon, true, 1, first);
-                    }
-                    else
-                    {
-                        LogDebug($"[{nameof(MiniCactpot)}] Skipping click for button #{first} due to throttling");
-                    }
-                    return true;
-                }, $"Click button {first}");
+            LogWarning("Step 11: No active tile index from solver, nothing to click");
+            return;
         }
+
+        var first = activeIndexes[0];
+        LogStep("Step 11", $"Enqueuing tile click: index={first}, activeIndexes=[{string.Join(", ", activeIndexes)}]");
+
+        TaskManager.Enqueue(() =>
+            {
+                if (addon == null)
+                {
+                    LogWarning("Step 12: Tile click task aborted - addon is null");
+                    return true;
+                }
+
+                if (EzThrottler.Throttle($"ClickButton_{first}", 100))
+                {
+                    LogStep("Step 12", $"Executing tile click via Callback.Fire for index={first}");
+                    Callback.Fire((AtkUnitBase*)addon, true, 1, first);
+                }
+                else
+                {
+                    LogStep("Step 12", $"Tile click throttled for index={first}");
+                }
+                return true;
+            }, $"Click button {first}");
     }
 
     private bool ClickConfirmClose(AddonLotteryDaily* addon, int stage)
     {
+        var action = stage == 5 ? "close" : "confirm";
+
         if (addon == null)
         {
+            LogWarning($"Step 14: {action} click aborted - addon is null");
             return false;
         }
 
         var confirm = addon->GetComponentButtonById(67);
-        if (confirm == null || !confirm->IsEnabled)
+        if (confirm == null)
         {
+            LogWarning($"Step 14: {action} click aborted - confirm button (id 67) is null");
             return false;
         }
 
-        LogDebug($"[{nameof(MiniCactpot)}] Clicking {(stage == 5 ? "close" : "confirm")}");
+        if (!confirm->IsEnabled)
+        {
+            LogStep("Step 14", $"{action} click deferred - confirm button (id 67) is disabled");
+            return false;
+        }
+
+        LogStep("Step 14", $"Enqueuing {action} click (stage={stage})");
 
         TaskManager.Enqueue(() =>
             {
                 var confirmBtn = addon->GetComponentButtonById(67);
-                if (confirmBtn == null || !confirmBtn->IsEnabled)
+                if (confirmBtn == null)
                 {
+                    LogWarning($"Step 15: {action} click task aborted - confirm button (id 67) is null");
+                    return true;
+                }
+
+                if (!confirmBtn->IsEnabled)
+                {
+                    LogStep("Step 15", $"{action} click task skipped - confirm button (id 67) is disabled");
                     return true;
                 }
 
                 if (EzThrottler.Throttle("ClickConfirm", 100))
                 {
-                    LogDebug($"[{nameof(MiniCactpot)}] Executing {(stage == 5 ? "close" : "confirm")} click");
+                    LogStep("Step 15", $"Executing {action} click");
                     confirmBtn->ClickAddonButton((AtkUnitBase*)addon);
                 }
                 else
                 {
-                    LogDebug($"[{nameof(MiniCactpot)}] Skipping {(stage == 5 ? "close" : "confirm")} click due to throttling");
+                    LogStep("Step 15", $"{action} click throttled");
                 }
                 return true;
-            }, $"Click {(stage == 5 ? "close" : "confirm")}");
+            }, $"Click {action}");
 
         return true;
     }
