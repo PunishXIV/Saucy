@@ -3,7 +3,6 @@ using Dalamud.Interface.Utility.Raii;
 using ECommons.GameHelpers;
 using ECommons.ImGuiMethods;
 using Saucy.Framework;
-using System.Linq;
 using System.Numerics;
 namespace Saucy.OtherGames;
 
@@ -60,14 +59,7 @@ public class AnyWayTheWindBlows : Module
 
     public class Stage
     {
-        public const float North = -50.76f;
-        public const float South = -21f;
-        public const float East = 85.45f;
-        public const float West = 55.6f;
         public static SafeSpotWrapper SafeSpot => new(66.96f, -4.48f, -24.69f);
-
-        public static bool PlayerOnStage => Player.Position.X is > West and < East && Player.Position.Z is < South and > North;
-        public static bool FungahPresent => Svc.Objects.Any(o => o.BaseId == 1010476);
 
         public class SafeSpotWrapper
         {

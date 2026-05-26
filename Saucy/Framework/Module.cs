@@ -29,15 +29,12 @@ public abstract partial class Module : IModule
     protected TaskManager TaskManager;
     protected TaskManagerConfiguration TaskManagerConfiguration = new()
     {
-        ShowDebug = true, TimeLimitMS = 5000, AbortOnTimeout = true
+        ShowDebug = false, TimeLimitMS = 5000, AbortOnTimeout = true
     };
     public Module()
     {
         InternalName = GetType().Name;
-        TaskManager = new(new()
-        {
-            ShowDebug = true
-        });
+        TaskManager = new(TaskManagerConfiguration);
     }
     public bool InSaucer => Svc.ClientState.TerritoryType is 144;
 

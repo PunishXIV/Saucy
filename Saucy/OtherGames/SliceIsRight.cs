@@ -13,10 +13,12 @@ public class SliceIsRight : Module
 {
     private const float MaxDistance = 30f;
 
-    private static readonly uint ColourBlue = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 1f, 0.15f)));
-    private static readonly uint ColourGreen = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 1f, 0.0f, 0.15f)));
-    private static readonly uint ColourRed = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 0.0f, 0.0f, 0.4f)));
+    private static uint colourBlue;
+    private static uint colourGreen;
+    private static uint colourRed;
+    private static bool coloursInitialized;
     private static readonly Dictionary<ulong, DateTime> ObjectsAndSpawnTime = [];
+    private static readonly List<ulong> DespawnedIds = [];
     public override string Name => "Slice is Right";
 
     private static float HalfPi => MathF.PI / 2;
@@ -30,6 +32,10 @@ public class SliceIsRight : Module
         {
             return;
         }
+
+        EnsureColours();
+        PruneDespawnedObjects();
+
         foreach (var gameObject in Svc.Objects)
         {
             if (!(Player.DistanceTo(gameObject) <= MaxDistance))
@@ -57,24 +63,66 @@ public class SliceIsRight : Module
                 case 2010777:
                     length = (float)((double?)radius ?? 25.0);
                     DrawRectWorld(gameObject, gameObject.Rotation + HalfPi, length, 5f,
-                        ColourBlue);
+                        colourBlue);
                     break;
                 case 2010778:
                     length = (float)((double?)radius ?? 25.0);
                     var rotation1 = gameObject.Rotation + HalfPi;
                     var rotation2 = gameObject.Rotation - HalfPi;
-                    DrawRectWorld(gameObject, rotation1, length, 5f, ColourGreen);
-                    DrawRectWorld(gameObject, rotation2, length, 5f, ColourGreen);
+                    DrawRectWorld(gameObject, rotation1, length, 5f, colourGreen);
+                    DrawRectWorld(gameObject, rotation2, length, 5f, colourGreen);
                     break;
                 case 2010779:
                     length = (float)((double?)radius ?? 11.0);
-                    DrawFilledCircleWorld(gameObject, length, ColourRed);
+                    DrawFilledCircleWorld(gameObject, length, colourRed);
                     break;
             }
         }
         else
         {
             ObjectsAndSpawnTime.Add(gameObject.GameObjectId, DateTime.Now);
+        }
+    }
+
+    private static void EnsureColours()
+    {
+        if (coloursInitialized)
+        {
+            return;
+        }
+
+        colourBlue = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 0.0f, 1f, 0.15f)));
+        colourGreen = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(0.0f, 1f, 0.0f, 0.15f)));
+        colourRed = ImGui.GetColorU32(ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 0.0f, 0.0f, 0.4f)));
+        coloursInitialized = true;
+    }
+
+    private static void PruneDespawnedObjects()
+    {
+        DespawnedIds.Clear();
+        foreach (var id in ObjectsAndSpawnTime.Keys)
+        {
+            var found = false;
+            foreach (var obj in Svc.Objects)
+            {
+                if (obj.GameObjectId != id)
+                {
+                    continue;
+                }
+
+                found = true;
+                break;
+            }
+
+            if (!found)
+            {
+                DespawnedIds.Add(id);
+            }
+        }
+
+        foreach (var id in DespawnedIds)
+        {
+            ObjectsAndSpawnTime.Remove(id);
         }
     }
 

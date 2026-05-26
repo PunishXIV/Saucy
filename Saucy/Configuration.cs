@@ -40,4 +40,31 @@ public class Configuration : IPluginConfiguration
     }
 
     public void Save() => EzConfig.Save();
+
+    public void MigrateModuleSettings()
+    {
+        if (Version >= 1)
+        {
+            return;
+        }
+
+        SyncModuleFlag(EnableAutoMiniCactpot, "MiniCactpot");
+        SyncModuleFlag(SliceIsRightModuleEnabled, "SliceIsRight");
+        SyncModuleFlag(AnyWayTheWindBlowsModuleEnabled, "AnyWayTheWindBlows");
+
+        EnableAutoMiniCactpot = EnabledModules.Contains("MiniCactpot");
+        SliceIsRightModuleEnabled = EnabledModules.Contains("SliceIsRight");
+        AnyWayTheWindBlowsModuleEnabled = EnabledModules.Contains("AnyWayTheWindBlows");
+
+        Version = 1;
+        Save();
+    }
+
+    private void SyncModuleFlag(bool enabled, string moduleName)
+    {
+        if (enabled && !EnabledModules.Contains(moduleName))
+        {
+            EnabledModules.Add(moduleName);
+        }
+    }
 }

@@ -8,15 +8,17 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.Framework;
 using Saucy.OutOnALimb.ECEmbedded;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 namespace Saucy.MiniCactpot;
 
 public unsafe class MiniCactpot : Module
 {
     private readonly CactpotSolver solver = new();
+    private readonly int[] scratchState = new int[9];
     private int[]? boardState;
+    private int[]? pendingState;
     private bool isProcessing;
+    private bool loggedDeferred;
     public override string Name => "Mini Cactpot";
 
     public override void Enable()
@@ -30,6 +32,8 @@ public unsafe class MiniCactpot : Module
         Log("Step 0: Unregistering LotteryDaily PostUpdate listener");
         Svc.AddonLifecycle.UnregisterListener(OnUpdate);
         boardState = null;
+        pendingState = null;
+        loggedDeferred = false;
     }
 
     private void LogStep(string step, string message) => Log($"{step}: {message}");
@@ -53,42 +57,84 @@ public unsafe class MiniCactpot : Module
             }
         }
 
-        var newState = Enumerable.Range(0, 9).Select(i => addon->GameNumbers[i]).ToArray();
-        if (!boardState?.SequenceEqual(newState) ?? true)
+        ReadBoardState(addon, scratchState);
+
+        if (!StatesEqual(boardState, scratchState))
         {
             var previousState = boardState is null ? "null" : $"[{string.Join(", ", boardState)}]";
-            LogStep("Step 3", $"Board state changed (stage={stage}): {previousState} -> [{string.Join(", ", newState)}]");
+            LogStep("Step 3", $"Board state changed (stage={stage}): {previousState} -> [{string.Join(", ", scratchState)}]");
 
             if (!isProcessing && !TaskManager.IsBusy)
             {
                 LogStep("Step 4", $"Processing new state (isProcessing={isProcessing}, TaskManager.IsBusy={TaskManager.IsBusy})");
-                ProcessGameState(addon, newState, stage);
-                boardState = newState;
+                ProcessAndCommit(addon, scratchState, stage);
+                loggedDeferred = false;
             }
             else
             {
-                LogStep("Step 4", $"Deferred processing while busy (isProcessing={isProcessing}, TaskManager.IsBusy={TaskManager.IsBusy})");
+                pendingState = (int[])scratchState.Clone();
+                if (!loggedDeferred)
+                {
+                    LogStep("Step 4", $"Deferred processing while busy (isProcessing={isProcessing}, TaskManager.IsBusy={TaskManager.IsBusy})");
+                    loggedDeferred = true;
+                }
             }
         }
+        else if (pendingState is not null && !isProcessing && !TaskManager.IsBusy)
+        {
+            if (!StatesEqual(boardState, pendingState))
+            {
+                LogStep("Step 4", "Processing deferred board state");
+                ProcessAndCommit(addon, pendingState, stage);
+            }
+
+            pendingState = null;
+            loggedDeferred = false;
+        }
+    }
+
+    private static void ReadBoardState(AddonLotteryDaily* addon, int[] dest)
+    {
+        for (var i = 0; i < 9; i++)
+        {
+            dest[i] = addon->GameNumbers[i];
+        }
+    }
+
+    private static bool StatesEqual(int[]? a, int[] b)
+    {
+        if (a is null)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < 9; i++)
+        {
+            if (a[i] != b[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void ProcessAndCommit(AddonLotteryDaily* addon, int[] state, int stage)
+    {
+        ProcessGameState(addon, state, stage);
+        boardState = (int[])state.Clone();
     }
 
     private void ProcessGameState(AddonLotteryDaily* addon, int[] newState, int stage)
     {
         isProcessing = true;
-        LogStep("Step 5", $"ProcessGameState started (stage={stage}, revealed={newState.Count(x => x > 0)})");
+        LogStep("Step 5", $"ProcessGameState started (stage={stage}, revealed={CountRevealed(newState)})");
 
         try
         {
             LogStep("Step 6", "Running solver");
             var solution = solver.Solve(newState);
-            var activeIndexes = solution
-                .Select((value, index) => new
-                {
-                    value, index
-                })
-                .Where(item => item.value)
-                .Select(item => item.index)
-                .ToArray();
+            var activeIndexes = CollectActiveIndexes(solution);
 
             LogStep("Step 7", $"Solver result: solutionLength={solution.Length}, activeIndexes=[{string.Join(", ", activeIndexes)}], solution=[{string.Join(", ", solution)}]");
 
@@ -112,6 +158,44 @@ public unsafe class MiniCactpot : Module
             isProcessing = false;
             LogStep("Step 10", "ProcessGameState finished");
         }
+    }
+
+    private static int CountRevealed(int[] state)
+    {
+        var count = 0;
+        for (var i = 0; i < state.Length; i++)
+        {
+            if (state[i] > 0)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static int[] CollectActiveIndexes(bool[] solution)
+    {
+        var count = 0;
+        for (var i = 0; i < solution.Length; i++)
+        {
+            if (solution[i])
+            {
+                count++;
+            }
+        }
+
+        var activeIndexes = new int[count];
+        var index = 0;
+        for (var i = 0; i < solution.Length; i++)
+        {
+            if (solution[i])
+            {
+                activeIndexes[index++] = i;
+            }
+        }
+
+        return activeIndexes;
     }
 
     private void ExecuteLaneSelection(AddonLotteryDaily* addon, int[] activeIndexes)
@@ -145,24 +229,23 @@ public unsafe class MiniCactpot : Module
                 {
                     LogStep("Step 12", $"Executing lane click for solverLane={first}, csLane={csLane}");
                     lane->ClickRadioButton((AtkUnitBase*)addon);
+                    return true;
                 }
-                else
-                {
-                    LogStep("Step 12", $"Lane click throttled for solverLane={first}, csLane={csLane}");
-                }
-                return true;
+
+                LogStep("Step 12", $"Lane click throttled for solverLane={first}, csLane={csLane}");
+                return false;
             }, $"Click lane {first}");
 
         TaskManager.Enqueue(() =>
         {
-            if (EzThrottler.Throttle("ConfirmLane", 300))
+            if (!EzThrottler.Throttle("ConfirmLane", 300))
             {
-                LogStep("Step 13", "ConfirmLane throttle passed, enqueuing confirm click");
-                return ClickConfirmClose(addon, -1);
+                LogStep("Step 13", "ConfirmLane throttled, retrying confirm");
+                return false;
             }
 
-            LogStep("Step 13", "ConfirmLane throttled, skipping confirm this task tick");
-            return true;
+            LogStep("Step 13", "ConfirmLane throttle passed, enqueuing confirm click");
+            return ClickConfirmClose(addon, -1);
         }, "Confirm lane selection");
     }
 
@@ -189,12 +272,11 @@ public unsafe class MiniCactpot : Module
                 {
                     LogStep("Step 12", $"Executing tile click via Callback.Fire for index={first}");
                     Callback.Fire((AtkUnitBase*)addon, true, 1, first);
+                    return true;
                 }
-                else
-                {
-                    LogStep("Step 12", $"Tile click throttled for index={first}");
-                }
-                return true;
+
+                LogStep("Step 12", $"Tile click throttled for index={first}");
+                return false;
             }, $"Click button {first}");
     }
 
@@ -234,20 +316,19 @@ public unsafe class MiniCactpot : Module
 
                 if (!confirmBtn->IsEnabled)
                 {
-                    LogStep("Step 15", $"{action} click task skipped - confirm button (id 67) is disabled");
-                    return true;
+                    LogStep("Step 15", $"{action} click task waiting - confirm button (id 67) is disabled");
+                    return false;
                 }
 
                 if (EzThrottler.Throttle("ClickConfirm", 100))
                 {
                     LogStep("Step 15", $"Executing {action} click");
                     confirmBtn->ClickAddonButton((AtkUnitBase*)addon);
+                    return true;
                 }
-                else
-                {
-                    LogStep("Step 15", $"{action} click throttled");
-                }
-                return true;
+
+                LogStep("Step 15", $"{action} click throttled");
+                return false;
             }, $"Click {action}");
 
         return true;
@@ -270,16 +351,5 @@ public unsafe class MiniCactpot : Module
     public class Reader(AtkUnitBase* unitBase, int beginOffset = 0) : AtkReader(unitBase, beginOffset)
     {
         public int Stage => ReadInt(0) ?? -1;
-        public string State => ReadString(3)!;
-        public IEnumerable<int> Numbers
-        {
-            get
-            {
-                for (var i = 6; i <= 14; i++)
-                {
-                    yield return ReadInt(i) ?? -1;
-                }
-            }
-        }
     }
 }

@@ -41,7 +41,7 @@ public class ModuleManager : IDisposable
 
     public void Dispose()
     {
-        _modules.ForEach(m => m.Disable());
+        _modules.ForEach(m => m.DisableInternal());
         _modules.Clear();
     }
 

@@ -32,13 +32,9 @@ public sealed class Saucy : IDalamudPlugin
 
     public static UIReaderTriadGame uiReaderGame = null!;
     public static UIReaderTriadPrep uiReaderPrep = null!;
-    public static UIReaderTriadCardList uiReaderCardList = null!;
-    public static UIReaderTriadDeckEdit uiReaderDeckEdit = null!;
     public static UIReaderScheduler uiReaderScheduler = null!;
     public static UIReaderGamesResults uiReaderGamesResults = null!;
-    public static StatTracker statTracker = null!;
     public static GameDataLoader dataLoader = null!;
-    internal static bool openTT;
     public static ModuleManager ModuleManager = null!;
 
     private readonly object _lockObj = new();
@@ -55,6 +51,7 @@ public sealed class Saucy : IDalamudPlugin
         });
         EzConfig.Migrate<Configuration>();
         C = EzConfig.Init<Configuration>();
+        C.MigrateModuleSettings();
         P = this;
 
         EzConfigGui.Init(new PluginUI());
@@ -80,8 +77,6 @@ public sealed class Saucy : IDalamudPlugin
             shouldScanDeckData = (TTSolver.profileGS == null) || TTSolver.profileGS.HasErrors
         };
         uiReaderPrep.OnUIStateChanged += TTSolver.UpdateDecks;
-
-        uiReaderCardList = new();
 
         var uiReaderMatchResults = new UIReaderTriadResults();
         uiReaderMatchResults.OnUpdated += CheckResults;
@@ -109,8 +104,6 @@ public sealed class Saucy : IDalamudPlugin
     }
     public string Name => "Saucy";
     public static Configuration C { get; private set; } = null!;
-
-    public static bool GameFinished => TTSolver.cachedScreenState == null;
 
     public void Dispose()
     {
@@ -355,7 +348,6 @@ public sealed class Saucy : IDalamudPlugin
             if (C.OpenAutomatically && uiReaderPrep.HasMatchRequestUI && !TriadAutomater.ModuleEnabled)
             {
                 EzConfigGui.Open();
-                openTT = true;
             }
 
             if (CufModule.ModuleEnabled)

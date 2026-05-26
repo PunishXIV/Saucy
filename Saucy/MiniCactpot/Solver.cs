@@ -268,7 +268,7 @@ public sealed class CactpotSolver
         }
     };
 
-    private static int[] Payouts => [0, 0, 0, 0, 0, 0, 10000, 36, 720, 360, 80, 252, 108, 72, 54, 180, 72, 180, 119, 36, 306, 1080, 144, 1800, 3600];
+    private static readonly int[] Payouts = [0, 0, 0, 0, 0, 0, 10000, 36, 720, 360, 80, 252, 108, 72, 54, 180, 72, 180, 119, 36, 306, 1080, 144, 1800, 3600];
 
     internal bool[] Solve(int[] state)
     {
@@ -287,13 +287,13 @@ public sealed class CactpotSolver
         double value;
         var whichToFlip = new bool[numOptions];
 
-        PluginLog.Information($"[MiniCactpot] Solver: state=[{string.Join(", ", state)}], revealed={numRevealed}, numOptions={numOptions}");
+        PluginLog.Debug($"[MiniCactpot] Solver: state=[{string.Join(", ", state)}], revealed={numRevealed}, numOptions={numOptions}");
 
         switch (numRevealed)
         {
             case 0:
                 // You don't get to choose the first spot, but here's the answer anyway
-                PluginLog.Information("[MiniCactpot] Solver: branch=case0 (no tiles revealed, returning default opening)");
+                PluginLog.Debug("[MiniCactpot] Solver: branch=case0 (no tiles revealed, returning default opening)");
                 return [true, false, true, false, false, false, true, false, true];
 
             case 1:
@@ -309,17 +309,17 @@ public sealed class CactpotSolver
                     }
 
                     (value, whichToFlip) = opening;
-                    PluginLog.Information($"[MiniCactpot] Solver: branch=case1 lookup succeeded for stateKey={stateKey}, expectedValue={value}");
+                    PluginLog.Debug($"[MiniCactpot] Solver: branch=case1 lookup succeeded for stateKey={stateKey}, expectedValue={value}");
                     break;
                 }
 
             default:
-                PluginLog.Information($"[MiniCactpot] Solver: branch=SolveAny for revealed={numRevealed}");
+                PluginLog.Debug($"[MiniCactpot] Solver: branch=SolveAny for revealed={numRevealed}");
                 value = SolveAny(ref state, ref whichToFlip);
                 break;
         }
 
-        PluginLog.Information($"[MiniCactpot] Solver: expectedValue={value} MGP, whichToFlip=[{string.Join(", ", whichToFlip)}]");
+        PluginLog.Debug($"[MiniCactpot] Solver: expectedValue={value} MGP, whichToFlip=[{string.Join(", ", whichToFlip)}]");
 
         return whichToFlip;
     }
