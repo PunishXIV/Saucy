@@ -287,13 +287,10 @@ public sealed class CactpotSolver
         double value;
         var whichToFlip = new bool[numOptions];
 
-        PluginLog.Debug($"[MiniCactpot] Solver: state=[{string.Join(", ", state)}], revealed={numRevealed}, numOptions={numOptions}");
-
         switch (numRevealed)
         {
             case 0:
                 // You don't get to choose the first spot, but here's the answer anyway
-                PluginLog.Debug("[MiniCactpot] Solver: branch=case0 (no tiles revealed, returning default opening)");
                 return [true, false, true, false, false, false, true, false, true];
 
             case 1:
@@ -304,22 +301,17 @@ public sealed class CactpotSolver
                     // Using our pre-calculated library, this is much faster
                     if (!precalculatedOpenings.TryGetValue(stateKey, out var opening))
                     {
-                        PluginLog.Error($"[MiniCactpot] Solver: branch=case1 lookup failed for stateKey={stateKey}");
                         throw new KeyNotFoundException($"No precalculated opening for state {stateKey}");
                     }
 
                     (value, whichToFlip) = opening;
-                    PluginLog.Debug($"[MiniCactpot] Solver: branch=case1 lookup succeeded for stateKey={stateKey}, expectedValue={value}");
                     break;
                 }
 
             default:
-                PluginLog.Debug($"[MiniCactpot] Solver: branch=SolveAny for revealed={numRevealed}");
                 value = SolveAny(ref state, ref whichToFlip);
                 break;
         }
-
-        PluginLog.Debug($"[MiniCactpot] Solver: expectedValue={value} MGP, whichToFlip=[{string.Join(", ", whichToFlip)}]");
 
         return whichToFlip;
     }
