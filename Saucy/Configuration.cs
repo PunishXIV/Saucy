@@ -32,6 +32,7 @@ public class Configuration : IPluginConfiguration
     public bool OpenAutomatically { get; set; } = false;
 
     public LimbConfig LimbConfig { get; set; } = new();
+    public bool SaucyThemeEnabled { get; set; } = true;
     public int Version { get; set; } = 0;
 
     public void UpdateStats(Action<Stats> updateAction)
