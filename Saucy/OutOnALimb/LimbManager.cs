@@ -4,6 +4,8 @@ using Dalamud.Game.Chat;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Text;
 using Dalamud.Interface.Colors;
+using Dalamud.Interface.Components;
+using Dalamud.Interface.Utility.Raii;
 using ECommons.Automation.UIInput;
 using ECommons.EzEventManager;
 using ECommons.GameHelpers;
@@ -16,7 +18,6 @@ using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel.Sheets;
-using Saucy.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -500,52 +501,63 @@ public unsafe class LimbManager : IDisposable
     public void DrawSettings()
     {
         var save = false;
-        ImGuiEx.TextWrapped("How to use: enable module, walk up to the Out on a Limb machine in Gold Saucer, input number of games you want to play to play automatically or access the machine manually to play one game.");
-        if (TidyChat)
-        {
-            ImGuiEx.TextWrapped(ImGuiColors.DalamudRed, @"Tidychat Warning: Please ensure you do not have ""You sense something..."" messages (Advanced -> System messages) hidden or this will not work");
-        }
-        ImGui.Separator();
-        save |= ImGui.Checkbox($"Enable", ref Cfg.EnableLimb);
-        if (save && Saucy.ModuleManager.GetModule<OutOnALimbModule>() is { } limbModule)
+
+        if (ImGui.Checkbox("Enable", ref Cfg.EnableLimb)
+            && Saucy.ModuleManager.GetModule<OutOnALimbModule>() is { } limbModule)
         {
             if (Cfg.EnableLimb && !C.EnabledModules.Contains(limbModule.InternalName))
-            {
                 C.EnabledModules.Add(limbModule.InternalName);
-            }
             else if (!Cfg.EnableLimb && C.EnabledModules.Contains(limbModule.InternalName))
-            {
                 C.EnabledModules.Remove(limbModule.InternalName);
-            }
+            save = true;
         }
-        ImGui.SetNextItemWidth(100f);
-        ImGui.InputInt("Games to play", ref GamesToPlay.ValidateRange(0, 9999));
         ImGui.SameLine();
-        if (ImGui.Button("Max"))
-        {
-            GamesToPlay = 9999;
-        }
-        ImGui.Checkbox($"Stop at next double down", ref Exit);
+        ImGuiComponents.HelpMarker(
+            "Walk up to the Out on a Limb machine in Gold Saucer, set the number of games, and the module plays them. "
+          + "Set 0 to start games manually from the machine.");
 
-        ImGui.Separator();
-        ImGui.SetNextItemWidth(100f);
-        save |= ImGuiEx.EnumCombo("Difficulty", ref Cfg.LimbDifficulty);
-        ImGui.SetNextItemWidth(100f);
-        save |= ImGui.DragInt($"Step", ref Cfg.Step, 0.05f);
-        ImGui.SameLine();
-        if (ImGui.Button("Default##2"))
+        if (TidyChat)
         {
-            Cfg.Step = new LimbConfig().Step;
+            using var _ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
+            ImGui.TextWrapped("TidyChat warning: ensure \"You sense something...\" system messages are NOT hidden (Advanced \u2192 System messages) or this will not work.");
         }
-        ImGui.SetNextItemWidth(100f);
-        save |= ImGui.DragInt($"Stop at remaining time with big win", ref Cfg.StopAt, 0.5f);
-        ImGui.SetNextItemWidth(100f);
-        save |= ImGui.DragInt($"Stop at remaining time with little win", ref Cfg.HardStopAt, 0.5f);
+
+        ImGui.Dummy(new Vector2(0, 4));
+
+        SaucyTheme.DrawCard("Run", null, () =>
+        {
+            ImGui.SetNextItemWidth(100f);
+            ImGui.InputInt("Games to play", ref GamesToPlay.ValidateRange(0, 9999));
+            ImGui.SameLine();
+            if (ImGui.Button("Max"))
+                GamesToPlay = 9999;
+
+            ImGui.Checkbox("Stop at next double down", ref Exit);
+        });
+
+        SaucyTheme.DrawCard("Tuning", null, () =>
+        {
+            ImGui.SetNextItemWidth(120f);
+            save |= ImGuiEx.EnumCombo("Difficulty", ref Cfg.LimbDifficulty);
+
+            ImGui.SetNextItemWidth(120f);
+            save |= ImGui.DragInt("Step", ref Cfg.Step, 0.05f);
+            ImGui.SameLine();
+            if (ImGui.Button("Default##step"))
+            {
+                Cfg.Step = new LimbConfig().Step;
+                save = true;
+            }
+
+            ImGui.SetNextItemWidth(120f);
+            save |= ImGui.DragInt("Stop with big win (remaining time)", ref Cfg.StopAt, 0.5f);
+
+            ImGui.SetNextItemWidth(120f);
+            save |= ImGui.DragInt("Stop with little win (remaining time)", ref Cfg.HardStopAt, 0.5f);
+        });
 
         if (save)
-        {
             C.Save();
-        }
     }
     public void DrawDebug()
     {
