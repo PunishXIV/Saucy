@@ -26,13 +26,39 @@ public unsafe class PluginUI : Window
 {
     public PluginUI() : base("Saucy###Saucy")
     {
-        Size = new Vector2(620, 440);
+        Size = new Vector2(310, 440);
         SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(580, 340),
+            MinimumSize = new Vector2(280, 240),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue),
         };
+    }
+
+    private static readonly string[] SidebarLabels =
+    {
+        "Out on a Limb", "Cuff-a-Cur",
+        "Slice is Right", "Wind Blows",
+        "Triple Triad", "Mini-Cactpot",
+        "Stats", "About",
+#if DEBUG
+        "Debug",
+#endif
+        "Saucy theme",
+        "MACHINES", "GATES", "OTHER GAMES",
+    };
+
+    private static float CalcSidebarWidth()
+    {
+        var style = ImGui.GetStyle();
+        float maxLabel = 0f;
+        foreach (var s in SidebarLabels)
+        {
+            var w = ImGui.CalcTextSize(s).X;
+            if (w > maxLabel) maxLabel = w;
+        }
+        var checkboxExtra = ImGui.GetFrameHeight() + style.ItemInnerSpacing.X;
+        return maxLabel + checkboxExtra + style.WindowPadding.X * 2f + style.FramePadding.X * 2f;
     }
 
     private enum NavItem
@@ -98,7 +124,7 @@ public unsafe class PluginUI : Window
 
     public override void Draw()
     {
-        const float sidebarW = 132f;
+        var sidebarW = CalcSidebarWidth();
         var availY = ImGui.GetContentRegionAvail().Y;
 
         using (var sidebar = ImRaii.Child("##Sidebar", new Vector2(sidebarW, availY), true))
@@ -292,7 +318,7 @@ public unsafe class PluginUI : Window
 
         if (!TriadAutomater.PlayXTimes) return;
 
-        ImGui.PushItemWidth(150f);
+        ImGui.PushItemWidth(150f * ImGuiHelpers.GlobalScale);
         ImGui.Text("How many times:");
         ImGui.SameLine();
         if (ImGui.InputInt("###NumberOfTimes", ref TriadAutomater.NumberOfTimes))
@@ -543,7 +569,7 @@ public unsafe class PluginUI : Window
         string preview = (selectedDeck >= 0 && selectedDeck < decks.Count() && decks[selectedDeck] != null)
             ? decks[selectedDeck]!.name : "";
 
-        ImGui.SetNextItemWidth(220f);
+        ImGui.SetNextItemWidth(220f * ImGuiHelpers.GlobalScale);
         if (ImGui.BeginCombo("Select deck", preview))
         {
             if (ImGui.Selectable(""))
@@ -626,7 +652,7 @@ public unsafe class PluginUI : Window
 
         if (TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops || TriadAutomater.PlayUntilAllCardsDropOnce)
         {
-            ImGui.SetNextItemWidth(120f);
+            ImGui.SetNextItemWidth(120f * ImGuiHelpers.GlobalScale);
             if (ImGui.InputInt("How many times", ref TriadAutomater.NumberOfTimes))
             {
                 if (TriadAutomater.NumberOfTimes <= 0)
@@ -655,7 +681,7 @@ public unsafe class PluginUI : Window
 
     private static void DrawSoundPicker()
     {
-        ImGui.SetNextItemWidth(140f);
+        ImGui.SetNextItemWidth(140f * ImGuiHelpers.GlobalScale);
         if (ImGui.BeginCombo("###SelectSound", C.SelectedSound))
         {
             var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds");
