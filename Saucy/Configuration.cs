@@ -37,6 +37,11 @@ public class Configuration : IPluginConfiguration
 
     public bool AirForceEnabled = false;
 
+    public bool TriadBuddyCollectionUiEnabled { get; set; } = true;
+
+    [JsonProperty("TriadBuddySettings")]
+    public TriadCollectionSettings TriadCollection { get; set; } = new();
+
     public void UpdateStats(Action<Stats> updateAction)
     {
         updateAction(Stats);

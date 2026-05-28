@@ -57,38 +57,32 @@ public class UIReaderScheduler(IGameGui gameGui)
             }
 
             // every tick: update & look for lost addons
-            if (hasActiveAddons)
+            foreach (var addon in addons)
             {
-                hasActiveAddons = false;
-                foreach (var addon in addons)
+                if (!addon.isActive)
+                    continue;
+
+                if (addon.name == null || addon.reader == null)
+                    continue;
+
+                var addonPtr = GetAddonPtrIfValid(addon.name);
+                if (addonPtr != addon.addonPtr)
                 {
-                    if (addon.isActive)
+                    addon.isActive = false;
+                    addon.reader.OnAddonLost();
+
+                    if (addonPtr != nint.Zero)
                     {
-                        if (addon.name == null || addon.reader == null)
-                        {
-                            continue;
-                        }
-
-                        var addonPtr = GetAddonPtrIfValid(addon.name);
-                        if (addonPtr != addon.addonPtr)
-                        {
-                            addon.isActive = false;
-                            addon.reader.OnAddonLost();
-
-                            if (addonPtr != nint.Zero)
-                            {
-                                addon.isActive = true;
-                                addon.reader.OnAddonShown(addonPtr);
-                            }
-                        }
-
-                        addon.addonPtr = addonPtr;
-                        if (addonPtr != nint.Zero)
-                        {
-                            addon.reader.OnAddonUpdate(addonPtr);
-                            hasActiveAddons = true;
-                        }
+                        addon.isActive = true;
+                        addon.reader.OnAddonShown(addonPtr);
                     }
+                }
+
+                addon.addonPtr = addonPtr;
+                if (addonPtr != nint.Zero)
+                {
+                    addon.reader.OnAddonUpdate(addonPtr);
+                    hasActiveAddons = true;
                 }
             }
         }

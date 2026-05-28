@@ -557,6 +557,17 @@ public unsafe class PluginUI : Window
             C.Save();
         }
 
+        var collectionUi = C.TriadBuddyCollectionUiEnabled;
+        if (ImGui.Checkbox("TriadBuddy card search at Gold Saucer", ref collectionUi))
+        {
+            C.TriadBuddyCollectionUiEnabled = collectionUi;
+            C.Save();
+        }
+        ImGuiComponents.HelpMarker("Shows card/NPC search panels beside the in-game Gold Saucer card list.");
+
+        if (CurrentNPC != null)
+            global::Saucy.TripleTriad.TriadNpcQuestUi.DrawUnlockQuest(CurrentNPC);
+
         ImGui.Dummy(new Vector2(0, 4));
 
         SaucyTheme.DrawCard("Deck", null, DrawTriadDeckBody);

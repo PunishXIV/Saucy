@@ -5,6 +5,7 @@ using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
 using Saucy;
+using Saucy.TripleTriad;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -63,16 +64,14 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         uiReaderCardList.OnUIStateChanged += OnUIStateChanged;
         UpdateWindowData();
 
-        if (Service.pluginConfig != null)
-        {
-            showNpcMatchesOnly = Service.pluginConfig.CheckCardNpcMatchOnly;
-            showNotOwnedOnly = Service.pluginConfig.CheckCardNotOwnedOnly;
-            hideNpcBeatenOnce = Service.pluginConfig.CheckNpcHideBeaten;
-            hideNpcCompleted = Service.pluginConfig.CheckNpcHideCompleted;
-        }
+        var collection = C.TriadCollection;
+        showNpcMatchesOnly = collection.CheckCardNpcMatchOnly;
+        showNotOwnedOnly = collection.CheckCardNotOwnedOnly;
+        hideNpcBeatenOnce = collection.CheckNpcHideBeaten;
+        hideNpcCompleted = collection.CheckNpcHideCompleted;
 
         // doesn't matter will be updated on next draw
-        PositionCondition = ImGuiCond.None;
+        PositionCondition = ImGuiCond.Always;
         SizeCondition = ImGuiCond.Always;
 
         SizeConstraints = new WindowSizeConstraints
@@ -92,10 +91,8 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
                 ImGuiWindowFlags.NoFocusOnAppearing |
                 ImGuiWindowFlags.NoNav;
 
-        if (Plugin.CurrentLocManager != null)
-        {
-            Plugin.CurrentLocManager.LocalizationChanged += _ => { hasCachedLocStrings = false; };
-        }
+        if (TriadCollectionUi.Loc != null)
+            TriadCollectionUi.Loc.LocalizationChanged += _ => { hasCachedLocStrings = false; };
     }
 
     public void Dispose()
@@ -125,6 +122,11 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         // reuse NpcStats
         locNpcStats = Localization.Localize("NS_Title", "NPC stats");
         locEstMGP = Localization.Localize("NS_DropPerMatch", "MGP per match:");
+    }
+
+    internal void SyncVisibility()
+    {
+        UpdateWindowData();
     }
 
     private void UpdateWindowData()
@@ -183,7 +185,12 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         }
     }
 
-    public override void PreDraw() => Position = new Vector2(uiReaderCardList.cachedState.screenPos.X + uiReaderCardList.cachedState.screenSize.X + 10, uiReaderCardList.cachedState.screenPos.Y);
+    public override void PreDraw()
+    {
+        var vp = ImGuiHelpers.MainViewport.Pos;
+        Position = vp + uiReaderCardList.cachedState.screenPos
+                 + new Vector2(uiReaderCardList.cachedState.screenSize.X + 10, 0);
+    }
 
     public override void Draw()
     {
@@ -245,22 +252,16 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         ImGui.Spacing();
         if (ImGui.Checkbox(locNpcOnly, ref showNpcMatchesOnly))
         {
-            if (Service.pluginConfig != null)
-            {
-                Service.pluginConfig.CheckCardNpcMatchOnly = showNpcMatchesOnly;
-                Service.pluginConfig.Save();
-            }
+            C.TriadCollection.CheckCardNpcMatchOnly = showNpcMatchesOnly;
+            C.Save();
         }
 
         if (showOwnedCheckbox)
         {
             if (ImGui.Checkbox(locNotOwnedOnly, ref showNotOwnedOnly))
             {
-                if (Service.pluginConfig != null)
-                {
-                    Service.pluginConfig.CheckCardNotOwnedOnly = showNotOwnedOnly;
-                    Service.pluginConfig.Save();
-                }
+                C.TriadCollection.CheckCardNotOwnedOnly = showNotOwnedOnly;
+                C.Save();
             }
         }
         else
@@ -306,20 +307,14 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         ImGui.Spacing();
         if (ImGui.Checkbox(locHideBeatenNpc, ref hideNpcBeatenOnce))
         {
-            if (Service.pluginConfig != null)
-            {
-                Service.pluginConfig.CheckNpcHideBeaten = hideNpcBeatenOnce;
-                Service.pluginConfig.Save();
-            }
+            C.TriadCollection.CheckNpcHideBeaten = hideNpcBeatenOnce;
+            C.Save();
         }
 
         if (ImGui.Checkbox(locHideCompletedNpc, ref hideNpcCompleted))
         {
-            if (Service.pluginConfig != null)
-            {
-                Service.pluginConfig.CheckNpcHideCompleted = hideNpcCompleted;
-                Service.pluginConfig.Save();
-            }
+            C.TriadCollection.CheckNpcHideCompleted = hideNpcCompleted;
+            C.Save();
         }
 
         ImGui.Spacing();
@@ -349,6 +344,8 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
             ImGui.SameLine();
             ImGui.Text($"{npcData.Item2.Location.PlaceName} {npcData.Item2.Location.CoordinateString}");
 
+            TriadNpcQuestUi.DrawUnlockQuest(npcData.Item2);
+
             cursorY += ImGui.GetTextLineHeight() + (ImGui.GetStyle().FramePadding.Y * 3);
             ImGui.SetCursorPosY(cursorY - ImGui.GetStyle().FramePadding.Y);
             if (ImGuiComponents.IconButton(FontAwesomeIcon.ChartLine))
@@ -356,7 +353,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
                 statsWindow.SetupAndOpen(npcData.Item1);
             }
 
-            var hasAvgRewards = StatTracker.GetAverageRewardPerMatchDesc(Service.pluginConfig, npcData.Item2, out var avgRewardPerMatch);
+            var hasAvgRewards = StatTracker.GetAverageRewardPerMatchDesc(C.TriadCollection, npcData.Item2, out var avgRewardPerMatch);
             ImGui.SetCursorPosY(cursorY);
             ImGui.SameLine();
             ImGui.Text(locNpcStats + (hasAvgRewards ? "," : ""));

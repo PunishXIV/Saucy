@@ -6,6 +6,7 @@ using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
 using System;
 using System.Numerics;
+using Saucy.TripleTriad;
 using TriadBuddy;
 namespace TriadBuddyPlugin;
 
@@ -35,8 +36,8 @@ public class PluginWindowCardInfo : Window, IDisposable
         UpdateWindowData();
 
         // doesn't matter will be updated on next draw
-        PositionCondition = ImGuiCond.None;
-        SizeCondition = ImGuiCond.None;
+        PositionCondition = ImGuiCond.Always;
+        SizeCondition = ImGuiCond.Always;
         RespectCloseHotkey = false;
         ForceMainWindow = true;
 
@@ -49,10 +50,8 @@ public class PluginWindowCardInfo : Window, IDisposable
                 ImGuiWindowFlags.NoFocusOnAppearing |
                 ImGuiWindowFlags.NoNav;
 
-        if (Plugin.CurrentLocManager != null)
-        {
-            Plugin.CurrentLocManager.LocalizationChanged += _ => { hasCachedLocStrings = false; };
-        }
+        if (TriadCollectionUi.Loc != null)
+            TriadCollectionUi.Loc.LocalizationChanged += _ => { hasCachedLocStrings = false; };
     }
 
     public void Dispose()
@@ -68,6 +67,11 @@ public class PluginWindowCardInfo : Window, IDisposable
         locNpcReward = Localization.Localize("CI_NpcReward", "NPC reward:");
         locShowOnMap = Localization.Localize("CI_ShowMap", "Show on map");
         locNoAvail = Localization.Localize("CI_NotAvail", "Not available");
+    }
+
+    internal void SyncVisibility()
+    {
+        UpdateWindowData();
     }
 
     private void UpdateWindowData()
@@ -110,7 +114,7 @@ public class PluginWindowCardInfo : Window, IDisposable
             requestedSize.Y = Math.Max(requestedSize.Y, ImGui.GetTextLineHeight() * 6.5f);
         }
 
-        Position = uiReaderCardList.cachedState.descriptionPos;
+        Position = ImGuiHelpers.MainViewport.Pos + uiReaderCardList.cachedState.descriptionPos;
         Size = requestedSize;
     }
 

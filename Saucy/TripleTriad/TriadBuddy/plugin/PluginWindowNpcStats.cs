@@ -3,6 +3,8 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
+using Saucy;
+using Saucy.TripleTriad;
 using System;
 using System.Numerics;
 namespace TriadBuddyPlugin;
@@ -43,10 +45,8 @@ public class PluginWindowNpcStats : Window, IDisposable
         Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar;
         RespectCloseHotkey = false;
 
-        if (Plugin.CurrentLocManager != null)
-        {
-            Plugin.CurrentLocManager.LocalizationChanged += _ => { hasCachedLocStrings = false; };
-        }
+        if (TriadCollectionUi.Loc != null)
+            TriadCollectionUi.Loc.LocalizationChanged += _ => { hasCachedLocStrings = false; };
     }
 
     public void Dispose()
@@ -188,7 +188,7 @@ public class PluginWindowNpcStats : Window, IDisposable
         }
     }
 
-    private void CopyStatstoClipboard(Configuration.NpcStatInfo savedStats)
+    private void CopyStatstoClipboard(TriadNpcStatRecord savedStats)
     {
         var desc = $"{npcName} stats:\n{savedStats.GetNumMatches()} matches (W:{savedStats.NumWins}/D:{savedStats.NumDraws}/L:{savedStats.NumLosses})";
         if (savedStats.Cards.Count > 0)

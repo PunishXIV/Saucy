@@ -39,6 +39,8 @@ public sealed class Saucy : IDalamudPlugin
     public static GameDataLoader dataLoader = null!;
     public static ModuleManager ModuleManager = null!;
 
+    private TriadBuddyHost? _triadBuddyHost;
+
     private static Dictionary<uint, int>? cardIdByItemId;
 
     private readonly object _lockObj = new();
@@ -114,6 +116,8 @@ public sealed class Saucy : IDalamudPlugin
         Svc.Commands.RemoveHandler(commandName);
         Svc.PluginInterface.UiBuilder.OpenMainUi -= EzConfigGui.Open;
         Svc.Framework.Update -= RunBot;
+        _triadBuddyHost?.Dispose();
+        _triadBuddyHost = null;
         lock (_lockObj) { DisposeAudio(); }
         CufModule.FuncHook?.Dispose();
         LimbManager.Dispose();

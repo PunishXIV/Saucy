@@ -17,6 +17,10 @@ public class GameNpcInfo
     public List<int> rewardCards = [];
     public int triadId;
 
+    public uint UnlockQuestId;
+
+    public string? UnlockQuestName;
+
     public bool IsExcludedFromAchievementTracker => (achievementId == 0xffff);
 }
 

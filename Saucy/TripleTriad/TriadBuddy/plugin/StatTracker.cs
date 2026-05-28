@@ -1,22 +1,24 @@
 ﻿using FFTriadBuddy;
+using Saucy;
+
 namespace TriadBuddyPlugin;
 
 public class StatTracker
 {
-    private static readonly Configuration.NpcStatInfo EmptyStats = new();
+    private static readonly TriadNpcStatRecord EmptyStats = new();
 
-    public void OnMatchFinished(SolverGame solver, UIStateTriadResults uiState)
+    private static TriadCollectionSettings Settings => Saucy.Saucy.C.TriadCollection;
+
+    public void OnMatchFinished(int npcLogicId, UIStateTriadResults uiState)
     {
-        if (!GameNpcDB.Get().mapNpcs.TryGetValue(solver.lastGameNpc?.Id ?? -1, out var npcInfo))
-        {
+        if (!GameNpcDB.Get().mapNpcs.TryGetValue(npcLogicId, out var npcInfo))
             return;
-        }
 
         var savedStats = GetNpcStats(npcInfo);
         if (savedStats == null)
         {
             savedStats = new();
-            Service.pluginConfig.NpcStats.Add(npcInfo.triadId, savedStats);
+            Settings.NpcStats.Add(npcInfo.triadId, savedStats);
         }
 
         savedStats.NumCoins += uiState.numMGP;
@@ -27,7 +29,6 @@ public class StatTracker
         if (uiState.cardItemId != 0)
         {
             var cardId = -1;
-
             var gameCardDB = GameCardDB.Get();
             foreach (var kvp in gameCardDB.mapCards)
             {
@@ -41,43 +42,33 @@ public class StatTracker
             if (cardId > 0)
             {
                 if (savedStats.Cards.TryGetValue(cardId, out var _))
-                {
                     savedStats.Cards[cardId] += 1;
-                }
                 else
-                {
                     savedStats.Cards.Add(cardId, 1);
-                }
             }
         }
 
-        Service.pluginConfig.Save();
-
-        // consume value to avoid counting if next match is against player
-        solver.lastGameNpc = null;
+        Saucy.Saucy.C.Save();
     }
 
-    public Configuration.NpcStatInfo? GetNpcStats(GameNpcInfo npcInfo)
+    public TriadNpcStatRecord? GetNpcStats(GameNpcInfo npcInfo)
     {
-        if (Service.pluginConfig.NpcStats.TryGetValue(npcInfo.triadId, out var savedStats))
-        {
+        if (Settings.NpcStats.TryGetValue(npcInfo.triadId, out var savedStats))
             return savedStats;
-        }
-
         return null;
     }
 
-    public Configuration.NpcStatInfo GetNpcStatsOrDefault(GameNpcInfo npcInfo) => GetNpcStats(npcInfo) ?? EmptyStats;
+    public TriadNpcStatRecord GetNpcStatsOrDefault(GameNpcInfo npcInfo) => GetNpcStats(npcInfo) ?? EmptyStats;
 
     public void RemoveNpcStats(GameNpcInfo npcInfo)
     {
-        Service.pluginConfig.NpcStats.Remove(npcInfo.triadId);
-        Service.pluginConfig.Save();
+        Settings.NpcStats.Remove(npcInfo.triadId);
+        Saucy.Saucy.C.Save();
     }
 
-    public static bool GetAverageRewardPerMatchDesc(Configuration config, GameNpcInfo npcInfo, out float avgMGP)
+    public static bool GetAverageRewardPerMatchDesc(TriadCollectionSettings settings, GameNpcInfo npcInfo, out float avgMGP)
     {
-        if (config.NpcStats.TryGetValue(npcInfo.triadId, out var savedStats))
+        if (settings.NpcStats.TryGetValue(npcInfo.triadId, out var savedStats))
         {
             var numMatches = savedStats.GetNumMatches();
             if (numMatches > 0)
@@ -92,13 +83,11 @@ public class StatTracker
                     {
                         var cardOb = cardDB.FindById(kvp.Key);
                         if (cardOb != null && cardOb.IsValid() && gameCardDB.mapCards.TryGetValue(kvp.Key, out var cardInfo))
-                        {
                             sumNetGain += kvp.Value * cardInfo.SaleValue;
-                        }
                     }
                 }
 
-                avgMGP = (1.0f * sumNetGain / numMatches);
+                avgMGP = 1.0f * sumNetGain / numMatches;
                 return true;
             }
         }

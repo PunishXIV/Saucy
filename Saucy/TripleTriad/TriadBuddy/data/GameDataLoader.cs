@@ -14,6 +14,7 @@ public class GameDataLoader
     private static readonly uint[] ruleLogicToLuminaMap = [0, 1, 2, 3, 5, 10, 11, 4, 6, 12, 13, 8, 9, 14, 7, 15];
     private readonly Dictionary<uint, ENpcCachedData> mapENpcCache = [];
     private readonly Dictionary<uint, int> mapNpcAchievementId = [];
+    private readonly Dictionary<uint, uint> mapNpcUnlockQuestId = [];
     public bool IsDataReady { get; private set; }
 
     public void StartAsyncWork() =>
@@ -68,6 +69,7 @@ public class GameDataLoader
         result = result && ParseCardTypes();
         result = result && ParseCards();
         result = result && ParseNpcs();
+        result = result && ParseNpcUnlockQuests();
         result = result && ParseNpcAchievements();
         result = result && ParseNpcLocations();
         result = result && ParseCardRewards();
@@ -393,6 +395,39 @@ public class GameDataLoader
         return true;
     }
 
+    private bool ParseNpcUnlockQuests()
+    {
+        var cardResidentSheet = Svc.Data.GetExcelSheet<TripleTriadCardResident>();
+        var npcSheet = Svc.Data.GetExcelSheet<TripleTriad>();
+        if (cardResidentSheet == null || npcSheet == null)
+            return true;
+
+        foreach (var npcRow in npcSheet)
+        {
+            if (npcRow.RowId == 0)
+                continue;
+
+            uint? questId = null;
+            foreach (var cardRef in npcRow.TripleTriadCardFixed)
+            {
+                if (cardRef.RowId == 0)
+                    continue;
+
+                var resident = cardResidentSheet.GetRowOrDefault(cardRef.RowId);
+                if (resident == null || resident.Value.Quest.RowId == 0)
+                    continue;
+
+                questId = resident.Value.Quest.RowId;
+                break;
+            }
+
+            if (questId != null)
+                mapNpcUnlockQuestId[npcRow.RowId] = questId.Value;
+        }
+
+        return true;
+    }
+
     private bool ParseNpcAchievements()
     {
         var npcDataSheet = Svc.Data.GetExcelSheet<TripleTriadResident>();
@@ -555,6 +590,11 @@ public class GameDataLoader
             {
                 npcId = kvp.Value.gameLogicIdx, triadId = (int)kvp.Value.triadId
             };
+            if (mapNpcUnlockQuestId.TryGetValue(kvp.Value.triadId, out var unlockQuestId))
+            {
+                gameNpcOb.UnlockQuestId = unlockQuestId;
+                gameNpcOb.UnlockQuestName = Svc.Data.GetExcelSheet<Quest>()?.GetRowOrDefault(unlockQuestId)?.Name.ToString();
+            }
             if (!mapNpcAchievementId.TryGetValue(kvp.Value.triadId, out gameNpcOb.achievementId))
             {
                 Svc.Log.Info($"Failed to find achievId for triadId:{kvp.Value.triadId}");

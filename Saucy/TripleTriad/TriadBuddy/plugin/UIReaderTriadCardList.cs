@@ -39,7 +39,7 @@ public class UIReaderTriadCardList : IUIReader
         SetStatus(Status.AddonNotFound);
     }
 
-    public void OnAddonShown(nint addonPtr)
+    public unsafe void OnAddonShown(nint addonPtr)
     {
         cachedAddonAgentPtr = (addonPtr != nint.Zero) ? Svc.GameGui.FindAgentInterface(addonPtr) : nint.Zero;
 
@@ -51,11 +51,25 @@ public class UIReaderTriadCardList : IUIReader
             Svc.Log.Info($"using agentPtr from failsafe: {(ulong)cachedAddonAgentPtr:X}");
 #endif // DEBUG
         }
+
+        if (addonPtr != nint.Zero)
+        {
+            var addon = (AddonTriadCardList*)addonPtr;
+            if (addon->AtkUnitBase.RootNode != null)
+            {
+                (cachedState.screenPos, cachedState.screenSize) =
+                    GUINodeUtils.GetNodePosAndSize(addon->AtkUnitBase.RootNode);
+            }
+
+            SetStatus(Status.NodesNotReady);
+        }
     }
 
     public unsafe void OnAddonUpdate(nint addonPtr)
     {
         var addon = (AddonTriadCardList*)addonPtr;
+        (cachedState.screenPos, cachedState.screenSize) = GUINodeUtils.GetNodePosAndSize(addon->AtkUnitBase.RootNode);
+
         if (cachedState.descNodeAddr == 0)
         {
             if (!FindTextNodeAddresses(addon))
@@ -66,7 +80,6 @@ public class UIReaderTriadCardList : IUIReader
         }
 
         var descNode = (AtkResNode*)cachedState.descNodeAddr;
-        (cachedState.screenPos, cachedState.screenSize) = GUINodeUtils.GetNodePosAndSize(addon->AtkUnitBase.RootNode);
         (cachedState.descriptionPos, cachedState.descriptionSize) = GUINodeUtils.GetNodePosAndSize(descNode);
 
         var newFilterMode =
@@ -175,7 +188,7 @@ public class UIReaderTriadCardList : IUIReader
         var nodeDescripion = GUINodeUtils.PickNode(nodeArrL0, 2, 9);
         cachedState.descNodeAddr = (ulong)GUINodeUtils.GetChildNode(nodeDescripion);
 
-        return (cachedState.descNodeAddr == 0);
+        return cachedState.descNodeAddr != 0;
     }
 
     [StructLayout(LayoutKind.Explicit, Size = 0x520)] // it's around 0x550?
