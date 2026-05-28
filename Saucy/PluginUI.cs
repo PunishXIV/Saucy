@@ -168,7 +168,8 @@ public unsafe class PluginUI : Window
 
         var style = ImGui.GetStyle();
         var checkboxH = ImGui.GetFrameHeight();
-        var bottomBlockH = style.ItemSpacing.Y + 1f + style.ItemSpacing.Y + checkboxH;
+        var creditH = ImGui.GetTextLineHeight();
+        var bottomBlockH = style.ItemSpacing.Y + 1f + style.ItemSpacing.Y + checkboxH + style.ItemSpacing.Y + creditH;
         var targetY = ImGui.GetWindowHeight() - style.WindowPadding.Y - bottomBlockH;
         if (targetY > ImGui.GetCursorPosY())
             ImGui.SetCursorPosY(targetY);
@@ -180,6 +181,7 @@ public unsafe class PluginUI : Window
             C.SaucyThemeEnabled = on;
             C.Save();
         }
+        ImGui.TextDisabled("Designed by Wah");
     }
 
     private void NavSelectable(string label, NavItem item)
