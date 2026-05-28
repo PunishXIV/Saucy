@@ -8,6 +8,7 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.Framework;
 using Saucy.OutOnALimb.ECEmbedded;
 using System;
+using static ECommons.GenericHelpers;
 namespace Saucy.MiniCactpot;
 
 public unsafe class MiniCactpot : Module
@@ -19,23 +20,42 @@ public unsafe class MiniCactpot : Module
     private bool isProcessing;
     public override string Name => "Mini Cactpot";
 
-    public override void Enable() => Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "LotteryDaily", OnUpdate);
+    public override void Enable()
+    {
+        Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "LotteryDaily", OnPostUpdate);
+        Svc.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "LotteryDaily", OnPreFinalize);
+    }
 
     public override void Disable()
     {
-        Svc.AddonLifecycle.UnregisterListener(OnUpdate);
+        Svc.AddonLifecycle.UnregisterListener(OnPostUpdate);
+        Svc.AddonLifecycle.UnregisterListener(OnPreFinalize);
+        TaskManager.Abort();
         boardState = null;
         pendingState = null;
+        isProcessing = false;
     }
 
-    private void OnUpdate(AddonEvent type, AddonArgs args)
+    private void OnPreFinalize(AddonEvent type, AddonArgs args)
     {
-        var addon = (AddonLotteryDaily*)args.Addon.Address;
-        var stage = new Reader((AtkUnitBase*)args.Addon.Address).Stage;
+        TaskManager.Abort();
+        boardState = null;
+        pendingState = null;
+        isProcessing = false;
+    }
 
-        if (stage == 5 && EzThrottler.Throttle("CloseGame"))
+    private void OnPostUpdate(AddonEvent type, AddonArgs args)
+    {
+        if (!TryGetLotteryAddon(out var addon))
         {
-            ClickConfirmClose((AddonLotteryDaily*)args.Addon.Address, 5);
+            return;
+        }
+
+        var stage = new Reader((AtkUnitBase*)addon).Stage;
+
+        if (stage == 5 && EzThrottler.Throttle("CloseGame") && !TaskManager.IsBusy)
+        {
+            TaskManager.Enqueue(() => TryClickConfirmButton(expectedStage: 5), "Click close");
         }
 
         ReadBoardState(addon, scratchState);
@@ -60,6 +80,17 @@ public unsafe class MiniCactpot : Module
 
             pendingState = null;
         }
+    }
+
+    private static bool TryGetLotteryAddon(out AddonLotteryDaily* addon)
+    {
+        if (TryGetAddonByName("LotteryDaily", out addon) && IsAddonReady((AtkUnitBase*)addon))
+        {
+            return true;
+        }
+
+        addon = null;
+        return false;
     }
 
     private static void ReadBoardState(AddonLotteryDaily* addon, int[] dest)
@@ -110,11 +141,11 @@ public unsafe class MiniCactpot : Module
 
             if (solution.Length is 8)
             {
-                ExecuteLaneSelection(addon, activeIndexes);
+                ExecuteLaneSelection(activeIndexes);
             }
             else
             {
-                ExecuteButtonSelection(addon, activeIndexes);
+                ExecuteButtonSelection(activeIndexes);
             }
         }
         catch (Exception ex)
@@ -165,7 +196,7 @@ public unsafe class MiniCactpot : Module
         return activeIndexes;
     }
 
-    private void ExecuteLaneSelection(AddonLotteryDaily* addon, int[] activeIndexes)
+    private void ExecuteLaneSelection(int[] activeIndexes)
     {
         if (activeIndexes.Length == 0)
         {
@@ -177,7 +208,7 @@ public unsafe class MiniCactpot : Module
 
         TaskManager.Enqueue(() =>
             {
-                if (addon == null)
+                if (!TryGetLotteryAddon(out var addon))
                 {
                     return true;
                 }
@@ -204,11 +235,11 @@ public unsafe class MiniCactpot : Module
                 return false;
             }
 
-            return ClickConfirmClose(addon, -1);
+            return TryClickConfirmButton(expectedStage: -1);
         }, "Confirm lane selection");
     }
 
-    private void ExecuteButtonSelection(AddonLotteryDaily* addon, int[] activeIndexes)
+    private void ExecuteButtonSelection(int[] activeIndexes)
     {
         if (activeIndexes.Length == 0)
         {
@@ -219,7 +250,7 @@ public unsafe class MiniCactpot : Module
 
         TaskManager.Enqueue(() =>
             {
-                if (addon == null)
+                if (!TryGetLotteryAddon(out var addon))
                 {
                     return true;
                 }
@@ -234,44 +265,44 @@ public unsafe class MiniCactpot : Module
             }, $"Click button {first}");
     }
 
-    private bool ClickConfirmClose(AddonLotteryDaily* addon, int stage)
+    private static bool TryClickConfirmButton(int expectedStage)
     {
-        if (addon == null)
+        if (!TryGetLotteryAddon(out var addon))
         {
-            return false;
+            return true;
         }
 
-        var confirm = addon->GetComponentButtonById(67);
-        if (confirm == null || !confirm->IsEnabled)
+        var stage = new Reader((AtkUnitBase*)addon).Stage;
+        if (expectedStage == 5)
         {
-            return false;
-        }
-
-        var action = stage == 5 ? "close" : "confirm";
-
-        TaskManager.Enqueue(() =>
+            if (stage != 5)
             {
-                var confirmBtn = addon->GetComponentButtonById(67);
-                if (confirmBtn == null)
-                {
-                    return true;
-                }
-
-                if (!confirmBtn->IsEnabled)
-                {
-                    return false;
-                }
-
-                if (EzThrottler.Throttle("ClickConfirm", 100))
-                {
-                    confirmBtn->ClickAddonButton((AtkUnitBase*)addon);
-                    return true;
-                }
-
                 return false;
-            }, $"Click {action}");
+            }
+        }
+        else if (stage == 5)
+        {
+            return true;
+        }
 
-        return true;
+        var confirmBtn = addon->GetComponentButtonById(67);
+        if (confirmBtn == null)
+        {
+            return true;
+        }
+
+        if (!confirmBtn->IsEnabled)
+        {
+            return false;
+        }
+
+        if (EzThrottler.Throttle("ClickConfirm", 100))
+        {
+            confirmBtn->ClickAddonButton((AtkUnitBase*)addon);
+            return true;
+        }
+
+        return false;
     }
 
     private int SolverLaneToCsLane(int lane)
