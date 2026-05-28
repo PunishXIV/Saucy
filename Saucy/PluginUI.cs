@@ -68,6 +68,7 @@ public unsafe class PluginUI : Window
         OutOnALimb,
         SliceIsRight,
         AnyWayTheWindBlows,
+        AirForceOne,
         MiniCactpot,
         Stats,
         About,
@@ -150,6 +151,7 @@ public unsafe class PluginUI : Window
         DrawSidebarHeader("GATES");
         NavSelectable("Slice is Right", NavItem.SliceIsRight);
         NavSelectable("Wind Blows", NavItem.AnyWayTheWindBlows);
+        NavSelectable("Air Force One", NavItem.AirForceOne);
 
         ImGui.Dummy(new Vector2(0, 6));
         DrawSidebarHeader("OTHER GAMES");
@@ -200,6 +202,7 @@ public unsafe class PluginUI : Window
             case NavItem.OutOnALimb:         DrawLimbPanel(); break;
             case NavItem.SliceIsRight:       DrawSliceIsRightPanel(); break;
             case NavItem.AnyWayTheWindBlows: DrawWindBlowsPanel(); break;
+            case NavItem.AirForceOne:        DrawAirForcePanel(); break;
             case NavItem.MiniCactpot:        DrawMiniCactpotPanel(); break;
             case NavItem.Stats:              DrawStatsTab(); break;
             case NavItem.About:              AboutTab.Draw("Saucy"); break;
@@ -269,6 +272,17 @@ public unsafe class PluginUI : Window
         }
     }
 
+    private static void DrawAirForcePanel()
+    {
+        DrawPanelHeader("Air Force One", "ride shooting minigame");
+        var enabled = C.AirForceEnabled;
+        if (ImGui.Checkbox("Enable##AirForce", ref enabled))
+        {
+            C.AirForceEnabled = enabled;
+            C.Save();
+        }
+    }
+
     private static void DrawMiniCactpotPanel()
     {
         DrawPanelHeader("Mini-Cactpot", "daily 3\u00d73 scratcher");
@@ -291,6 +305,7 @@ public unsafe class PluginUI : Window
         else if (P?.LimbManager?.Cfg?.EnableLimb == true) status = "Out on a Limb";
         else if (C.SliceIsRightModuleEnabled) status = "Slice is Right";
         else if (C.AnyWayTheWindBlowsModuleEnabled) status = "Any Way the Wind Blows";
+        else if (C.AirForceEnabled) status = "Air Force One";
         else if (C.EnableAutoMiniCactpot) status = "Mini-Cactpot";
         else status = "Idle";
 

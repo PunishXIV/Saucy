@@ -35,6 +35,8 @@ public class Configuration : IPluginConfiguration
     public bool SaucyThemeEnabled { get; set; } = true;
     public int Version { get; set; } = 0;
 
+    public bool AirForceEnabled = false;
+
     public void UpdateStats(Action<Stats> updateAction)
     {
         updateAction(Stats);

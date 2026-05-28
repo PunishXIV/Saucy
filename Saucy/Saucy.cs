@@ -8,6 +8,7 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using MgAl2O4.Utils;
 using NAudio.Wave;
 using PunishLib;
+using Saucy.AirForce;
 using Saucy.CuffACur;
 using Saucy.Framework;
 using Saucy.OutOnALimb;
@@ -387,6 +388,11 @@ public sealed class Saucy : IDalamudPlugin
             {
                 var deltaSeconds = (float)framework.UpdateDelta.TotalSeconds;
                 uiReaderScheduler.Update(deltaSeconds);
+            }
+
+            if (C.AirForceEnabled)
+            {
+                AirForceModule.OnUpdate();
             }
 
             if (C.OpenAutomatically && uiReaderPrep.HasMatchRequestUI && !TriadAutomater.ModuleEnabled)
