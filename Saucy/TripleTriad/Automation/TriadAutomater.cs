@@ -1,5 +1,4 @@
 using Dalamud.Utility;
-using ECommons;
 using ECommons.Automation;
 using ECommons.Automation.UIInput;
 using ECommons.UIHelpers.AddonMasterImplementations;

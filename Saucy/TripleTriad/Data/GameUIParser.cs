@@ -1,5 +1,4 @@
-
-using System;
+﻿using System;
 namespace Saucy.TripleTriad.Data;
 
 public class GameUIParser

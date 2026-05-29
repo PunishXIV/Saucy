@@ -1,5 +1,4 @@
 using Saucy.Framework;
-
 namespace Saucy.OutOnALimb;
 
 public class OutOnALimbModule : Module

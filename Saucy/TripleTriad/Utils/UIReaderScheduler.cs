@@ -1,4 +1,4 @@
-using FFXIVClientStructs.FFXIV.Component.GUI;
+﻿using FFXIVClientStructs.FFXIV.Component.GUI;
 using System.Collections.Generic;
 namespace Saucy.TripleTriad.Utils;
 
@@ -60,10 +60,14 @@ public class UIReaderScheduler(IGameGui gameGui)
             foreach (var addon in addons)
             {
                 if (!addon.isActive)
+                {
                     continue;
+                }
 
                 if (addon.name == null || addon.reader == null)
+                {
                     continue;
+                }
 
                 var addonPtr = GetAddonPtrIfValid(addon.name);
                 if (addonPtr != addon.addonPtr)
@@ -91,18 +95,24 @@ public class UIReaderScheduler(IGameGui gameGui)
     private unsafe nint GetAddonPtrIfValid(string name)
     {
         if (gameGui == null)
+        {
             return nint.Zero;
+        }
 
         var maxIndex = name == "GSInfoCardList" ? 8 : 1;
         for (var i = 0; i < maxIndex; i++)
         {
             var handle = gameGui.GetAddonByName(name, i);
             if (handle.Address == nint.Zero)
+            {
                 continue;
+            }
 
             var baseNode = (AtkUnitBase*)handle.Address;
             if (baseNode->RootNode != null && baseNode->RootNode->IsVisible())
+            {
                 return handle.Address;
+            }
         }
 
         return nint.Zero;

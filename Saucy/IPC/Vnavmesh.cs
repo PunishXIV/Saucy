@@ -1,11 +1,10 @@
 using ECommons.EzIpcManager;
 using System;
 using System.Numerics;
-
 namespace Saucy.IPC;
 
 /// <summary>
-/// IPC client for awgil/vnavmesh (<c>vnavmesh/IPCProvider.cs</c>).
+///     IPC client for awgil/vnavmesh (<c>vnavmesh/IPCProvider.cs</c>).
 /// </summary>
 [IPC(IPCNames.Vnavmesh)]
 internal static class Vnavmesh

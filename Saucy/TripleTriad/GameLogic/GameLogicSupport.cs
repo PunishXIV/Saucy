@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-
 namespace Saucy.TripleTriad.GameLogic;
 
 public class PlayerSettingsDB

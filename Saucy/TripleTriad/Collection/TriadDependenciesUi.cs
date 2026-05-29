@@ -2,15 +2,12 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility.Raii;
-using Dalamud.Plugin;
-using ECommons;
 using ECommons.Reflection;
 using Saucy.IPC;
 using System;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
-
 namespace Saucy.TripleTriad;
 
 internal static class TriadDependenciesUi
@@ -30,7 +27,7 @@ internal static class TriadDependenciesUi
             "Teleport to the nearest aetheryte before vnavmesh when the NPC is far away or in another zone.",
             "https://github.com/NightmareXIV/MyDalamudPlugins/raw/main/pluginmaster.json",
             [
-                "https://raw.githubusercontent.com/NightmareXIV/MyDalamudPlugins/main/pluginmaster.json",
+                "https://raw.githubusercontent.com/NightmareXIV/MyDalamudPlugins/main/pluginmaster.json"
             ],
             () => Lifestream.IsInstalled),
         new(
@@ -39,17 +36,19 @@ internal static class TriadDependenciesUi
             "Start unlock quests for Triple Triad NPCs directly from Saucy card and NPC search.",
             "https://love.puni.sh/ment.json",
             [],
-            () => Questionable.IsInstalled),
+            () => Questionable.IsInstalled)
     ];
 
     public static void Draw()
     {
         ImGui.TextWrapped(
             "Optional plugins for Saucy: path to NPCs on the map, teleport when needed, and start unlock quests.");
-        ImGui.Dummy(new Vector2(0, 4));
+        ImGui.Dummy(new(0, 4));
 
         foreach (var entry in Dependencies)
+        {
             DrawDependency(entry);
+        }
     }
 
     private static void DrawDependency(DependencyEntry entry)
@@ -64,14 +63,18 @@ internal static class TriadDependenciesUi
         DrawStatus(state);
 
         if (state == DependencyState.Ready)
+        {
             return;
+        }
 
         var repoAdded = IsRepositoryAdded(entry);
         var showAddRepo = !repoAdded && state == DependencyState.NotInstalled;
         var showInstall = state == DependencyState.NotInstalled;
 
         if (!showAddRepo && !showInstall)
+        {
             return;
+        }
 
         ImGui.Spacing();
         var firstButton = true;
@@ -79,10 +82,14 @@ internal static class TriadDependenciesUi
         if (showAddRepo)
         {
             if (ImGui.Button("Add repository"))
+            {
                 TryAddRepository(entry);
+            }
 
             if (ImGui.IsItemHovered())
+            {
                 ImGui.SetTooltip($"Add {entry.PrimaryRepositoryUrl} to Custom Plugin Repositories.");
+            }
 
             firstButton = false;
         }
@@ -90,16 +97,22 @@ internal static class TriadDependenciesUi
         if (showInstall)
         {
             if (!firstButton)
+            {
                 ImGui.SameLine();
+            }
 
             if (ImGui.Button("Install plugin"))
+            {
                 TryInstallPlugin(entry);
+            }
 
             if (ImGui.IsItemHovered())
+            {
                 ImGui.SetTooltip($"Install {entry.DisplayName} from its plugin repository.");
+            }
         }
 
-        ImGui.Dummy(new Vector2(0, 6));
+        ImGui.Dummy(new(0, 6));
     }
 
     private static bool IsRepositoryAdded(DependencyEntry entry)
@@ -107,7 +120,9 @@ internal static class TriadDependenciesUi
         foreach (var url in entry.RepositoryUrls)
         {
             if (DalamudReflector.HasRepo(url))
+            {
                 return true;
+            }
         }
 
         return false;
@@ -136,9 +151,13 @@ internal static class TriadDependenciesUi
     private static async Task InstallPluginAsync(DependencyEntry entry, string repoUrl)
     {
         if (await DalamudReflector.AddPlugin(repoUrl, entry.InternalName))
+        {
             Svc.Chat.Print($"[Saucy] Installed {entry.DisplayName}.");
+        }
         else
+        {
             Svc.Chat.PrintError($"[Saucy] Could not install {entry.DisplayName}. Check the plugin installer for details.");
+        }
     }
 
     private static void DrawStatus(DependencyState state)
@@ -152,7 +171,9 @@ internal static class TriadDependenciesUi
                 DrawStatusLine(FontAwesomeIcon.ExclamationTriangle, ImGuiColors.DalamudYellow, "Installed but not loaded");
                 ImGui.SameLine();
                 if (ImGui.Button("Open installer"))
+                {
                     Svc.PluginInterface.OpenPluginInstallerTo(PluginInstallerOpenKind.InstalledPlugins, string.Empty);
+                }
                 break;
             default:
                 DrawStatusLine(FontAwesomeIcon.Times, ImGuiColors.DalamudRed, "Not installed");
@@ -172,11 +193,15 @@ internal static class TriadDependenciesUi
     private static DependencyState GetState(string internalName, Func<bool> isReady)
     {
         if (isReady())
+        {
             return DependencyState.Ready;
+        }
 
         var plugin = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == internalName);
         if (plugin != null)
+        {
             return DependencyState.InstalledNotLoaded;
+        }
 
         return DependencyState.NotInstalled;
     }
@@ -185,10 +210,11 @@ internal static class TriadDependenciesUi
     {
         NotInstalled,
         InstalledNotLoaded,
-        Ready,
+        Ready
     }
 
-    private sealed record DependencyEntry(
+    private sealed record DependencyEntry
+    (
         string DisplayName,
         string InternalName,
         string Description,

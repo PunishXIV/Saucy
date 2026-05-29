@@ -1,5 +1,4 @@
 using Saucy.Framework;
-
 namespace Saucy.CuffACur;
 
 public class CuffACurModule : Module

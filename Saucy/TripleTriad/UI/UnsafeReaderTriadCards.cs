@@ -1,23 +1,21 @@
-using Saucy.TripleTriad;
-
-namespace Saucy.TripleTriad.UI;
+﻿namespace Saucy.TripleTriad.UI;
 
 public class UnsafeReaderTriadCards
 {
+    public UnsafeReaderTriadCards() => HasErrors = false;
     public bool HasErrors { get; }
-
-    public UnsafeReaderTriadCards()
-    {
-        HasErrors = false;
-    }
 
     public bool IsCardOwned(int cardId)
     {
         if (cardId <= 0 || cardId > 65535)
+        {
             return false;
+        }
 
         if (!TriadMemoryReads.IsAvailable)
+        {
             return false;
+        }
 
         return TriadMemoryReads.TryIsCardOwned(cardId);
     }

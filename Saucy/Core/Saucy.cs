@@ -5,7 +5,6 @@ using ECommons.Configuration;
 using ECommons.SimpleGui;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using Saucy.TripleTriad.Utils;
 using NAudio.Wave;
 using PunishLib;
 using Saucy.AirForce;
@@ -20,8 +19,6 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Saucy.TripleTriad.Data;
-using Saucy.TripleTriad.UI;
 using static ECommons.GenericHelpers;
 using Module = ECommons.Module;
 
@@ -41,13 +38,13 @@ public sealed class Saucy : IDalamudPlugin
     public static GameDataLoader dataLoader = null!;
     public static ModuleManager ModuleManager = null!;
 
-    private TriadCollectionHost? _triadCollectionHost;
-
     private static Dictionary<uint, int>? cardIdByItemId;
 
     private readonly object _lockObj = new();
     private Mp3FileReader? _currentReader;
     private WaveOutEvent? _currentWaveOut;
+
+    private TriadCollectionHost? _triadCollectionHost;
 
     public LimbManager LimbManager = null!;
     public Saucy(IDalamudPluginInterface pluginInterface)
@@ -110,7 +107,7 @@ public sealed class Saucy : IDalamudPlugin
         ModuleManager = new();
         C.EnabledModules.CollectionChanged += OnChange;
 
-        _triadCollectionHost = new TriadCollectionHost(pluginInterface);
+        _triadCollectionHost = new(pluginInterface);
     }
     public string Name => "Saucy";
     public static Configuration C { get; private set; } = null!;
@@ -331,13 +328,11 @@ public sealed class Saucy : IDalamudPlugin
                 var values = stackalloc AtkValue[2];
                 values[0] = new()
                 {
-                    Type = AtkValueType.Int,
-                    Int = 0
+                    Type = AtkValueType.Int, Int = 0
                 };
                 values[1] = new()
                 {
-                    Type = AtkValueType.UInt,
-                    UInt = 1
+                    Type = AtkValueType.UInt, UInt = 1
                 };
                 addon->FireCallback(2, values);
             }
@@ -361,7 +356,7 @@ public sealed class Saucy : IDalamudPlugin
         {
             if (cardInfo.ItemId != 0)
             {
-                lookup[(uint)cardInfo.ItemId] = cardInfo.CardId;
+                lookup[cardInfo.ItemId] = cardInfo.CardId;
             }
         }
 
@@ -377,8 +372,7 @@ public sealed class Saucy : IDalamudPlugin
         }
     }
 
-    private static void ScheduleLogout()
-    {
+    private static void ScheduleLogout() =>
         _ = PerformLogout().ContinueWith(
             task =>
             {
@@ -388,7 +382,6 @@ public sealed class Saucy : IDalamudPlugin
                 }
             },
             TaskScheduler.Default);
-    }
 
     private void RunBot(IFramework framework)
     {

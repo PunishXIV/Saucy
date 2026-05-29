@@ -2,11 +2,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
-using ECommons;
 using Saucy.IPC;
-using Saucy.TripleTriad.Data;
-using Saucy.TripleTriad.UI;
-
 namespace Saucy.TripleTriad;
 
 internal static class TriadNpcQuestUi
@@ -23,15 +19,21 @@ internal static class TriadNpcQuestUi
     public static void DrawUnlockQuestIconRow(GameNpcInfo? npcInfo)
     {
         if (npcInfo == null || npcInfo.UnlockQuestId == 0)
+        {
             return;
+        }
 
         var snapshot = GetSnapshot(npcInfo.UnlockQuestId);
         if (snapshot.IsComplete)
+        {
             return;
+        }
 
         var questName = npcInfo.UnlockQuestName;
         if (string.IsNullOrEmpty(questName))
+        {
             questName = $"Quest #{npcInfo.UnlockQuestId}";
+        }
 
         var tooltip = BuildTooltip(snapshot, questName);
 
@@ -42,11 +44,15 @@ internal static class TriadNpcQuestUi
         using (ImRaii.Disabled(!snapshot.HasAutomationPath))
         {
             if (ImGuiComponents.IconButton(FontAwesomeIcon.BookOpen))
+            {
                 HandleUnlockQuestClick(npcInfo, questName, snapshot);
+            }
         }
 
         if (!string.IsNullOrEmpty(tooltip) && ImGui.IsItemHovered())
+        {
             ImGui.SetTooltip(tooltip);
+        }
 
         ImGui.SetCursorPosY(rowY);
         ImGui.SameLine();
@@ -63,7 +69,9 @@ internal static class TriadNpcQuestUi
         }
 
         if (!snapshot.HasAutomationPath)
+        {
             return;
+        }
 
         InvalidateCache();
         snapshot = GetSnapshot(npcInfo.UnlockQuestId);
@@ -76,21 +84,31 @@ internal static class TriadNpcQuestUi
         }
 
         if (!string.IsNullOrEmpty(snapshot.StatusMessage))
+        {
             Svc.Chat.PrintError($"[Saucy] {snapshot.StatusMessage}");
+        }
         else
+        {
             Svc.Chat.PrintError($"[Saucy] Questionable could not start \"{questName}\".");
+        }
     }
 
     private static string? BuildTooltip(QuestSnapshot snapshot, string questName)
     {
         if (!Questionable.IsInstalled)
+        {
             return "Install Questionable (/qst) to start this quest.";
+        }
 
         if (!snapshot.HasAutomationPath)
+        {
             return "Not supported in Questionable yet.";
+        }
 
         if (snapshot.CanStart)
+        {
             return $"Start \"{questName}\" with Questionable";
+        }
 
         return snapshot.StatusMessage;
     }
@@ -98,7 +116,9 @@ internal static class TriadNpcQuestUi
     private static QuestSnapshot GetSnapshot(uint questId)
     {
         if (_snapshot != null && _cachedQuestId == questId)
+        {
             return _snapshot;
+        }
 
         _cachedQuestId = questId;
         _snapshot = BuildSnapshot(questId);
@@ -109,12 +129,9 @@ internal static class TriadNpcQuestUi
     {
         if (!Questionable.IsInstalled)
         {
-            return new QuestSnapshot
+            return new()
             {
-                IsComplete = false,
-                HasAutomationPath = true,
-                CanStart = false,
-                StatusMessage = null,
+                IsComplete = false, HasAutomationPath = true, CanStart = false, StatusMessage = null
             };
         }
 
@@ -122,65 +139,47 @@ internal static class TriadNpcQuestUi
 
         if (QuestionableTriad.IsQuestComplete(questId))
         {
-            return new QuestSnapshot
+            return new()
             {
-                IsComplete = true,
-                HasAutomationPath = hasAutomationPath,
-                CanStart = false,
-                StatusMessage = null,
+                IsComplete = true, HasAutomationPath = hasAutomationPath, CanStart = false, StatusMessage = null
             };
         }
 
         if (!hasAutomationPath)
         {
-            return new QuestSnapshot
+            return new()
             {
-                IsComplete = false,
-                HasAutomationPath = false,
-                CanStart = false,
-                StatusMessage = null,
+                IsComplete = false, HasAutomationPath = false, CanStart = false, StatusMessage = null
             };
         }
 
         if (QuestionableTriad.IsQuestAccepted(questId))
         {
-            return new QuestSnapshot
+            return new()
             {
-                IsComplete = false,
-                HasAutomationPath = true,
-                CanStart = false,
-                StatusMessage = "Quest already accepted.",
+                IsComplete = false, HasAutomationPath = true, CanStart = false, StatusMessage = "Quest already accepted."
             };
         }
 
         if (QuestionableTriad.IsQuestUnobtainable(questId))
         {
-            return new QuestSnapshot
+            return new()
             {
-                IsComplete = false,
-                HasAutomationPath = true,
-                CanStart = false,
-                StatusMessage = "Quest unavailable in Questionable.",
+                IsComplete = false, HasAutomationPath = true, CanStart = false, StatusMessage = "Quest unavailable in Questionable."
             };
         }
 
         if (!QuestionableTriad.IsReadyToAccept(questId))
         {
-            return new QuestSnapshot
+            return new()
             {
-                IsComplete = false,
-                HasAutomationPath = true,
-                CanStart = false,
-                StatusMessage = "Prerequisites not met yet (check Questionable /qst).",
+                IsComplete = false, HasAutomationPath = true, CanStart = false, StatusMessage = "Prerequisites not met yet (check Questionable /qst)."
             };
         }
 
-        return new QuestSnapshot
+        return new()
         {
-            IsComplete = false,
-            HasAutomationPath = true,
-            CanStart = true,
-            StatusMessage = null,
+            IsComplete = false, HasAutomationPath = true, CanStart = true, StatusMessage = null
         };
     }
 

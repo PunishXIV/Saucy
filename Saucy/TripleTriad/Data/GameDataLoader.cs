@@ -1,10 +1,9 @@
-﻿
-using Lumina.Excel.Sheets;
-using TriadNpcSheet = Lumina.Excel.Sheets.TripleTriad;
+﻿using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TriadNpcSheet = Lumina.Excel.Sheets.TripleTriad;
 namespace Saucy.TripleTriad.Data;
 
 public class GameDataLoader
@@ -400,17 +399,23 @@ public class GameDataLoader
     {
         var npcSheet = Svc.Data.GetExcelSheet<TriadNpcSheet>();
         if (npcSheet == null)
+        {
             return true;
+        }
 
         foreach (var row in npcSheet)
         {
             if (row.RowId == 0)
+            {
                 continue;
+            }
 
             foreach (var questRef in row.PreviousQuest)
             {
                 if (questRef.RowId == 0)
+                {
                     continue;
+                }
 
                 mapNpcUnlockQuestId[row.RowId] = questRef.RowId;
                 break;

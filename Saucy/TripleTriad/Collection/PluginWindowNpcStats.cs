@@ -1,14 +1,8 @@
-using Dalamud;
-using Dalamud.Bindings.ImGui;
+﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
-using Saucy.TripleTriad.GameLogic;
-using Saucy;
-using Saucy.TripleTriad;
 using System;
 using System.Numerics;
-using Saucy.TripleTriad.Data;
-using Saucy.TripleTriad.UI;
 namespace Saucy.TripleTriad;
 
 public class PluginWindowNpcStats : Window, IDisposable
@@ -31,7 +25,6 @@ public class PluginWindowNpcStats : Window, IDisposable
 
         Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar;
         RespectCloseHotkey = false;
-
     }
 
     public void Dispose()

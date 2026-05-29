@@ -1,5 +1,4 @@
-using Dalamud.Game.Text.SeStringHandling.Payloads;
-using Saucy.TripleTriad;
+﻿using Dalamud.Game.Text.SeStringHandling.Payloads;
 using System.Collections.Generic;
 namespace Saucy.TripleTriad.Data;
 
@@ -39,7 +38,9 @@ public class GameNpcDB
     public void Refresh(bool completion, bool beatenOnce)
     {
         if (completion)
+        {
             RefreshCompleted();
+        }
     }
 
     public void RefreshCompleted()

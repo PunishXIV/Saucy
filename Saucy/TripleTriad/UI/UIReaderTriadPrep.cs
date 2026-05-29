@@ -1,5 +1,4 @@
-using FFXIVClientStructs.FFXIV.Component.GUI;
-using Saucy.TripleTriad.Utils;
+﻿using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
 using System.Numerics;

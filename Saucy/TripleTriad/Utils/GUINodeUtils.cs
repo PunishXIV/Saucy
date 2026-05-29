@@ -1,4 +1,4 @@
-using FFXIVClientStructs.FFXIV.Component.GUI;
+﻿using FFXIVClientStructs.FFXIV.Component.GUI;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -197,13 +197,13 @@ public class GUINodeUtils
 #if DEBUG
     private class ParsableNode
     {
-        public ulong nodeAddr;
-        public string? content;
         public int childIdx;
-        public int numChildren;
-        public int depth;
-        public NodeType type;
+        public string? content;
         public string? debugPath;
+        public int depth;
+        public ulong nodeAddr;
+        public int numChildren;
+        public NodeType type;
     }
 
     private static unsafe bool RecursiveAppendParsableChildNodes(AtkResNode* node, int depth, int childIdx, List<ParsableNode> list, string debugPath)
@@ -254,7 +254,7 @@ public class GUINodeUtils
 
             if (hasParsableChildNodes || hasContent)
             {
-                list.Insert(insertIdx, new ParsableNode()
+                list.Insert(insertIdx, new()
                 {
                     nodeAddr = (ulong)node,
                     content = content,
@@ -277,7 +277,7 @@ public class GUINodeUtils
 
         foreach (var entry in list)
         {
-            var prefix = entry.depth > 0 ? new string(' ', entry.depth * 2) : "";
+            var prefix = entry.depth > 0 ? new(' ', entry.depth * 2) : "";
             Svc.Log.Info($"{prefix}> '{entry.content}' idx:{entry.childIdx}, children:{entry.numChildren}, type:{entry.type}, addr:{entry.nodeAddr:X}, path:{entry.debugPath}");
         }
     }

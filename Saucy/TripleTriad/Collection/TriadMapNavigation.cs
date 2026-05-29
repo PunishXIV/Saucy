@@ -1,16 +1,14 @@
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
-using ECommons;
 using ECommons.GameHelpers;
-using Lumina.Excel.Sheets;
 using Saucy.IPC;
 using System;
 using System.Numerics;
-
+using Map = Lumina.Excel.Sheets.Map;
 namespace Saucy.TripleTriad;
 
 /// <summary>
-/// Map-link navigation: Lifestream to nearest aetheryte, then vnavmesh to the NPC.
+///     Map-link navigation: Lifestream to nearest aetheryte, then vnavmesh to the NPC.
 /// </summary>
 internal static class TriadMapNavigation
 {
@@ -23,7 +21,9 @@ internal static class TriadMapNavigation
     public static void HandleMapClick(MapLinkPayload location)
     {
         if (TryBeginNavigation(location))
+        {
             return;
+        }
 
         Svc.GameGui.OpenMapWithMapLink(location);
     }
@@ -32,7 +32,9 @@ internal static class TriadMapNavigation
     {
         var pending = _pending;
         if (pending == null)
+        {
             return;
+        }
 
         if (DateTime.UtcNow - pending.StartedUtc > NavigationTimeout)
         {
@@ -45,7 +47,9 @@ internal static class TriadMapNavigation
         {
             case NavigationPhase.WaitingForTeleport:
                 if (!IsTravelComplete(pending.TargetTerritoryId))
+                {
                     return;
+                }
 
                 pending.Phase = NavigationPhase.WaitingForNavReady;
                 pending.PhaseStartedUtc = DateTime.UtcNow;
@@ -53,7 +57,9 @@ internal static class TriadMapNavigation
 
             case NavigationPhase.WaitingForNavReady:
                 if (!Player.Interactable || IsBetweenAreas())
+                {
                     return;
+                }
 
                 if (!Vnavmesh.IsNavReady())
                 {
@@ -67,9 +73,13 @@ internal static class TriadMapNavigation
                 }
 
                 if (!TryStartVnav(pending))
+                {
                     ClearPending();
+                }
                 else
+                {
                     ClearPending();
+                }
 
                 return;
         }
@@ -97,7 +107,9 @@ internal static class TriadMapNavigation
                           Vector3.Distance(Player.Position, pointOnFloor) <= SkipTeleportDistance;
 
         if (closeEnough)
+        {
             return TryStartVnavImmediate(location, pointOnFloor, fly);
+        }
 
         if (!Lifestream.IsInstalled)
         {
@@ -136,7 +148,7 @@ internal static class TriadMapNavigation
             return false;
         }
 
-        _pending = new PendingNavigation
+        _pending = new()
         {
             Location = location,
             Destination = pointOnFloor,
@@ -144,7 +156,7 @@ internal static class TriadMapNavigation
             TargetTerritoryId = targetTerritoryId,
             Phase = NavigationPhase.WaitingForTeleport,
             StartedUtc = DateTime.UtcNow,
-            PhaseStartedUtc = DateTime.UtcNow,
+            PhaseStartedUtc = DateTime.UtcNow
         };
 
         EnsureFrameworkSubscription();
@@ -161,14 +173,13 @@ internal static class TriadMapNavigation
             return false;
         }
 
-        if (!TryStartVnav(new PendingNavigation
-            {
-                Location = location,
-                Destination = destination,
-                Fly = fly,
-                TargetTerritoryId = location.TerritoryType.RowId,
-            }))
+        if (!TryStartVnav(new()
+        {
+            Location = location, Destination = destination, Fly = fly, TargetTerritoryId = location.TerritoryType.RowId
+        }))
+        {
             return false;
+        }
 
         return true;
     }
@@ -191,10 +202,14 @@ internal static class TriadMapNavigation
     private static bool IsTravelComplete(uint targetTerritoryId)
     {
         if (Lifestream.IsBusyNow())
+        {
             return false;
+        }
 
         if (Svc.ClientState.TerritoryType != targetTerritoryId)
+        {
             return false;
+        }
 
         return Player.Interactable && !IsBetweenAreas() && !Player.IsAnimationLocked;
     }
@@ -204,7 +219,9 @@ internal static class TriadMapNavigation
     private static void EnsureFrameworkSubscription()
     {
         if (_frameworkSubscribed)
+        {
             return;
+        }
 
         Svc.Framework.Update += OnFrameworkUpdate;
         _frameworkSubscribed = true;
@@ -226,12 +243,12 @@ internal static class TriadMapNavigation
     internal static Vector3? GetWorldPosition(MapLinkPayload location)
     {
         var map = location.Map.Value;
-        var worldXz = MapToWorld(new Vector2(location.XCoord, location.YCoord), map);
+        var worldXz = MapToWorld(new(location.XCoord, location.YCoord), map);
         return new Vector3(worldXz.X, 0f, worldXz.Y);
     }
 
     /// <summary>From Henchman GeneralHelpers.MapToWorld.</summary>
-    private static Vector2 MapToWorld(Vector2 mapCoordinates, Lumina.Excel.Sheets.Map map) =>
+    private static Vector2 MapToWorld(Vector2 mapCoordinates, Map map) =>
         MapToWorld(mapCoordinates, map.OffsetX, map.OffsetY, map.SizeFactor);
 
     private static Vector2 MapToWorld(Vector2 mapCoordinates, int xOffset, int yOffset, uint scale) =>
@@ -245,17 +262,17 @@ internal static class TriadMapNavigation
     private enum NavigationPhase
     {
         WaitingForTeleport,
-        WaitingForNavReady,
+        WaitingForNavReady
     }
 
     private sealed class PendingNavigation
     {
-        public required MapLinkPayload Location;
         public required Vector3 Destination;
         public required bool Fly;
-        public required uint TargetTerritoryId;
+        public required MapLinkPayload Location;
         public NavigationPhase Phase;
-        public DateTime StartedUtc;
         public DateTime PhaseStartedUtc;
+        public DateTime StartedUtc;
+        public required uint TargetTerritoryId;
     }
 }

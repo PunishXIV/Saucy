@@ -1,7 +1,3 @@
-using Saucy.TripleTriad.GameLogic;
-using Saucy.TripleTriad.Data;
-using Saucy.TripleTriad.UI;
-
 namespace Saucy.TripleTriad;
 
 public class StatTracker
@@ -13,7 +9,9 @@ public class StatTracker
     public void OnMatchFinished(int npcLogicId, UIStateTriadResults uiState)
     {
         if (!GameNpcDB.Get().mapNpcs.TryGetValue(npcLogicId, out var npcInfo))
+        {
             return;
+        }
 
         var savedStats = GetNpcStats(npcInfo);
         if (savedStats == null)
@@ -43,9 +41,13 @@ public class StatTracker
             if (cardId > 0)
             {
                 if (savedStats.Cards.TryGetValue(cardId, out var _))
+                {
                     savedStats.Cards[cardId] += 1;
+                }
                 else
+                {
                     savedStats.Cards.Add(cardId, 1);
+                }
             }
         }
 
@@ -55,7 +57,9 @@ public class StatTracker
     public TriadNpcStatRecord? GetNpcStats(GameNpcInfo npcInfo)
     {
         if (Settings.NpcStats.TryGetValue(npcInfo.triadId, out var savedStats))
+        {
             return savedStats;
+        }
         return null;
     }
 
@@ -84,7 +88,9 @@ public class StatTracker
                     {
                         var cardOb = cardDB.FindById(kvp.Key);
                         if (cardOb != null && cardOb.IsValid() && gameCardDB.mapCards.TryGetValue(kvp.Key, out var cardInfo))
+                        {
                             sumNetGain += kvp.Value * cardInfo.SaleValue;
+                        }
                     }
                 }
 

@@ -13,11 +13,11 @@ namespace Saucy.MiniCactpot;
 
 public unsafe class MiniCactpot : Module
 {
-    private readonly CactpotSolver solver = new();
     private readonly int[] scratchState = new int[9];
+    private readonly CactpotSolver solver = new();
     private int[]? boardState;
-    private int[]? pendingState;
     private bool isProcessing;
+    private int[]? pendingState;
     public override string Name => "Mini Cactpot";
 
     public override void Enable()

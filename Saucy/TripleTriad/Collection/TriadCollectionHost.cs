@@ -1,21 +1,17 @@
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
-using ECommons;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using Saucy.TripleTriad.UI;
 using System;
-using static ECommons.GenericHelpers;
-
 namespace Saucy.TripleTriad;
 
 internal sealed class TriadCollectionHost : IDisposable
 {
-    private readonly WindowSystem _windowSystem = new("SaucyTriadCollection");
-    private readonly UIReaderTriadCardList _uiReaderCardList = new();
-    private readonly StatTracker _statTracker = new();
-    private readonly PluginWindowCardSearch _cardSearchWindow;
     private readonly PluginWindowCardInfo _cardInfoWindow;
+    private readonly PluginWindowCardSearch _cardSearchWindow;
     private readonly PluginWindowNpcStats _npcStatsWindow;
+    private readonly StatTracker _statTracker = new();
+    private readonly UIReaderTriadCardList _uiReaderCardList = new();
+    private readonly WindowSystem _windowSystem = new("SaucyTriadCollection");
     private bool _sawGameDataReady;
 
     public TriadCollectionHost(IDalamudPluginInterface pluginInterface)
@@ -40,19 +36,27 @@ internal sealed class TriadCollectionHost : IDisposable
 
     private void OnDraw()
     {
-        if (!Saucy.C.CollectionUiEnabled)
+        if (!C.CollectionUiEnabled)
+        {
             return;
+        }
 
         if (!Svc.ClientState.IsLoggedIn)
+        {
             return;
+        }
 
         RefreshCardListReader();
 
         if (!_uiReaderCardList.IsVisible)
+        {
             return;
+        }
 
-        if (!Saucy.dataLoader.IsDataReady)
+        if (!dataLoader.IsDataReady)
+        {
             return;
+        }
 
         if (!_sawGameDataReady)
         {
@@ -63,27 +67,35 @@ internal sealed class TriadCollectionHost : IDisposable
         _cardSearchWindow.SyncVisibility();
         _cardInfoWindow.SyncVisibility();
 
-        if (Saucy.C.SaucyThemeEnabled)
+        if (C.SaucyThemeEnabled)
+        {
             SaucyTheme.Push();
+        }
 
         _windowSystem.Draw();
 
-        if (Saucy.C.SaucyThemeEnabled)
+        if (C.SaucyThemeEnabled)
+        {
             SaucyTheme.Pop();
+        }
     }
 
-    private unsafe void RefreshCardListReader()
+    private void RefreshCardListReader()
     {
         var addonPtr = ResolveCardListAddonPtr();
         if (addonPtr == nint.Zero)
         {
             if (_uiReaderCardList.status != UIReaderTriadCardList.Status.AddonNotFound)
+            {
                 _uiReaderCardList.OnAddonLost();
+            }
             return;
         }
 
         if (_uiReaderCardList.status is UIReaderTriadCardList.Status.AddonNotFound or UIReaderTriadCardList.Status.AddonNotVisible)
+        {
             _uiReaderCardList.OnAddonShown(addonPtr);
+        }
 
         _uiReaderCardList.OnAddonUpdate(addonPtr);
     }
@@ -94,11 +106,15 @@ internal sealed class TriadCollectionHost : IDisposable
         {
             var handle = Svc.GameGui.GetAddonByName("GSInfoCardList", i);
             if (handle.Address == nint.Zero)
+            {
                 continue;
+            }
 
             var unit = (AtkUnitBase*)handle.Address;
             if (unit->IsVisible && unit->RootNode != null && unit->RootNode->IsVisible())
+            {
                 return handle.Address;
+            }
         }
 
         return nint.Zero;

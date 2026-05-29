@@ -5,7 +5,6 @@ using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using ECommons.ImGuiMethods;
-using Saucy.TripleTriad.GameLogic;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
 using PunishLib.ImGuiMethods;
@@ -17,68 +16,48 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using Saucy.TripleTriad.Data;
-using Saucy.TripleTriad.UI;
 namespace Saucy;
 
 // It is good to have this be disposable in general, in case you ever need it
 // to do any cleanup
 public unsafe class PluginUI : Window
 {
+    private const long DeltaVisibleMs = 30_000;
+
+    private const uint MgpItemId = 29;
+
+    private static readonly string[] SidebarLabels =
+    {
+        "Out on a Limb",
+        "Cuff-a-Cur",
+        "Slice is Right",
+        "Wind Blows",
+        "Triple Triad",
+        "Mini-Cactpot",
+        "Stats",
+        "About",
+#if DEBUG
+        "Debug",
+#endif
+        "Saucy theme",
+        "MACHINES",
+        "GATES",
+        "OTHER GAMES"
+    };
+
+    private static int _lastMgp = -1;
+    private static long _lastMgpIncreaseMs;
+
+    private NavItem _selectedNav = NavItem.TripleTriad;
     public PluginUI() : base("Saucy###Saucy")
     {
         Size = new Vector2(310, 440);
         SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(280, 240),
-            MaximumSize = new Vector2(float.MaxValue, float.MaxValue),
+            MinimumSize = new(280, 240), MaximumSize = new(float.MaxValue, float.MaxValue)
         };
     }
-
-    private static readonly string[] SidebarLabels =
-    {
-        "Out on a Limb", "Cuff-a-Cur",
-        "Slice is Right", "Wind Blows",
-        "Triple Triad", "Mini-Cactpot",
-        "Stats", "About",
-#if DEBUG
-        "Debug",
-#endif
-        "Saucy theme",
-        "MACHINES", "GATES", "OTHER GAMES",
-    };
-
-    private static float CalcSidebarWidth()
-    {
-        var style = ImGui.GetStyle();
-        float maxLabel = 0f;
-        foreach (var s in SidebarLabels)
-        {
-            var w = ImGui.CalcTextSize(s).X;
-            if (w > maxLabel) maxLabel = w;
-        }
-        var checkboxExtra = ImGui.GetFrameHeight() + style.ItemInnerSpacing.X;
-        return maxLabel + checkboxExtra + style.WindowPadding.X * 2f + style.FramePadding.X * 2f;
-    }
-
-    private enum NavItem
-    {
-        TripleTriad,
-        CuffACur,
-        OutOnALimb,
-        SliceIsRight,
-        AnyWayTheWindBlows,
-        AirForceOne,
-        MiniCactpot,
-        Stats,
-        About,
-#if DEBUG
-        Debug,
-#endif
-    }
-
-    private NavItem _selectedNav = NavItem.TripleTriad;
 
     public GameNpcInfo? CurrentNPC
     {
@@ -95,50 +74,67 @@ public unsafe class PluginUI : Window
 
     public bool Enabled { get; set; } = false;
 
-    private static int _lastMgp = -1;
-    private static long _lastMgpIncreaseMs;
-    private const long DeltaVisibleMs = 30_000;
+    private static float CalcSidebarWidth()
+    {
+        var style = ImGui.GetStyle();
+        var maxLabel = 0f;
+        foreach (var s in SidebarLabels)
+        {
+            var w = ImGui.CalcTextSize(s).X;
+            if (w > maxLabel)
+            {
+                maxLabel = w;
+            }
+        }
+        var checkboxExtra = ImGui.GetFrameHeight() + style.ItemInnerSpacing.X;
+        return maxLabel + checkboxExtra + style.WindowPadding.X * 2f + style.FramePadding.X * 2f;
+    }
 
     public override void PreDraw()
     {
         if (C.SaucyThemeEnabled)
+        {
             SaucyTheme.Push();
+        }
 
         var info = BuildBannerInfo();
 
         if (_lastMgp >= 0 && info.Mgp > _lastMgp)
+        {
             _lastMgpIncreaseMs = Environment.TickCount64;
+        }
         _lastMgp = info.Mgp;
 
         var showDelta = info.SessionDelta > 0
-                     && Environment.TickCount64 - _lastMgpIncreaseMs < DeltaVisibleMs;
+                        && Environment.TickCount64 - _lastMgpIncreaseMs < DeltaVisibleMs;
         var delta = showDelta ? $"  +{info.SessionDelta:N0}" : "";
         var status = info.ModuleStatus == "Idle" ? "Idle" : $"Enabled: {info.ModuleStatus}";
         WindowName = $"Saucy  \u2022  {status}  \u2022  MGP {info.Mgp:N0}{delta}###Saucy";
     }
 
-    public override void PostDraw()
-    {
-        SaucyTheme.Pop();
-    }
-
-    private const uint MgpItemId = 29;
+    public override void PostDraw() => SaucyTheme.Pop();
 
     public override void Draw()
     {
         var sidebarW = CalcSidebarWidth();
         var availY = ImGui.GetContentRegionAvail().Y;
 
-        using (var sidebar = ImRaii.Child("##Sidebar", new Vector2(sidebarW, availY), true))
+        using (var sidebar = ImRaii.Child("##Sidebar", new(sidebarW, availY), true))
         {
-            if (sidebar) DrawSidebar();
+            if (sidebar)
+            {
+                DrawSidebar();
+            }
         }
 
         ImGui.SameLine();
 
-        using (var panel = ImRaii.Child("##Panel", new Vector2(0, availY), false))
+        using (var panel = ImRaii.Child("##Panel", new(0, availY), false))
         {
-            if (panel) DrawPanel();
+            if (panel)
+            {
+                DrawPanel();
+            }
         }
     }
 
@@ -148,18 +144,18 @@ public unsafe class PluginUI : Window
         NavSelectable("Out on a Limb", NavItem.OutOnALimb);
         NavSelectable("Cuff-a-Cur", NavItem.CuffACur);
 
-        ImGui.Dummy(new Vector2(0, 6));
+        ImGui.Dummy(new(0, 6));
         DrawSidebarHeader("GATES");
         NavSelectable("Slice is Right", NavItem.SliceIsRight);
         NavSelectable("Wind Blows", NavItem.AnyWayTheWindBlows);
         NavSelectable("Air Force One", NavItem.AirForceOne);
 
-        ImGui.Dummy(new Vector2(0, 6));
+        ImGui.Dummy(new(0, 6));
         DrawSidebarHeader("OTHER GAMES");
         NavSelectable("Triple Triad", NavItem.TripleTriad);
         NavSelectable("Mini-Cactpot", NavItem.MiniCactpot);
 
-        ImGui.Dummy(new Vector2(0, 6));
+        ImGui.Dummy(new(0, 6));
         ImGui.Separator();
         NavSelectable("Stats", NavItem.Stats);
         NavSelectable("About", NavItem.About);
@@ -173,7 +169,9 @@ public unsafe class PluginUI : Window
         var bottomBlockH = style.ItemSpacing.Y + 1f + style.ItemSpacing.Y + checkboxH + style.ItemSpacing.Y + creditH;
         var targetY = ImGui.GetWindowHeight() - style.WindowPadding.Y - bottomBlockH;
         if (targetY > ImGui.GetCursorPosY())
+        {
             ImGui.SetCursorPosY(targetY);
+        }
 
         ImGui.Separator();
         var on = C.SaucyThemeEnabled;
@@ -188,29 +186,28 @@ public unsafe class PluginUI : Window
     private void NavSelectable(string label, NavItem item)
     {
         if (ImGui.Selectable(label, _selectedNav == item))
+        {
             _selectedNav = item;
+        }
     }
 
-    private static void DrawSidebarHeader(string label)
-    {
-        ImGui.TextColored(SaucyTheme.ColorOr(SaucyTheme.SectionTitle, ImGuiCol.TextDisabled), label);
-    }
+    private static void DrawSidebarHeader(string label) => ImGui.TextColored(SaucyTheme.ColorOr(SaucyTheme.SectionTitle, ImGuiCol.TextDisabled), label);
 
     private void DrawPanel()
     {
         switch (_selectedNav)
         {
-            case NavItem.TripleTriad:        DrawTriadTab(); break;
-            case NavItem.CuffACur:           DrawCuffPanel(); break;
-            case NavItem.OutOnALimb:         DrawLimbPanel(); break;
-            case NavItem.SliceIsRight:       DrawSliceIsRightPanel(); break;
+            case NavItem.TripleTriad: DrawTriadTab(); break;
+            case NavItem.CuffACur: DrawCuffPanel(); break;
+            case NavItem.OutOnALimb: DrawLimbPanel(); break;
+            case NavItem.SliceIsRight: DrawSliceIsRightPanel(); break;
             case NavItem.AnyWayTheWindBlows: DrawWindBlowsPanel(); break;
-            case NavItem.AirForceOne:        DrawAirForcePanel(); break;
-            case NavItem.MiniCactpot:        DrawMiniCactpotPanel(); break;
-            case NavItem.Stats:              DrawStatsTab(); break;
-            case NavItem.About:              AboutTab.Draw("Saucy"); break;
+            case NavItem.AirForceOne: DrawAirForcePanel(); break;
+            case NavItem.MiniCactpot: DrawMiniCactpotPanel(); break;
+            case NavItem.Stats: DrawStatsTab(); break;
+            case NavItem.About: AboutTab.Draw("Saucy"); break;
 #if DEBUG
-            case NavItem.Debug:              DrawDebugTab(); break;
+            case NavItem.Debug: DrawDebugTab(); break;
 #endif
         }
     }
@@ -224,7 +221,7 @@ public unsafe class PluginUI : Window
             ImGui.TextDisabled(" \u2014 " + subtitle);
         }
         ImGui.Separator();
-        ImGui.Dummy(new Vector2(0, 2));
+        ImGui.Dummy(new(0, 2));
     }
 
     private void DrawCuffPanel()
@@ -236,12 +233,14 @@ public unsafe class PluginUI : Window
         {
             CufModule.ModuleEnabled = enabled;
             C.EnableCuffModule = enabled;
-            ToggleEnabledModule(Saucy.ModuleManager.GetModule<CuffACur.CuffACurModule>()!.InternalName, enabled);
+            ToggleEnabledModule(ModuleManager.GetModule<CuffACurModule>()!.InternalName, enabled);
             if (enabled && TriadAutomater.ModuleEnabled)
+            {
                 TriadAutomater.ModuleEnabled = false;
+            }
         }
 
-        ImGui.Dummy(new Vector2(0, 4));
+        ImGui.Dummy(new(0, 4));
         DrawCuffBody();
     }
 
@@ -299,42 +298,75 @@ public unsafe class PluginUI : Window
 
     private static BannerInfo BuildBannerInfo()
     {
-        var im  = InventoryManager.Instance();
-        var mgp = im != null ? im->GetInventoryItemCount(MgpItemId, false, false, false, 0) : 0;
+        var im = InventoryManager.Instance();
+        var mgp = im != null ? im->GetInventoryItemCount(MgpItemId, false, false, false) : 0;
 
         string status;
-        if (TriadAutomater.ModuleEnabled) status = "Triple Triad";
-        else if (CufModule.ModuleEnabled) status = "Cuff-a-Cur";
-        else if (P?.LimbManager?.Cfg?.EnableLimb == true) status = "Out on a Limb";
-        else if (C.SliceIsRightModuleEnabled) status = "Slice is Right";
-        else if (C.AnyWayTheWindBlowsModuleEnabled) status = "Any Way the Wind Blows";
-        else if (C.AirForceEnabled) status = "Air Force One";
-        else if (C.EnableAutoMiniCactpot) status = "Mini-Cactpot";
-        else status = "Idle";
+        if (TriadAutomater.ModuleEnabled)
+        {
+            status = "Triple Triad";
+        }
+        else if (CufModule.ModuleEnabled)
+        {
+            status = "Cuff-a-Cur";
+        }
+        else if (P?.LimbManager?.Cfg?.EnableLimb == true)
+        {
+            status = "Out on a Limb";
+        }
+        else if (C.SliceIsRightModuleEnabled)
+        {
+            status = "Slice is Right";
+        }
+        else if (C.AnyWayTheWindBlowsModuleEnabled)
+        {
+            status = "Any Way the Wind Blows";
+        }
+        else if (C.AirForceEnabled)
+        {
+            status = "Air Force One";
+        }
+        else if (C.EnableAutoMiniCactpot)
+        {
+            status = "Mini-Cactpot";
+        }
+        else
+        {
+            status = "Idle";
+        }
 
         var sessionDelta = C.SessionStats.MGPWon + C.SessionStats.CuffMGP + C.SessionStats.LimbMGP;
 
-        return new BannerInfo
+        return new()
         {
-            Mgp = mgp,
-            SessionDelta = sessionDelta,
-            ModuleStatus = status,
+            Mgp = mgp, SessionDelta = sessionDelta, ModuleStatus = status
         };
     }
 
     private static void ToggleEnabledModule(string internalName, bool enabled)
     {
-        if (enabled) C.EnabledModules.Add(internalName);
-        else C.EnabledModules.Remove(internalName);
+        if (enabled)
+        {
+            C.EnabledModules.Add(internalName);
+        }
+        else
+        {
+            C.EnabledModules.Remove(internalName);
+        }
         C.Save();
     }
 
     private static void DrawCuffBody()
     {
         if (ImGui.Checkbox("Play X Amount of Times", ref TriadAutomater.PlayXTimes) && TriadAutomater.NumberOfTimes <= 0)
+        {
             TriadAutomater.NumberOfTimes = 1;
+        }
 
-        if (!TriadAutomater.PlayXTimes) return;
+        if (!TriadAutomater.PlayXTimes)
+        {
+            return;
+        }
 
         ImGui.PushItemWidth(150f * ImGuiHelpers.GlobalScale);
         ImGui.Text("How many times:");
@@ -342,7 +374,9 @@ public unsafe class PluginUI : Window
         if (ImGui.InputInt("###NumberOfTimes", ref TriadAutomater.NumberOfTimes))
         {
             if (TriadAutomater.NumberOfTimes <= 0)
+            {
                 TriadAutomater.NumberOfTimes = 1;
+            }
         }
 
         ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
@@ -366,7 +400,7 @@ public unsafe class PluginUI : Window
     {
         DrawStatsToolbar();
 
-        var (life, sess) = (C.Stats, C.SessionStats);
+        (var life, var sess) = (C.Stats, C.SessionStats);
 
         DrawStatsCard("Triple Triad", TriadHeadline(life), () => DrawTriadRows(life, sess));
         DrawStatsCard("Cuff-a-Cur", CuffHeadline(life), () => DrawCuffRows(life, sess));
@@ -385,7 +419,9 @@ public unsafe class PluginUI : Window
         var spacing = ImGui.GetStyle().ItemSpacing.X;
         var rightX = ImGui.GetWindowContentRegionMax().X - lifeW - sessW - spacing;
         if (rightX > ImGui.GetCursorPosX())
+        {
             ImGui.SetCursorPosX(rightX);
+        }
         ImGui.BeginDisabled(!ImGui.GetIO().KeyCtrl);
         if (ImGui.Button(lifeLbl))
         {
@@ -394,14 +430,19 @@ public unsafe class PluginUI : Window
         }
         ImGui.SameLine();
         if (ImGui.Button(sessLbl))
+        {
             C.SessionStats = new();
+        }
         ImGui.EndDisabled();
-        ImGui.Dummy(new Vector2(0, 2));
+        ImGui.Dummy(new(0, 2));
     }
 
     private static string TriadHeadline(Stats s)
     {
-        if (s.GamesPlayedWithSaucy == 0) return "no games played";
+        if (s.GamesPlayedWithSaucy == 0)
+        {
+            return "no games played";
+        }
         var pct = Math.Round(s.GamesWonWithSaucy / (double)s.GamesPlayedWithSaucy * 100, 1);
         return $"{s.GamesPlayedWithSaucy:N0} games \u00b7 {pct}% win";
     }
@@ -414,7 +455,10 @@ public unsafe class PluginUI : Window
 
     private static void DrawTriadRows(Stats life, Stats sess)
     {
-        if (!BeginStatsTable("triad")) return;
+        if (!BeginStatsTable("triad"))
+        {
+            return;
+        }
         StatsHeader();
         StatsRow("Games", life.GamesPlayedWithSaucy, sess.GamesPlayedWithSaucy);
         StatsRow("Wins", life.GamesWonWithSaucy, sess.GamesWonWithSaucy);
@@ -422,14 +466,14 @@ public unsafe class PluginUI : Window
         StatsRow("Draws", life.GamesDrawnWithSaucy, sess.GamesDrawnWithSaucy);
         StatsRow("Cards won", life.CardsDroppedWithSaucy, sess.CardsDroppedWithSaucy);
         StatsRow("Card drop value", $"{GetDroppedCardValues(life):N0}", $"{GetDroppedCardValues(sess):N0}");
-        StatsRow("MGP won", $"{life.MGPWon:N0}", $"{sess.MGPWon:N0}", accent: true);
+        StatsRow("MGP won", $"{life.MGPWon:N0}", $"{sess.MGPWon:N0}", true);
 
-        var (lifeNpcCount, lifeNpcName) = TopNpcCell(life);
-        var (sessNpcCount, sessNpcName) = TopNpcCell(sess);
+        (var lifeNpcCount, var lifeNpcName) = TopNpcCell(life);
+        (var sessNpcCount, var sessNpcName) = TopNpcCell(sess);
         StatsRow("Most played NPC", lifeNpcCount, sessNpcCount, tooltipLife: lifeNpcName, tooltipSess: sessNpcName);
 
-        var (lifeCardCount, lifeCardName) = TopCardCell(life);
-        var (sessCardCount, sessCardName) = TopCardCell(sess);
+        (var lifeCardCount, var lifeCardName) = TopCardCell(life);
+        (var sessCardCount, var sessCardName) = TopCardCell(sess);
         StatsRow("Most won card", lifeCardCount, sessCardCount, tooltipLife: lifeCardName, tooltipSess: sessCardName);
 
         ImGui.EndTable();
@@ -437,22 +481,28 @@ public unsafe class PluginUI : Window
 
     private static void DrawCuffRows(Stats life, Stats sess)
     {
-        if (!BeginStatsTable("cuff")) return;
+        if (!BeginStatsTable("cuff"))
+        {
+            return;
+        }
         StatsHeader();
         StatsRow("Games", life.CuffGamesPlayed, sess.CuffGamesPlayed);
         StatsRow("Bruisings", life.CuffBruisings, sess.CuffBruisings);
         StatsRow("Punishings", life.CuffPunishings, sess.CuffPunishings);
         StatsRow("Brutals", life.CuffBrutals, sess.CuffBrutals);
-        StatsRow("MGP won", $"{life.CuffMGP:N0}", $"{sess.CuffMGP:N0}", accent: true);
+        StatsRow("MGP won", $"{life.CuffMGP:N0}", $"{sess.CuffMGP:N0}", true);
         ImGui.EndTable();
     }
 
     private static void DrawLimbRows(Stats life, Stats sess)
     {
-        if (!BeginStatsTable("limb")) return;
+        if (!BeginStatsTable("limb"))
+        {
+            return;
+        }
         StatsHeader();
         StatsRow("Games", life.LimbGamesPlayed, sess.LimbGamesPlayed);
-        StatsRow("MGP won", $"{life.LimbMGP:N0}", $"{sess.LimbMGP:N0}", accent: true);
+        StatsRow("MGP won", $"{life.LimbMGP:N0}", $"{sess.LimbMGP:N0}", true);
         ImGui.EndTable();
     }
 
@@ -461,14 +511,20 @@ public unsafe class PluginUI : Window
 
     private static (string count, string? name) TopNpcCell(Stats s)
     {
-        if (s.NPCsPlayed.Count == 0) return ("\u2014", null);
+        if (s.NPCsPlayed.Count == 0)
+        {
+            return ("\u2014", null);
+        }
         var top = s.NPCsPlayed.OrderByDescending(x => x.Value).First();
         return ($"{top.Value:N0}", top.Key);
     }
 
     private static (string count, string? name) TopCardCell(Stats s)
     {
-        if (s.CardsWon.Count == 0) return ("\u2014", null);
+        if (s.CardsWon.Count == 0)
+        {
+            return ("\u2014", null);
+        }
         var top = s.CardsWon.OrderByDescending(x => x.Value).First();
         return ($"{top.Value:N0}", TriadCardDB.Get().FindById((int)top.Key)!.Name);
     }
@@ -491,7 +547,7 @@ public unsafe class PluginUI : Window
         => StatsRow(label, life.ToString("N0"), sess.ToString("N0"), accent);
 
     private static void StatsRow(string label, string life, string sess, bool accent = false,
-                                 string? tooltipLife = null, string? tooltipSess = null)
+        string? tooltipLife = null, string? tooltipSess = null)
     {
         ImGui.TableNextRow();
         ImGui.TableNextColumn();
@@ -504,12 +560,16 @@ public unsafe class PluginUI : Window
         ImGui.TableNextColumn();
         RightAlignCellText(life, col);
         if (tooltipLife != null && ImGui.IsItemHovered())
+        {
             ImGui.SetTooltip(tooltipLife);
+        }
 
         ImGui.TableNextColumn();
         RightAlignCellText(sess, col);
         if (tooltipSess != null && ImGui.IsItemHovered())
+        {
             ImGui.SetTooltip(tooltipSess);
+        }
     }
 
     private static void RightAlignCellText(string text, Vector4 color)
@@ -519,7 +579,9 @@ public unsafe class PluginUI : Window
         var tw = ImGui.CalcTextSize(text).X;
         var ind = avail - tw - cellRightMargin;
         if (ind > 0)
+        {
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ind);
+        }
         ImGui.TextColored(color, text);
     }
 
@@ -539,16 +601,22 @@ public unsafe class PluginUI : Window
     public void DrawTriadTab()
     {
         if (GameNpcDB.Get().mapNpcs.TryGetValue(TTSolver.preGameNpc?.Id ?? -1, out var npcInfo))
+        {
             CurrentNPC = npcInfo;
+        }
         else
+        {
             CurrentNPC = null;
+        }
 
         var enabled = TriadAutomater.ModuleEnabled;
         if (ImGui.Checkbox("Enable Triad Module", ref enabled))
         {
             TriadAutomater.ModuleEnabled = enabled;
             if (enabled)
+            {
                 CufModule.ModuleEnabled = false;
+            }
         }
         ImGui.SameLine();
         ImGuiComponents.HelpMarker("Challenge an NPC first, then enable the module here.");
@@ -569,9 +637,11 @@ public unsafe class PluginUI : Window
         ImGuiComponents.HelpMarker("Shows card/NPC search panels beside the in-game Gold Saucer card list.");
 
         if (CurrentNPC != null)
-            global::Saucy.TripleTriad.TriadNpcQuestUi.DrawUnlockQuestIconRow(CurrentNPC);
+        {
+            TriadNpcQuestUi.DrawUnlockQuestIconRow(CurrentNPC);
+        }
 
-        ImGui.Dummy(new Vector2(0, 4));
+        ImGui.Dummy(new(0, 4));
 
         SaucyTheme.DrawCard("Deck", null, DrawTriadDeckBody);
         SaucyTheme.DrawCard("Run mode", null, DrawTriadRunModeBody);
@@ -594,22 +664,30 @@ public unsafe class PluginUI : Window
             C.Save();
         }
 
-        if (C.UseRecommendedDeck) return;
+        if (C.UseRecommendedDeck)
+        {
+            return;
+        }
 
         var selectedDeck = C.SelectedDeckIndex;
         var decks = TTSolver.profileGS.GetPlayerDecks()!;
-        string preview = (selectedDeck >= 0 && selectedDeck < decks.Count() && decks[selectedDeck] != null)
+        var preview = (selectedDeck >= 0 && selectedDeck < decks.Count() && decks[selectedDeck] != null)
             ? decks[selectedDeck]!.name : "";
 
         ImGui.SetNextItemWidth(220f * ImGuiHelpers.GlobalScale);
         if (ImGui.BeginCombo("Select deck", preview))
         {
             if (ImGui.Selectable(""))
+            {
                 C.SelectedDeckIndex = -1;
+            }
 
             foreach (var deck in decks)
             {
-                if (deck is null) continue;
+                if (deck is null)
+                {
+                    continue;
+                }
                 if (ImGui.Selectable(deck.name, deck.id == selectedDeck))
                 {
                     C.SelectedDeckIndex = deck.id;
@@ -627,7 +705,10 @@ public unsafe class PluginUI : Window
             TriadAutomater.PlayXTimes = true;
             TriadAutomater.PlayUntilCardDrops = false;
             TriadAutomater.PlayUntilAllCardsDropOnce = false;
-            if (TriadAutomater.NumberOfTimes <= 0) TriadAutomater.NumberOfTimes = 1;
+            if (TriadAutomater.NumberOfTimes <= 0)
+            {
+                TriadAutomater.NumberOfTimes = 1;
+            }
         }
 
         if (ImGui.RadioButton("Play until any cards drop", TriadAutomater.PlayUntilCardDrops))
@@ -635,7 +716,10 @@ public unsafe class PluginUI : Window
             TriadAutomater.PlayUntilCardDrops = true;
             TriadAutomater.PlayXTimes = false;
             TriadAutomater.PlayUntilAllCardsDropOnce = false;
-            if (TriadAutomater.NumberOfTimes <= 0) TriadAutomater.NumberOfTimes = 1;
+            if (TriadAutomater.NumberOfTimes <= 0)
+            {
+                TriadAutomater.NumberOfTimes = 1;
+            }
         }
 
         if (ImGui.RadioButton("Play until all cards drop", TriadAutomater.PlayUntilAllCardsDropOnce))
@@ -652,7 +736,9 @@ public unsafe class PluginUI : Window
             using var subIndent = ImRaii.PushIndent();
 
             if (CurrentNPC != null)
+            {
                 ImGui.TextDisabled($"NPC: {TriadNpcDB.Get().FindByID(CurrentNPC.npcId).Name}");
+            }
 
             var onlyUnobtained = C.OnlyUnobtainedCards;
             if (ImGui.Checkbox("Only unobtained cards", ref onlyUnobtained))
@@ -688,7 +774,9 @@ public unsafe class PluginUI : Window
             if (ImGui.InputInt("How many times", ref TriadAutomater.NumberOfTimes))
             {
                 if (TriadAutomater.NumberOfTimes <= 0)
+                {
                     TriadAutomater.NumberOfTimes = 1;
+                }
             }
         }
     }
@@ -736,7 +824,10 @@ public unsafe class PluginUI : Window
         {
             Process.Start("explorer.exe", Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds"));
         }
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Open sound folder — drop MP3s here to add your own.");
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Open sound folder — drop MP3s here to add your own.");
+        }
     }
 
     private void DrawDebugTab()
@@ -748,5 +839,21 @@ public unsafe class PluginUI : Window
             ImGui.Text($"GatePositionType: {dir->GatePositionType}");
             ImGui.Text($"Flags: {dir->Flags}");
         }
+    }
+
+    private enum NavItem
+    {
+        TripleTriad,
+        CuffACur,
+        OutOnALimb,
+        SliceIsRight,
+        AnyWayTheWindBlows,
+        AirForceOne,
+        MiniCactpot,
+        Stats,
+        About,
+#if DEBUG
+        Debug,
+#endif
     }
 }

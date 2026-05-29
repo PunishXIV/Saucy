@@ -2,11 +2,10 @@ using ECommons.EzIpcManager;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-
 namespace Saucy.IPC;
 
 /// <summary>
-/// IPC client for PunishXIV/Questionable (<c>Questionable/External/QuestionableIpc.cs</c>).
+///     IPC client for PunishXIV/Questionable (<c>Questionable/External/QuestionableIpc.cs</c>).
 /// </summary>
 [IPC(IPCNames.Questionable)]
 internal static class Questionable
@@ -42,19 +41,27 @@ internal static class QuestionableTriad
     public static bool HasAutomationPath(uint luminaQuestRowId)
     {
         if (!Questionable.IsInstalled || luminaQuestRowId == 0)
+        {
             return true;
+        }
 
         if (QuestsWithoutPath.Contains(luminaQuestRowId))
+        {
             return false;
+        }
 
         var locked = IsQuestLocked(luminaQuestRowId);
         var ready = IsReadyToAccept(luminaQuestRowId);
 
         if (locked && ready)
+        {
             return false;
+        }
 
         if (!locked)
+        {
             return true;
+        }
 
         return true;
     }
@@ -77,13 +84,19 @@ internal static class QuestionableTriad
     public static bool TryStartSingleQuest(uint luminaQuestRowId)
     {
         if (!Questionable.IsInstalled || luminaQuestRowId == 0)
+        {
             return false;
+        }
 
         if (!Questionable.StartSingleQuest.TryInvoke(FormatQuestId(luminaQuestRowId), out var started))
+        {
             return false;
+        }
 
         if (!started)
+        {
             QuestsWithoutPath.Add(luminaQuestRowId);
+        }
 
         return started;
     }
@@ -94,7 +107,9 @@ internal static class QuestionableTriad
     private static bool InvokeBool(Func<string, bool> ipc, uint luminaQuestRowId)
     {
         if (!Questionable.IsInstalled || luminaQuestRowId == 0)
+        {
             return false;
+        }
 
         return ipc.TryInvoke(FormatQuestId(luminaQuestRowId), out var ret) && ret;
     }

@@ -1,17 +1,8 @@
-using Dalamud;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
-using Saucy.TripleTriad.GameLogic;
-using Saucy;
 using System;
-using System.Numerics;
-using Saucy.TripleTriad;
-using Saucy.TripleTriad.Utils;
-using Saucy.TripleTriad.Data;
-using Saucy.TripleTriad.UI;
-
 namespace Saucy.TripleTriad;
 
 public class PluginWindowCardInfo : Window, IDisposable
@@ -47,7 +38,6 @@ public class PluginWindowCardInfo : Window, IDisposable
                 ImGuiWindowFlags.NoDocking |
                 ImGuiWindowFlags.NoFocusOnAppearing |
                 ImGuiWindowFlags.NoNav;
-
     }
 
     public void Dispose()
@@ -55,10 +45,7 @@ public class PluginWindowCardInfo : Window, IDisposable
         // meh
     }
 
-    internal void SyncVisibility()
-    {
-        UpdateWindowData();
-    }
+    internal void SyncVisibility() => UpdateWindowData();
 
     private void UpdateWindowData()
     {

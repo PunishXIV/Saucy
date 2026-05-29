@@ -2,7 +2,6 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using System;
 using System.Numerics;
-
 namespace Saucy;
 
 public struct BannerInfo
@@ -14,38 +13,6 @@ public struct BannerInfo
 
 internal static class SaucyTheme
 {
-    private static Vector4 Rgb(byte r, byte g, byte b, float a = 1f)
-        => new(r / 255f, g / 255f, b / 255f, a);
-
-    // Colors
-    private static readonly Vector4 BgDarkest = Rgb(0x1A, 0x0B, 0x2E);     // main window
-    private static readonly Vector4 BgPanel = Rgb(0x2A, 0x11, 0x45);       // inner boxes, tabs
-    private static readonly Vector4 BgInput = Rgb(0x3D, 0x1B, 0x5C);       // text fields
-    private static readonly Vector4 BgInputHover = Rgb(0x4D, 0x24, 0x70);
-    private static readonly Vector4 BgInputActive = Rgb(0x5D, 0x2D, 0x85);
-
-    private static readonly Vector4 Highlight = Rgb(0x7B, 0x2D, 0x8E);     // active tabs, buttons
-    private static readonly Vector4 HighlightHover = Rgb(0x9B, 0x3F, 0xB0);
-    private static readonly Vector4 HighlightActive = Rgb(0xB8, 0x5C, 0xCC);
-
-    private static readonly Vector4 Accent = Rgb(0xE5, 0xB8, 0x4B);        // gold — borders
-    private static readonly Vector4 AccentSoft = Rgb(0xE5, 0xB8, 0x4B, 0.5f);
-    private static readonly Vector4 AccentBright = Rgb(0xFF, 0xD9, 0x68);  // gold — titles
-
-    private static readonly Vector4 Signal = Rgb(0xFF, 0x4B, 0x9E);        // pink — checkmarks, jackpot
-
-    private static readonly Vector4 TextPrimary = Rgb(0xF4, 0xE4, 0xBC);
-    private static readonly Vector4 TextDim = Rgb(0xB8, 0xA5, 0x80);
-    private static readonly Vector4 None = new(0, 0, 0, 0);
-
-    // Names other files use
-    public static Vector4 CardBorder { get; } = Accent;
-    public static Vector4 CardSeparator { get; } = AccentSoft;
-    public static Vector4 SectionTitle { get; } = AccentBright;
-    public static Vector4 ColumnHeader { get; } = Accent;
-    public static Vector4 BodyText { get; } = TextPrimary;
-    public static Vector4 BodyTextAccent { get; } = AccentBright;
-
     // Corner roundness (px)
     private const float WindowRound = 4f;
     private const float ChildRound = 3f;
@@ -64,16 +31,47 @@ internal static class SaucyTheme
     private const float CardBorderRound = 3f;
     private const float CardBorderWeight = 1f;
 
+    // Colors
+    private static readonly Vector4 BgDarkest = Rgb(0x1A, 0x0B, 0x2E); // main window
+    private static readonly Vector4 BgPanel = Rgb(0x2A, 0x11, 0x45); // inner boxes, tabs
+    private static readonly Vector4 BgInput = Rgb(0x3D, 0x1B, 0x5C); // text fields
+    private static readonly Vector4 BgInputHover = Rgb(0x4D, 0x24, 0x70);
+    private static readonly Vector4 BgInputActive = Rgb(0x5D, 0x2D, 0x85);
+
+    private static readonly Vector4 Highlight = Rgb(0x7B, 0x2D, 0x8E); // active tabs, buttons
+    private static readonly Vector4 HighlightHover = Rgb(0x9B, 0x3F, 0xB0);
+    private static readonly Vector4 HighlightActive = Rgb(0xB8, 0x5C, 0xCC);
+
+    private static readonly Vector4 Accent = Rgb(0xE5, 0xB8, 0x4B); // gold — borders
+    private static readonly Vector4 AccentSoft = Rgb(0xE5, 0xB8, 0x4B, 0.5f);
+    private static readonly Vector4 AccentBright = Rgb(0xFF, 0xD9, 0x68); // gold — titles
+
+    private static readonly Vector4 Signal = Rgb(0xFF, 0x4B, 0x9E); // pink — checkmarks, jackpot
+
+    private static readonly Vector4 TextPrimary = Rgb(0xF4, 0xE4, 0xBC);
+    private static readonly Vector4 TextDim = Rgb(0xB8, 0xA5, 0x80);
+    private static readonly Vector4 None = new(0, 0, 0, 0);
+
+    private static int _colorPushes;
+    private static int _varPushes;
+
+    // Names other files use
+    public static Vector4 CardBorder { get; } = Accent;
+    public static Vector4 CardSeparator { get; } = AccentSoft;
+    public static Vector4 SectionTitle { get; } = AccentBright;
+    public static Vector4 ColumnHeader { get; } = Accent;
+    public static Vector4 BodyText { get; } = TextPrimary;
+    public static Vector4 BodyTextAccent { get; } = AccentBright;
+
     public static bool Enabled => C.SaucyThemeEnabled;
+    private static Vector4 Rgb(byte r, byte g, byte b, float a = 1f)
+        => new(r / 255f, g / 255f, b / 255f, a);
 
     public static Vector4 ColorOr(Vector4 themeColor, ImGuiCol fallback)
         => Enabled ? themeColor : ImGui.GetStyle().Colors[(int)fallback];
 
     public static uint ColorU32Or(Vector4 themeColor, ImGuiCol fallback)
         => Enabled ? ImGui.GetColorU32(themeColor) : ImGui.GetColorU32(fallback);
-
-    private static int _colorPushes;
-    private static int _varPushes;
 
     private static void PushColor(ImGuiCol c, Vector4 v)
     {
@@ -184,7 +182,7 @@ internal static class SaucyTheme
         var avail = ImGui.GetContentRegionAvail().X;
         var startScreen = ImGui.GetCursorScreenPos();
 
-        ImGui.Dummy(new Vector2(0, CardPad));
+        ImGui.Dummy(new(0, CardPad));
         using var indent = ImRaii.PushIndent(CardPad);
 
         ImGui.TextColored(ColorOr(SectionTitle, ImGuiCol.Text), name);
@@ -196,22 +194,22 @@ internal static class SaucyTheme
 
         var sepY = ImGui.GetCursorScreenPos().Y + CardSepGapAbove;
         drawList.AddLine(
-            new Vector2(startScreen.X + CardPad, sepY),
-            new Vector2(startScreen.X + avail - CardPad, sepY),
+            new(startScreen.X + CardPad, sepY),
+            new(startScreen.X + avail - CardPad, sepY),
             ColorU32Or(CardSeparator, ImGuiCol.Separator), CardBorderWeight);
-        ImGui.Dummy(new Vector2(0, CardSepGapBelow));
+        ImGui.Dummy(new(0, CardSepGapBelow));
 
         body();
 
         indent.Dispose();
-        ImGui.Dummy(new Vector2(0, CardPad));
+        ImGui.Dummy(new(0, CardPad));
 
         var endY = ImGui.GetCursorScreenPos().Y;
         drawList.AddRect(
-            new Vector2(startScreen.X, startScreen.Y),
-            new Vector2(startScreen.X + avail, endY),
+            new(startScreen.X, startScreen.Y),
+            new(startScreen.X + avail, endY),
             ColorU32Or(CardBorder, ImGuiCol.Border), CardBorderRound);
 
-        ImGui.Dummy(new Vector2(0, CardGapBetween));
+        ImGui.Dummy(new(0, CardGapBetween));
     }
 }

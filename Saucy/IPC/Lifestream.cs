@@ -1,10 +1,9 @@
 using ECommons.EzIpcManager;
 using System;
-
 namespace Saucy.IPC;
 
 /// <summary>
-/// IPC client for NightmareXIV/Lifestream (<c>Lifestream/IPC/IPCProvider.cs</c>).
+///     IPC client for NightmareXIV/Lifestream (<c>Lifestream/IPC/IPCProvider.cs</c>).
 /// </summary>
 [IPC(IPCNames.Lifestream)]
 internal static class Lifestream

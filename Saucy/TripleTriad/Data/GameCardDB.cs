@@ -1,5 +1,4 @@
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 namespace Saucy.TripleTriad.Data;
 
@@ -36,12 +35,9 @@ public class GameCardInfo
 // aguments TriadCardDB with stuff not related to game logic
 public class GameCardDB
 {
-    private static readonly GameCardDB instance = new();
     public const int MaxGridCells = 30;
     private const int MinGridPages = 20;
-
-    /// <summary>Exclusive upper bound for page indices (pages 0..MaxGridPages-1).</summary>
-    public static int MaxGridPages => Math.Max(instance.maxGridPageIndex + 1, MinGridPages);
+    private static readonly GameCardDB instance = new();
 
     public Dictionary<int, GameCardInfo> mapCards = [];
     private int maxCardId;
@@ -49,6 +45,9 @@ public class GameCardDB
 
     public UnsafeReaderTriadCards? memReader;
     public List<int> ownedCardIds = [];
+
+    /// <summary>Exclusive upper bound for page indices (pages 0..MaxGridPages-1).</summary>
+    public static int MaxGridPages => Math.Max(instance.maxGridPageIndex + 1, MinGridPages);
 
     public static GameCardDB Get() => instance;
 
@@ -200,7 +199,9 @@ public class GameCardDB
                             PageIndex = pageIdx, CellIndex = cellIdx
                         };
                         if (pageIdx > filterMaxPage)
+                        {
                             filterMaxPage = pageIdx;
+                        }
                         cellIdx++;
                     }
                     else
@@ -214,7 +215,9 @@ public class GameCardDB
             }
 
             if (filterMaxPage > maxGridPageIndex)
+            {
                 maxGridPageIndex = filterMaxPage;
+            }
         }
     }
 
@@ -277,7 +280,9 @@ public class GameCardDB
                         PageIndex = pageIdx, CellIndex = cellIdx
                     };
                     if (pageIdx > deckEditMaxPage)
+                    {
                         deckEditMaxPage = pageIdx;
+                    }
                     cellIdx++;
                 }
                 else
@@ -291,6 +296,8 @@ public class GameCardDB
         }
 
         if (deckEditMaxPage > maxGridPageIndex)
+        {
             maxGridPageIndex = deckEditMaxPage;
+        }
     }
 }

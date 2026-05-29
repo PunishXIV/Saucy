@@ -1,8 +1,6 @@
-
-using FFXIVClientStructs.FFXIV.Client.UI;
+﻿using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using Saucy.TripleTriad.Utils;
 using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -29,18 +27,6 @@ public class UIReaderTriadCardList : IUIReader
     public bool HasErrors => false;
 
     public string GetAddonName() => "GSInfoCardList";
-
-    private static nint ResolveAddonPtr()
-    {
-        for (var i = 0; i < 8; i++)
-        {
-            var handle = Svc.GameGui.GetAddonByName("GSInfoCardList", i);
-            if (handle.Address != nint.Zero)
-                return handle.Address;
-        }
-
-        return nint.Zero;
-    }
 
     public void OnAddonLost()
     {
@@ -134,6 +120,20 @@ public class UIReaderTriadCardList : IUIReader
         SetStatus(Status.NoErrors);
     }
 
+    private static nint ResolveAddonPtr()
+    {
+        for (var i = 0; i < 8; i++)
+        {
+            var handle = Svc.GameGui.GetAddonByName("GSInfoCardList", i);
+            if (handle.Address != nint.Zero)
+            {
+                return handle.Address;
+            }
+        }
+
+        return nint.Zero;
+    }
+
     public static unsafe nint LoadFailsafeAgent()
     {
         var uiModule = (UIModule*)Svc.GameGui.GetUIModule().Address;
@@ -166,7 +166,7 @@ public class UIReaderTriadCardList : IUIReader
         }
 
         // refresh cached pointers before using them
-        nint addonPtr = ResolveAddonPtr();
+        var addonPtr = ResolveAddonPtr();
         OnAddonShown(addonPtr);
 
         if (addonPtr != nint.Zero && cachedAddonAgentPtr != nint.Zero)
@@ -206,7 +206,7 @@ public class UIReaderTriadCardList : IUIReader
         {
             0x3 or 0x7 => 1, // owned only
             0xC or 0xA => 2, // missing only
-            _ => 0, // all (0xD and other values)
+            var _ => 0 // all (0xD and other values)
         };
 
     private unsafe bool FindTextNodeAddresses(AddonTriadCardList* addon)
@@ -297,7 +297,7 @@ public class UIStateTriadCardList
             return matchOb;
         }
 
-        var gridMatch = ctx.ParseCardByGridLocation(pageIndex, cardIndex, filterMode, markFailed: false);
+        var gridMatch = ctx.ParseCardByGridLocation(pageIndex, cardIndex, filterMode, false);
         if (gridMatch != null)
         {
             return gridMatch;

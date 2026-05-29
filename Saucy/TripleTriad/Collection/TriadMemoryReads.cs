@@ -1,7 +1,5 @@
-using ECommons;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using System;
-
 namespace Saucy.TripleTriad;
 
 public static class TriadMemoryReads
@@ -12,13 +10,17 @@ public static class TriadMemoryReads
     public static unsafe bool TryIsCardOwned(int cardId)
     {
         if (cardId <= 0 || cardId > ushort.MaxValue)
+        {
             return false;
+        }
 
         try
         {
             var uiState = UIState.Instance();
             if (uiState == null)
+            {
                 return false;
+            }
 
             // Prefer the game helper over raw bit-array indexing (row id vs bit index can diverge).
             return uiState->IsTripleTriadCardUnlocked((ushort)cardId);
@@ -34,13 +36,17 @@ public static class TriadMemoryReads
     {
         // TripleTriad sheet row ids (e.g. 0x230002+); not TripleTriadResident indices.
         if (triadSheetRowId < 0x230002)
+        {
             return false;
+        }
 
         try
         {
             var uiState = UIState.Instance();
             if (uiState == null)
+            {
                 return false;
+            }
 
             return uiState->IsTripleTriadNpcBeaten((uint)triadSheetRowId);
         }

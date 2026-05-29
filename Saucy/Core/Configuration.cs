@@ -10,13 +10,14 @@ namespace Saucy;
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
-    public bool AnyWayTheWindBlowsModuleEnabled = false;
-    public bool EnableAutoMiniCactpot = false;
-    public bool EnableCuffModule = false;
+    public bool AirForceEnabled = false;
+    public bool AnyWayTheWindBlowsModuleEnabled;
+    public bool EnableAutoMiniCactpot;
+    public bool EnableCuffModule;
 
     public ObservableCollection<string> EnabledModules = [];
 
-    public bool SliceIsRightModuleEnabled = false;
+    public bool SliceIsRightModuleEnabled;
 
     public bool UseRecommendedDeck { get; set; } = false;
 
@@ -34,15 +35,13 @@ public class Configuration : IPluginConfiguration
 
     public LimbConfig LimbConfig { get; set; } = new();
     public bool SaucyThemeEnabled { get; set; } = true;
-    public int Version { get; set; } = 0;
-
-    public bool AirForceEnabled = false;
 
     [JsonProperty("TriadBuddyCollectionUiEnabled")]
     public bool CollectionUiEnabled { get; set; } = true;
 
     [JsonProperty("TriadBuddySettings")]
     public TriadCollectionSettings TriadCollection { get; set; } = new();
+    public int Version { get; set; }
 
     public void UpdateStats(Action<Stats> updateAction)
     {

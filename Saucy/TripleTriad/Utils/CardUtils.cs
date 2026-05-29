@@ -1,5 +1,4 @@
-using Saucy.TripleTriad.GameLogic;
-namespace Saucy.TripleTriad.Utils;
+﻿namespace Saucy.TripleTriad.Utils;
 
 internal static class CardUtils
 {

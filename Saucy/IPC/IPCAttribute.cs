@@ -1,5 +1,4 @@
 using System;
-
 namespace Saucy.IPC;
 
 [AttributeUsage(AttributeTargets.Class)]

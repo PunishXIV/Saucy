@@ -1,10 +1,7 @@
-using Dalamud.Plugin.Services;
-using ECommons;
 using ECommons.EzIpcManager;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-
 namespace Saucy.IPC;
 
 internal static class SubscriptionManager
@@ -25,7 +22,9 @@ internal static class SubscriptionManager
             if (!IsInitialized(attr.Name))
             {
                 if (!IsLoaded(attr.Name))
+                {
                     continue;
+                }
 
                 var disposals = EzIPC.Init(type, attr.Name);
                 InitializedIpcs.Add(attr.Name, disposals);
@@ -33,7 +32,9 @@ internal static class SubscriptionManager
             else if (!IsLoaded(attr.Name))
             {
                 foreach (var token in InitializedIpcs[attr.Name])
+                {
                     token.Dispose();
+                }
 
                 InitializedIpcs.Remove(attr.Name);
             }
@@ -45,7 +46,9 @@ internal static class SubscriptionManager
         foreach (var tokens in InitializedIpcs.Values)
         {
             foreach (var token in tokens)
+            {
                 token.Dispose();
+            }
         }
 
         InitializedIpcs.Clear();

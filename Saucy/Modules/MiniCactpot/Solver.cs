@@ -21,6 +21,8 @@ public sealed class CactpotSolver
 
     private const double EPS = 0.00001;
 
+    private static readonly int[] Payouts = [0, 0, 0, 0, 0, 0, 10000, 36, 720, 360, 80, 252, 108, 72, 54, 180, 72, 180, 119, 36, 306, 1080, 144, 1800, 3600];
+
     private readonly Dictionary<string, (double Value, bool[] Tiles)> precalculatedOpenings = new()
     {
         {
@@ -267,8 +269,6 @@ public sealed class CactpotSolver
             "000000009", (1517.7214285714285, [false, false, true, false, true, false, true, false, false])
         }
     };
-
-    private static readonly int[] Payouts = [0, 0, 0, 0, 0, 0, 10000, 36, 720, 360, 80, 252, 108, 72, 54, 180, 72, 180, 119, 36, 306, 1080, 144, 1800, 3600];
 
     internal bool[] Solve(int[] state)
     {

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-
 namespace Saucy.TripleTriad.Data;
 
 internal static class GameDataText

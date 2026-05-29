@@ -1,5 +1,4 @@
-using Saucy.TripleTriad.Utils;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 namespace Saucy.TripleTriad.GameLogic;
@@ -35,10 +34,10 @@ public class TriadGameModifier : IComparable
     protected bool bAllowCombo;
     protected bool bHasLastRedReminder;
     protected bool bIsDeckOrderImportant;
+    public string DisplayName = string.Empty;
     protected EFeature Features = EFeature.None;
     protected int RuleIndex;
     protected string RuleName;
-    public string DisplayName = string.Empty;
     protected ETriadGameSpecialMod SpecialMod = ETriadGameSpecialMod.None;
 
     public int CompareTo(object obj) => CompareTo((TriadGameModifier)obj);
