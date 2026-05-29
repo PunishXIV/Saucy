@@ -8,7 +8,6 @@ using Lumina.Excel.Sheets;
 using Saucy.TripleTriad.Utils;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using static ECommons.GenericHelpers;
 using static Saucy.Saucy;
 
@@ -16,8 +15,6 @@ namespace Saucy.TripleTriad;
 
 internal static unsafe class TriadAutomater
 {
-    public delegate int PlaceCardDelegate(nint addon);
-
     private const int MaxDeckSelectAttemptsPerScreen = 12;
     private const int DeckSelectRetryCooldownFrames = 15;
     private const int DeckSelectPostOptimizerCooldownFrames = Solver.DeckSelectPostProfileWriteFrames;
@@ -45,6 +42,7 @@ internal static unsafe class TriadAutomater
     private static int framesSinceDeckSelectAttempt;
     private static bool rematchPending;
     private static bool sessionEndDismissRequested;
+    private static bool cardFarmSessionActive;
     private static int pendingDeckIndex = -1;
     private static int pendingSelectMethod;
     private static bool awaitingDeckSelectConfirm;
@@ -57,11 +55,13 @@ internal static unsafe class TriadAutomater
 
     private const int RematchRetryCooldownFrames = 15;
     private const int MatchAcceptRetryCooldownFrames = 15;
-    internal const ushort ResultQuitNodeId = 20;
-    internal const ushort ResultRematchNodeId = 21;
+    private const ushort ResultQuitNodeId = 20;
+    private const ushort ResultRematchNodeId = 21;
 
-    /// <summary>When true, posts brief /echo lines for triad move debugging.</summary>
-    public const bool DebugTriadAutomation = false;
+    private static nint cachedResultButtonAddonPtr;
+    private static ushort resolvedRematchNodeId;
+    private static ushort resolvedQuitNodeId;
+    private static bool resultButtonsResolved;
 
     public static bool PlaceCard(int which, int slot)
     {
@@ -87,6 +87,7 @@ internal static unsafe class TriadAutomater
     {
         if (PlayUntilAllCardsDropOnce)
         {
+            EnsureCardFarmArmed();
             EnsureRunTargetCards(ResolveRunTargetNpc());
         }
 
@@ -117,12 +118,21 @@ internal static unsafe class TriadAutomater
 
         if (IsMatchRegistrationVisible() || IsPrepDeckSelectVisible())
         {
+            ClearRematchPending();
             EnsureAutomationSessionForMatchPrep();
         }
 
         if (!ShouldContinueTriadSession())
         {
-            return;
+            if (!ModuleEnabled)
+            {
+                return;
+            }
+
+            if (!(IsCardFarmModeActive() && CardFarmHasPendingDrops() && IsAutomationFlowActive()))
+            {
+                return;
+            }
         }
 
         if (IsMatchRegistrationVisible())
@@ -146,7 +156,11 @@ internal static unsafe class TriadAutomater
         TryGetAddonByName<AtkUnitBase>("TripleTriadResult", out var addon) && addon->IsVisible;
 
     public static bool CanFinalizeTriadSession() =>
-        !ShouldContinueTriadSession() && !IsTriadBoardVisible() && !IsTriadResultVisible();
+        !ShouldContinueTriadSession() &&
+        !IsTriadBoardVisible() &&
+        !IsTriadResultVisible() &&
+        !IsMatchRegistrationVisible() &&
+        !IsPrepDeckSelectVisible();
 
     private static bool TryRunTriadBoard()
     {
@@ -210,6 +224,106 @@ internal static unsafe class TriadAutomater
         framesSinceRematchAttempt = 0;
     }
 
+    public static void ApplyRunMode(TriadRunMode mode)
+    {
+        PlayXTimes = mode == TriadRunMode.PlayXTimes;
+        PlayUntilCardDrops = mode == TriadRunMode.PlayUntilAnyCard;
+        PlayUntilAllCardsDropOnce = mode == TriadRunMode.PlayUntilAllCards;
+    }
+
+    /// <summary>True while any tracked NPC reward card is below the per-card target count.</summary>
+    public static bool IsCardFarmModeActive() => ModuleEnabled && PlayUntilAllCardsDropOnce;
+
+    public static bool CardFarmSessionActive => cardFarmSessionActive;
+
+    /// <summary>True only when every tracked card reached the per-card target count.</summary>
+    public static bool IsCardFarmComplete()
+    {
+        if (TempCardsWonList.Count == 0)
+        {
+            return false;
+        }
+
+        var targetPerCard = Math.Max(1, NumberOfTimes);
+        foreach (var wins in TempCardsWonList.Values)
+        {
+            if (wins < targetPerCard)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public static bool CardFarmHasPendingDrops()
+    {
+        if (!cardFarmSessionActive && !IsCardFarmModeActive())
+        {
+            return false;
+        }
+
+        if (TempCardsWonList.Count == 0)
+        {
+            return cardFarmSessionActive;
+        }
+
+        return !IsCardFarmComplete();
+    }
+
+    public static void EnsureCardFarmArmed()
+    {
+        if (!ModuleEnabled || !PlayUntilAllCardsDropOnce)
+        {
+            return;
+        }
+
+        cardFarmSessionActive = true;
+        if (TempCardsWonList.Count == 0)
+        {
+            StartCardFarmTargets(ResolveRunTargetNpc());
+        }
+    }
+
+    public static void ActivateCardFarmSession(GameNpcInfo? npcInfo = null)
+    {
+        cardFarmSessionActive = true;
+        TTSolver.EnsureRunTargetNpcSynced();
+        StartCardFarmTargets(npcInfo ?? ResolveRunTargetNpc());
+    }
+
+    public static void DeactivateCardFarmSession()
+    {
+        cardFarmSessionActive = false;
+    }
+
+    public static void StartCardFarmTargets(GameNpcInfo? npcInfo)
+    {
+        if (npcInfo == null)
+        {
+            return;
+        }
+
+        lastTargetNpcId = npcInfo.npcId;
+        TempCardsWonList.Clear();
+
+        GameCardDB.Get().Refresh();
+        foreach (var cardId in npcInfo.rewardCards)
+        {
+            if (GameCardDB.Get().FindById(cardId) == null)
+            {
+                continue;
+            }
+
+            if (C.OnlyUnobtainedCards && TriadMemoryReads.TryIsCardOwned(cardId))
+            {
+                continue;
+            }
+
+            TempCardsWonList[(uint)cardId] = 0;
+        }
+    }
+
     public static void BeginAutomationSession()
     {
         MatchesCompletedThisSession = 0;
@@ -224,8 +338,13 @@ internal static unsafe class TriadAutomater
                 NumberOfTimes = 1;
             }
 
-            TempCardsWonList.Clear();
-            lastTargetNpcId = -1;
+            TTSolver.EnsureRunTargetNpcSynced();
+            RefreshRunTargetFromPrep();
+            ActivateCardFarmSession(ResolveRunTargetNpc());
+        }
+        else
+        {
+            DeactivateCardFarmSession();
         }
 
         ClearRematchPending();
@@ -240,7 +359,7 @@ internal static unsafe class TriadAutomater
     /// <summary>Call when run mode or play count changes in the UI mid-session.</summary>
     public static void SyncPlayXTimesSession(int desiredPlayCount)
     {
-        if (!PlayXTimes)
+        if (!PlayXTimes || PlayUntilAllCardsDropOnce || cardFarmSessionActive)
         {
             return;
         }
@@ -271,6 +390,26 @@ internal static unsafe class TriadAutomater
             NumberOfTimes = 1;
         }
 
+        if (PlayUntilAllCardsDropOnce)
+        {
+            if (CardFarmHasPendingDrops())
+            {
+                sessionEndDismissRequested = false;
+            }
+            else if (IsTriadResultVisible() && IsCardFarmComplete())
+            {
+                DeactivateCardFarmSession();
+                RequestSessionEndDismiss();
+            }
+
+            return;
+        }
+
+        if (cardFarmSessionActive)
+        {
+            DeactivateCardFarmSession();
+        }
+
         if (!ShouldContinueTriadSession())
         {
             RequestSessionEndDismiss();
@@ -284,7 +423,19 @@ internal static unsafe class TriadAutomater
         framesSinceSessionEndDismiss = 0;
     }
 
-    public static void ResetResultMatchRecording() => lastRecordedResultAddonPtr = nint.Zero;
+    public static void ResetResultMatchRecording()
+    {
+        lastRecordedResultAddonPtr = nint.Zero;
+        ResetResultButtonBindings();
+    }
+
+    private static void ResetResultButtonBindings()
+    {
+        cachedResultButtonAddonPtr = nint.Zero;
+        resultButtonsResolved = false;
+        resolvedRematchNodeId = 0;
+        resolvedQuitNodeId = 0;
+    }
 
     private static bool IsResultMatchRecorded(nint resultAddonPtr) =>
         resultAddonPtr != nint.Zero && resultAddonPtr == lastRecordedResultAddonPtr;
@@ -354,6 +505,14 @@ internal static unsafe class TriadAutomater
                 continue;
             }
 
+            if (IsCardFarmModeActive() && TempCardsWonList.TryGetValue((uint)cardId, out var priorWins))
+            {
+                if (priorWins >= Math.Max(1, NumberOfTimes))
+                {
+                    continue;
+                }
+            }
+
             droppedCard = GameCardDB.Get().FindById(cardId);
             return droppedCard != null;
         }
@@ -399,6 +558,24 @@ internal static unsafe class TriadAutomater
         }
 
         lastRecordedResultAddonPtr = resultAddonPtr;
+        EnsureCardFarmArmed();
+
+        if (IsCardFarmModeActive())
+        {
+            sessionEndDismissRequested = false;
+            if (!IsCardFarmComplete())
+            {
+                RequestRematch();
+            }
+            else
+            {
+                DeactivateCardFarmSession();
+                RequestSessionEndDismiss();
+                Svc.Framework.Run(TryDismissResultIfSessionEnded);
+            }
+
+            return;
+        }
 
         if (PlayXTimes && !PlayUntilAllCardsDropOnce && !PlayUntilCardDrops)
         {
@@ -484,32 +661,14 @@ internal static unsafe class TriadAutomater
 
     public static bool ShouldContinueTriadSession()
     {
-        if (PlayUntilAllCardsDropOnce)
+        if (IsCardFarmModeActive())
         {
-            if (!ModuleEnabled)
-            {
-                return false;
-            }
+            return !IsCardFarmComplete();
+        }
 
-            var runTargetNpc = ResolveRunTargetNpc();
-            EnsureRunTargetCards(runTargetNpc);
-
-            var targetPerCard = Math.Max(1, NumberOfTimes);
-            if (TempCardsWonList.Count > 0)
-            {
-                foreach (var wins in TempCardsWonList.Values)
-                {
-                    if (wins < targetPerCard)
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-
-            // Empty list means tracking has not caught up yet, not that every card was obtained.
-            return true;
+        if (PlayUntilCardDrops)
+        {
+            return ModuleEnabled && NumberOfTimes > 0;
         }
 
         if (PlayXTimes && NumberOfTimes <= 0)
@@ -539,7 +698,16 @@ internal static unsafe class TriadAutomater
 
         if (lastTargetNpcId != npcInfo.npcId)
         {
-            TempCardsWonList.Clear();
+            if (cardFarmSessionActive && lastTargetNpcId >= 0 && TempCardsWonList.Count > 0)
+            {
+                return;
+            }
+
+            if (lastTargetNpcId >= 0)
+            {
+                TempCardsWonList.Clear();
+            }
+
             lastTargetNpcId = npcInfo.npcId;
         }
 
@@ -568,18 +736,30 @@ internal static unsafe class TriadAutomater
             return;
         }
 
-        if (IsMatchRegistrationVisible())
+        try
         {
-            uiReaderPrep.SyncMatchRegistrationFromLiveAddon();
-        }
-        else if (IsPrepDeckSelectVisible())
-        {
-            uiReaderPrep.SyncDeckSelectFromLiveAddon();
-        }
+            if (IsMatchRegistrationVisible())
+            {
+                uiReaderPrep.SyncMatchRegistrationFromLiveAddon();
+            }
+            else if (IsPrepDeckSelectVisible())
+            {
+                uiReaderPrep.SyncDeckSelectFromLiveAddon();
+            }
 
-        TTSolver.EnsureRunTargetNpcSynced(
-            deckSelectScreen: uiReaderPrep.HasDeckSelectionUI && !IsMatchRegistrationVisible());
-        EnsureRunTargetCards(ResolveRunTargetNpc());
+            TTSolver.EnsureRunTargetNpcSynced(
+                deckSelectScreen: uiReaderPrep.HasDeckSelectionUI && !IsMatchRegistrationVisible());
+            EnsureRunTargetCards(ResolveRunTargetNpc());
+
+            if (ModuleEnabled && cardFarmSessionActive && TempCardsWonList.Count == 0)
+            {
+                StartCardFarmTargets(ResolveRunTargetNpc());
+            }
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Error(ex, "[TriadAutomater] RefreshRunTargetFromPrep failed");
+        }
     }
 
     private static bool TryRematch()
@@ -597,23 +777,45 @@ internal static unsafe class TriadAutomater
             return false;
         }
 
+        EnsureCardFarmArmed();
+
         if (IsResultMatchRecorded((nint)addon))
         {
             framesWaitingForResultOutcome = 0;
         }
-        else
+        else if (++framesWaitingForResultOutcome >= ResultOutcomeFallbackFrames)
         {
-            framesWaitingForResultOutcome++;
-            if (framesWaitingForResultOutcome >= ResultOutcomeFallbackFrames &&
-                IsTriadResultScreenReady(addon))
+            uiReaderMatchResults.ForceNotifyFromFallback((nint)addon);
+            framesWaitingForResultOutcome = 0;
+        }
+
+        if (IsCardFarmModeActive() && CardFarmHasPendingDrops())
+        {
+            sessionEndDismissRequested = false;
+            if (!rematchPending && IsResultMatchRecorded((nint)addon))
             {
-                RecordMatchResultIfNeeded((nint)addon, requireActionButtons: true);
+                RequestRematch();
             }
+        }
+
+        if (ModuleEnabled &&
+            !IsResultMatchRecorded((nint)addon) &&
+            IsTriadResultScreenReady(addon))
+        {
+            RecordMatchResultIfNeeded((nint)addon, requireActionButtons: true);
         }
 
         if (sessionEndDismissRequested)
         {
-            if (framesSinceSessionEndDismiss <= 0)
+            if (IsCardFarmModeActive() && CardFarmHasPendingDrops())
+            {
+                sessionEndDismissRequested = false;
+                if (!rematchPending)
+                {
+                    RequestRematch();
+                }
+            }
+            else if (framesSinceSessionEndDismiss <= 0)
             {
                 if (TryDismissTriadResult(addon))
                 {
@@ -631,12 +833,7 @@ internal static unsafe class TriadAutomater
             return true;
         }
 
-        if (!ModuleEnabled)
-        {
-            return false;
-        }
-
-        if (!rematchPending)
+        if (!ModuleEnabled || !rematchPending)
         {
             return false;
         }
@@ -649,8 +846,38 @@ internal static unsafe class TriadAutomater
 
         try
         {
-            TryFireResultChoiceCallback(addon, 1);
-            TryClickResultButton(addon, ResultRematchNodeId);
+            if (!IsResultScreenReadyForRematch(addon))
+            {
+                return true;
+            }
+
+            if (DidEnterRematchFlow())
+            {
+                ClearRematchPending();
+                return true;
+            }
+
+            if (!EnsureResultButtonsResolved(addon))
+            {
+                return true;
+            }
+
+            if (resolvedRematchNodeId == 0)
+            {
+                framesSinceRematchAttempt = RematchRetryCooldownFrames;
+                return true;
+            }
+
+            TryClickResultButton(addon, resolvedRematchNodeId, requireEnabled: false);
+
+            if (DidEnterRematchFlow())
+            {
+                ClearRematchPending();
+            }
+            else if (!addon->IsVisible && IsCardFarmModeActive() && CardFarmHasPendingDrops())
+            {
+                RequestRematch();
+            }
 
             framesSinceRematchAttempt = RematchRetryCooldownFrames;
         }
@@ -664,26 +891,16 @@ internal static unsafe class TriadAutomater
 
     private static bool TryDismissTriadResult(AtkUnitBase* addon)
     {
-        TryFireResultChoiceCallback(addon, 0);
-        if (!addon->IsVisible)
+        EnsureResultButtonsResolved(addon);
+
+        if (resolvedQuitNodeId != 0 &&
+            TryClickResultButton(addon, resolvedQuitNodeId, requireEnabled: false))
         {
             return true;
         }
 
-        TryClickResultButton(addon, ResultQuitNodeId, requireEnabled: false);
-        if (!addon->IsVisible)
-        {
-            return true;
-        }
-
-        TryClickResultButton(addon, ResultQuitNodeId);
-        if (!addon->IsVisible)
-        {
-            return true;
-        }
-
-        TryClickLowestResultButton(addon, skipNodeId: ResultRematchNodeId, requireEnabled: false);
-        if (!addon->IsVisible)
+        if (resolvedQuitNodeId != 0 &&
+            TryClickResultButton(addon, resolvedQuitNodeId))
         {
             return true;
         }
@@ -701,8 +918,170 @@ internal static unsafe class TriadAutomater
         return !addon->IsVisible;
     }
 
+    private static bool DidEnterRematchFlow() =>
+        IsPrepDeckSelectVisible() || IsMatchRegistrationVisible();
+
     private static bool TryClickResultButton(AtkUnitBase* addon, ushort nodeId, bool requireEnabled = true) =>
         TryClickAddonButton(addon, FindResultButton(addon, nodeId), requireEnabled);
+
+    private static unsafe bool IsResultScreenReadyForRematch(AtkUnitBase* addon)
+    {
+        if (!addon->IsReady)
+        {
+            return false;
+        }
+
+        var quitButton = FindResultButton(addon, ResultQuitNodeId);
+        var rematchButton = FindResultButton(addon, ResultRematchNodeId);
+        return quitButton != null &&
+               rematchButton != null &&
+               quitButton->AtkResNode != null &&
+               rematchButton->AtkResNode != null &&
+               quitButton->AtkResNode->IsVisible() &&
+               rematchButton->AtkResNode->IsVisible();
+    }
+
+    private static unsafe bool EnsureResultButtonsResolved(AtkUnitBase* addon)
+    {
+        var addonPtr = (nint)addon;
+        if (resultButtonsResolved && cachedResultButtonAddonPtr == addonPtr)
+        {
+            return resolvedRematchNodeId != 0;
+        }
+
+        var button20 = FindResultButton(addon, ResultQuitNodeId);
+        var button21 = FindResultButton(addon, ResultRematchNodeId);
+        if (button20 == null || button21 == null ||
+            button20->AtkResNode == null || button21->AtkResNode == null ||
+            !button20->AtkResNode->IsVisible() || !button21->AtkResNode->IsVisible())
+        {
+            return false;
+        }
+
+        var label20 = GetResultButtonLabel(button20);
+        var label21 = GetResultButtonLabel(button21);
+
+        if (!string.IsNullOrWhiteSpace(label20) && LabelMatchesRematch(label20) &&
+            !string.IsNullOrWhiteSpace(label21) && LabelMatchesQuit(label21))
+        {
+            ApplyResultButtonBindings(addonPtr, ResultQuitNodeId, ResultRematchNodeId);
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(label21) && LabelMatchesRematch(label21) &&
+            !string.IsNullOrWhiteSpace(label20) && LabelMatchesQuit(label20))
+        {
+            ApplyResultButtonBindings(addonPtr, ResultRematchNodeId, ResultQuitNodeId);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void ApplyResultButtonBindings(nint addonPtr, ushort rematchNodeId, ushort quitNodeId)
+    {
+        resolvedRematchNodeId = rematchNodeId;
+        resolvedQuitNodeId = quitNodeId;
+        cachedResultButtonAddonPtr = addonPtr;
+        resultButtonsResolved = true;
+    }
+
+    private static bool LabelMatchesRematch(string label)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return false;
+        }
+
+        foreach (var token in new[]
+                 {
+                     "Rematch", "Revanche", "Erneutes Spiel", "Revenge", "再戦", "再戦する", "リマッチ"
+                 })
+        {
+            if (label.Contains(token, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool LabelMatchesQuit(string label)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return false;
+        }
+
+        foreach (var token in new[]
+                 {
+                     "Quit", "Beenden", "Quitter", "Abandon", "Exit", "やめる", "終了"
+                 })
+        {
+            if (label.Contains(token, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static unsafe string? GetResultButtonLabel(AtkComponentButton* button)
+    {
+        if (button == null)
+        {
+            return null;
+        }
+
+        var comp = (AtkComponentBase*)button;
+        for (var i = 0; i < comp->UldManager.NodeListCount; i++)
+        {
+            var node = comp->UldManager.NodeList[i];
+            if (node == null)
+            {
+                continue;
+            }
+
+            var text = GUINodeUtils.GetNodeText(node);
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                return text.Trim();
+            }
+
+            if ((int)node->Type < 1000)
+            {
+                continue;
+            }
+
+            var inner = ((AtkComponentNode*)node)->Component;
+            if (inner == null)
+            {
+                continue;
+            }
+
+            for (var j = 0; j < inner->UldManager.NodeListCount; j++)
+            {
+                text = GUINodeUtils.GetNodeText(inner->UldManager.NodeList[j]);
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    return text.Trim();
+                }
+            }
+        }
+
+        foreach (var node in GUINodeUtils.GetAllChildNodes(button->AtkResNode) ?? [])
+        {
+            var text = GUINodeUtils.GetNodeText(node);
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                return text.Trim();
+            }
+        }
+
+        return null;
+    }
 
     internal static unsafe bool HasVisibleResultActionButtons(AtkUnitBase* addon)
     {
@@ -778,46 +1157,10 @@ internal static unsafe class TriadAutomater
         return null;
     }
 
-    private static unsafe bool IsTriadResultScreenReady(AtkUnitBase* addon) =>
+    internal static unsafe bool IsTriadResultScreenReady(AtkUnitBase* addon) =>
         FindResultButton(addon, ResultQuitNodeId) != null ||
         FindResultButton(addon, ResultRematchNodeId) != null ||
         HasVisibleResultActionButtons(addon);
-
-    private static unsafe bool TryClickLowestResultButton(
-        AtkUnitBase* addon,
-        ushort skipNodeId,
-        bool requireEnabled = true)
-    {
-        AtkComponentButton* bestButton = null;
-        ushort bestNodeId = ushort.MaxValue;
-
-        foreach (var node in GUINodeUtils.GetAllChildNodes(addon->RootNode) ?? [])
-        {
-            if (node == null || node->NodeId == skipNodeId)
-            {
-                continue;
-            }
-
-            var button = TryGetButtonFromNode(node);
-            if (button == null || button->AtkResNode == null || !button->AtkResNode->IsVisible())
-            {
-                continue;
-            }
-
-            if (requireEnabled && !button->IsEnabled)
-            {
-                continue;
-            }
-
-            if (node->NodeId < bestNodeId)
-            {
-                bestNodeId = (ushort)node->NodeId;
-                bestButton = button;
-            }
-        }
-
-        return bestButton != null && TryClickAddonButton(addon, bestButton, requireEnabled);
-    }
 
     private static bool TryClickAddonButton(AtkUnitBase* addon, AtkComponentButton* button, bool requireEnabled = true)
     {
@@ -844,33 +1187,13 @@ internal static unsafe class TriadAutomater
         }
     }
 
-    private static void TryFireResultChoiceCallback(AtkUnitBase* addon, uint choice)
-    {
-        try
-        {
-            var values = stackalloc AtkValue[2];
-            values[0] = new()
-            {
-                Type = AtkValueType.Int, Int = 0
-            };
-            values[1] = new()
-            {
-                Type = AtkValueType.UInt, UInt = choice
-            };
-            addon->FireCallback(2, values);
-            addon->Update(0);
-        }
-        catch (Exception ex)
-        {
-            Svc.Log.Verbose(ex, "[TriadAutomater] Result choice callback {0} failed", choice);
-        }
-    }
-
     private static void DeckSelect()
     {
         try
         {
-            if (!ShouldContinueTriadSession() || !IsPrepDeckSelectVisible())
+            var cardFarmActive = IsCardFarmModeActive() && CardFarmHasPendingDrops();
+            if (!IsPrepDeckSelectVisible() ||
+                (!ShouldContinueTriadSession() && !cardFarmActive))
             {
                 ClearDeckSelectPending();
                 ResetDeckSelectSession();
@@ -1037,8 +1360,8 @@ internal static unsafe class TriadAutomater
         Svc.Chat.Print("[Saucy] Selecting first deck...");
         foreach (var listIndex in new[] { 0, 1, 2, 3, 4 })
         {
-            TryFireDeckCallback(addon, 1, listIndex);
-            TryFireDeckCallback(addon, 0, listIndex);
+            TryClickDeckListRow(addon, listIndex);
+            TryClickDeckConfirmButton(addon);
             addon->Update(0);
             if (!addon->IsVisible)
             {
@@ -1125,13 +1448,13 @@ internal static unsafe class TriadAutomater
                 TryClickDeckListRow(addon, deckIndex);
                 break;
             case 1:
-                TryFireDeckCallback(addon, 1, deckIndex);
+                TryClickDeckConfirmButton(addon);
                 break;
             case 2:
-                TryFireDeckCallback(addon, 0, deckIndex);
+                TryClickDeckListRow(addon, deckIndex);
                 break;
             case 3:
-                TryFireDeckCallback(addon, 2, deckIndex);
+                TryClickAnyAddonButton(addon);
                 break;
             case 4:
                 TryClickDeckConfirmButton(addon);
@@ -1239,23 +1562,6 @@ internal static unsafe class TriadAutomater
         else
         {
             Svc.Chat.Print($"[Saucy] Selecting deck {deck + 1}...");
-        }
-    }
-
-    private static void TryFireDeckCallback(AtkUnitBase* addon, int eventId, int value)
-    {
-        try
-        {
-            var values = stackalloc AtkValue[1];
-            values[0] = new()
-            {
-                Type = AtkValueType.Int, Int = value
-            };
-            addon->FireCallback((uint)eventId, values);
-        }
-        catch (Exception ex)
-        {
-            Svc.Log.Verbose(ex, "[TriadAutomater] Deck callback {0} failed for deck {1}", eventId, value);
         }
     }
 
@@ -1392,29 +1698,35 @@ internal static unsafe class TriadAutomater
                 return;
             }
 
-            var values = stackalloc AtkValue[1];
-            values[0] = new()
-            {
-                Type = AtkValueType.Int, Int = 0
-            };
-            addon->FireCallback(0, values);
-            addon->Update(0);
-
             var challengeButton = addon->GetComponentButtonById(41);
-            if (challengeButton != null && challengeButton->IsEnabled &&
-                challengeButton->AtkResNode != null && challengeButton->AtkResNode->IsVisible())
+            if (challengeButton != null && challengeButton->AtkResNode != null &&
+                challengeButton->AtkResNode->IsVisible())
             {
                 try
                 {
                     challengeButton->ClickAddonButton(addon);
+                    addon->Update(0);
                 }
                 catch (Exception clickEx)
                 {
-                    Svc.Log.Verbose(clickEx, "[TriadAutomater] Challenge button click fallback failed");
+                    Svc.Log.Verbose(clickEx, "[TriadAutomater] Challenge button click failed");
                 }
             }
 
             framesSinceMatchAcceptAttempt = MatchAcceptRetryCooldownFrames;
+
+            if (PlayUntilAllCardsDropOnce)
+            {
+                if (!cardFarmSessionActive)
+                {
+                    ActivateCardFarmSession(ResolveRunTargetNpc());
+                }
+                else if (TempCardsWonList.Count == 0)
+                {
+                    StartCardFarmTargets(ResolveRunTargetNpc());
+                }
+            }
+
             SnapshotMatchRewardOwnership();
         }
         catch (Exception ex)

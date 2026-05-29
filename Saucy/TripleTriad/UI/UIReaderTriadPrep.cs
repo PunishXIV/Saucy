@@ -46,6 +46,26 @@ public class UIReaderTriadPrep
             return;
         }
 
+        ApplyMatchRequestState(baseNode, notifyDeckEval: true);
+    }
+
+    public unsafe void SyncMatchRegistrationFromLiveAddon()
+    {
+        if (!TryGetAddonByName<AtkUnitBase>("TripleTriadRequest", out var addon) || !addon->IsVisible)
+        {
+            return;
+        }
+
+        ApplyMatchRequestState(addon, notifyDeckEval: false);
+
+        if (TriadAutomater.IsCardFarmModeActive() || TriadAutomater.CardFarmSessionActive)
+        {
+            TriadAutomater.EnsureCardFarmArmed();
+        }
+    }
+
+    private unsafe void ApplyMatchRequestState(AtkUnitBase* baseNode, bool notifyDeckEval)
+    {
         var wasFirstShow = !HasMatchRequestUI;
         var previousNpc = cachedState.npc;
 
@@ -63,28 +83,17 @@ public class UIReaderTriadPrep
         {
             TTSolver.OnMatchPrepDetected(cachedState);
 
-            // notify when prep data changes; deck eval ignores duplicate input
-            if (wasFirstShow || cachedState.npc != previousNpc)
+            if (notifyDeckEval && (wasFirstShow || cachedState.npc != previousNpc))
             {
                 OnUIStateChanged?.Invoke(cachedState);
             }
         }
-        else if (wasFirstShow)
+        else if (notifyDeckEval && wasFirstShow && !string.IsNullOrWhiteSpace(cachedState.npc))
         {
             OnUIStateChanged?.Invoke(cachedState);
         }
 
         (cachedState.screenPos, cachedState.screenSize) = GUINodeUtils.GetNodePosAndSize(baseNode->RootNode);
-    }
-
-    public unsafe void SyncMatchRegistrationFromLiveAddon()
-    {
-        if (!TryGetAddonByName<AtkUnitBase>("TripleTriadRequest", out var addon) || !addon->IsVisible)
-        {
-            return;
-        }
-
-        OnAddonUpdateMatchRequest((nint)addon);
     }
 
     public unsafe void SyncDeckSelectFromLiveAddon()

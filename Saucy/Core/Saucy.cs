@@ -4,6 +4,7 @@ using ECommons;
 using ECommons.Configuration;
 using ECommons.SimpleGui;
 using ECommons.UIHelpers.AddonMasterImplementations;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using NAudio.Wave;
 using PunishLib;
@@ -33,12 +34,11 @@ public sealed class Saucy : IDalamudPlugin
 
     public static UIReaderTriadGame uiReaderGame = null!;
     public static UIReaderTriadPrep uiReaderPrep = null!;
+    public static UIReaderTriadResults uiReaderMatchResults = null!;
     public static UIReaderScheduler uiReaderScheduler = null!;
     public static UIReaderGamesResults uiReaderGamesResults = null!;
     public static GameDataLoader dataLoader = null!;
     public static ModuleManager ModuleManager = null!;
-
-    private static Dictionary<uint, int>? cardIdByItemId;
 
     private readonly object _lockObj = new();
     private Mp3FileReader? _currentReader;
@@ -87,7 +87,7 @@ public sealed class Saucy : IDalamudPlugin
         uiReaderPrep.OnMatchRequestChanged += OnTriadPrepUiChanged;
         uiReaderPrep.OnDeckSelectionChanged += OnTriadPrepUiChanged;
 
-        var uiReaderMatchResults = new UIReaderTriadResults();
+        uiReaderMatchResults = new UIReaderTriadResults();
         uiReaderMatchResults.OnUpdated += CheckResults;
 
         uiReaderGamesResults = new(Svc.GameGui);
@@ -269,9 +269,13 @@ public sealed class Saucy : IDalamudPlugin
                         }
                     });
 
-                    if (TriadAutomater.TempCardsWonList.ContainsKey((uint)droppedCard.CardId))
+                    if (TriadAutomater.TempCardsWonList.TryGetValue((uint)droppedCard.CardId, out var priorWins))
                     {
-                        TriadAutomater.TempCardsWonList[(uint)droppedCard.CardId] += 1;
+                        var target = Math.Max(1, TriadAutomater.NumberOfTimes);
+                        if (priorWins < target)
+                        {
+                            TriadAutomater.TempCardsWonList[(uint)droppedCard.CardId] = priorWins + 1;
+                        }
                     }
                 }
             }
@@ -306,31 +310,6 @@ public sealed class Saucy : IDalamudPlugin
 
         var bonusMGP = Math.Round(Math.Ceiling(numMGP * multiplier), 0);
         return (int)bonusMGP;
-    }
-
-    private unsafe void Rematch()
-    {
-        TriadAutomater.RequestRematch();
-    }
-
-    private static GameCardInfo? FindCardByItemId(uint itemId)
-    {
-        cardIdByItemId ??= BuildCardIdByItemIdLookup();
-        return cardIdByItemId.TryGetValue(itemId, out var cardId) ? GameCardDB.Get().FindById(cardId) : null;
-    }
-
-    private static Dictionary<uint, int> BuildCardIdByItemIdLookup()
-    {
-        var lookup = new Dictionary<uint, int>();
-        foreach ((var _, var cardInfo) in GameCardDB.Get().mapCards)
-        {
-            if (cardInfo.ItemId != 0)
-            {
-                lookup[cardInfo.ItemId] = cardInfo.CardId;
-            }
-        }
-
-        return lookup;
     }
 
     private static void DisableCuffModule()
@@ -388,22 +367,24 @@ public sealed class Saucy : IDalamudPlugin
 
             if (TriadAutomater.ModuleEnabled || TriadAutomater.IsTriadResultVisible())
             {
+                if (TriadAutomater.ModuleEnabled)
+                {
+                    TrySkipTriadDialogue();
+                }
+
                 if (!TriadAutomater.ShouldContinueTriadSession())
                 {
                     TriadAutomater.RunModule();
 
                     if (TriadAutomater.CanFinalizeTriadSession())
                     {
-                        if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent] ||
-                            Svc.Condition[ConditionFlag.Occupied33] ||
-                            Svc.Condition[ConditionFlag.OccupiedInEvent] ||
-                            Svc.Condition[ConditionFlag.Occupied30] ||
-                            Svc.Condition[ConditionFlag.Occupied38] ||
-                            Svc.Condition[ConditionFlag.Occupied39] ||
-                            Svc.Condition[ConditionFlag.OccupiedSummoningBell] ||
-                            Svc.Condition[ConditionFlag.WatchingCutscene] ||
-                            Svc.Condition[ConditionFlag.Mounting71] ||
-                            Svc.Condition[ConditionFlag.CarryingObject])
+                        if (TriadAutomater.CardFarmHasPendingDrops() &&
+                            (TriadAutomater.IsCardFarmModeActive() || TriadAutomater.CardFarmSessionActive))
+                        {
+                            return;
+                        }
+
+                        if (IsTriadDialogueBlocking())
                         {
                             SkipDialogue();
                         }
@@ -414,9 +395,6 @@ public sealed class Saucy : IDalamudPlugin
                                 PlaySound();
                             }
 
-                            TriadAutomater.PlayXTimes = false;
-                            TriadAutomater.PlayUntilCardDrops = false;
-                            TriadAutomater.PlayUntilAllCardsDropOnce = false;
                             TriadAutomater.ModuleEnabled = false;
                             TriadAutomater.TempCardsWonList.Clear();
                             TriadAutomater.MatchesCompletedThisSession = 0;
@@ -495,6 +473,64 @@ public sealed class Saucy : IDalamudPlugin
         }
 
         return addon->IsVisible;
+    }
+
+    private void TrySkipTriadDialogue()
+    {
+        if (!IsTriadDialogueBlocking())
+        {
+            return;
+        }
+
+        SkipDialogue();
+        TrySkipSelectYesno();
+    }
+
+    private static bool IsTriadDialogueBlocking()
+    {
+        if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent] ||
+            Svc.Condition[ConditionFlag.Occupied33] ||
+            Svc.Condition[ConditionFlag.OccupiedInEvent] ||
+            Svc.Condition[ConditionFlag.Occupied30] ||
+            Svc.Condition[ConditionFlag.Occupied38] ||
+            Svc.Condition[ConditionFlag.Occupied39] ||
+            Svc.Condition[ConditionFlag.OccupiedSummoningBell] ||
+            Svc.Condition[ConditionFlag.WatchingCutscene] ||
+            Svc.Condition[ConditionFlag.Mounting71] ||
+            Svc.Condition[ConditionFlag.CarryingObject])
+        {
+            return true;
+        }
+
+        return IsTriadAddonReady("Talk") || IsTriadAddonReady("SelectYesno");
+    }
+
+    private static unsafe bool IsTriadAddonReady(string addonName)
+    {
+        if (!TryGetAddonByName<AtkUnitBase>(addonName, out var addon))
+        {
+            return false;
+        }
+
+        return addon->IsVisible && IsAddonReady(addon);
+    }
+
+    private unsafe void TrySkipSelectYesno()
+    {
+        try
+        {
+            if (!TryGetAddonByName<AddonSelectYesno>("SelectYesno", out var yesno) ||
+                !IsAddonReady(&yesno->AtkUnitBase))
+            {
+                return;
+            }
+
+            new AddonMaster.SelectYesno(yesno).Yes();
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Verbose(ex, "[Saucy] TrySkipSelectYesno failed");
+        }
     }
 
     private unsafe void SkipDialogue()
@@ -604,7 +640,7 @@ public sealed class Saucy : IDalamudPlugin
         {
             if (int.TryParse(args[2], out var val))
             {
-                TriadAutomater.PlayXTimes = true;
+                TriadAutomater.ApplyRunMode(TriadRunMode.PlayXTimes);
                 Svc.Chat.Print("[Saucy] Play X Amount of Times Enabled!");
                 TriadAutomater.NumberOfTimes = val;
             }
@@ -619,12 +655,13 @@ public sealed class Saucy : IDalamudPlugin
         {
             if (args[2].ToLower() == "any")
             {
-                TriadAutomater.PlayUntilCardDrops = true;
+                TriadAutomater.ApplyRunMode(TriadRunMode.PlayUntilAnyCard);
                 Svc.Chat.Print("[Saucy] Play Until Any Cards Drop Enabled!");
             }
+
             if (args[2].ToLower() == "all")
             {
-                TriadAutomater.PlayUntilAllCardsDropOnce = true;
+                TriadAutomater.ApplyRunMode(TriadRunMode.PlayUntilAllCards);
                 Svc.Chat.Print("[Saucy] Play Until All Cards Drop from NPC at Least X Times Enabled!");
             }
 

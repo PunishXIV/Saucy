@@ -78,11 +78,6 @@ public class Solver
     public Solver() => TriadGameSimulation.StaticInitialize();
 
     public TriadGameScreenMemory DebugScreenMemory { get; } = new();
-    public ScannerTriad.GameState DebugScreenState => cachedScreenState;
-    public TriadCard MoveCard => DebugScreenMemory.deckBlue?.GetCard(moveCardIdx);
-    public float PreGameProgress => (preGameDecks.Count > 0) ? (1.0f * preGameSolved / preGameDecks.Count) : 0.0f;
-    public float DeckOptimizerProgress => deckOptimizer.GetProgress() / 100.0f;
-    public bool IsRecommendedDeckOptimizerRunning => optimizerInProgress && !optimizerTimedOut && !optimizerApplied;
     public bool HasOptimizedDeckApplied => optimizerApplied;
 
     public int OptimizedDeckSlotId => optimizerApplied ? optimizerTargetDeckId : -1;
@@ -292,13 +287,6 @@ public class Solver
 
         return false;
     }
-
-    public event Action<bool> OnMoveChanged;
-
-    /// <summary>
-    /// Optional in-game debug lines via /echo. Off by default.
-    /// </summary>
-    public const bool DebugTriadMoves = false;
 
     public void UpdateGame(UIStateTriadGame stateOb) => UpdateGame(stateOb, false);
 
@@ -613,18 +601,12 @@ public class Solver
         moveCardIdx = -1;
         moveBoardIdx = -1;
         ResetPendingPlacement();
-        OnMoveChanged?.Invoke(false);
     }
 
     private void ApplySolverMove(TriadNpc _, TriadGameScreenMemory.EUpdateFlags updateFlags, bool moveChanged, bool turnBecameActive)
     {
         if (DebugScreenMemory.deckBlue == null || DebugScreenMemory.gameState == null || DebugScreenMemory.gameSolver == null)
         {
-            if (DebugTriadMoves)
-            {
-                Svc.Chat.Print("[Saucy] Triad: screen memory not ready.");
-            }
-
             ClearMove();
             return;
         }
@@ -662,14 +644,6 @@ public class Solver
                 TryApplyFallbackMove();
             }
 
-            if (DebugTriadMoves)
-            {
-                var cardName = DebugScreenMemory.deckBlue.GetCard(moveCardIdx)?.Name ?? "??";
-                Svc.Chat.Print(hasMove
-                    ? $"[Saucy] Triad move: card {moveCardIdx} ({cardName}) -> board {moveBoardIdx}"
-                    : $"[Saucy] Triad: solver found no legal move (flags:{updateFlags}, moveChg:{moveChanged}, turnOn:{turnBecameActive}).");
-            }
-
             if (hasMove)
             {
                 var solverCardOb = DebugScreenMemory.deckBlue.GetCard(moveCardIdx);
@@ -685,54 +659,6 @@ public class Solver
             pauseOptimizerForSolver = false;
             UpdateDeckOptimizerPause();
         }
-
-        OnMoveChanged?.Invoke(hasMove);
-    }
-
-    public (List<TriadCard>, List<TriadCard>) GetScreenRedDeckDebug()
-    {
-        var knownCards = new List<TriadCard>();
-        var unknownCards = new List<TriadCard>();
-
-        if (DebugScreenMemory != null && DebugScreenMemory.deckRed != null && DebugScreenMemory.deckRed.deck != null)
-        {
-            var deckInst = DebugScreenMemory.deckRed;
-            if (deckInst.availableCardMask > 0)
-            {
-                for (var Idx = 0; Idx < deckInst.cards.Length; Idx++)
-                {
-                    var bIsAvailable = (deckInst.availableCardMask & (1 << Idx)) != 0;
-                    if (bIsAvailable)
-                    {
-                        var cardOb = deckInst.GetCard(Idx);
-                        var bIsKnownPool = deckInst.deck.knownCards.Contains(cardOb);
-
-                        var listToUse = bIsKnownPool ? knownCards : unknownCards;
-                        listToUse.Add(cardOb);
-                    }
-                }
-            }
-
-            var visibleCardsMask = (deckInst.cards != null) ? ((1 << deckInst.cards.Length) - 1) : 0;
-            var hasHiddenCards = (deckInst.availableCardMask & ~visibleCardsMask) != 0;
-            if (hasHiddenCards)
-            {
-                for (var Idx = deckInst.cards.Length; Idx < 15; Idx++)
-                {
-                    var bIsAvailable = (deckInst.availableCardMask & (1 << Idx)) != 0;
-                    if (bIsAvailable)
-                    {
-                        var cardOb = deckInst.GetCard(Idx);
-                        var bIsKnownPool = (deckInst.unknownPoolMask & (1 << Idx)) == 0;
-
-                        var listToUse = bIsKnownPool ? knownCards : unknownCards;
-                        listToUse.Add(cardOb);
-                    }
-                }
-            }
-        }
-
-        return (knownCards, unknownCards);
     }
 
     public void OnNpcSelected(TriadNpc npc) => OnNpcSelected(npc, [], startOptimizer: false);
@@ -816,8 +742,6 @@ public class Solver
             StartRecommendedDeckOptimizer(npc, preGameMods);
         }
     }
-
-    public void EnsurePrepNpcSynced() => EnsureRunTargetNpcSynced();
 
     private bool TrySyncNpcFromPrepState(UIStateTriadPrep state)
     {
@@ -924,9 +848,19 @@ public class Solver
 
             var preserveOptimizedDeck = optimizerApplied && optimizerTargetDeckId >= 0;
 
-            preGameNpc = newPreGameNpc;
+            preGameNpc = newPreGameNpc ?? preGameNpc;
             preGameMods = newPreGameMods;
             preGameDecks = newPreGameDecks;
+
+            if (preGameNpc == null)
+            {
+                return;
+            }
+
+            if (preGameNpc.Deck == null || preGameDecks == null || preGameDecks.Count == 0)
+            {
+                return;
+            }
 
             if (preserveOptimizedDeck)
             {
@@ -949,6 +883,11 @@ public class Solver
 
             foreach (var kvp in preGameDecks)
             {
+                if (kvp.Value?.solverDeck == null)
+                {
+                    continue;
+                }
+
                 var deckSolver = new TriadGameSolver();
                 deckSolver.InitializeSimulation(preGameMods);
 
@@ -1667,3 +1606,4 @@ public class Solver
         public TriadGameSolver solver;
     }
 }
+                                                                      

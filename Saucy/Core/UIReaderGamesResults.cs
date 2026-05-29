@@ -13,7 +13,6 @@ public class UIReaderGamesResults(IGameGui gameGui) : IUIReader
     private bool needsNotify;
     public Action<UIStateCuffResults>? OnCuffUpdated;
     public Action<UIStateLimbResults>? OnLimbUpdated;
-    public Action<bool>? OnResultsUIChanged;
 
     public bool HasResultsUI { get; private set; }
 
@@ -54,14 +53,7 @@ public class UIReaderGamesResults(IGameGui gameGui) : IUIReader
         }
     }
 
-    public void SetIsResultsUI(bool value)
-    {
-        if (HasResultsUI != value)
-        {
-            HasResultsUI = value;
-            OnResultsUIChanged?.Invoke(value);
-        }
-    }
+    public void SetIsResultsUI(bool value) => HasResultsUI = value;
 
     private unsafe void UpdateCachedState(AtkUnitBase* baseNode)
     {
@@ -92,7 +84,6 @@ public class UIReaderGamesResults(IGameGui gameGui) : IUIReader
                 limbResults.numMGP = -1;
             }
 
-            Svc.Log.Debug($"{limbResults.numMGP}");
         }
     }
 }

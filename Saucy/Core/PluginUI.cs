@@ -362,6 +362,13 @@ public unsafe class PluginUI : Window
             TriadAutomater.NumberOfTimes = 1;
         }
 
+        if (TriadAutomater.PlayXTimes)
+        {
+            TriadAutomater.PlayUntilAllCardsDropOnce = false;
+            TriadAutomater.PlayUntilCardDrops = false;
+            TriadAutomater.DeactivateCardFarmSession();
+        }
+
         if (!TriadAutomater.PlayXTimes)
         {
             return;
@@ -627,6 +634,10 @@ public unsafe class PluginUI : Window
                 TriadAutomater.EnsureRunTargetCards(CurrentNPC);
                 TriadAutomater.RunModule();
             }
+            else
+            {
+                TriadAutomater.DeactivateCardFarmSession();
+            }
         }
         ImGui.SameLine();
         ImGuiComponents.HelpMarker("Enable during match registration or deck select to auto-accept and play.");
@@ -715,6 +726,7 @@ public unsafe class PluginUI : Window
             TriadAutomater.PlayXTimes = true;
             TriadAutomater.PlayUntilCardDrops = false;
             TriadAutomater.PlayUntilAllCardsDropOnce = false;
+            TriadAutomater.DeactivateCardFarmSession();
             if (TriadAutomater.NumberOfTimes <= 0)
             {
                 TriadAutomater.NumberOfTimes = 1;
@@ -728,6 +740,7 @@ public unsafe class PluginUI : Window
             TriadAutomater.PlayUntilCardDrops = true;
             TriadAutomater.PlayXTimes = false;
             TriadAutomater.PlayUntilAllCardsDropOnce = false;
+            TriadAutomater.DeactivateCardFarmSession();
             if (TriadAutomater.NumberOfTimes <= 0)
             {
                 TriadAutomater.NumberOfTimes = 1;
@@ -742,7 +755,15 @@ public unsafe class PluginUI : Window
             TriadAutomater.PlayUntilCardDrops = false;
             TriadAutomater.PlayXTimes = false;
             TriadAutomater.NumberOfTimes = 1;
-            TriadAutomater.TempCardsWonList.Clear();
+            if (TriadAutomater.ModuleEnabled)
+            {
+                TriadAutomater.ActivateCardFarmSession(CurrentNPC);
+            }
+            else
+            {
+                TriadAutomater.TempCardsWonList.Clear();
+            }
+
             TriadAutomater.OnRunModeSettingsChanged();
         }
 

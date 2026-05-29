@@ -1,5 +1,6 @@
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System.Collections.Generic;
+using static ECommons.GenericHelpers;
 namespace Saucy.TripleTriad.Utils;
 
 public interface IUIReader
@@ -96,23 +97,27 @@ public class UIReaderScheduler(IGameGui gameGui)
             return nint.Zero;
         }
 
-        var maxIndex = name == "GSInfoCardList" ? 8 : 1;
-        for (var i = 0; i < maxIndex; i++)
+        if (name == "GSInfoCardList")
         {
-            var handle = gameGui.GetAddonByName(name, i);
-            if (handle.Address == nint.Zero)
+            for (var i = 0; i < 8; i++)
             {
-                continue;
+                var handle = gameGui.GetAddonByName(name, i);
+                if (handle.Address == nint.Zero)
+                {
+                    continue;
+                }
+
+                var baseNode = (AtkUnitBase*)handle.Address;
+                if (IsAddonVisible(baseNode))
+                {
+                    return handle.Address;
+                }
             }
 
-            var baseNode = (AtkUnitBase*)handle.Address;
-            if (IsAddonVisible(baseNode))
-            {
-                return handle.Address;
-            }
+            return nint.Zero;
         }
 
-        return nint.Zero;
+        return TryGetAddonByName<AtkUnitBase>(name, out var addon) ? (nint)addon : nint.Zero;
     }
 
     private static unsafe bool IsAddonVisible(AtkUnitBase* baseNode)
