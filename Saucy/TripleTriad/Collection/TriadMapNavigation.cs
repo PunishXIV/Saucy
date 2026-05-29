@@ -236,7 +236,6 @@ internal static class TriadMapNavigation
             pointOnFloor,
             fly,
             targetTerritoryId,
-            null,
             aethernetShardId: travelPlan.AethernetShardId,
             aethernetShardName: travelPlan.AethernetShardName);
 

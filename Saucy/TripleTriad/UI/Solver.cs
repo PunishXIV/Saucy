@@ -302,7 +302,7 @@ public class Solver
         if (stateOb != null)
         {
             var parseCtx = new GameUIParser();
-            screenOb = stateOb.ToTriadScreenState(parseCtx, false);
+            screenOb = stateOb.ToTriadScreenState(parseCtx);
             currentNpc = stateOb.ToTriadNpc(parseCtx);
             EnsureScreenMods(screenOb);
 
@@ -656,7 +656,7 @@ public class Solver
         }
     }
 
-    public void OnNpcSelected(TriadNpc npc) => OnNpcSelected(npc, [], false);
+    public void OnNpcSelected(TriadNpc npc) => OnNpcSelected(npc, []);
 
     public void OnNpcSelected(TriadNpc npc, List<TriadGameModifier> regionMods, bool startOptimizer = false)
     {
