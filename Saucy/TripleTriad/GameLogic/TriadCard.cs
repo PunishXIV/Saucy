@@ -1,5 +1,5 @@
-﻿using System;
-namespace FFTriadBuddy;
+using System;
+namespace Saucy.TripleTriad.GameLogic;
 
 public enum ETriadCardRarity
 {

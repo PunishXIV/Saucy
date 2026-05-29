@@ -1,11 +1,12 @@
-﻿using FFXIVClientStructs.FFXIV.Component.GUI;
-using MgAl2O4.Utils;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.CuffACur;
 using Saucy.OutOnALimb;
+using Saucy.TripleTriad.Utils;
 using System;
 using System.Linq;
 
-namespace Saucy.TripleTriad;
+namespace Saucy;
+
 public class UIReaderGamesResults(IGameGui gameGui) : IUIReader
 {
     private readonly IGameGui gameGui = gameGui;

@@ -5,7 +5,7 @@ using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using ECommons.ImGuiMethods;
-using FFTriadBuddy;
+using Saucy.TripleTriad.GameLogic;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
 using PunishLib.ImGuiMethods;
@@ -17,7 +17,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using TriadBuddyPlugin;
+using Saucy.TripleTriad.Data;
+using Saucy.TripleTriad.UI;
 namespace Saucy;
 
 // It is good to have this be disposable in general, in case you ever need it
@@ -559,10 +560,10 @@ public unsafe class PluginUI : Window
             C.Save();
         }
 
-        var collectionUi = C.TriadBuddyCollectionUiEnabled;
-        if (ImGui.Checkbox("TriadBuddy card search at Gold Saucer", ref collectionUi))
+        var collectionUi = C.CollectionUiEnabled;
+        if (ImGui.Checkbox("Card search at Gold Saucer", ref collectionUi))
         {
-            C.TriadBuddyCollectionUiEnabled = collectionUi;
+            C.CollectionUiEnabled = collectionUi;
             C.Save();
         }
         ImGuiComponents.HelpMarker("Shows card/NPC search panels beside the in-game Gold Saucer card list.");
@@ -575,7 +576,7 @@ public unsafe class PluginUI : Window
         SaucyTheme.DrawCard("Deck", null, DrawTriadDeckBody);
         SaucyTheme.DrawCard("Run mode", null, DrawTriadRunModeBody);
         SaucyTheme.DrawCard("Notifications", null, DrawTriadNotificationsBody);
-        SaucyTheme.DrawCard("Dependencies", "TriadBuddy integrations", TriadDependenciesUi.Draw);
+        SaucyTheme.DrawCard("Dependencies", "Optional integrations", TriadDependenciesUi.Draw);
     }
 
     private static void DrawTriadDeckBody()

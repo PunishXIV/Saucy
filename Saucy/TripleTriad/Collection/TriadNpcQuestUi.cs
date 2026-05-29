@@ -4,7 +4,8 @@ using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using ECommons;
 using Saucy.IPC;
-using TriadBuddyPlugin;
+using Saucy.TripleTriad.Data;
+using Saucy.TripleTriad.UI;
 
 namespace Saucy.TripleTriad;
 

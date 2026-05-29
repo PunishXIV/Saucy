@@ -1,5 +1,5 @@
-﻿using FFTriadBuddy;
-namespace TriadBuddy;
+using Saucy.TripleTriad.GameLogic;
+namespace Saucy.TripleTriad.Utils;
 
 internal static class CardUtils
 {

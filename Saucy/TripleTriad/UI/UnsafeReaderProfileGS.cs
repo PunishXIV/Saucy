@@ -1,9 +1,9 @@
-﻿using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using System;
 using System.Text;
 using static FFXIVClientStructs.FFXIV.Client.UI.Misc.GoldSaucerModule;
 
-namespace TriadBuddyPlugin;
+namespace Saucy.TripleTriad.UI;
 
 public unsafe class UnsafeReaderProfileGS
 {

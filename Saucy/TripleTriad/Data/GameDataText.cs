@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace FFTriadBuddy;
+namespace Saucy.TripleTriad.Data;
 
 internal static class GameDataText
 {

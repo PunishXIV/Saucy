@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-namespace FFTriadBuddy;
+namespace Saucy.TripleTriad.GameLogic;
 
 public abstract class TriadGameAgent
 {

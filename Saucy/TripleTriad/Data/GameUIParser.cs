@@ -1,6 +1,6 @@
-﻿using FFTriadBuddy;
+
 using System;
-namespace TriadBuddyPlugin;
+namespace Saucy.TripleTriad.Data;
 
 public class GameUIParser
 {

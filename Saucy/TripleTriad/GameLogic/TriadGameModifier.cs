@@ -1,8 +1,8 @@
-﻿using MgAl2O4.Utils;
+using Saucy.TripleTriad.Utils;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-namespace FFTriadBuddy;
+namespace Saucy.TripleTriad.GameLogic;
 
 [Flags]
 public enum ETriadGameSpecialMod

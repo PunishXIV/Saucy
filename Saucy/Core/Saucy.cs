@@ -5,7 +5,7 @@ using ECommons.Configuration;
 using ECommons.SimpleGui;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using MgAl2O4.Utils;
+using Saucy.TripleTriad.Utils;
 using NAudio.Wave;
 using PunishLib;
 using Saucy.AirForce;
@@ -20,7 +20,8 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using TriadBuddyPlugin;
+using Saucy.TripleTriad.Data;
+using Saucy.TripleTriad.UI;
 using static ECommons.GenericHelpers;
 using Module = ECommons.Module;
 
@@ -40,7 +41,7 @@ public sealed class Saucy : IDalamudPlugin
     public static GameDataLoader dataLoader = null!;
     public static ModuleManager ModuleManager = null!;
 
-    private TriadBuddyHost? _triadBuddyHost;
+    private TriadCollectionHost? _triadCollectionHost;
 
     private static Dictionary<uint, int>? cardIdByItemId;
 
@@ -109,7 +110,7 @@ public sealed class Saucy : IDalamudPlugin
         ModuleManager = new();
         C.EnabledModules.CollectionChanged += OnChange;
 
-        _triadBuddyHost = new TriadBuddyHost(pluginInterface);
+        _triadCollectionHost = new TriadCollectionHost(pluginInterface);
     }
     public string Name => "Saucy";
     public static Configuration C { get; private set; } = null!;
@@ -119,9 +120,9 @@ public sealed class Saucy : IDalamudPlugin
         Svc.Commands.RemoveHandler(commandName);
         Svc.PluginInterface.UiBuilder.OpenMainUi -= EzConfigGui.Open;
         Svc.Framework.Update -= RunBot;
-        _triadBuddyHost?.Dispose();
+        _triadCollectionHost?.Dispose();
         SubscriptionManager.DisposeAll();
-        _triadBuddyHost = null;
+        _triadCollectionHost = null;
         lock (_lockObj) { DisposeAudio(); }
         CufModule.FuncHook?.Dispose();
         ModuleManager.Dispose();

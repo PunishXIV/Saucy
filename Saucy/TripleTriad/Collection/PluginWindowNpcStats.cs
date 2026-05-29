@@ -1,13 +1,14 @@
-﻿using Dalamud;
+using Dalamud;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
-using FFTriadBuddy;
+using Saucy.TripleTriad.GameLogic;
 using Saucy;
 using Saucy.TripleTriad;
 using System;
 using System.Numerics;
-using TriadBuddyPlugin;
+using Saucy.TripleTriad.Data;
+using Saucy.TripleTriad.UI;
 namespace Saucy.TripleTriad;
 
 public class PluginWindowNpcStats : Window, IDisposable

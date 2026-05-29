@@ -1,5 +1,6 @@
-﻿using FFTriadBuddy;
-using TriadBuddyPlugin;
+using Saucy.TripleTriad.GameLogic;
+using Saucy.TripleTriad.Data;
+using Saucy.TripleTriad.UI;
 
 namespace Saucy.TripleTriad;
 

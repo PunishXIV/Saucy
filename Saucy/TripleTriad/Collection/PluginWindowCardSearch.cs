@@ -1,16 +1,17 @@
-﻿using Dalamud;
+using Dalamud;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
-using FFTriadBuddy;
+using Saucy.TripleTriad.GameLogic;
 using Saucy;
 using Saucy.TripleTriad;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using TriadBuddy;
-using TriadBuddyPlugin;
+using Saucy.TripleTriad.Utils;
+using Saucy.TripleTriad.Data;
+using Saucy.TripleTriad.UI;
 
 namespace Saucy.TripleTriad;
 

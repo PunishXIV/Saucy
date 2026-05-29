@@ -1,7 +1,7 @@
-using MgAl2O4.Utils;
+using Saucy.TripleTriad.Utils;
 using System;
 using System.Collections.Generic;
-namespace FFTriadBuddy;
+namespace Saucy.TripleTriad.GameLogic;
 
 public enum ETriadDeckState
 {

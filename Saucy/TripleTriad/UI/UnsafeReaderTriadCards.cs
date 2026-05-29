@@ -1,6 +1,6 @@
-﻿using Saucy.TripleTriad;
+using Saucy.TripleTriad;
 
-namespace TriadBuddyPlugin;
+namespace Saucy.TripleTriad.UI;
 
 public class UnsafeReaderTriadCards
 {

@@ -1,12 +1,12 @@
-﻿using FFTriadBuddy;
+
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using MgAl2O4.Utils;
+using Saucy.TripleTriad.Utils;
 using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
-namespace TriadBuddyPlugin;
+namespace Saucy.TripleTriad.UI;
 
 public class UIReaderTriadCardList : IUIReader
 {

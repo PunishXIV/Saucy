@@ -45,7 +45,7 @@ internal static class TriadDependenciesUi
     public static void Draw()
     {
         ImGui.TextWrapped(
-            "Optional plugins for TriadBuddy in Saucy: path to NPCs on the map, teleport when needed, and start unlock quests.");
+            "Optional plugins for Saucy: path to NPCs on the map, teleport when needed, and start unlock quests.");
         ImGui.Dummy(new Vector2(0, 4));
 
         foreach (var entry in Dependencies)

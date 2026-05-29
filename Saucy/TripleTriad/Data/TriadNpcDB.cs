@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-namespace FFTriadBuddy;
+namespace Saucy.TripleTriad.Data;
 
 public class TriadNpc
 {

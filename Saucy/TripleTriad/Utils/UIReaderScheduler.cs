@@ -1,6 +1,6 @@
-﻿using FFXIVClientStructs.FFXIV.Component.GUI;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using System.Collections.Generic;
-namespace MgAl2O4.Utils;
+namespace Saucy.TripleTriad.Utils;
 
 public interface IUIReader
 {

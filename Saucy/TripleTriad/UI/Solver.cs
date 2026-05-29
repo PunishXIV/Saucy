@@ -1,9 +1,9 @@
-using FFTriadBuddy;
-using MgAl2O4.Utils;
+
+using Saucy.TripleTriad.Utils;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-namespace TriadBuddyPlugin;
+namespace Saucy.TripleTriad.UI;
 
 public class Solver
 {

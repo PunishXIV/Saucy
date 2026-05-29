@@ -1,4 +1,4 @@
-﻿using Dalamud.Utility;
+using Dalamud.Utility;
 using ECommons;
 using ECommons.Automation;
 using ECommons.Automation.UIInput;
@@ -8,7 +8,7 @@ using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using static ECommons.GenericHelpers;
-using static TriadBuddyPlugin.UIReaderTriadGame;
+using static Saucy.TripleTriad.UI.UIReaderTriadGame;
 
 namespace Saucy.TripleTriad;
 

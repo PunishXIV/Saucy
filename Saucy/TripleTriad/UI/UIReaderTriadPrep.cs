@@ -1,9 +1,9 @@
-﻿using FFXIVClientStructs.FFXIV.Component.GUI;
-using MgAl2O4.Utils;
+using FFXIVClientStructs.FFXIV.Component.GUI;
+using Saucy.TripleTriad.Utils;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-namespace TriadBuddyPlugin;
+namespace Saucy.TripleTriad.UI;
 
 public class UIReaderTriadPrep
 {

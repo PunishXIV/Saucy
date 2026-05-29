@@ -1,7 +1,7 @@
-﻿using FFTriadBuddy;
+
 using System;
 using System.Collections.Generic;
-namespace TriadBuddyPlugin;
+namespace Saucy.TripleTriad.Data;
 
 public enum GameCardCollectionFilter
 {

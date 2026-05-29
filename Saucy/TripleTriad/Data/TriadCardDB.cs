@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-namespace FFTriadBuddy;
+namespace Saucy.TripleTriad.Data;
 
 public class TriadCardDB
 {

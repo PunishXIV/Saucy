@@ -1,7 +1,7 @@
-﻿using FFTriadBuddy;
+
 using System;
 using System.Collections.Generic;
-namespace TriadBuddyPlugin;
+namespace Saucy.TripleTriad.UI;
 
 public class UIStateTriadCard : IEquatable<UIStateTriadCard>
 {

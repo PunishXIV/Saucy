@@ -1,7 +1,7 @@
-﻿using Dalamud.Game.Text.SeStringHandling.Payloads;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Saucy.TripleTriad;
 using System.Collections.Generic;
-namespace TriadBuddyPlugin;
+namespace Saucy.TripleTriad.Data;
 
 public class GameNpcInfo
 {

@@ -1,8 +1,8 @@
-﻿using FFXIVClientStructs.FFXIV.Component.GUI;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
-namespace MgAl2O4.Utils;
+namespace Saucy.TripleTriad.Utils;
 
 // Dalamud.Interface.UIDebug is amazing
 

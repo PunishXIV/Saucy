@@ -2,15 +2,15 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ECommons;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Saucy.TripleTriad.UI;
 using System;
-using TriadBuddyPlugin;
 using static ECommons.GenericHelpers;
 
 namespace Saucy.TripleTriad;
 
-internal sealed class TriadBuddyHost : IDisposable
+internal sealed class TriadCollectionHost : IDisposable
 {
-    private readonly WindowSystem _windowSystem = new("SaucyTriadBuddy");
+    private readonly WindowSystem _windowSystem = new("SaucyTriadCollection");
     private readonly UIReaderTriadCardList _uiReaderCardList = new();
     private readonly StatTracker _statTracker = new();
     private readonly PluginWindowCardSearch _cardSearchWindow;
@@ -18,7 +18,7 @@ internal sealed class TriadBuddyHost : IDisposable
     private readonly PluginWindowNpcStats _npcStatsWindow;
     private bool _sawGameDataReady;
 
-    public TriadBuddyHost(IDalamudPluginInterface pluginInterface)
+    public TriadCollectionHost(IDalamudPluginInterface pluginInterface)
     {
         _npcStatsWindow = new(_statTracker);
         _cardSearchWindow = new(_uiReaderCardList, _npcStatsWindow);
@@ -40,7 +40,7 @@ internal sealed class TriadBuddyHost : IDisposable
 
     private void OnDraw()
     {
-        if (!Saucy.C.TriadBuddyCollectionUiEnabled)
+        if (!Saucy.C.CollectionUiEnabled)
             return;
 
         if (!Svc.ClientState.IsLoggedIn)
@@ -88,7 +88,6 @@ internal sealed class TriadBuddyHost : IDisposable
         _uiReaderCardList.OnAddonUpdate(addonPtr);
     }
 
-    /// <summary>Upstream TriadBuddy uses <c>GetAddonByName("GSInfoCardList", 1)</c> — index 0 is often not the visible instance.</summary>
     private static unsafe nint ResolveCardListAddonPtr()
     {
         for (var i = 0; i < 8; i++)
@@ -105,5 +104,3 @@ internal sealed class TriadBuddyHost : IDisposable
         return nint.Zero;
     }
 }
-
-

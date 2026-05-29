@@ -1,11 +1,11 @@
-﻿using MgAl2O4.Utils;
+using Saucy.TripleTriad.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
-namespace FFTriadBuddy;
+namespace Saucy.TripleTriad.GameLogic;
 
 public class TriadDeckOptimizer
 {

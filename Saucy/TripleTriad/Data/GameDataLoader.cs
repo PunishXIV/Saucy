@@ -1,10 +1,11 @@
-using FFTriadBuddy;
+﻿
 using Lumina.Excel.Sheets;
+using TriadNpcSheet = Lumina.Excel.Sheets.TripleTriad;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-namespace TriadBuddyPlugin;
+namespace Saucy.TripleTriad.Data;
 
 public class GameDataLoader
 {
@@ -227,7 +228,7 @@ public class GameDataLoader
         // name is a bit more annoying to get
         var listTriadIds = new List<uint>();
 
-        var npcDataSheet = Svc.Data.GetExcelSheet<TripleTriad>();
+        var npcDataSheet = Svc.Data.GetExcelSheet<TriadNpcSheet>();
         if (npcDataSheet != null)
         {
             // rowIds are not going from 0 here!
@@ -397,7 +398,7 @@ public class GameDataLoader
 
     private bool ParseNpcUnlockQuests()
     {
-        var npcSheet = Svc.Data.GetExcelSheet<TripleTriad>();
+        var npcSheet = Svc.Data.GetExcelSheet<TriadNpcSheet>();
         if (npcSheet == null)
             return true;
 
