@@ -11,22 +11,22 @@ namespace Saucy.IPC;
 internal static class Questionable
 {
     [EzIPC]
-    public static Func<string, bool> StartSingleQuest;
+    public static Func<string, bool> StartSingleQuest = null!;
 
     [EzIPC]
-    public static Func<string, bool> IsQuestLocked;
+    public static Func<string, bool> IsQuestLocked = null!;
 
     [EzIPC]
-    public static Func<string, bool> IsReadyToAcceptQuest;
+    public static Func<string, bool> IsReadyToAcceptQuest = null!;
 
     [EzIPC]
-    public static Func<string, bool> IsQuestComplete;
+    public static Func<string, bool> IsQuestComplete = null!;
 
     [EzIPC]
-    public static Func<string, bool> IsQuestAccepted;
+    public static Func<string, bool> IsQuestAccepted = null!;
 
     [EzIPC]
-    public static Func<string, bool> IsQuestUnobtainable;
+    public static Func<string, bool> IsQuestUnobtainable = null!;
 
     public static bool IsInstalled => SubscriptionManager.IsInitialized(IPCNames.Questionable);
 }

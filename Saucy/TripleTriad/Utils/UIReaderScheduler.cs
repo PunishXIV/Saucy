@@ -16,7 +16,6 @@ public class UIReaderScheduler(IGameGui gameGui)
     private readonly List<AddonInfo> addons = [];
 
     private readonly IGameGui gameGui = gameGui;
-    private bool hasActiveAddons;
     private float slowCheckRemaining;
 
     public void AddObservedAddon(IUIReader uiReader) => addons.Add(new()
@@ -48,7 +47,6 @@ public class UIReaderScheduler(IGameGui gameGui)
                         {
                             addon.addonPtr = addonPtr;
                             addon.isActive = true;
-                            hasActiveAddons = true;
 
                             addon.reader.OnAddonShown(addonPtr);
                         }
@@ -86,7 +84,6 @@ public class UIReaderScheduler(IGameGui gameGui)
                 if (addonPtr != nint.Zero)
                 {
                     addon.reader.OnAddonUpdate(addonPtr);
-                    hasActiveAddons = true;
                 }
             }
         }

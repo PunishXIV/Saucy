@@ -1,18 +1,25 @@
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
+using ECommons;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Saucy.TripleTriad.UI;
 using System;
+using static ECommons.GenericHelpers;
+
 namespace Saucy.TripleTriad;
 
 internal sealed class TriadCollectionHost : IDisposable
 {
-    private readonly PluginWindowCardInfo _cardInfoWindow;
-    private readonly PluginWindowCardSearch _cardSearchWindow;
-    private readonly PluginWindowNpcStats _npcStatsWindow;
-    private readonly StatTracker _statTracker = new();
-    private readonly UIReaderTriadCardList _uiReaderCardList = new();
+    private const float SlowCheckInterval = 0.5f;
+
     private readonly WindowSystem _windowSystem = new("SaucyTriadCollection");
+    private readonly UIReaderTriadCardList _uiReaderCardList = new();
+    private readonly StatTracker _statTracker = new();
+    private readonly PluginWindowCardSearch _cardSearchWindow;
+    private readonly PluginWindowCardInfo _cardInfoWindow;
+    private readonly PluginWindowNpcStats _npcStatsWindow;
     private bool _sawGameDataReady;
+    private float _slowCheckRemaining;
 
     public TriadCollectionHost(IDalamudPluginInterface pluginInterface)
     {
@@ -25,30 +32,43 @@ internal sealed class TriadCollectionHost : IDisposable
         _windowSystem.AddWindow(_npcStatsWindow);
 
         pluginInterface.UiBuilder.Draw += OnDraw;
+        Svc.Framework.Update += OnFrameworkUpdate;
     }
 
     public void Dispose()
     {
+        Svc.Framework.Update -= OnFrameworkUpdate;
         Svc.PluginInterface.UiBuilder.Draw -= OnDraw;
         _windowSystem.RemoveAllWindows();
         _cardSearchWindow.Dispose();
     }
 
+    private void OnFrameworkUpdate(IFramework framework)
+    {
+        if (!C.CollectionUiEnabled || !Svc.ClientState.IsLoggedIn)
+        {
+            return;
+        }
+
+        if (_uiReaderCardList.IsVisible)
+        {
+            RefreshCardListReader();
+            return;
+        }
+
+        _slowCheckRemaining -= (float)framework.UpdateDelta.TotalSeconds;
+        if (_slowCheckRemaining > 0)
+        {
+            return;
+        }
+
+        _slowCheckRemaining = SlowCheckInterval;
+        RefreshCardListReader();
+    }
+
     private void OnDraw()
     {
-        if (!C.CollectionUiEnabled)
-        {
-            return;
-        }
-
-        if (!Svc.ClientState.IsLoggedIn)
-        {
-            return;
-        }
-
-        RefreshCardListReader();
-
-        if (!_uiReaderCardList.IsVisible)
+        if (!C.CollectionUiEnabled || !Svc.ClientState.IsLoggedIn || !_uiReaderCardList.IsVisible)
         {
             return;
         }
@@ -89,6 +109,7 @@ internal sealed class TriadCollectionHost : IDisposable
             {
                 _uiReaderCardList.OnAddonLost();
             }
+
             return;
         }
 

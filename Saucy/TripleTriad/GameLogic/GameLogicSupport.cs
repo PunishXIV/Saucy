@@ -1,3 +1,4 @@
+#nullable disable
 using System.Collections.Generic;
 namespace Saucy.TripleTriad.GameLogic;
 
@@ -5,12 +6,12 @@ public class PlayerSettingsDB
 {
     private static readonly PlayerSettingsDB instance = new();
     public List<TriadCard> ownedCards = [];
-    public TriadCard?[] starterCards;
+    public TriadCard[] starterCards;
 
     public PlayerSettingsDB()
     {
         var cardDB = TriadCardDB.Get();
-        starterCards = new TriadCard?[5];
+        starterCards = new TriadCard[5];
 
         starterCards[0] = cardDB.FindById(1); // Dodo
         starterCards[1] = cardDB.FindById(3); // Sabotender
@@ -33,12 +34,12 @@ public class ScannerTriad
 
     public class GameState
     {
-        public TriadCard?[] blueDeck = new TriadCard[5];
-        public TriadCard?[] board = new TriadCard[9];
+        public TriadCard[] blueDeck = new TriadCard[5];
+        public TriadCard[] board = new TriadCard[9];
         public ETriadCardOwner[] boardOwner = new ETriadCardOwner[9];
-        public TriadCard? forcedBlueCard = null;
+        public TriadCard forcedBlueCard = null;
         public List<TriadGameModifier> mods = [];
-        public TriadCard?[] redDeck = new TriadCard[5];
+        public TriadCard[] redDeck = new TriadCard[5];
         public ETurnState turnState = ETurnState.MissingTimer;
     }
 }

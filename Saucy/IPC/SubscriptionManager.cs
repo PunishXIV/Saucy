@@ -1,4 +1,6 @@
+using Dalamud.Plugin.Services;
 using ECommons.EzIpcManager;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -6,7 +8,13 @@ namespace Saucy.IPC;
 
 internal static class SubscriptionManager
 {
+    private static readonly Type[] IpcTypes = Assembly.GetExecutingAssembly()
+        .GetTypes()
+        .Where(type => type.GetCustomAttribute<IPCAttribute>() != null)
+        .ToArray();
+
     private static readonly Dictionary<string, EzIPCDisposalToken[]> InitializedIpcs = new();
+    private static int _subscribeTick;
 
     internal static bool IsInitialized(string plugin) =>
         InitializedIpcs.ContainsKey(plugin) && IsLoaded(plugin);
@@ -16,28 +24,37 @@ internal static class SubscriptionManager
 
     internal static void Subscribe(IFramework framework)
     {
-        foreach (var type in Assembly.GetExecutingAssembly().GetTypes().Where(type => type.GetCustomAttribute<IPCAttribute>() != null))
+        try
         {
-            var attr = type.GetCustomAttribute<IPCAttribute>()!;
-            if (!IsInitialized(attr.Name))
-            {
-                if (!IsLoaded(attr.Name))
-                {
-                    continue;
-                }
+            var checkUnloadsOnly = InitializedIpcs.Count == IpcTypes.Length &&
+                                   ++_subscribeTick % 60 != 0;
 
-                var disposals = EzIPC.Init(type, attr.Name);
-                InitializedIpcs.Add(attr.Name, disposals);
-            }
-            else if (!IsLoaded(attr.Name))
+            foreach (var type in IpcTypes)
             {
-                foreach (var token in InitializedIpcs[attr.Name])
+                var attr = type.GetCustomAttribute<IPCAttribute>()!;
+                if (!IsInitialized(attr.Name))
                 {
-                    token.Dispose();
-                }
+                    if (checkUnloadsOnly || !IsLoaded(attr.Name))
+                    {
+                        continue;
+                    }
 
-                InitializedIpcs.Remove(attr.Name);
+                    InitializedIpcs[attr.Name] = EzIPC.Init(type, attr.Name);
+                }
+                else if (!IsLoaded(attr.Name))
+                {
+                    foreach (var token in InitializedIpcs[attr.Name])
+                    {
+                        token.Dispose();
+                    }
+
+                    InitializedIpcs.Remove(attr.Name);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Error(ex, "Could not subscribe to IPCs");
         }
     }
 

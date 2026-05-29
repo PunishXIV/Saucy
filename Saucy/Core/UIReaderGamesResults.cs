@@ -11,9 +11,9 @@ public class UIReaderGamesResults(IGameGui gameGui) : IUIReader
     private UIStateLimbResults limbResults = new();
 
     private bool needsNotify;
-    public Action<UIStateCuffResults> OnCuffUpdated;
-    public Action<UIStateLimbResults> OnLimbUpdated;
-    public Action<bool> OnResultsUIChanged;
+    public Action<UIStateCuffResults>? OnCuffUpdated;
+    public Action<UIStateLimbResults>? OnLimbUpdated;
+    public Action<bool>? OnResultsUIChanged;
 
     public bool HasResultsUI { get; private set; }
 

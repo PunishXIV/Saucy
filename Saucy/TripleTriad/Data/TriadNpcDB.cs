@@ -1,3 +1,4 @@
+﻿#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -14,9 +15,9 @@ public class TriadNpc
     public bool hasLocMarkup;
     public int Id;
     public string Name = string.Empty;
-    public Regex? NamePartialRegex;
+    public Regex NamePartialRegex;
 
-    public Regex? NameRegex;
+    public Regex NameRegex;
     public List<TriadGameModifier> Rules;
 
     public TriadNpc(int id, List<TriadGameModifier> rules, int[] cardsAlways, int[] cardsPool)
@@ -80,13 +81,13 @@ public class TriadNpcDB
 
     public static TriadNpcDB Get() => instance;
 
-    public TriadNpc? Find(string Name)
+    public TriadNpc Find(string Name)
     {
         var nameLower = Name.ToLower();
         return npcs.Find(x => (x != null) && x.IsMatchingName(nameLower));
     }
 
-    public TriadNpc? FindByNameStart(string Name)
+    public TriadNpc FindByNameStart(string Name)
     {
         var nameLower = Name.ToLower();
         return npcs.Find(x => (x != null) && x.IsMatchingNameStart(nameLower));

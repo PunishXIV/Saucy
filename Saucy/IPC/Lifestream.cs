@@ -9,10 +9,10 @@ namespace Saucy.IPC;
 internal static class Lifestream
 {
     [EzIPC]
-    public static Func<uint, byte, bool> Teleport;
+    public static Func<uint, byte, bool> Teleport = null!;
 
     [EzIPC]
-    public static Func<bool> IsBusy;
+    public static Func<bool> IsBusy = null!;
 
     public static bool IsInstalled => SubscriptionManager.IsInitialized(IPCNames.Lifestream);
 

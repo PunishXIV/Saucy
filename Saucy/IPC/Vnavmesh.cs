@@ -10,13 +10,13 @@ namespace Saucy.IPC;
 internal static class Vnavmesh
 {
     [EzIPC("Nav.IsReady")]
-    public static Func<bool> NavIsReady;
+    public static Func<bool> NavIsReady = null!;
 
     [EzIPC("SimpleMove.PathfindAndMoveTo")]
-    public static Func<Vector3, bool, bool> SimpleMovePathfindAndMoveTo;
+    public static Func<Vector3, bool, bool> SimpleMovePathfindAndMoveTo = null!;
 
     [EzIPC("Query.Mesh.PointOnFloor")]
-    public static Func<Vector3, bool, float, Vector3?> QueryMeshPointOnFloor;
+    public static Func<Vector3, bool, float, Vector3?> QueryMeshPointOnFloor = null!;
 
     public static bool IsInstalled => SubscriptionManager.IsInitialized(IPCNames.Vnavmesh);
 
