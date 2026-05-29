@@ -122,7 +122,6 @@ public sealed class Saucy : IDalamudPlugin
         _triadBuddyHost = null;
         lock (_lockObj) { DisposeAudio(); }
         CufModule.FuncHook?.Dispose();
-        LimbManager.Dispose();
         ModuleManager.Dispose();
         ECommonsMain.Dispose(); //Don't forget!
         P = null!; //necessary to free the reference for GC
@@ -329,11 +328,13 @@ public sealed class Saucy : IDalamudPlugin
                 var values = stackalloc AtkValue[2];
                 values[0] = new()
                 {
-                    Type = AtkValueType.Int, Int = 0
+                    Type = AtkValueType.Int,
+                    Int = 0
                 };
                 values[1] = new()
                 {
-                    Type = AtkValueType.UInt, UInt = 1
+                    Type = AtkValueType.UInt,
+                    UInt = 1
                 };
                 addon->FireCallback(2, values);
             }
