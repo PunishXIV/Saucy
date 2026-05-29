@@ -385,14 +385,16 @@ public unsafe class PluginUI : Window
         var rightX = ImGui.GetWindowContentRegionMax().X - lifeW - sessW - spacing;
         if (rightX > ImGui.GetCursorPosX())
             ImGui.SetCursorPosX(rightX);
-        if (ImGui.Button(lifeLbl) && ImGui.GetIO().KeyCtrl)
+        ImGui.BeginDisabled(!ImGui.GetIO().KeyCtrl);
+        if (ImGui.Button(lifeLbl))
         {
             C.Stats = new();
             C.Save();
         }
         ImGui.SameLine();
-        if (ImGui.Button(sessLbl) && ImGui.GetIO().KeyCtrl)
+        if (ImGui.Button(sessLbl))
             C.SessionStats = new();
+        ImGui.EndDisabled();
         ImGui.Dummy(new Vector2(0, 2));
     }
 
