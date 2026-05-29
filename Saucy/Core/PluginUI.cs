@@ -729,6 +729,8 @@ public unsafe class PluginUI : Window
             {
                 TriadAutomater.NumberOfTimes = 1;
             }
+
+            TriadAutomater.OnRunModeSettingsChanged();
         }
 
         if (ImGui.RadioButton("Play until any cards drop", TriadAutomater.PlayUntilCardDrops))
@@ -740,6 +742,8 @@ public unsafe class PluginUI : Window
             {
                 TriadAutomater.NumberOfTimes = 1;
             }
+
+            TriadAutomater.OnRunModeSettingsChanged();
         }
 
         if (ImGui.RadioButton("Play until all cards drop", TriadAutomater.PlayUntilAllCardsDropOnce))
@@ -749,6 +753,7 @@ public unsafe class PluginUI : Window
             TriadAutomater.PlayXTimes = false;
             TriadAutomater.NumberOfTimes = 1;
             TriadAutomater.TempCardsWonList.Clear();
+            TriadAutomater.OnRunModeSettingsChanged();
         }
 
         if (TriadAutomater.PlayUntilAllCardsDropOnce)
@@ -800,7 +805,7 @@ public unsafe class PluginUI : Window
             }
         }
 
-        if (TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops || TriadAutomater.PlayUntilAllCardsDropOnce)
+        if (TriadAutomater.PlayXTimes)
         {
             ImGui.SetNextItemWidth(120f * ImGuiHelpers.GlobalScale);
             if (ImGui.InputInt("How many times", ref TriadAutomater.NumberOfTimes))
@@ -809,6 +814,8 @@ public unsafe class PluginUI : Window
                 {
                     TriadAutomater.NumberOfTimes = 1;
                 }
+
+                TriadAutomater.SyncPlayXTimesSession(TriadAutomater.NumberOfTimes);
             }
         }
     }

@@ -82,7 +82,7 @@ public unsafe class UnsafeReaderProfileGS
     /// <summary>
     /// Writes five card ids into a Gold Saucer profile deck slot (0–4).
     /// </summary>
-    public bool TryWritePlayerDeck(int deckIdx, ushort[] cardIds)
+    public bool TryWritePlayerDeck(int deckIdx, ushort[] cardIds, string? deckName = null)
     {
         if (HasErrors || deckIdx < 0 || deckIdx > 4 || cardIds == null || cardIds.Length != 5)
         {
@@ -117,6 +117,11 @@ public unsafe class UnsafeReaderProfileGS
                 deckPtr->Cards[idx] = cardIds[idx];
             }
 
+            if (!string.IsNullOrWhiteSpace(deckName))
+            {
+                WriteDeckName(deckPtr, deckName.Trim());
+            }
+
             return true;
         }
         catch (Exception ex)
@@ -124,6 +129,23 @@ public unsafe class UnsafeReaderProfileGS
             Svc.Log.Error(ex, "Failed to write GS profile deck {0}", deckIdx);
             HasErrors = true;
             return false;
+        }
+    }
+
+    private static void WriteDeckName(TripleTriadDeck* deckPtr, string deckName)
+    {
+        Span<byte> nameBytes = stackalloc byte[48];
+        nameBytes.Clear();
+        var encoded = Encoding.UTF8.GetBytes(deckName);
+        var copyLen = Math.Min(encoded.Length, 47);
+        if (copyLen > 0)
+        {
+            encoded.AsSpan(0, copyLen).CopyTo(nameBytes);
+        }
+
+        for (var idx = 0; idx < 48; idx++)
+        {
+            deckPtr->Name[idx] = nameBytes[idx];
         }
     }
 

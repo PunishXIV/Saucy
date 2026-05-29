@@ -1,7 +1,9 @@
-﻿using Lumina.Excel.Sheets;
+﻿using Dalamud.Utility;
+using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 using TriadNpcSheet = Lumina.Excel.Sheets.TripleTriad;
 namespace Saucy.TripleTriad.Data;
@@ -468,18 +470,16 @@ public class GameDataLoader
                 var mapRow = sheetMap.GetRowOrDefault(kvp.Value.mapId);
                 if (mapRow != null && kvp.Value.mapRawCoords != null)
                 {
-                    kvp.Value.mapCoords = new float[2];
-                    kvp.Value.mapCoords[0] = CovertCoordToHumanReadable(kvp.Value.mapRawCoords[0], mapRow.Value.OffsetX, mapRow.Value.SizeFactor);
-                    kvp.Value.mapCoords[1] = CovertCoordToHumanReadable(kvp.Value.mapRawCoords[2], mapRow.Value.OffsetY, mapRow.Value.SizeFactor);
+                    var map = mapRow.Value;
+                    kvp.Value.mapCoords =
+                    [
+                        MapUtil.ConvertWorldCoordXZToMapCoord(
+                            kvp.Value.mapRawCoords[0], map.SizeFactor, map.OffsetX),
+                        MapUtil.ConvertWorldCoordXZToMapCoord(
+                            kvp.Value.mapRawCoords[2], map.SizeFactor, map.OffsetY)
+                    ];
                 }
             }
-        }
-
-        static float CovertCoordToHumanReadable(float Coord, float Offset, float Scale)
-        {
-            var useScale = Scale / 100.0f;
-            var useValue = (Coord + Offset) * useScale;
-            return ((41.0f / useScale) * ((useValue + 1024.0f) / 2048.0f)) + 1;
         }
 
         return true;
@@ -601,6 +601,11 @@ public class GameDataLoader
             if (kvp.Value.mapCoords != null)
             {
                 gameNpcOb.Location = new(kvp.Value.territoryId, kvp.Value.mapId, kvp.Value.mapCoords[0], kvp.Value.mapCoords[1]);
+            }
+
+            if (kvp.Value.mapRawCoords is { Length: 3 } rawCoords)
+            {
+                gameNpcOb.WorldPosition = new(rawCoords[0], rawCoords[1], rawCoords[2]);
             }
 
             foreach (var cardId in kvp.Value.rewardCardIds)

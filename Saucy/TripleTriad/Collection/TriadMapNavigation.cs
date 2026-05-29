@@ -2,7 +2,9 @@ using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using ECommons.GameHelpers;
 using Saucy.IPC;
+using Saucy.TripleTriad.Data;
 using System;
+using System.Globalization;
 using System.Numerics;
 using Map = Lumina.Excel.Sheets.Map;
 namespace Saucy.TripleTriad;
@@ -16,6 +18,7 @@ internal static class TriadMapNavigation
     private static readonly TimeSpan DefaultNavigationTimeout = TimeSpan.FromSeconds(90);
     private static readonly TimeSpan AethernetStartupTimeout = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan AethernetSettleDelay = TimeSpan.FromSeconds(1.5);
+    private static readonly TimeSpan PostRouteNavReadyTimeout = TimeSpan.FromSeconds(45);
     private static readonly float AethernetMinMoveDistance = 3f;
     private static readonly float AethernetNearShardDistance = 8f;
 
@@ -26,10 +29,10 @@ internal static class TriadMapNavigation
     {
         if (npc != null)
         {
-            TTSolver.OnNpcSelected(npc);
+            TTSolver.OnNpcSelected(npc, [], startOptimizer: true);
         }
 
-        if (TryBeginNavigation(location))
+        if (TryBeginNavigation(location, npc: npc))
         {
             return;
         }
@@ -113,7 +116,7 @@ internal static class TriadMapNavigation
                 return;
 
             case NavigationPhase.WaitingForNavReady:
-                if (Lifestream.IsBusyNow() || Vnavmesh.IsMoving())
+                if (!pending.ArrivedViaMultiAreaRoute && (Lifestream.IsBusyNow() || Vnavmesh.IsMoving()))
                 {
                     return;
                 }
@@ -125,7 +128,10 @@ internal static class TriadMapNavigation
 
                 if (!Vnavmesh.IsNavReady())
                 {
-                    if (DateTime.UtcNow - pending.PhaseStartedUtc > TimeSpan.FromSeconds(15))
+                    var navReadyTimeout = pending.ArrivedViaMultiAreaRoute
+                        ? PostRouteNavReadyTimeout
+                        : TimeSpan.FromSeconds(15);
+                    if (DateTime.UtcNow - pending.PhaseStartedUtc > navReadyTimeout)
                     {
                         Svc.Chat.PrintError("[Saucy] vnavmesh is not ready for this zone yet.");
                         ClearPending();
@@ -147,7 +153,7 @@ internal static class TriadMapNavigation
         }
     }
 
-    private static bool TryBeginNavigation(MapLinkPayload location, bool fly = false)
+    private static bool TryBeginNavigation(MapLinkPayload location, bool fly = false, TriadNpc? npc = null)
     {
         if (!Vnavmesh.IsInstalled)
         {
@@ -155,7 +161,7 @@ internal static class TriadMapNavigation
             return false;
         }
 
-        var destination = GetWorldPosition(location);
+        var destination = ResolveDestination(location, npc);
         if (destination == null)
         {
             Svc.Chat.PrintError("[Saucy] Could not resolve NPC map coordinates.");
@@ -187,7 +193,7 @@ internal static class TriadMapNavigation
         var route = MultiAreaRouteRegistry.FindRoute(location);
         if (route != null && !inTargetTerritory)
         {
-            return TryBeginMultiAreaRoute(location, pointOnFloor, fly, targetTerritoryId, route);
+            return TryBeginMultiAreaRoute(location, pointOnFloor, fly, targetTerritoryId, route, npc);
         }
 
         var travelPlan = AetheryteHelper.FindBestTravelPlan(targetTerritoryId, pointOnFloor, inTargetTerritory);
@@ -231,18 +237,19 @@ internal static class TriadMapNavigation
             pointOnFloor,
             fly,
             targetTerritoryId,
+            npc: null,
             aethernetShardId: travelPlan.AethernetShardId,
             aethernetShardName: travelPlan.AethernetShardName);
 
         if (travelPlan.HasAethernet)
         {
             Svc.Chat.Print(
-                $"[Saucy] Teleporting to {location.PlaceName}, then aethernet to {travelPlan.AethernetShardName}, then moving to {location.CoordinateString}.");
+                $"[Saucy] Teleporting to {location.PlaceName}, then aethernet to {travelPlan.AethernetShardName}, then moving to {FormatMapCoordinates(location)}.");
         }
         else
         {
             Svc.Chat.Print(
-                $"[Saucy] Teleporting to {location.PlaceName}, then moving to {location.CoordinateString}.");
+                $"[Saucy] Teleporting to {location.PlaceName}, then moving to {FormatMapCoordinates(location)}.");
         }
 
         return true;
@@ -253,7 +260,8 @@ internal static class TriadMapNavigation
         Vector3 pointOnFloor,
         bool fly,
         uint targetTerritoryId,
-        MultiAreaRoute route)
+        MultiAreaRoute route,
+        TriadNpc? npc)
     {
         var context = new MultiAreaRouteExecutor.MultiAreaRouteContext
         {
@@ -276,6 +284,7 @@ internal static class TriadMapNavigation
             pointOnFloor,
             fly,
             targetTerritoryId,
+            npc,
             routeExecution: execution,
             startingPhase: startsWithTeleport
                 ? NavigationPhase.WaitingForLifestream
@@ -291,23 +300,18 @@ internal static class TriadMapNavigation
 
     private static void ContinueAfterZoneArrival(PendingNavigation pending)
     {
-        var travelPlan = AetheryteHelper.FindBestTravelPlan(
-            pending.TargetTerritoryId,
-            pending.Destination,
-            inTargetTerritory: true);
-
-        if (travelPlan.HasAethernet &&
-            Lifestream.TryAethernetTeleportById(travelPlan.AethernetShardId))
+        pending.RouteExecution = null;
+        pending.ArrivedViaMultiAreaRoute = true;
+        if (ResolveDestination(pending.Location, pending.Npc) is { } destination)
         {
-            pending.RouteExecution = null;
-            EnterWaitingForAethernet(pending, travelPlan.AethernetShardId);
-            Svc.Chat.Print($"[Saucy] Taking aethernet to {travelPlan.AethernetShardName}.");
-            return;
+            pending.Destination = destination;
         }
 
-        pending.RouteExecution = null;
         pending.Phase = NavigationPhase.WaitingForNavReady;
         pending.PhaseStartedUtc = DateTime.UtcNow;
+        Svc.Chat.Print(
+            $"[Saucy] Arrived in {pending.Location.PlaceName}. Moving to {FormatDestination(pending.Destination)}...");
+        DebugLog(pending, $"Post-route destination: {FormatDestination(pending.Destination)}");
     }
 
     private static bool TryStartAethernetTravel(
@@ -338,7 +342,7 @@ internal static class TriadMapNavigation
             startingPhase: NavigationPhase.WaitingForAethernet,
             activeAethernetShardId: travelPlan.AethernetShardId);
         Svc.Chat.Print(
-            $"[Saucy] Taking aethernet to {travelPlan.AethernetShardName}, then moving to {location.CoordinateString}.");
+            $"[Saucy] Taking aethernet to {travelPlan.AethernetShardName}, then moving to {FormatMapCoordinates(location)}.");
         return true;
     }
 
@@ -384,6 +388,7 @@ internal static class TriadMapNavigation
         Vector3 destination,
         bool fly,
         uint targetTerritoryId,
+        TriadNpc? npc = null,
         MultiAreaRouteExecutor.RouteExecution? routeExecution = null,
         uint aethernetShardId = 0,
         string? aethernetShardName = null,
@@ -400,6 +405,7 @@ internal static class TriadMapNavigation
             Location = location,
             Destination = destination,
             Fly = fly,
+            Npc = npc,
             TargetTerritoryId = targetTerritoryId,
             RouteExecution = routeExecution,
             PendingAethernetShardId = aethernetShardId,
@@ -429,7 +435,11 @@ internal static class TriadMapNavigation
 
         if (!TryStartVnav(new()
         {
-            Location = location, Destination = destination, Fly = fly, TargetTerritoryId = location.TerritoryType.RowId
+            Location = location,
+            Destination = destination,
+            Fly = fly,
+            TargetTerritoryId = location.TerritoryType.RowId,
+            Npc = null
         }))
         {
             return false;
@@ -462,8 +472,15 @@ internal static class TriadMapNavigation
             return false;
         }
 
+        if (!Vnavmesh.IsMoving())
+        {
+            Svc.Chat.PrintError("[Saucy] vnavmesh accepted the path but did not start moving.");
+            return false;
+        }
+
         Svc.Chat.Print(
-            $"[Saucy] Moving to {pending.Location.PlaceName} {pending.Location.CoordinateString}.");
+            $"[Saucy] Moving to {pending.Location.PlaceName} {FormatDestination(pending.Destination)}.");
+        DebugLog(pending, $"vnav started toward {FormatDestination(pointOnFloor)}");
         return true;
     }
 
@@ -604,12 +621,86 @@ internal static class TriadMapNavigation
 
     private static void ClearPending() => _pending = null;
 
-    internal static Vector3? GetWorldPosition(MapLinkPayload location)
+    private static string FormatMapCoordinates(MapLinkPayload location) =>
+        $"({location.XCoord.ToString("0.0", CultureInfo.InvariantCulture)}, {location.YCoord.ToString("0.0", CultureInfo.InvariantCulture)})";
+
+    internal static Vector3? ResolveDestination(MapLinkPayload location, TriadNpc? npc = null)
+    {
+        if (npc != null &&
+            GameNpcDB.Get().mapNpcs.TryGetValue(npc.Id, out var npcInfo) &&
+            npcInfo.WorldPosition is { } npcWorldPos)
+        {
+            return npcWorldPos;
+        }
+
+        foreach (var kvp in GameNpcDB.Get().mapNpcs)
+        {
+            var info = kvp.Value;
+            if (info.WorldPosition is not { } worldPos || info.Location == null)
+            {
+                continue;
+            }
+
+            if (LocationsMatch(info.Location, location))
+            {
+                return worldPos;
+            }
+        }
+
+        return GetWorldPositionFromMapLink(location);
+    }
+
+    internal static Vector3? GetWorldPosition(MapLinkPayload location) => GetWorldPositionFromMapLink(location);
+
+    private static Vector3? GetWorldPositionFromMapLink(MapLinkPayload location)
     {
         var map = location.Map.Value;
         var worldXz = MapToWorld(new(location.XCoord, location.YCoord), map);
         return new Vector3(worldXz.X, 0f, worldXz.Y);
     }
+
+    private static bool LocationsMatch(MapLinkPayload a, MapLinkPayload b)
+    {
+        if (a.Map.RowId != b.Map.RowId ||
+            MathF.Abs(a.XCoord - b.XCoord) >= 0.05f ||
+            MathF.Abs(a.YCoord - b.YCoord) >= 0.05f)
+        {
+            return false;
+        }
+
+        var territoryA = a.TerritoryType.RowId;
+        var territoryB = b.TerritoryType.RowId;
+        if (territoryA == territoryB)
+        {
+            return true;
+        }
+
+        var route = MultiAreaRouteRegistry.FindRoute(a) ?? MultiAreaRouteRegistry.FindRoute(b);
+        if (route?.ArrivalTerritoryIds is not { Count: > 0 } arrivalIds)
+        {
+            return false;
+        }
+
+        var aListed = false;
+        var bListed = false;
+        foreach (var id in arrivalIds)
+        {
+            if (id == territoryA)
+            {
+                aListed = true;
+            }
+
+            if (id == territoryB)
+            {
+                bListed = true;
+            }
+        }
+
+        return aListed && bListed;
+    }
+
+    private static string FormatDestination(Vector3 destination) =>
+        $"({destination.X.ToString("F1", CultureInfo.InvariantCulture)}, {destination.Y.ToString("F1", CultureInfo.InvariantCulture)}, {destination.Z.ToString("F1", CultureInfo.InvariantCulture)})";
 
     /// <summary>From Henchman GeneralHelpers.MapToWorld.</summary>
     private static Vector2 MapToWorld(Vector2 mapCoordinates, Map map) =>
@@ -636,6 +727,7 @@ internal static class TriadMapNavigation
         public required Vector3 Destination;
         public required bool Fly;
         public required MapLinkPayload Location;
+        public TriadNpc? Npc;
         public NavigationPhase Phase;
         public DateTime PhaseStartedUtc;
         public DateTime StartedUtc;
@@ -648,5 +740,6 @@ internal static class TriadMapNavigation
         public Vector3? AethernetShardPosition;
         public bool AethernetSeenBusy;
         public DateTime? AethernetBusyClearedUtc;
+        public bool ArrivedViaMultiAreaRoute;
     }
 }

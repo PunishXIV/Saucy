@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Hooking;
 using ECommons;
@@ -7,6 +7,7 @@ using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
+using System.Linq;
 using System.Numerics;
 using GameObject = FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject;
 
@@ -27,24 +28,33 @@ public unsafe class CufModule
         {
             if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent])
             {
-                if (GenericHelpers.TryGetAddonByName<AddonSelectString>("SelectString", out var startMenu) && startMenu->AtkUnitBase.IsVisible)
+                if (GenericHelpers.TryGetAddonByName<AddonSelectString>("SelectString", out var startMenu) &&
+                    startMenu->AtkUnitBase.IsVisible &&
+                    GenericHelpers.IsAddonReady(&startMenu->AtkUnitBase))
                 {
+                    var entries = new AddonMaster.SelectString(startMenu).Entries;
+                    if (entries == null || !entries.Any())
+                    {
+                        return;
+                    }
+
                     try
                     {
-                        new AddonMaster.SelectString(startMenu).Entries[0].Select();
-                        return;
+                        entries[0].Select();
                     }
                     catch (Exception ex)
                     {
-                        Svc.Log.Error(ex, "[CufModule] Failed to select start menu entry");
+                        Svc.Log.Verbose(ex, "[CufModule] Failed to select start menu entry");
                     }
+
+                    return;
                 }
 
                 if (addon != nint.Zero)
                 {
                     var ui = (AtkUnitBase*)addon.Address;
 
-                    if (ui->IsVisible)
+                    if (ui->IsVisible && ui->UldManager.NodeListCount > 18)
                     {
                         var slidingNode = ui->UldManager.NodeList[18];
                         var btn = ui->UldManager.NodeList[10];

@@ -44,7 +44,31 @@ internal sealed class MultiAreaRoute
     public string? TooltipHint { get; init; }
     public required Func<MapLinkPayload, bool> Matches { get; init; }
     public required IReadOnlyList<MultiAreaRouteStep> Steps { get; init; }
+    public IReadOnlyList<uint>? ArrivalTerritoryIds { get; init; }
     public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(180);
+
+    public bool IsInDestinationTerritory(uint territoryId, uint fallbackTargetTerritoryId)
+    {
+        if (territoryId == fallbackTargetTerritoryId)
+        {
+            return true;
+        }
+
+        if (ArrivalTerritoryIds is not { Count: > 0 })
+        {
+            return false;
+        }
+
+        foreach (var candidate in ArrivalTerritoryIds)
+        {
+            if (candidate == territoryId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 
 internal static class MultiAreaRouteRegistry
@@ -62,6 +86,9 @@ internal static class MultiAreaRouteRegistry
 
 internal static unsafe class MultiAreaRouteExecutor
 {
+    private const uint GeneralActionDismount = 23;
+    private const uint GeneralActionFlyingMountRoulette = 24;
+
     internal sealed class RouteExecution
     {
         public required MultiAreaRoute Route;
@@ -112,12 +139,12 @@ internal static unsafe class MultiAreaRouteExecutor
             }
 
             beginMessage =
-                $"[Saucy] Teleporting for {route.Name}, then moving to {context.Location.CoordinateString}.";
+                $"[Saucy] Teleporting for {route.Name}, then moving to the NPC.";
             return true;
         }
 
         beginMessage =
-            $"[Saucy] Entering {route.Name}, then moving to {context.Location.CoordinateString}.";
+            $"[Saucy] Entering {route.Name}, then moving to the NPC.";
         return true;
     }
 
@@ -177,7 +204,7 @@ internal static unsafe class MultiAreaRouteExecutor
             }
 
             if (step.Kind == MultiAreaRouteStepKind.WaitForZone &&
-                Svc.ClientState.TerritoryType == context.TargetTerritoryId)
+                route.IsInDestinationTerritory(Svc.ClientState.TerritoryType, context.TargetTerritoryId))
             {
                 continue;
             }
@@ -297,7 +324,8 @@ internal static unsafe class MultiAreaRouteExecutor
             return false;
         }
 
-        if (Svc.ClientState.TerritoryType != execution.Context.TargetTerritoryId)
+        if (!execution.Route.IsInDestinationTerritory(
+                Svc.ClientState.TerritoryType, execution.Context.TargetTerritoryId))
         {
             if (DateTime.UtcNow - execution.StepStartedUtc > TimeSpan.FromSeconds(30))
             {
@@ -328,7 +356,7 @@ internal static unsafe class MultiAreaRouteExecutor
             return false;
         }
 
-        if (ActionManager.Instance()->GetActionStatus(ActionType.GeneralAction, 9) != 0)
+        if (ActionManager.Instance()->GetActionStatus(ActionType.GeneralAction, GeneralActionFlyingMountRoulette) != 0)
         {
             return true;
         }
@@ -338,7 +366,7 @@ internal static unsafe class MultiAreaRouteExecutor
             return false;
         }
 
-        Chat.ExecuteGeneralAction(9);
+        Chat.ExecuteGeneralAction(GeneralActionFlyingMountRoulette);
         return false;
     }
 
@@ -354,7 +382,7 @@ internal static unsafe class MultiAreaRouteExecutor
             return false;
         }
 
-        Chat.ExecuteGeneralAction(8);
+        Chat.ExecuteGeneralAction(GeneralActionDismount);
         return false;
     }
 
@@ -378,11 +406,13 @@ internal static class JeunoFirstWalkRoute
     private const uint MamookAetheryteId = 206;
     private const uint EntranceDataId = 2014450;
     private static readonly Vector3 YakTelPortalApproachPoint = new(-527.2f, -152.4f, 668.5f);
+    private static readonly uint[] LowerJeunoTerritoryIds = [1265, 1190, 1191, 1192];
 
     internal static readonly MultiAreaRoute Route = new()
     {
         Name = "Jeuno: The First Walk",
         TooltipHint = "Lower Jeuno routes via Mamook and the Yak T'el portal.",
+        ArrivalTerritoryIds = LowerJeunoTerritoryIds,
         Matches = location =>
         {
             var placeName = location.PlaceName.ToString();
@@ -401,7 +431,7 @@ internal static class JeunoFirstWalkRoute
                 Fly = true,
                 ArrivalObjectDataId = EntranceDataId
             },
-            new() { Kind = MultiAreaRouteStepKind.Interact, ObjectDataId = EntranceDataId, Range = 6f, DismountFirst = true },
+            new() { Kind = MultiAreaRouteStepKind.Interact, ObjectDataId = EntranceDataId, Range = 6f },
             new() { Kind = MultiAreaRouteStepKind.WaitForZone }
         ]
     };

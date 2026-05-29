@@ -76,6 +76,18 @@ public class UIReaderTriadPrep
         (cachedState.screenPos, cachedState.screenSize) = GUINodeUtils.GetNodePosAndSize(baseNode->RootNode);
     }
 
+    /// <summary>Re-parses deck rows from the live addon (e.g. after a profile deck write).</summary>
+    public unsafe void RefreshDeckSelectList(nint addonPtr)
+    {
+        var baseNode = (AtkUnitBase*)addonPtr;
+        if (baseNode == null)
+        {
+            return;
+        }
+
+        UpdateDeckSelect(baseNode);
+    }
+
     public unsafe void OnAddonUpdateDeckSelect(nint addonPtr)
     {
         var baseNode = (AtkUnitBase*)addonPtr;
@@ -152,60 +164,152 @@ public class UIReaderTriadPrep
 
     private unsafe void UpdateDeckSelect(AtkUnitBase* baseNode)
     {
-        // 5 child nodes (node list)
-        //    [4] list 
-        //        [x] comp nodes, each has 12 child nodes
-        //            [3] simple node with 5 children, each is a card
-        //                [x] comp node with 2 children
-        //                    [1] comp node with 4 children
-        //                        [0] card image
-        //            [11] text, deck name
-
         cachedState.decks.Clear();
 
-        var nodeA = (baseNode->UldManager.NodeListCount == 5) ? baseNode->UldManager.NodeList[4] : null;
-        if (nodeA != null && (int)nodeA->Type > 1000)
+        for (var listIdx = 0; listIdx < baseNode->UldManager.NodeListCount; listIdx++)
         {
-            var compNodeA = (AtkComponentNode*)nodeA;
-            for (var idxA = 0; idxA < compNodeA->Component->UldManager.NodeListCount; idxA++)
+            var nodeA = baseNode->UldManager.NodeList[listIdx];
+            if (nodeA == null || (int)nodeA->Type <= 1000)
             {
-                var nodeB = compNodeA->Component->UldManager.NodeList[idxA];
-                var nodeC1 = GUINodeUtils.PickChildNode(nodeB, 3, 12);
+                continue;
+            }
 
-                if (nodeC1 != null)
+            var compNodeA = (AtkComponentNode*)nodeA;
+            var rowCount = compNodeA->Component->UldManager.NodeListCount;
+            if (rowCount <= 0)
+            {
+                continue;
+            }
+
+            var parsedRows = new List<UIStateTriadPrepDeck>();
+            for (var rowIdx = 0; rowIdx < rowCount; rowIdx++)
+            {
+                var rowNode = compNodeA->Component->UldManager.NodeList[rowIdx];
+                if (rowNode == null)
                 {
-                    var deckOb = new UIStateTriadPrepDeck
-                    {
-                        id = cachedState.decks.Count, rootNodeAddr = (ulong)nodeB
-                    };
-
-                    if (shouldScanDeckData)
-                    {
-                        var nodeArrC1 = GUINodeUtils.GetImmediateChildNodes(nodeC1);
-                        if (nodeArrC1 != null && nodeArrC1.Length == 5)
-                        {
-                            for (var idxC = 0; idxC < nodeArrC1.Length; idxC++)
-                            {
-                                var nodeD = GUINodeUtils.PickChildNode(nodeArrC1[idxC], 1, 2);
-                                var nodeE = GUINodeUtils.PickChildNode(nodeD, 0, 4);
-                                var texPath = GUINodeUtils.GetNodeTexturePath(nodeE);
-                                if (string.IsNullOrEmpty(texPath))
-                                {
-                                    break;
-                                }
-
-                                deckOb.cardTexPaths[idxC] = texPath;
-                            }
-                        }
-
-                        var nodeC2 = GUINodeUtils.PickChildNode(nodeB, 11, 12);
-                        deckOb.name = GUINodeUtils.GetNodeText(nodeC2) ?? "";
-                    }
-
-                    cachedState.decks.Add(deckOb);
+                    continue;
                 }
+
+                var deckName = ExtractDeckRowName(rowNode);
+                if (string.IsNullOrWhiteSpace(deckName) && !RowLooksLikeDeckRow(rowNode))
+                {
+                    continue;
+                }
+
+                var deckOb = new UIStateTriadPrepDeck
+                {
+                    id = parsedRows.Count,
+                    rootNodeAddr = (ulong)rowNode,
+                    name = deckName ?? string.Empty
+                };
+
+                if (shouldScanDeckData)
+                {
+                    TryScanDeckRowCards(rowNode, deckOb);
+                }
+
+                parsedRows.Add(deckOb);
+            }
+
+            if (parsedRows.Count > 0)
+            {
+                cachedState.decks.AddRange(parsedRows);
+                return;
             }
         }
+    }
+
+    private static unsafe void TryScanDeckRowCards(AtkResNode* rowNode, UIStateTriadPrepDeck deckOb)
+    {
+        var nodeC1 = GUINodeUtils.PickChildNode(rowNode, 3, 12);
+        if (nodeC1 == null)
+        {
+            nodeC1 = FindChildComponentWithChildCount(rowNode, 5);
+        }
+
+        if (nodeC1 == null)
+        {
+            return;
+        }
+
+        var nodeArrC1 = GUINodeUtils.GetImmediateChildNodes(nodeC1);
+        if (nodeArrC1 == null || nodeArrC1.Length != 5)
+        {
+            return;
+        }
+
+        for (var idxC = 0; idxC < nodeArrC1.Length; idxC++)
+        {
+            var nodeD = GUINodeUtils.PickChildNode(nodeArrC1[idxC], 1, 2);
+            var nodeE = GUINodeUtils.PickChildNode(nodeD, 0, 4);
+            var texPath = GUINodeUtils.GetNodeTexturePath(nodeE);
+            if (string.IsNullOrEmpty(texPath))
+            {
+                break;
+            }
+
+            deckOb.cardTexPaths[idxC] = texPath;
+        }
+    }
+
+    private static unsafe AtkResNode* FindChildComponentWithChildCount(AtkResNode* rowNode, int childCount)
+    {
+        foreach (var child in GUINodeUtils.GetAllChildNodes(rowNode) ?? [])
+        {
+            if (child == null || (int)child->Type <= 1000)
+            {
+                continue;
+            }
+
+            var comp = ((AtkComponentNode*)child)->Component;
+            if (comp != null && comp->UldManager.NodeListCount == childCount)
+            {
+                return child;
+            }
+        }
+
+        return null;
+    }
+
+    private static unsafe bool RowLooksLikeDeckRow(AtkResNode* rowNode) =>
+        FindChildComponentWithChildCount(rowNode, 5) != null ||
+        GUINodeUtils.PickChildNode(rowNode, 3, 12) != null;
+
+    private static unsafe string? ExtractDeckRowName(AtkResNode* rowNode)
+    {
+        foreach (var childCount in new[] { 12, 13, 11, 10, 14 })
+        {
+            var nameNode = GUINodeUtils.PickChildNode(rowNode, 11, childCount);
+            var name = GUINodeUtils.GetNodeText(nameNode);
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                return name;
+            }
+        }
+
+        string? bestName = null;
+        foreach (var child in GUINodeUtils.GetAllChildNodes(rowNode) ?? [])
+        {
+            var text = GUINodeUtils.GetNodeText(child);
+            if (string.IsNullOrWhiteSpace(text) || text.Length is < 2 or > 64)
+            {
+                continue;
+            }
+
+            if (text.Contains("Time Remaining", StringComparison.OrdinalIgnoreCase) ||
+                text.Contains("Recommended", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            bestName = text;
+            if (text.Contains("(Saucy)", StringComparison.OrdinalIgnoreCase))
+            {
+                return text;
+            }
+        }
+
+        return bestName;
     }
 
     private void SetIsMatchRequest(bool value)

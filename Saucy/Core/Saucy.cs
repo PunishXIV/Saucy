@@ -247,6 +247,10 @@ public sealed class Saucy : IDalamudPlugin
             if (TriadAutomater.PlayXTimes)
             {
                 TriadAutomater.MatchesCompletedThisSession++;
+                if (TriadAutomater.NumberOfTimes > 0)
+                {
+                    TriadAutomater.NumberOfTimes--;
+                }
             }
 
             if (obj.isWin)
@@ -290,7 +294,8 @@ public sealed class Saucy : IDalamudPlugin
             }
             else
             {
-                TriadAutomater.ClearRematchPending();
+                TriadAutomater.RequestSessionEndDismiss();
+                Svc.Framework.Run(TriadAutomater.TryDismissResultIfSessionEnded);
             }
 
             C.Save();
@@ -395,41 +400,47 @@ public sealed class Saucy : IDalamudPlugin
                 return;
             }
 
-            if (TriadAutomater.ModuleEnabled)
+            if (TriadAutomater.ModuleEnabled || TriadAutomater.IsTriadResultVisible())
             {
-                if (!TriadAutomater.ShouldContinueTriadSession() && !TriadAutomater.IsAutomationFlowActive())
+                if (!TriadAutomater.ShouldContinueTriadSession())
                 {
-                    if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent] ||
-                        Svc.Condition[ConditionFlag.Occupied33] ||
-                        Svc.Condition[ConditionFlag.OccupiedInEvent] ||
-                        Svc.Condition[ConditionFlag.Occupied30] ||
-                        Svc.Condition[ConditionFlag.Occupied38] ||
-                        Svc.Condition[ConditionFlag.Occupied39] ||
-                        Svc.Condition[ConditionFlag.OccupiedSummoningBell] ||
-                        Svc.Condition[ConditionFlag.WatchingCutscene] ||
-                        Svc.Condition[ConditionFlag.Mounting71] ||
-                        Svc.Condition[ConditionFlag.CarryingObject])
+                    TriadAutomater.RunModule();
+
+                    if (TriadAutomater.CanFinalizeTriadSession())
                     {
-                        SkipDialogue();
-                    }
-                    else
-                    {
-                        if (C.PlaySound)
+                        if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent] ||
+                            Svc.Condition[ConditionFlag.Occupied33] ||
+                            Svc.Condition[ConditionFlag.OccupiedInEvent] ||
+                            Svc.Condition[ConditionFlag.Occupied30] ||
+                            Svc.Condition[ConditionFlag.Occupied38] ||
+                            Svc.Condition[ConditionFlag.Occupied39] ||
+                            Svc.Condition[ConditionFlag.OccupiedSummoningBell] ||
+                            Svc.Condition[ConditionFlag.WatchingCutscene] ||
+                            Svc.Condition[ConditionFlag.Mounting71] ||
+                            Svc.Condition[ConditionFlag.CarryingObject])
                         {
-                            PlaySound();
+                            SkipDialogue();
                         }
-
-                        TriadAutomater.PlayXTimes = false;
-                        TriadAutomater.PlayUntilCardDrops = false;
-                        TriadAutomater.PlayUntilAllCardsDropOnce = false;
-                        TriadAutomater.ModuleEnabled = false;
-                        TriadAutomater.TempCardsWonList.Clear();
-                        TriadAutomater.MatchesCompletedThisSession = 0;
-                        TriadAutomater.ClearRematchPending();
-
-                        if (TriadAutomater.LogOutAfterCompletion)
+                        else
                         {
-                            ScheduleLogout();
+                            if (C.PlaySound)
+                            {
+                                PlaySound();
+                            }
+
+                            TriadAutomater.PlayXTimes = false;
+                            TriadAutomater.PlayUntilCardDrops = false;
+                            TriadAutomater.PlayUntilAllCardsDropOnce = false;
+                            TriadAutomater.ModuleEnabled = false;
+                            TriadAutomater.TempCardsWonList.Clear();
+                            TriadAutomater.MatchesCompletedThisSession = 0;
+                            TriadAutomater.NumberOfTimes = TriadAutomater.SessionInitialPlayCount;
+                            TriadAutomater.ClearRematchPending();
+
+                            if (TriadAutomater.LogOutAfterCompletion)
+                            {
+                                ScheduleLogout();
+                            }
                         }
                     }
 

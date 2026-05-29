@@ -1,5 +1,6 @@
 ﻿using Dalamud.Game.Text.SeStringHandling.Payloads;
 using System.Collections.Generic;
+using System.Numerics;
 namespace Saucy.TripleTriad.Data;
 
 public class GameNpcInfo
@@ -11,6 +12,9 @@ public class GameNpcInfo
     public bool IsCompleted;
 
     public MapLinkPayload? Location;
+
+    /// <summary>World position from Level sheet; use for vnav when map flags are unavailable.</summary>
+    public Vector3? WorldPosition;
 
     public int matchFee;
     public int npcId;
