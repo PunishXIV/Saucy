@@ -162,26 +162,7 @@ public class PluginWindowCardInfo : Window, IDisposable
                     ImGui.Spacing();
                 }
 
-                //ImGui.NewLine();
-                var cursorY = ImGui.GetCursorPosY();
-                ImGui.SetCursorPosY(cursorY - ImGui.GetStyle().FramePadding.Y);
-                if (ImGuiComponents.IconButton(FontAwesomeIcon.Map))
-                {
-                    Svc.GameGui.OpenMapWithMapLink(rewardNpcInfo.Location);
-                }
-                if (ImGui.IsItemHovered())
-                {
-                    ImGui.SetTooltip(locShowOnMap);
-                }
-
-                ImGui.SetCursorPosY(cursorY);
-                ImGui.SameLine();
-
-                var indentPosX = ImGui.GetCursorPosX();
-                ImGui.Text($"{rewardNpcInfo.Location.PlaceName} {rewardNpcInfo.Location.CoordinateString}");
-
-                ImGui.NewLine();
-                ImGui.SameLine(indentPosX);
+                TriadNpcMapUi.DrawMapLocationRow(rewardNpcInfo.Location, locShowOnMap ?? string.Empty);
                 ImGui.TextColored(colorGray, rewardNpcRules);
             }
             else

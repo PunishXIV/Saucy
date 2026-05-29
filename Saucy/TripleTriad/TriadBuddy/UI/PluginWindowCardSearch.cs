@@ -468,10 +468,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
             return;
 
         if (npcInfo.Location != null)
-        {
-            DrawIconTextRow(FontAwesomeIcon.Map, locShowOnMap, () => Svc.GameGui.OpenMapWithMapLink(npcInfo.Location),
-                $"{npcInfo.Location.PlaceName} {npcInfo.Location.CoordinateString}");
-        }
+            TriadNpcMapUi.DrawMapLocationRow(npcInfo.Location, locShowOnMap);
 
         TriadNpcQuestUi.DrawUnlockQuestIconRow(npcInfo);
 

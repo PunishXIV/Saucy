@@ -37,10 +37,15 @@ public class GameCardInfo
 public class GameCardDB
 {
     private static readonly GameCardDB instance = new();
-    public static readonly int MaxGridPages = 15;
-    public static readonly int MaxGridCells = 30;
+    public const int MaxGridCells = 30;
+    private const int MinGridPages = 20;
+
+    /// <summary>Exclusive upper bound for page indices (pages 0..MaxGridPages-1).</summary>
+    public static int MaxGridPages => Math.Max(instance.maxGridPageIndex + 1, MinGridPages);
+
     public Dictionary<int, GameCardInfo> mapCards = [];
     private int maxCardId;
+    private int maxGridPageIndex;
 
     public UnsafeReaderTriadCards? memReader;
     public List<int> ownedCardIds = [];
@@ -96,6 +101,7 @@ public class GameCardDB
     public void Refresh()
     {
         ownedCardIds.Clear();
+        maxGridPageIndex = 0;
 
         if (memReader == null || memReader.HasErrors || maxCardId <= 0)
         {
@@ -161,6 +167,7 @@ public class GameCardDB
             var groupIdx = 0;
             var pageIdx = 0;
             var cellIdx = 0;
+            var filterMaxPage = 0;
 
             foreach (var cardOb in sortedTriadCards)
             {
@@ -192,6 +199,8 @@ public class GameCardDB
                         {
                             PageIndex = pageIdx, CellIndex = cellIdx
                         };
+                        if (pageIdx > filterMaxPage)
+                            filterMaxPage = pageIdx;
                         cellIdx++;
                     }
                     else
@@ -203,6 +212,9 @@ public class GameCardDB
                     }
                 }
             }
+
+            if (filterMaxPage > maxGridPageIndex)
+                maxGridPageIndex = filterMaxPage;
         }
     }
 
@@ -244,6 +256,7 @@ public class GameCardDB
         var filterIdx = (int)GameCardCollectionFilter.DeckEditDefault;
         var pageIdx = 0;
         var cellIdx = 0;
+        var deckEditMaxPage = 0;
 
         foreach (var entry in sortedDeckEditCards)
         {
@@ -263,6 +276,8 @@ public class GameCardDB
                     {
                         PageIndex = pageIdx, CellIndex = cellIdx
                     };
+                    if (pageIdx > deckEditMaxPage)
+                        deckEditMaxPage = pageIdx;
                     cellIdx++;
                 }
                 else
@@ -274,5 +289,8 @@ public class GameCardDB
                 }
             }
         }
+
+        if (deckEditMaxPage > maxGridPageIndex)
+            maxGridPageIndex = deckEditMaxPage;
     }
 }

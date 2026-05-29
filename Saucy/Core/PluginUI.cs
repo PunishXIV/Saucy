@@ -573,6 +573,7 @@ public unsafe class PluginUI : Window
         SaucyTheme.DrawCard("Deck", null, DrawTriadDeckBody);
         SaucyTheme.DrawCard("Run mode", null, DrawTriadRunModeBody);
         SaucyTheme.DrawCard("Notifications", null, DrawTriadNotificationsBody);
+        SaucyTheme.DrawCard("Dependencies", "TriadBuddy integrations", TriadDependenciesUi.Draw);
     }
 
     private static void DrawTriadDeckBody()

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
-namespace Saucy.TripleTriad;
+namespace Saucy.IPC;
 
 /// <summary>
 /// IPC client for PunishXIV/Questionable (<c>Questionable/External/QuestionableIpc.cs</c>).
