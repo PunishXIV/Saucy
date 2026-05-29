@@ -79,6 +79,54 @@ public unsafe class UnsafeReaderProfileGS
         return null;
     }
 
+    /// <summary>
+    /// Writes five card ids into a Gold Saucer profile deck slot (0–4).
+    /// </summary>
+    public bool TryWritePlayerDeck(int deckIdx, ushort[] cardIds)
+    {
+        if (HasErrors || deckIdx < 0 || deckIdx > 4 || cardIds == null || cardIds.Length != 5)
+        {
+            return false;
+        }
+
+        for (var idx = 0; idx < 5; idx++)
+        {
+            if (cardIds[idx] == 0)
+            {
+                return false;
+            }
+        }
+
+        try
+        {
+            var uiModule = (Svc.GameGui != null) ? (UIModule*)Svc.GameGui.GetUIModule().Address : null;
+            var gsModule = (uiModule != null) ? uiModule->GetGoldSaucerModule() : null;
+            if (gsModule == null)
+            {
+                return false;
+            }
+
+            var deckPtr = gsModule->GetDeck(deckIdx);
+            if (deckPtr == null)
+            {
+                return false;
+            }
+
+            for (var idx = 0; idx < 5; idx++)
+            {
+                deckPtr->Cards[idx] = cardIds[idx];
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Error(ex, "Failed to write GS profile deck {0}", deckIdx);
+            HasErrors = true;
+            return false;
+        }
+    }
+
     public class PlayerDeck
     {
         public ushort[] cardIds = new ushort[5];

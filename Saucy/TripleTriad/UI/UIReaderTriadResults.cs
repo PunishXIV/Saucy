@@ -42,8 +42,13 @@ public class UIReaderTriadResults : IUIReader
 
             UpdateCachedState(baseNode);
 
-            if ((cachedState.isDraw || cachedState.isLose || cachedState.isWin) && cachedState.numMGP >= 0)
+            if (cachedState.isDraw || cachedState.isLose || cachedState.isWin)
             {
+                if (cachedState.numMGP < 0)
+                {
+                    cachedState.numMGP = 0;
+                }
+
                 needsNotify = false;
                 OnUpdated?.Invoke(cachedState);
             }

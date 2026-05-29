@@ -426,6 +426,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
                     {
                         selectedNpcIdx = idx;
                         GenerateNpcRewardList();
+                        TTSolver.OnNpcSelected(npcOb);
                     }
 
                     if (isSelected)
@@ -479,7 +480,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
 
         if (npcInfo.Location != null)
         {
-            TriadNpcMapUi.DrawMapLocationRow(npcInfo.Location, "Show on map");
+            TriadNpcMapUi.DrawMapLocationRow(npcInfo.Location, "Show on map", npcData.Item1);
         }
 
         TriadNpcQuestUi.DrawUnlockQuestIconRow(npcInfo);

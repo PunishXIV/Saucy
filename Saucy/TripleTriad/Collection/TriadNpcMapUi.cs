@@ -8,7 +8,7 @@ namespace Saucy.TripleTriad;
 
 internal static class TriadNpcMapUi
 {
-    public static void DrawMapLocationRow(MapLinkPayload location, string showOnMapTooltip)
+    public static void DrawMapLocationRow(MapLinkPayload location, string showOnMapTooltip, TriadNpc? npc = null)
     {
         var label = $"{location.PlaceName} {location.CoordinateString}";
         var tooltip = BuildTooltip(location, showOnMapTooltip);
@@ -19,7 +19,7 @@ internal static class TriadNpcMapUi
 
         if (ImGuiComponents.IconButton(FontAwesomeIcon.Map))
         {
-            TriadMapNavigation.HandleMapClick(location);
+            TriadMapNavigation.HandleMapClick(location, npc);
         }
 
         if (ImGui.IsItemHovered())
@@ -39,7 +39,7 @@ internal static class TriadNpcMapUi
                 {
                     if (ImGui.Selectable(label))
                     {
-                        TriadMapNavigation.HandleMapClick(location);
+                        TriadMapNavigation.HandleMapClick(location, npc);
                     }
                 }
             }

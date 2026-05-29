@@ -224,7 +224,7 @@ public sealed class Saucy : IDalamudPlugin
                 stats.GamesPlayedWithSaucy++;
                 stats.MGPWon += GetBonusMGP(obj.numMGP);
 
-                var npcName = TTSolver.lastGameNpc.Name;
+                var npcName = TTSolver.lastGameNpc?.Name ?? "Unknown";
                 if (stats.NPCsPlayed.TryGetValue(npcName, out var plays))
                 {
                     stats.NPCsPlayed[npcName] += 1;
@@ -246,7 +246,7 @@ public sealed class Saucy : IDalamudPlugin
 
             if (TriadAutomater.PlayXTimes)
             {
-                TriadAutomater.NumberOfTimes--;
+                TriadAutomater.MatchesCompletedThisSession++;
             }
 
             if (obj.isWin)
@@ -284,7 +284,15 @@ public sealed class Saucy : IDalamudPlugin
                 }
             }
 
-            Rematch();
+            if (TriadAutomater.ShouldContinueTriadSession())
+            {
+                TriadAutomater.RequestRematch();
+            }
+            else
+            {
+                TriadAutomater.ClearRematchPending();
+            }
+
             C.Save();
         }
     }
@@ -317,32 +325,7 @@ public sealed class Saucy : IDalamudPlugin
 
     private unsafe void Rematch()
     {
-        try
-        {
-            if (TryGetAddonByName<AtkUnitBase>("TripleTriadResult", out var addon) && TriadAutomater.ModuleEnabled)
-            {
-                if (((TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops) && TriadAutomater.NumberOfTimes == 0) || (TriadAutomater.TempCardsWonList.Count > 0 && TriadAutomater.TempCardsWonList.All(x => x.Value >= TriadAutomater.NumberOfTimes)))
-                {
-                    addon->Close(true);
-                    return;
-                }
-
-                var values = stackalloc AtkValue[2];
-                values[0] = new()
-                {
-                    Type = AtkValueType.Int, Int = 0
-                };
-                values[1] = new()
-                {
-                    Type = AtkValueType.UInt, UInt = 1
-                };
-                addon->FireCallback(2, values);
-            }
-        }
-        catch (Exception ex)
-        {
-            Svc.Log.Error(ex, "[Saucy] Rematch failed");
-        }
+        TriadAutomater.RequestRematch();
     }
 
     private static GameCardInfo? FindCardByItemId(uint itemId)
@@ -394,6 +377,11 @@ public sealed class Saucy : IDalamudPlugin
 
             var deltaSeconds = (float)framework.UpdateDelta.TotalSeconds;
             uiReaderScheduler.Update(deltaSeconds);
+            if (TriadAutomater.IsAutomationFlowActive() || uiReaderGame.IsVisible)
+            {
+                TTSolver.EnsureRunTargetNpcSynced();
+            }
+
             UpdateTriadAutoOpen();
 
             if (C.AirForceEnabled)
@@ -409,7 +397,7 @@ public sealed class Saucy : IDalamudPlugin
 
             if (TriadAutomater.ModuleEnabled)
             {
-                if (((TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops) && TriadAutomater.NumberOfTimes == 0) || (TriadAutomater.TempCardsWonList.Count > 0 && TriadAutomater.TempCardsWonList.All(x => x.Value >= TriadAutomater.NumberOfTimes)))
+                if (!TriadAutomater.ShouldContinueTriadSession() && !TriadAutomater.IsAutomationFlowActive())
                 {
                     if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent] ||
                         Svc.Condition[ConditionFlag.Occupied33] ||
@@ -436,7 +424,8 @@ public sealed class Saucy : IDalamudPlugin
                         TriadAutomater.PlayUntilAllCardsDropOnce = false;
                         TriadAutomater.ModuleEnabled = false;
                         TriadAutomater.TempCardsWonList.Clear();
-                        TriadAutomater.NumberOfTimes = 1;
+                        TriadAutomater.MatchesCompletedThisSession = 0;
+                        TriadAutomater.ClearRematchPending();
 
                         if (TriadAutomater.LogOutAfterCompletion)
                         {
@@ -601,6 +590,7 @@ public sealed class Saucy : IDalamudPlugin
 
         if (subCommand == "go")
         {
+            TriadAutomater.BeginAutomationSession();
             TriadAutomater.ModuleEnabled = true;
             Svc.Chat.Print("[Saucy] Triad Module Enabled!");
             return;

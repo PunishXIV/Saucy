@@ -1,4 +1,4 @@
-﻿using FFXIVClientStructs.FFXIV.Component.GUI;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -45,12 +45,31 @@ public class UIReaderTriadPrep
             return;
         }
 
-        if (!HasMatchRequestUI)
-        {
-            UpdateRequest(baseNode);
-            SetIsMatchRequest(true);
+        var wasFirstShow = !HasMatchRequestUI;
+        var previousNpc = cachedState.npc;
 
-            // notify always, if deck data depends on UI, it will be ignored by solver
+        UpdateRequest(baseNode);
+
+        if (wasFirstShow)
+        {
+            SetIsMatchRequest(true);
+        }
+
+        var prepChanged = !string.IsNullOrWhiteSpace(cachedState.npc) &&
+                          (wasFirstShow || cachedState.npc != previousNpc || TTSolver.preGameNpc == null);
+
+        if (prepChanged)
+        {
+            TTSolver.OnMatchPrepDetected(cachedState);
+
+            // notify when prep data changes; deck eval ignores duplicate input
+            if (wasFirstShow || cachedState.npc != previousNpc)
+            {
+                OnUIStateChanged?.Invoke(cachedState);
+            }
+        }
+        else if (wasFirstShow)
+        {
             OnUIStateChanged?.Invoke(cachedState);
         }
 
@@ -65,26 +84,23 @@ public class UIReaderTriadPrep
             return;
         }
 
-        if (!HasDeckSelectionUI)
-        {
-            UpdateDeckSelect(baseNode);
-        }
+        var wasFirstShow = !HasDeckSelectionUI;
+        var previousDeckCount = cachedState.decks.Count;
+        UpdateDeckSelect(baseNode);
 
         var newHasDeckSelectUI = cachedState.decks.Count > 0;
-
-        // notify only when deck data is coming from UI
-        if (!HasDeckSelectionUI && newHasDeckSelectUI)
+        if (newHasDeckSelectUI)
         {
-            SetIsDeckSelect(true);
+            if (wasFirstShow)
+            {
+                SetIsDeckSelect(true);
+            }
 
-            if (shouldScanDeckData)
+            if (wasFirstShow || cachedState.decks.Count != previousDeckCount)
             {
                 OnUIStateChanged?.Invoke(cachedState);
             }
-        }
 
-        if (newHasDeckSelectUI)
-        {
             foreach (var deckOb in cachedState.decks)
             {
                 var updateNode = (AtkResNode*)deckOb.rootNodeAddr;
@@ -93,6 +109,11 @@ public class UIReaderTriadPrep
                     (deckOb.screenPos, deckOb.screenSize) = GUINodeUtils.GetNodePosAndSize(updateNode);
                 }
             }
+        }
+        else if (wasFirstShow)
+        {
+            SetIsDeckSelect(true);
+            OnUIStateChanged?.Invoke(cachedState);
         }
     }
 
@@ -215,12 +236,9 @@ public class UIReaderTriadPrepMatchRequest : IUIReader
 
     public void OnAddonLost() => parentReader?.OnMatchRequestLost();
 
-    public void OnAddonShown(nint addonPtr)
-    {
-        // nothing to cache
-    }
-
     public void OnAddonUpdate(nint addonPtr) => parentReader?.OnAddonUpdateMatchRequest(addonPtr);
+
+    public void OnAddonShown(nint addonPtr) => OnAddonUpdate(addonPtr);
 }
 
 // helper class for scheduler: handles three octaves performance UI and passes all notifies to parent
@@ -232,12 +250,9 @@ public class UIReaderTriadPrepDeckSelect : IUIReader
 
     public void OnAddonLost() => parentReader?.OnDeckSelectLost();
 
-    public void OnAddonShown(nint addonPtr)
-    {
-        // nothing to cache
-    }
-
     public void OnAddonUpdate(nint addonPtr) => parentReader?.OnAddonUpdateDeckSelect(addonPtr);
+
+    public void OnAddonShown(nint addonPtr) => OnAddonUpdate(addonPtr);
 }
 
 public class UIStateTriadPrepDeck

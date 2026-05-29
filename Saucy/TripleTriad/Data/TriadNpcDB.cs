@@ -65,12 +65,19 @@ public class TriadNpc
 
     public bool IsMatchingNameStart(string testName)
     {
+        if (string.IsNullOrWhiteSpace(testName))
+        {
+            return false;
+        }
+
+        testName = testName.Trim();
         if (NamePartialRegex != null)
         {
             return NamePartialRegex.IsMatch(testName);
         }
 
-        return Name.StartsWith(testName, StringComparison.OrdinalIgnoreCase);
+        return Name.StartsWith(testName, StringComparison.OrdinalIgnoreCase) ||
+               testName.StartsWith(Name, StringComparison.OrdinalIgnoreCase);
     }
 }
 

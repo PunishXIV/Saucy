@@ -70,11 +70,14 @@ public unsafe class PluginUI : Window
         get;
         set
         {
-            if (field != value)
+            var newNpcId = value?.npcId ?? -1;
+            var oldNpcId = field?.npcId ?? -1;
+            if (newNpcId != oldNpcId)
             {
                 TriadAutomater.TempCardsWonList.Clear();
-                field = value;
             }
+
+            field = value;
         }
     }
 
@@ -271,7 +274,7 @@ public unsafe class PluginUI : Window
 
     private static void DrawWindBlowsPanel()
     {
-        DrawPanelHeader("Any Way the Wind Blows", "chocobo wind reader");
+        DrawPanelHeader("Any Way the Wind Blows", "statistical safe spot");
         var enabled = C.AnyWayTheWindBlowsModuleEnabled;
         if (ImGui.Checkbox("Enable##Wind", ref enabled))
         {
@@ -621,14 +624,7 @@ public unsafe class PluginUI : Window
 
     public void DrawTriadTab()
     {
-        if (GameNpcDB.Get().mapNpcs.TryGetValue(TTSolver.preGameNpc?.Id ?? -1, out var npcInfo))
-        {
-            CurrentNPC = npcInfo;
-        }
-        else
-        {
-            CurrentNPC = null;
-        }
+        CurrentNPC = TriadAutomater.ResolveRunTargetNpc();
 
         var enabled = TriadAutomater.ModuleEnabled;
         if (ImGui.Checkbox("Enable Triad Module", ref enabled))
@@ -637,10 +633,13 @@ public unsafe class PluginUI : Window
             if (enabled)
             {
                 CufModule.ModuleEnabled = false;
+                TriadAutomater.BeginAutomationSession();
+                TriadAutomater.EnsureRunTargetCards(CurrentNPC);
+                TriadAutomater.RunModule();
             }
         }
         ImGui.SameLine();
-        ImGuiComponents.HelpMarker("Challenge an NPC first, then enable the module here.");
+        ImGuiComponents.HelpMarker("Enable during match registration or deck select to auto-accept and play.");
 
         var autoOpen = C.OpenAutomatically;
         if (ImGui.Checkbox("Open Saucy when challenging an NPC", ref autoOpen))
@@ -756,9 +755,17 @@ public unsafe class PluginUI : Window
         {
             using var subIndent = ImRaii.PushIndent();
 
-            if (CurrentNPC != null)
+            TTSolver.EnsureRunTargetNpcSynced();
+            var runTargetNpc = TriadAutomater.ResolveRunTargetNpc();
+            TriadAutomater.EnsureRunTargetCards(runTargetNpc);
+
+            if (runTargetNpc != null)
             {
-                ImGui.TextDisabled($"NPC: {TriadNpcDB.Get().FindByID(CurrentNPC.npcId).Name}");
+                ImGui.TextDisabled($"NPC: {TriadNpcDB.Get().FindByID(runTargetNpc.npcId).Name}");
+            }
+            else
+            {
+                ImGui.TextDisabled("NPC: challenge an NPC to track reward cards.");
             }
 
             var onlyUnobtained = C.OnlyUnobtainedCards;
@@ -767,24 +774,28 @@ public unsafe class PluginUI : Window
                 TriadAutomater.TempCardsWonList.Clear();
                 C.OnlyUnobtainedCards = onlyUnobtained;
                 C.Save();
+                TriadAutomater.EnsureRunTargetCards(runTargetNpc);
             }
 
-            if (CurrentNPC != null)
+            foreach (var entry in TriadAutomater.TempCardsWonList)
             {
-                GameCardDB.Get().Refresh();
-                foreach (var card in CurrentNPC.rewardCards)
-                {
-                    if ((C.OnlyUnobtainedCards && !GameCardDB.Get().FindById(card)!.IsOwned) || !C.OnlyUnobtainedCards)
-                    {
-                        TriadAutomater.TempCardsWonList.TryAdd((uint)card, 0);
-                        ImGui.Text($"\u2022 {TriadCardDB.Get().FindById(GameCardDB.Get().FindById(card)!.CardId)!.Name} \u2014 {TriadAutomater.TempCardsWonList[(uint)card]}/{TriadAutomater.NumberOfTimes}");
-                    }
-                }
+                var cardInfo = GameCardDB.Get().FindById((int)entry.Key);
+                var cardName = cardInfo != null
+                    ? TriadCardDB.Get().FindById(cardInfo.CardId)?.Name ?? $"Card #{entry.Key}"
+                    : $"Card #{entry.Key}";
+                ImGui.Text($"\u2022 {cardName} \u2014 {entry.Value}/{TriadAutomater.NumberOfTimes}");
+            }
 
-                if (C.OnlyUnobtainedCards && TriadAutomater.TempCardsWonList.Count == 0)
+            if (onlyUnobtained && TriadAutomater.TempCardsWonList.Count == 0)
+            {
+                using var _ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
+                if (runTargetNpc != null)
                 {
-                    using var _ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
                     ImGui.TextWrapped("You already have every card from this NPC. Untick \"Only unobtained cards\" or pick a different NPC.");
+                }
+                else
+                {
+                    ImGui.TextWrapped("Start a match with an NPC to see which cards are still missing.");
                 }
             }
         }

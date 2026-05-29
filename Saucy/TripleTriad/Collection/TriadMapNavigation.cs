@@ -22,8 +22,13 @@ internal static class TriadMapNavigation
     private static PendingNavigation? _pending;
     private static bool _frameworkSubscribed;
 
-    public static void HandleMapClick(MapLinkPayload location)
+    public static void HandleMapClick(MapLinkPayload location, TriadNpc? npc = null)
     {
+        if (npc != null)
+        {
+            TTSolver.OnNpcSelected(npc);
+        }
+
         if (TryBeginNavigation(location))
         {
             return;

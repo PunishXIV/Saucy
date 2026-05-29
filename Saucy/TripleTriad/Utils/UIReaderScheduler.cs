@@ -1,4 +1,4 @@
-﻿using FFXIVClientStructs.FFXIV.Component.GUI;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using System.Collections.Generic;
 namespace Saucy.TripleTriad.Utils;
 
@@ -106,13 +106,28 @@ public class UIReaderScheduler(IGameGui gameGui)
             }
 
             var baseNode = (AtkUnitBase*)handle.Address;
-            if (baseNode->RootNode != null && baseNode->RootNode->IsVisible())
+            if (IsAddonVisible(baseNode))
             {
                 return handle.Address;
             }
         }
 
         return nint.Zero;
+    }
+
+    private static unsafe bool IsAddonVisible(AtkUnitBase* baseNode)
+    {
+        if (baseNode == null)
+        {
+            return false;
+        }
+
+        if (baseNode->IsVisible)
+        {
+            return true;
+        }
+
+        return baseNode->RootNode != null && baseNode->RootNode->IsVisible();
     }
 
     private class AddonInfo

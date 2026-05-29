@@ -1,8 +1,9 @@
-﻿using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using static ECommons.GenericHelpers;
 namespace Saucy.TripleTriad.UI;
 
 public class UIReaderTriadGame : IUIReader
@@ -45,43 +46,71 @@ public class UIReaderTriadGame : IUIReader
             return;
         }
 
-        status = Status.NoErrors;
-        var newState = new UIStateTriadGame();
-
-        var nodeArrL0 = GUINodeUtils.GetImmediateChildNodes(addon->AtkUnitBase.RootNode);
-        newState.redPlayerDesc = GetUIDescriptionRedPlayer(nodeArrL0);
-        newState.rules = GetUIDescriptionRules(nodeArrL0);
-        newState.isPvP = GetUIStatePvP(nodeArrL0);
-
-        if (status == Status.NoErrors)
-        {
-            newState.move = (byte)addon->TurnState;
-            if (newState.move > 2)
-            {
-                SetStatus(Status.FailedToReadMove);
-            }
-        }
-
-        if (status == Status.NoErrors)
-        {
-            for (var idx = 0; idx < 5; idx++)
-            {
-                newState.blueDeck[idx] = GetCardData(addon->BlueDeck[idx]);
-                newState.redDeck[idx] = GetCardData(addon->RedDeck[idx]);
-            }
-
-            for (var idx = 0; idx < 9; idx++)
-            {
-                newState.board[idx] = GetCardData(addon->Board[idx]);
-            }
-        }
-
-        SetCurrentState(status == Status.NoErrors ? newState : null);
+        var newState = BuildState(addon);
+        SetCurrentState(newState);
 
         if (newState.isPvP)
         {
             SetStatus(Status.PvPMatch);
         }
+    }
+
+    /// <summary>
+    /// Re-reads the live addon and updates <see cref="currentState"/> without Equals gating.
+    /// Used by automation so solver ticks every frame during the player's turn.
+    /// </summary>
+    public unsafe void SyncCurrentFromAddon(nint addonPtr)
+    {
+        var addon = (AddonTripleTriad*)addonPtr;
+        if (addon == null)
+        {
+            return;
+        }
+
+        status = Status.NoErrors;
+        currentState = BuildState(addon);
+    }
+
+    public unsafe void RefreshFromVisibleAddon()
+    {
+        if (!TryGetAddonByName("TripleTriad", out AddonTripleTriad* addon) ||
+            !addon->AtkUnitBase.IsVisible)
+        {
+            return;
+        }
+
+        SyncCurrentFromAddon((nint)addon);
+    }
+
+    private unsafe UIStateTriadGame BuildState(AddonTripleTriad* addon)
+    {
+        status = Status.NoErrors;
+        var newState = new UIStateTriadGame
+        {
+            move = (byte)addon->TurnState
+        };
+
+        var nodeArrL0 = GUINodeUtils.GetImmediateChildNodes(addon->AtkUnitBase.RootNode);
+        newState.redPlayerDesc = GetUIDescriptionRedPlayer(nodeArrL0);
+        if (newState.redPlayerDesc.Count == 0)
+        {
+            newState.redPlayerDesc = CollectVisibleNpcCandidateText(addon->AtkUnitBase.RootNode);
+        }
+        newState.rules = GetUIDescriptionRules(nodeArrL0);
+        newState.isPvP = GetUIStatePvP(nodeArrL0) && newState.redPlayerDesc.Count == 0;
+
+        for (var idx = 0; idx < 5; idx++)
+        {
+            newState.blueDeck[idx] = GetCardData(addon->BlueDeck[idx]);
+            newState.redDeck[idx] = GetCardData(addon->RedDeck[idx]);
+        }
+
+        for (var idx = 0; idx < 9; idx++)
+        {
+            newState.board[idx] = GetCardData(addon->Board[idx]);
+        }
+
+        return newState;
     }
 
     public event Action<UIStateTriadGame?>? OnUIStateChanged;
@@ -147,12 +176,37 @@ public class UIReaderTriadGame : IUIReader
             }
         }
 
-        if (numParsed == 0)
+        // Do not fail the whole reader when name nodes move; Solver can use lastGameNpc from prep.
+        return listRedDesc;
+    }
+
+    private unsafe List<string> CollectVisibleNpcCandidateText(AtkResNode* rootNode)
+    {
+        var candidates = new List<string>();
+        CollectVisibleTextNodes(rootNode, candidates);
+        return candidates;
+    }
+
+    private static unsafe void CollectVisibleTextNodes(AtkResNode* node, List<string> output)
+    {
+        if (node == null || !node->IsVisible())
         {
-            SetStatus(Status.FailedToReadRedPlayer);
+            return;
         }
 
-        return listRedDesc;
+        if ((int)node->Type == (int)NodeType.Text)
+        {
+            var text = GUINodeUtils.GetNodeText(node)?.Trim();
+            if (!string.IsNullOrEmpty(text) && text.Length >= 3)
+            {
+                output.Add(text);
+            }
+        }
+
+        foreach (var child in GUINodeUtils.GetImmediateChildNodes(node) ?? [])
+        {
+            CollectVisibleTextNodes(child, output);
+        }
     }
 
     private unsafe List<string> GetUIDescriptionRules(AtkResNode*[]? level0)
@@ -172,9 +226,16 @@ public class UIReaderTriadGame : IUIReader
                 }
             }
         }
-        else
+        else if (nodeArrRule != null)
         {
-            SetStatus(Status.FailedToReadRules);
+            foreach (var node in nodeArrRule)
+            {
+                var text = GUINodeUtils.GetNodeText(node);
+                if (!string.IsNullOrEmpty(text))
+                {
+                    listRuleDesc.Add(text);
+                }
+            }
         }
 
         return listRuleDesc;
@@ -192,11 +253,6 @@ public class UIReaderTriadGame : IUIReader
         var nodeB = GUINodeUtils.PickChildNode(nodeA, 0, 2);
         var nodeC = GUINodeUtils.PickChildNode(nodeB, 3, 21);
         var texPath = GUINodeUtils.GetNodeTexturePath(nodeC);
-
-        if (nodeC == null)
-        {
-            SetStatus(Status.FailedToReadCards);
-        }
 
         var isLocked = (nodeB != null) && (nodeB->MultiplyRed < 100);
         return (texPath ?? "", isLocked);

@@ -135,7 +135,7 @@ public class PluginWindowCardInfo : Window, IDisposable
                     ImGui.Spacing();
                 }
 
-                TriadNpcMapUi.DrawMapLocationRow(rewardNpcInfo.Location, "Show on map");
+                TriadNpcMapUi.DrawMapLocationRow(rewardNpcInfo.Location, "Show on map", rewardNpc);
                 ImGui.TextColored(colorGray, rewardNpcRules);
             }
             else

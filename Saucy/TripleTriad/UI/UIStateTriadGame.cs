@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 namespace Saucy.TripleTriad.UI;
 
@@ -22,7 +22,10 @@ public class UIStateTriadCard : IEquatable<UIStateTriadCard>
         (isPresent == other.isPresent) &&
         (isLocked == other.isLocked) &&
         (owner == other.owner) &&
-        (texturePath == other.texturePath);
+        (texturePath == other.texturePath) &&
+        (!isPresent ||
+         (numU == other.numU && numL == other.numL && numD == other.numD && numR == other.numR &&
+          type == other.type && rarity == other.rarity));
 
     public override string ToString()
     {
@@ -40,10 +43,24 @@ public class UIStateTriadCard : IEquatable<UIStateTriadCard>
         return desc;
     }
 
-    public TriadCard? ToTriadCard(GameUIParser ctx) =>
-        !isPresent ? null :
-        IsHidden ? ctx.cards.hiddenCard :
-        ctx.ParseCard(numU, numL, numD, numR, texturePath ?? "");
+    public TriadCard? ToTriadCard(GameUIParser ctx, bool markFailed = false)
+    {
+        if (!isPresent)
+        {
+            return null;
+        }
+
+        if (IsHidden)
+        {
+            return ctx.cards.hiddenCard;
+        }
+
+        var cardType = GameDataLoader.ConvertToTriadType(type);
+        var cardRarity = GameDataLoader.ConvertToTriadRarity(rarity);
+
+        return ctx.ParseCard(numU, numL, numD, numR, cardType, cardRarity, markFailed) ??
+               ctx.ParseCard(numU, numL, numD, numR, texturePath ?? "", markFailed);
+    }
 }
 
 public class UIStateTriadGame : IEquatable<UIStateTriadGame>
@@ -115,7 +132,7 @@ public class UIStateTriadGame : IEquatable<UIStateTriadGame>
 
         foreach (var name in redPlayerDesc)
         {
-            var matchOb = ctx.ParseNpcNameStart(name, false);
+            var matchOb = ctx.ParseNpc(name, false) ?? ctx.ParseNpcNameStart(name, false);
             if (matchOb != null)
             {
                 if (resultOb == null || resultOb == matchOb)
@@ -149,12 +166,12 @@ public class UIStateTriadGame : IEquatable<UIStateTriadGame>
         return resultOb;
     }
 
-    public List<TriadGameModifier> ToTriadModifier(GameUIParser ctx)
+    public List<TriadGameModifier> ToTriadModifier(GameUIParser ctx, bool markFailed = false)
     {
         var list = new List<TriadGameModifier>();
         foreach (var rule in rules)
         {
-            var matchOb = ctx.ParseModifier(rule);
+            var matchOb = ctx.ParseModifier(rule, markFailed);
             if (matchOb != null)
             {
                 list.Add(matchOb);
@@ -164,16 +181,17 @@ public class UIStateTriadGame : IEquatable<UIStateTriadGame>
         return list;
     }
 
-    public ScannerTriad.GameState ToTriadScreenState(GameUIParser ctx)
+    public ScannerTriad.GameState ToTriadScreenState(GameUIParser ctx, bool markFailed = false)
     {
         var screenOb = new ScannerTriad.GameState
         {
-            mods = ToTriadModifier(ctx), turnState = (move == 0) ? ScannerTriad.ETurnState.Waiting : ScannerTriad.ETurnState.Active
+            mods = ToTriadModifier(ctx, markFailed),
+            turnState = (move == 0) ? ScannerTriad.ETurnState.Waiting : ScannerTriad.ETurnState.Active
         };
 
         for (var idx = 0; idx < board.Length; idx++)
         {
-            screenOb.board[idx] = board[idx].ToTriadCard(ctx);
+            screenOb.board[idx] = board[idx].ToTriadCard(ctx, markFailed);
             screenOb.boardOwner[idx] =
                 (board[idx].owner == 1) ? ETriadCardOwner.Blue :
                 (board[idx].owner == 2) ? ETriadCardOwner.Red :
@@ -183,8 +201,8 @@ public class UIStateTriadGame : IEquatable<UIStateTriadGame>
         var hasForcedMove = (move == 2);
         for (var idx = 0; idx < blueDeck.Length; idx++)
         {
-            screenOb.blueDeck[idx] = blueDeck[idx].ToTriadCard(ctx);
-            screenOb.redDeck[idx] = redDeck[idx].ToTriadCard(ctx);
+            screenOb.blueDeck[idx] = blueDeck[idx].ToTriadCard(ctx, markFailed);
+            screenOb.redDeck[idx] = redDeck[idx].ToTriadCard(ctx, markFailed);
 
             if (hasForcedMove && blueDeck[idx].isPresent && !blueDeck[idx].isLocked)
             {

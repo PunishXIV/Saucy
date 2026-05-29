@@ -134,7 +134,16 @@ public class GameUIParser
 
     public TriadNpc? ParseNpc(string desc, bool markFailed = true)
     {
-        var matchOb = npcs.Find(desc);
+        var trimmed = desc?.Trim() ?? string.Empty;
+        if (trimmed.Length == 0)
+        {
+            return null;
+        }
+
+        var matchOb = npcs.Find(trimmed) ??
+                      npcs.FindByNameStart(trimmed.Length > PartialNpcNameLength
+                          ? trimmed[..PartialNpcNameLength]
+                          : trimmed);
         if (matchOb == null && markFailed)
         {
             OnFailedNpc(desc);
