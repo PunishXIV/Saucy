@@ -4,10 +4,12 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Plugin;
 using ECommons;
+using ECommons.Reflection;
 using Saucy.IPC;
 using System;
 using System.Linq;
 using System.Numerics;
+using System.Threading.Tasks;
 
 namespace Saucy.TripleTriad;
 
@@ -20,6 +22,7 @@ internal static class TriadDependenciesUi
             "vnavmesh",
             "Walk to Triple Triad NPCs from Saucy map links after you arrive in the zone.",
             "https://puni.sh/api/repository/veyn",
+            [],
             VnavmeshInterop.Refresh,
             () => VnavmeshInterop.IsInstalled),
         new(
@@ -27,6 +30,9 @@ internal static class TriadDependenciesUi
             "Lifestream",
             "Teleport to the nearest aetheryte before vnavmesh when the NPC is far away or in another zone.",
             "https://github.com/NightmareXIV/MyDalamudPlugins/raw/main/pluginmaster.json",
+            [
+                "https://raw.githubusercontent.com/NightmareXIV/MyDalamudPlugins/main/pluginmaster.json",
+            ],
             LifestreamInterop.Refresh,
             () => LifestreamInterop.IsInstalled),
         new(
@@ -34,6 +40,7 @@ internal static class TriadDependenciesUi
             "Questionable",
             "Start unlock quests for Triple Triad NPCs directly from Saucy card and NPC search.",
             "https://love.puni.sh/ment.json",
+            [],
             QuestionableInterop.Refresh,
             () => QuestionableInterop.IsInstalled),
     ];
@@ -69,8 +76,8 @@ internal static class TriadDependenciesUi
         if (state == DependencyState.Ready)
             return;
 
-        var repoAdded = DalamudRepoHelper.IsRepositoryAdded(entry.RepositoryUrl);
-        var showAddRepo = !repoAdded;
+        var repoAdded = IsRepositoryAdded(entry);
+        var showAddRepo = !repoAdded && state == DependencyState.NotInstalled;
         var showInstall = state == DependencyState.NotInstalled;
 
         if (!showAddRepo && !showInstall)
@@ -82,14 +89,10 @@ internal static class TriadDependenciesUi
         if (showAddRepo)
         {
             if (ImGui.Button("Add repository"))
-            {
-                ImGui.SetClipboardText(entry.RepositoryUrl);
-                Svc.PluginInterface.OpenDalamudSettingsTo(SettingsOpenKind.Experimental);
-                Svc.Chat.Print($"[Saucy] Copied {entry.DisplayName} repository URL. Paste it under Custom Plugin Repositories, then save.");
-            }
+                TryAddRepository(entry);
 
             if (ImGui.IsItemHovered())
-                ImGui.SetTooltip($"Copy {entry.RepositoryUrl}\nand open Dalamud Experimental settings.");
+                ImGui.SetTooltip($"Add {entry.PrimaryRepositoryUrl} to Custom Plugin Repositories.");
 
             firstButton = false;
         }
@@ -100,11 +103,50 @@ internal static class TriadDependenciesUi
                 ImGui.SameLine();
 
             if (ImGui.Button("Install plugin"))
-                Svc.PluginInterface.OpenPluginInstallerTo(PluginInstallerOpenKind.AllPlugins, entry.InstallerSearch);
+                TryInstallPlugin(entry);
 
             if (ImGui.IsItemHovered())
-                ImGui.SetTooltip($"Open the plugin installer and search for {entry.DisplayName}.");
+                ImGui.SetTooltip($"Install {entry.DisplayName} from its plugin repository.");
         }
+    }
+
+    private static bool IsRepositoryAdded(DependencyEntry entry)
+    {
+        foreach (var url in entry.RepositoryUrls)
+        {
+            if (DalamudReflector.HasRepo(url))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static void TryAddRepository(DependencyEntry entry)
+    {
+        if (DalamudReflector.HasRepo(entry.PrimaryRepositoryUrl))
+        {
+            Svc.Chat.Print($"[Saucy] {entry.DisplayName} repository is already added.");
+            return;
+        }
+
+        DalamudReflector.AddRepo(entry.PrimaryRepositoryUrl, true);
+        DalamudReflector.SaveDalamudConfig();
+        DalamudReflector.ReloadPluginMasters();
+        Svc.Chat.Print($"[Saucy] Added {entry.DisplayName} repository.");
+    }
+
+    private static void TryInstallPlugin(DependencyEntry entry)
+    {
+        var repoUrl = entry.RepositoryUrls.FirstOrDefault(DalamudReflector.HasRepo) ?? entry.PrimaryRepositoryUrl;
+        _ = InstallPluginAsync(entry, repoUrl);
+    }
+
+    private static async Task InstallPluginAsync(DependencyEntry entry, string repoUrl)
+    {
+        if (await DalamudReflector.AddPlugin(repoUrl, entry.InternalName))
+            Svc.Chat.Print($"[Saucy] Installed {entry.DisplayName}.");
+        else
+            Svc.Chat.PrintError($"[Saucy] Could not install {entry.DisplayName}. Check the plugin installer for details.");
     }
 
     private static void DrawStatus(DependencyState state)
@@ -158,10 +200,16 @@ internal static class TriadDependenciesUi
         string DisplayName,
         string InternalName,
         string Description,
-        string RepositoryUrl,
+        string PrimaryRepositoryUrl,
+        string[] AlternateRepositoryUrls,
         Action Refresh,
         Func<bool> IsReady)
     {
         public string InstallerSearch => DisplayName;
+
+        public string[] RepositoryUrls =>
+            AlternateRepositoryUrls.Length == 0
+                ? [PrimaryRepositoryUrl]
+                : [PrimaryRepositoryUrl, ..AlternateRepositoryUrls];
     }
 }
