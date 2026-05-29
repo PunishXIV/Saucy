@@ -2,7 +2,6 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ECommons;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using Saucy.IPC;
 using System;
 using TriadBuddyPlugin;
 using static ECommons.GenericHelpers;
@@ -29,14 +28,12 @@ internal sealed class TriadBuddyHost : IDisposable
         _windowSystem.AddWindow(_cardInfoWindow);
         _windowSystem.AddWindow(_npcStatsWindow);
 
-        IpcSubscriptions.Refresh();
         pluginInterface.UiBuilder.Draw += OnDraw;
     }
 
     public void Dispose()
     {
         Svc.PluginInterface.UiBuilder.Draw -= OnDraw;
-        IpcSubscriptions.Dispose();
         _windowSystem.RemoveAllWindows();
         _cardSearchWindow.Dispose();
     }
@@ -45,8 +42,6 @@ internal sealed class TriadBuddyHost : IDisposable
     {
         if (!Saucy.C.TriadBuddyCollectionUiEnabled)
             return;
-
-        IpcSubscriptions.Refresh();
 
         if (!Svc.ClientState.IsLoggedIn)
             return;

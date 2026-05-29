@@ -23,8 +23,7 @@ internal static class TriadDependenciesUi
             "Walk to Triple Triad NPCs from Saucy map links after you arrive in the zone.",
             "https://puni.sh/api/repository/veyn",
             [],
-            VnavmeshInterop.Refresh,
-            () => VnavmeshInterop.IsInstalled),
+            () => Vnavmesh.IsInstalled),
         new(
             "Lifestream",
             "Lifestream",
@@ -33,39 +32,30 @@ internal static class TriadDependenciesUi
             [
                 "https://raw.githubusercontent.com/NightmareXIV/MyDalamudPlugins/main/pluginmaster.json",
             ],
-            LifestreamInterop.Refresh,
-            () => LifestreamInterop.IsInstalled),
+            () => Lifestream.IsInstalled),
         new(
             "Questionable",
             "Questionable",
             "Start unlock quests for Triple Triad NPCs directly from Saucy card and NPC search.",
             "https://love.puni.sh/ment.json",
             [],
-            QuestionableInterop.Refresh,
-            () => QuestionableInterop.IsInstalled),
+            () => Questionable.IsInstalled),
     ];
 
     public static void Draw()
     {
-        IpcSubscriptions.Refresh();
-
         ImGui.TextWrapped(
             "Optional plugins for TriadBuddy in Saucy: path to NPCs on the map, teleport when needed, and start unlock quests.");
         ImGui.Dummy(new Vector2(0, 4));
 
         foreach (var entry in Dependencies)
-        {
             DrawDependency(entry);
-            ImGui.Dummy(new Vector2(0, 6));
-        }
     }
 
     private static void DrawDependency(DependencyEntry entry)
     {
-        entry.Refresh();
-
         using var id = ImRaii.PushId(entry.InternalName);
-        var state = GetState(entry.InternalName, entry.IsReady);
+        var state = GetState(entry.InternalName, entry.IsInstalled);
 
         ImGui.TextColored(SaucyTheme.ColorOr(SaucyTheme.SectionTitle, ImGuiCol.Text), entry.DisplayName);
         ImGui.TextWrapped(entry.Description);
@@ -108,6 +98,8 @@ internal static class TriadDependenciesUi
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip($"Install {entry.DisplayName} from its plugin repository.");
         }
+
+        ImGui.Dummy(new Vector2(0, 6));
     }
 
     private static bool IsRepositoryAdded(DependencyEntry entry)
@@ -202,11 +194,8 @@ internal static class TriadDependenciesUi
         string Description,
         string PrimaryRepositoryUrl,
         string[] AlternateRepositoryUrls,
-        Action Refresh,
-        Func<bool> IsReady)
+        Func<bool> IsInstalled)
     {
-        public string InstallerSearch => DisplayName;
-
         public string[] RepositoryUrls =>
             AlternateRepositoryUrls.Length == 0
                 ? [PrimaryRepositoryUrl]

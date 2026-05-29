@@ -43,14 +43,11 @@ internal static class TriadNpcMapUi
 
     private static string BuildTooltip(string showOnMapTooltip)
     {
-        VnavmeshInterop.Refresh();
-        LifestreamInterop.Refresh();
-
-        if (!VnavmeshInterop.IsInstalled)
+        if (!Vnavmesh.IsInstalled)
             return $"{showOnMapTooltip}\nInstall vnavmesh to walk to this NPC.";
 
         var lines = $"{showOnMapTooltip}\nClick to move with vnavmesh.";
-        if (LifestreamInterop.IsInstalled)
+        if (Lifestream.IsInstalled)
             lines += "\nUses Lifestream to teleport to the nearest aetheryte first.";
 
         return lines;

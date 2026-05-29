@@ -55,7 +55,7 @@ internal static class TriadNpcQuestUi
 
     private static void HandleUnlockQuestClick(GameNpcInfo npcInfo, string questName, QuestSnapshot snapshot)
     {
-        if (!QuestionableInterop.IsInstalled)
+        if (!Questionable.IsInstalled)
         {
             Svc.Chat.Print("[Saucy] Install Questionable (/qst) to start quests from Saucy.");
             return;
@@ -67,7 +67,7 @@ internal static class TriadNpcQuestUi
         InvalidateCache();
         snapshot = GetSnapshot(npcInfo.UnlockQuestId);
 
-        if (QuestionableInterop.TryStartSingleQuest(npcInfo.UnlockQuestId))
+        if (QuestionableTriad.TryStartSingleQuest(npcInfo.UnlockQuestId))
         {
             Svc.Chat.Print($"[Saucy] Sent \"{questName}\" to Questionable.");
             InvalidateCache();
@@ -82,7 +82,7 @@ internal static class TriadNpcQuestUi
 
     private static string? BuildTooltip(QuestSnapshot snapshot, string questName)
     {
-        if (!QuestionableInterop.IsInstalled)
+        if (!Questionable.IsInstalled)
             return "Install Questionable (/qst) to start this quest.";
 
         if (!snapshot.HasAutomationPath)
@@ -106,7 +106,7 @@ internal static class TriadNpcQuestUi
 
     private static QuestSnapshot BuildSnapshot(uint questId)
     {
-        if (!QuestionableInterop.IsInstalled)
+        if (!Questionable.IsInstalled)
         {
             return new QuestSnapshot
             {
@@ -117,9 +117,9 @@ internal static class TriadNpcQuestUi
             };
         }
 
-        var hasAutomationPath = QuestionableInterop.HasAutomationPath(questId);
+        var hasAutomationPath = QuestionableTriad.HasAutomationPath(questId);
 
-        if (QuestionableInterop.IsQuestComplete(questId))
+        if (QuestionableTriad.IsQuestComplete(questId))
         {
             return new QuestSnapshot
             {
@@ -141,7 +141,7 @@ internal static class TriadNpcQuestUi
             };
         }
 
-        if (QuestionableInterop.IsQuestAccepted(questId))
+        if (QuestionableTriad.IsQuestAccepted(questId))
         {
             return new QuestSnapshot
             {
@@ -152,7 +152,7 @@ internal static class TriadNpcQuestUi
             };
         }
 
-        if (QuestionableInterop.IsQuestUnobtainable(questId))
+        if (QuestionableTriad.IsQuestUnobtainable(questId))
         {
             return new QuestSnapshot
             {
@@ -163,7 +163,7 @@ internal static class TriadNpcQuestUi
             };
         }
 
-        if (!QuestionableInterop.IsReadyToAccept(questId))
+        if (!QuestionableTriad.IsReadyToAccept(questId))
         {
             return new QuestSnapshot
             {

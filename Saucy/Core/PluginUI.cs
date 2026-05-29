@@ -467,7 +467,7 @@ public unsafe class PluginUI : Window
     {
         if (s.CardsWon.Count == 0) return ("\u2014", null);
         var top = s.CardsWon.OrderByDescending(x => x.Value).First();
-        return ($"{top.Value:N0}", TriadCardDB.Get().FindById((int)top.Key)!.Name.GetLocalized());
+        return ($"{top.Value:N0}", TriadCardDB.Get().FindById((int)top.Key)!.Name);
     }
 
     private static void StatsHeader()
@@ -649,7 +649,7 @@ public unsafe class PluginUI : Window
             using var subIndent = ImRaii.PushIndent();
 
             if (CurrentNPC != null)
-                ImGui.TextDisabled($"NPC: {TriadNpcDB.Get().FindByID(CurrentNPC.npcId).Name.GetLocalized()}");
+                ImGui.TextDisabled($"NPC: {TriadNpcDB.Get().FindByID(CurrentNPC.npcId).Name}");
 
             var onlyUnobtained = C.OnlyUnobtainedCards;
             if (ImGui.Checkbox("Only unobtained cards", ref onlyUnobtained))
@@ -667,7 +667,7 @@ public unsafe class PluginUI : Window
                     if ((C.OnlyUnobtainedCards && !GameCardDB.Get().FindById(card)!.IsOwned) || !C.OnlyUnobtainedCards)
                     {
                         TriadAutomater.TempCardsWonList.TryAdd((uint)card, 0);
-                        ImGui.Text($"\u2022 {TriadCardDB.Get().FindById(GameCardDB.Get().FindById(card)!.CardId)!.Name.GetLocalized()} \u2014 {TriadAutomater.TempCardsWonList[(uint)card]}/{TriadAutomater.NumberOfTimes}");
+                        ImGui.Text($"\u2022 {TriadCardDB.Get().FindById(GameCardDB.Get().FindById(card)!.CardId)!.Name} \u2014 {TriadAutomater.TempCardsWonList[(uint)card]}/{TriadAutomater.NumberOfTimes}");
                     }
                 }
 

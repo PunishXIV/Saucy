@@ -11,6 +11,7 @@ using PunishLib;
 using Saucy.AirForce;
 using Saucy.CuffACur;
 using Saucy.Framework;
+using Saucy.IPC;
 using Saucy.OutOnALimb;
 using Saucy.TripleTriad;
 using System;
@@ -119,6 +120,7 @@ public sealed class Saucy : IDalamudPlugin
         Svc.PluginInterface.UiBuilder.OpenMainUi -= EzConfigGui.Open;
         Svc.Framework.Update -= RunBot;
         _triadBuddyHost?.Dispose();
+        SubscriptionManager.DisposeAll();
         _triadBuddyHost = null;
         lock (_lockObj) { DisposeAudio(); }
         CufModule.FuncHook?.Dispose();
@@ -222,7 +224,7 @@ public sealed class Saucy : IDalamudPlugin
                 stats.GamesPlayedWithSaucy++;
                 stats.MGPWon += GetBonusMGP(obj.numMGP);
 
-                var npcName = TTSolver.lastGameNpc.Name.GetLocalized();
+                var npcName = TTSolver.lastGameNpc.Name;
                 if (stats.NPCsPlayed.TryGetValue(npcName, out var plays))
                 {
                     stats.NPCsPlayed[npcName] += 1;
@@ -391,6 +393,8 @@ public sealed class Saucy : IDalamudPlugin
     {
         try
         {
+            SubscriptionManager.Subscribe(framework);
+
             if (dataLoader.IsDataReady)
             {
                 var deltaSeconds = (float)framework.UpdateDelta.TotalSeconds;

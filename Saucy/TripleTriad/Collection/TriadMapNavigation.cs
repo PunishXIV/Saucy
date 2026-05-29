@@ -55,8 +55,7 @@ internal static class TriadMapNavigation
                 if (!Player.Interactable || IsBetweenAreas())
                     return;
 
-                VnavmeshInterop.Refresh();
-                if (!VnavmeshInterop.IsNavReady())
+                if (!Vnavmesh.IsNavReady())
                 {
                     if (DateTime.UtcNow - pending.PhaseStartedUtc > TimeSpan.FromSeconds(15))
                     {
@@ -78,10 +77,7 @@ internal static class TriadMapNavigation
 
     private static bool TryBeginNavigation(MapLinkPayload location, bool fly = false)
     {
-        VnavmeshInterop.Refresh();
-        LifestreamInterop.Refresh();
-
-        if (!VnavmeshInterop.IsInstalled)
+        if (!Vnavmesh.IsInstalled)
         {
             Svc.Chat.Print("[Saucy] Install vnavmesh to path to NPCs from Saucy.");
             return false;
@@ -103,7 +99,7 @@ internal static class TriadMapNavigation
         if (closeEnough)
             return TryStartVnavImmediate(location, pointOnFloor, fly);
 
-        if (!LifestreamInterop.IsInstalled)
+        if (!Lifestream.IsInstalled)
         {
             if (!inTargetTerritory)
             {
@@ -128,13 +124,13 @@ internal static class TriadMapNavigation
             return TryStartVnavImmediate(location, pointOnFloor, fly);
         }
 
-        if (LifestreamInterop.IsBusy())
+        if (Lifestream.IsBusyNow())
         {
             Svc.Chat.Print("[Saucy] Lifestream is busy. Try again in a moment.");
             return false;
         }
 
-        if (!LifestreamInterop.TryTeleport(aetheryteId))
+        if (!Lifestream.TryTeleport(aetheryteId))
         {
             Svc.Chat.PrintError("[Saucy] Lifestream could not start teleport.");
             return false;
@@ -159,7 +155,7 @@ internal static class TriadMapNavigation
 
     private static bool TryStartVnavImmediate(MapLinkPayload location, Vector3 destination, bool fly)
     {
-        if (!VnavmeshInterop.IsNavReady())
+        if (!Vnavmesh.IsNavReady())
         {
             Svc.Chat.Print("[Saucy] vnavmesh is not ready for this zone yet.");
             return false;
@@ -179,9 +175,9 @@ internal static class TriadMapNavigation
 
     private static bool TryStartVnav(PendingNavigation pending)
     {
-        var pointOnFloor = VnavmeshInterop.TryGetPointOnFloor(pending.Destination) ?? pending.Destination;
+        var pointOnFloor = Vnavmesh.TryGetPointOnFloor(pending.Destination) ?? pending.Destination;
 
-        if (!VnavmeshInterop.TryPathfindAndMoveTo(pointOnFloor, pending.Fly))
+        if (!Vnavmesh.TryPathfindAndMoveTo(pointOnFloor, pending.Fly))
         {
             Svc.Chat.PrintError("[Saucy] vnavmesh could not start movement.");
             return false;
@@ -194,7 +190,7 @@ internal static class TriadMapNavigation
 
     private static bool IsTravelComplete(uint targetTerritoryId)
     {
-        if (LifestreamInterop.IsBusy())
+        if (Lifestream.IsBusyNow())
             return false;
 
         if (Svc.ClientState.TerritoryType != targetTerritoryId)
