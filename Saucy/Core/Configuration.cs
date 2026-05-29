@@ -28,6 +28,9 @@ public class Configuration : IPluginConfiguration
     [JsonIgnore]
     public Stats SessionStats { get; set; } = new();
 
+    [JsonIgnore]
+    public DateTime SessionStartTime { get; set; } = DateTime.UtcNow;
+
     public bool PlaySound { get; set; } = false;
     public string SelectedSound { get; set; } = "Moogle";
     public bool OnlyUnobtainedCards { get; set; } = false;
