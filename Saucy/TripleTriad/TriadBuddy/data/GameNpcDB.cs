@@ -33,17 +33,16 @@ public class GameNpcDB
 
     public static GameNpcDB Get() => instance;
 
-    public void Refresh()
-    {
-        if (memReader != null && !memReader.HasErrors)
-        {
-            foreach (var kvp in mapNpcs)
-            {
-                kvp.Value.IsBeatenOnce = memReader.IsNpcBeaten(kvp.Value.triadId);
-            }
-        }
+    public void Refresh() => RefreshCompleted();
 
-        // card search window is already doing GameCardDB refresh before this
+    public void Refresh(bool completion, bool beatenOnce)
+    {
+        if (completion)
+            RefreshCompleted();
+    }
+
+    public void RefreshCompleted()
+    {
         var cardInfoDB = GameCardDB.Get();
 
         foreach (var kvp in mapNpcs)
@@ -55,12 +54,17 @@ public class GameNpcDB
                 if (!cardInfoDB.ownedCardIds.Contains(rewardId))
                 {
                     isCompleted = false;
-
                     break;
                 }
             }
 
             kvp.Value.IsCompleted = isCompleted;
         }
+    }
+
+    public void RefreshBeatenOnce()
+    {
+        foreach (var kvp in mapNpcs)
+            kvp.Value.IsBeatenOnce = false;
     }
 }

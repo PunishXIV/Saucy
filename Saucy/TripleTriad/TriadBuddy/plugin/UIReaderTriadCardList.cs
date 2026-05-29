@@ -30,6 +30,18 @@ public class UIReaderTriadCardList : IUIReader
 
     public string GetAddonName() => "GSInfoCardList";
 
+    private static nint ResolveAddonPtr()
+    {
+        for (var i = 0; i < 8; i++)
+        {
+            var handle = Svc.GameGui.GetAddonByName("GSInfoCardList", i);
+            if (handle.Address != nint.Zero)
+                return handle.Address;
+        }
+
+        return nint.Zero;
+    }
+
     public void OnAddonLost()
     {
         // reset cached pointers when addon address changes
@@ -82,10 +94,13 @@ public class UIReaderTriadCardList : IUIReader
         var descNode = (AtkResNode*)cachedState.descNodeAddr;
         (cachedState.descriptionPos, cachedState.descriptionSize) = GUINodeUtils.GetNodePosAndSize(descNode);
 
-        var newFilterMode =
-            (addon->FilterMode == 0x7) ? (byte)1 :
-            (addon->FilterMode == 0xA) ? (byte)2 :
-            (byte)0;
+        // Addon FilterMode: 0xD = all, 0x3 = owned only, 0xC = missing only (see struct comment)
+        var newFilterMode = addon->FilterMode switch
+        {
+            0x3 => (byte)1,
+            0xC => (byte)2,
+            _ => (byte)0,
+        };
 
         if (cachedState.pageIndex != addon->PageIndex ||
             cachedState.cardIndex != addon->CardIndex ||
@@ -141,7 +156,7 @@ public class UIReaderTriadCardList : IUIReader
         }
 
         // refresh cached pointers before using them
-        nint addonPtr = Svc.GameGui.GetAddonByName(GetAddonName());
+        nint addonPtr = ResolveAddonPtr();
         OnAddonShown(addonPtr);
 
         if (addonPtr != nint.Zero && cachedAddonAgentPtr != nint.Zero)

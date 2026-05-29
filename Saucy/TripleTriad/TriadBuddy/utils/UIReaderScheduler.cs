@@ -90,14 +90,19 @@ public class UIReaderScheduler(IGameGui gameGui)
 
     private unsafe nint GetAddonPtrIfValid(string name)
     {
-        nint addonPtr = (gameGui == null) ? nint.Zero : gameGui.GetAddonByName(name);
-        if (addonPtr != nint.Zero)
+        if (gameGui == null)
+            return nint.Zero;
+
+        var maxIndex = name == "GSInfoCardList" ? 8 : 1;
+        for (var i = 0; i < maxIndex; i++)
         {
-            var baseNode = (AtkUnitBase*)addonPtr;
+            var handle = gameGui.GetAddonByName(name, i);
+            if (handle.Address == nint.Zero)
+                continue;
+
+            var baseNode = (AtkUnitBase*)handle.Address;
             if (baseNode->RootNode != null && baseNode->RootNode->IsVisible())
-            {
-                return addonPtr;
-            }
+                return handle.Address;
         }
 
         return nint.Zero;

@@ -7,26 +7,6 @@ using System.Collections.Generic;
 
 namespace MgAl2O4.Utils
 {
-    /// <summary>Minimal stub for TriadBuddy UI strings when the full MgAl2O4 localization assembly is not linked.</summary>
-    public class Localization
-    {
-        public event Action<string>? LocalizationChanged;
-
-        public Localization(string resourcePrefix, string resourceSuffix, bool fromManifest)
-        {
-        }
-
-        public void SetupWithLangCode(string langCode)
-        {
-        }
-
-        public void SetupWithFallbacks()
-        {
-        }
-
-        public static string Localize(string key, string defaultText) => defaultText;
-    }
-
     public class Logger
     {
 #if DEBUG

@@ -4,6 +4,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
 using FFTriadBuddy;
+using Saucy;
 using System;
 using System.Numerics;
 using Saucy.TripleTriad;
@@ -33,7 +34,6 @@ public class PluginWindowCardInfo : Window, IDisposable
 
         uiReaderCardList.OnVisibilityChanged += _ => UpdateWindowData();
         uiReaderCardList.OnUIStateChanged += _ => UpdateWindowData();
-        UpdateWindowData();
 
         // doesn't matter will be updated on next draw
         PositionCondition = ImGuiCond.Always;
@@ -50,8 +50,6 @@ public class PluginWindowCardInfo : Window, IDisposable
                 ImGuiWindowFlags.NoFocusOnAppearing |
                 ImGuiWindowFlags.NoNav;
 
-        if (TriadCollectionUi.Loc != null)
-            TriadCollectionUi.Loc.LocalizationChanged += _ => { hasCachedLocStrings = false; };
     }
 
     public void Dispose()
@@ -64,9 +62,9 @@ public class PluginWindowCardInfo : Window, IDisposable
         if (hasCachedLocStrings) { return; }
         hasCachedLocStrings = true;
 
-        locNpcReward = Localization.Localize("CI_NpcReward", "NPC reward:");
-        locShowOnMap = Localization.Localize("CI_ShowMap", "Show on map");
-        locNoAvail = Localization.Localize("CI_NotAvail", "Not available");
+        locNpcReward = "NPC reward:";
+        locShowOnMap = "Show on map";
+        locNoAvail = "Not available";
     }
 
     internal void SyncVisibility()
@@ -83,7 +81,7 @@ public class PluginWindowCardInfo : Window, IDisposable
             uiReaderCardList.cachedState != null &&
             uiReaderCardList.cachedState.iconId == 0)
         {
-            if (!IsOpen)
+            if (!IsOpen && TriadMemoryReads.IsAvailable)
             {
                 // force refresh owned cards, required for parsing id based on collection index
                 GameCardDB.Get().Refresh();
@@ -114,7 +112,7 @@ public class PluginWindowCardInfo : Window, IDisposable
             requestedSize.Y = Math.Max(requestedSize.Y, ImGui.GetTextLineHeight() * 6.5f);
         }
 
-        Position = ImGuiHelpers.MainViewport.Pos + uiReaderCardList.cachedState.descriptionPos;
+        Position = uiReaderCardList.cachedState.descriptionPos;
         Size = requestedSize;
     }
 
@@ -124,8 +122,8 @@ public class PluginWindowCardInfo : Window, IDisposable
         {
             UpdateLocalizationCache();
 
-            var colorName = new Vector4(0.9f, 0.9f, 0.2f, 1);
-            var colorGray = new Vector4(0.6f, 0.6f, 0.6f, 1);
+            var colorName = SaucyTheme.ColorOr(SaucyTheme.SectionTitle, ImGuiCol.Text);
+            var colorGray = SaucyTheme.ColorOr(SaucyTheme.BodyText, ImGuiCol.TextDisabled);
 
             ImGui.TextColored(colorName, selectedCard.Name.GetLocalized());
 

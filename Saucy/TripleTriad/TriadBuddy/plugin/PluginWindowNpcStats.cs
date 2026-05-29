@@ -45,8 +45,6 @@ public class PluginWindowNpcStats : Window, IDisposable
         Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar;
         RespectCloseHotkey = false;
 
-        if (TriadCollectionUi.Loc != null)
-            TriadCollectionUi.Loc.LocalizationChanged += _ => { hasCachedLocStrings = false; };
     }
 
     public void Dispose()
@@ -59,19 +57,19 @@ public class PluginWindowNpcStats : Window, IDisposable
         if (hasCachedLocStrings) { return; }
         hasCachedLocStrings = true;
 
-        locTitle = Localization.Localize("NS_Title", "NPC stats");
-        locNumTracked = Localization.Localize("NS_NumMacthes", "Num tracked matches: {0}");
-        locBtnReset = Localization.Localize("NS_Reset", "Reset");
-        locBtnCopy = Localization.Localize("NS_Copy", "Copy");
-        locGameStats = Localization.Localize("NS_GameStats", "Game stats:");
-        locGameWins = Localization.Localize("NS_GameStatsWins", "{0} wins");
-        locGameDraws = Localization.Localize("NS_GameStatsDraws", "{0} draws");
-        locGameLosses = Localization.Localize("NS_GameStatsLosses", "{0} losses");
-        locDropStats = Localization.Localize("NS_DropStats", "Reward stats:");
-        locDropMGP = Localization.Localize("NS_DropMGPAvg", "MGP: {0}");
-        locDropCard = Localization.Localize("NS_DropCardName", "{0} card: {1}");
-        locEstMGP = Localization.Localize("NS_DropPerMatch", "MGP per match:");
-        locEstMGPHint = Localization.Localize("NS_DropIncludesSelling", "Includes MGP from selling cards");
+        locTitle = "NPC stats";
+        locNumTracked = "Num tracked matches: {0}";
+        locBtnReset = "Reset";
+        locBtnCopy = "Copy";
+        locGameStats = "Game stats:";
+        locGameWins = "{0} wins";
+        locGameDraws = "{0} draws";
+        locGameLosses = "{0} losses";
+        locDropStats = "Reward stats:";
+        locDropMGP = "MGP: {0}";
+        locDropCard = "{0} card: {1}";
+        locEstMGP = "MGP per match:";
+        locEstMGPHint = "Includes MGP from selling cards";
     }
 
     public void SetupAndOpen(TriadNpc? triadNpc)

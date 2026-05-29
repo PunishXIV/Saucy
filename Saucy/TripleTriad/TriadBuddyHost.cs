@@ -2,7 +2,6 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ECommons;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using MgAl2O4.Utils;
 using System;
 using TriadBuddyPlugin;
 using static ECommons.GenericHelpers;
@@ -17,17 +16,9 @@ internal sealed class TriadBuddyHost : IDisposable
     private readonly PluginWindowCardSearch _cardSearchWindow;
     private readonly PluginWindowCardInfo _cardInfoWindow;
     private readonly PluginWindowNpcStats _npcStatsWindow;
-    private readonly Localization _locManager;
 
     public TriadBuddyHost(IDalamudPluginInterface pluginInterface)
     {
-        var assemblyName = typeof(Saucy).Assembly.GetName().Name!;
-        _locManager = new($"{assemblyName}.TripleTriad.TriadBuddy.assets.loc.", "", true);
-        _locManager.SetupWithLangCode(pluginInterface.UiLanguage);
-        TriadCollectionUi.Loc = _locManager;
-
-        pluginInterface.LanguageChanged += OnLanguageChanged;
-
         _npcStatsWindow = new(_statTracker);
         _cardSearchWindow = new(_uiReaderCardList, _npcStatsWindow);
         _cardInfoWindow = new(_uiReaderCardList);
@@ -38,27 +29,14 @@ internal sealed class TriadBuddyHost : IDisposable
 
         QuestionableInterop.Init(pluginInterface);
         pluginInterface.UiBuilder.Draw += OnDraw;
-
-        Saucy.uiReaderScheduler.AddObservedAddon(_uiReaderCardList);
     }
 
     public void Dispose()
     {
         Svc.PluginInterface.UiBuilder.Draw -= OnDraw;
-        Svc.PluginInterface.LanguageChanged -= OnLanguageChanged;
         QuestionableInterop.Dispose();
         _windowSystem.RemoveAllWindows();
         _cardSearchWindow.Dispose();
-        TriadCollectionUi.Loc = null;
-    }
-
-    private void OnLanguageChanged(string langCode)
-    {
-        var supported = new[] { "de", "en", "es", "fr", "ja", "ko", "zh" };
-        if (Array.Find(supported, x => x == langCode) != null)
-            _locManager.SetupWithLangCode(langCode);
-        else
-            _locManager.SetupWithFallbacks();
     }
 
     private void OnDraw()
@@ -66,27 +44,61 @@ internal sealed class TriadBuddyHost : IDisposable
         if (!Saucy.C.TriadBuddyCollectionUiEnabled)
             return;
 
+        if (!Svc.ClientState.IsLoggedIn)
+            return;
+
         RefreshCardListReader();
+
+        if (!_uiReaderCardList.IsVisible)
+            return;
+
+        if (!Saucy.dataLoader.IsDataReady)
+            return;
 
         _cardSearchWindow.SyncVisibility();
         _cardInfoWindow.SyncVisibility();
 
+        if (Saucy.C.SaucyThemeEnabled)
+            SaucyTheme.Push();
+
         _windowSystem.Draw();
+
+        if (Saucy.C.SaucyThemeEnabled)
+            SaucyTheme.Pop();
     }
 
     private unsafe void RefreshCardListReader()
     {
-        if (!TryGetAddonByName<AtkUnitBase>("GSInfoCardList", out var addon) || !IsAddonReady(addon))
+        var addonPtr = ResolveCardListAddonPtr();
+        if (addonPtr == nint.Zero)
         {
             if (_uiReaderCardList.status != UIReaderTriadCardList.Status.AddonNotFound)
                 _uiReaderCardList.OnAddonLost();
             return;
         }
 
-        var addonPtr = addon.Address;
         if (_uiReaderCardList.status is UIReaderTriadCardList.Status.AddonNotFound or UIReaderTriadCardList.Status.AddonNotVisible)
             _uiReaderCardList.OnAddonShown(addonPtr);
 
         _uiReaderCardList.OnAddonUpdate(addonPtr);
     }
+
+    /// <summary>Upstream TriadBuddy uses <c>GetAddonByName("GSInfoCardList", 1)</c> — index 0 is often not the visible instance.</summary>
+    private static unsafe nint ResolveCardListAddonPtr()
+    {
+        for (var i = 0; i < 8; i++)
+        {
+            var handle = Svc.GameGui.GetAddonByName("GSInfoCardList", i);
+            if (handle.Address == nint.Zero)
+                continue;
+
+            var unit = (AtkUnitBase*)handle.Address;
+            if (unit->IsVisible && unit->RootNode != null && unit->RootNode->IsVisible())
+                return handle.Address;
+        }
+
+        return nint.Zero;
+    }
 }
+
+

@@ -107,6 +107,8 @@ public sealed class Saucy : IDalamudPlugin
         LimbManager = new(C.LimbConfig);
         ModuleManager = new();
         C.EnabledModules.CollectionChanged += OnChange;
+
+        _triadBuddyHost = new TriadBuddyHost(pluginInterface);
     }
     public string Name => "Saucy";
     public static Configuration C { get; private set; } = null!;
