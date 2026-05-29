@@ -432,9 +432,10 @@ public unsafe class PluginUI : Window
         if (ImGui.Button(sessLbl))
         {
             C.SessionStats = new();
+            C.SessionStartTime = DateTime.UtcNow;
         }
-        ImGui.EndDisabled();
-        ImGui.Dummy(new(0, 2));
+		ImGui.EndDisabled();
+        ImGui.Dummy(new (0, 2));
     }
 
     private static string TriadHeadline(Stats s)
@@ -466,7 +467,7 @@ public unsafe class PluginUI : Window
         StatsRow("Draws", life.GamesDrawnWithSaucy, sess.GamesDrawnWithSaucy);
         StatsRow("Cards won", life.CardsDroppedWithSaucy, sess.CardsDroppedWithSaucy);
         StatsRow("Card drop value", $"{GetDroppedCardValues(life):N0}", $"{GetDroppedCardValues(sess):N0}");
-        StatsRow("MGP won", $"{life.MGPWon:N0}", $"{sess.MGPWon:N0}", true);
+        StatsRow("MGP won", $"{life.MGPWon:N0}", $"{sess.MGPWon:N0}", true, SessionMgpPerHour(sess.MGPWon));
 
         (var lifeNpcCount, var lifeNpcName) = TopNpcCell(life);
         (var sessNpcCount, var sessNpcName) = TopNpcCell(sess);
@@ -490,7 +491,7 @@ public unsafe class PluginUI : Window
         StatsRow("Bruisings", life.CuffBruisings, sess.CuffBruisings);
         StatsRow("Punishings", life.CuffPunishings, sess.CuffPunishings);
         StatsRow("Brutals", life.CuffBrutals, sess.CuffBrutals);
-        StatsRow("MGP won", $"{life.CuffMGP:N0}", $"{sess.CuffMGP:N0}", true);
+        StatsRow("MGP won", $"{life.CuffMGP:N0}", $"{sess.CuffMGP:N0}", true, SessionMgpPerHour(sess.CuffMGP));
         ImGui.EndTable();
     }
 
@@ -502,12 +503,12 @@ public unsafe class PluginUI : Window
         }
         StatsHeader();
         StatsRow("Games", life.LimbGamesPlayed, sess.LimbGamesPlayed);
-        StatsRow("MGP won", $"{life.LimbMGP:N0}", $"{sess.LimbMGP:N0}", true);
+        StatsRow("MGP won", $"{life.LimbMGP:N0}", $"{sess.LimbMGP:N0}", true, SessionMgpPerHour(sess.LimbMGP));
         ImGui.EndTable();
     }
 
     private static bool BeginStatsTable(string id)
-        => ImGui.BeginTable($"##stats_{id}", 3, ImGuiTableFlags.NoBordersInBody | ImGuiTableFlags.SizingStretchProp);
+        => ImGui.BeginTable($"##stats_{id}", 4, ImGuiTableFlags.NoBordersInBody | ImGuiTableFlags.SizingStretchProp);
 
     private static (string count, string? name) TopNpcCell(Stats s)
     {
@@ -531,9 +532,10 @@ public unsafe class PluginUI : Window
 
     private static void StatsHeader()
     {
-        ImGui.TableSetupColumn("Metric", ImGuiTableColumnFlags.WidthStretch, 0.32f);
-        ImGui.TableSetupColumn("Lifetime", ImGuiTableColumnFlags.WidthStretch, 0.34f);
-        ImGui.TableSetupColumn("Session", ImGuiTableColumnFlags.WidthStretch, 0.34f);
+        ImGui.TableSetupColumn("Metric", ImGuiTableColumnFlags.WidthStretch, 0.30f);
+        ImGui.TableSetupColumn("Lifetime", ImGuiTableColumnFlags.WidthStretch, 0.25f);
+        ImGui.TableSetupColumn("Session", ImGuiTableColumnFlags.WidthStretch, 0.25f);
+        ImGui.TableSetupColumn("Per Hour", ImGuiTableColumnFlags.WidthStretch, 0.20f);
 
         ImGui.TableNextRow();
         ImGui.TableNextColumn();
@@ -541,13 +543,15 @@ public unsafe class PluginUI : Window
         RightAlignCellText("Lifetime", SaucyTheme.ColorOr(SaucyTheme.ColumnHeader, ImGuiCol.Text));
         ImGui.TableNextColumn();
         RightAlignCellText("Session", SaucyTheme.ColorOr(SaucyTheme.ColumnHeader, ImGuiCol.Text));
+        ImGui.TableNextColumn();
+        RightAlignCellText("Per Hour", SaucyTheme.ColorOr(SaucyTheme.ColumnHeader, ImGuiCol.Text));
     }
 
-    private static void StatsRow(string label, int life, int sess, bool accent = false)
-        => StatsRow(label, life.ToString("N0"), sess.ToString("N0"), accent);
+    private static void StatsRow(string label, int life, int sess, bool accent = false, string? perHour = null)
+        => StatsRow(label, life.ToString("N0"), sess.ToString("N0"), accent, perHour: perHour);
 
     private static void StatsRow(string label, string life, string sess, bool accent = false,
-        string? tooltipLife = null, string? tooltipSess = null)
+        string? tooltipLife = null, string? tooltipSess = null, string? perHour = null)
     {
         ImGui.TableNextRow();
         ImGui.TableNextColumn();
@@ -570,6 +574,10 @@ public unsafe class PluginUI : Window
         {
             ImGui.SetTooltip(tooltipSess);
         }
+
+        ImGui.TableNextColumn();
+        if (perHour != null)
+            RightAlignCellText(perHour, col);
     }
 
     private static void RightAlignCellText(string text, Vector4 color)
@@ -587,6 +595,13 @@ public unsafe class PluginUI : Window
 
     private static void DrawStatsCard(string name, string subtitle, Action body)
         => SaucyTheme.DrawCard(name, subtitle, body);
+
+    private static string SessionMgpPerHour(int sessionMgp)
+    {
+        var hours = (DateTime.UtcNow - C.SessionStartTime).TotalHours;
+        if (hours < 0.001 || sessionMgp == 0) return "—";
+        return $"{(int)(sessionMgp / hours):N0}";
+    }
 
     private static int GetDroppedCardValues(Stats stat)
     {
