@@ -244,19 +244,11 @@ public sealed class Saucy : IDalamudPlugin
                 }
             });
 
-            if (TriadAutomater.PlayXTimes)
-            {
-                TriadAutomater.MatchesCompletedThisSession++;
-                if (TriadAutomater.NumberOfTimes > 0)
-                {
-                    TriadAutomater.NumberOfTimes--;
-                }
-            }
-
             if (obj.isWin)
             {
                 C.UpdateStats(stats => stats.GamesWonWithSaucy++);
-                if (obj.cardItemId > 0)
+
+                if (TriadAutomater.TryGetVerifiedNpcCardDrop(out var droppedCard) && droppedCard != null)
                 {
                     if (TriadAutomater.PlayUntilCardDrops)
                     {
@@ -265,38 +257,26 @@ public sealed class Saucy : IDalamudPlugin
 
                     C.UpdateStats(stats => stats.CardsDroppedWithSaucy++);
 
-                    var cardInfo = FindCardByItemId(obj.cardItemId);
-                    if (cardInfo is not null)
+                    C.UpdateStats(stats =>
                     {
-                        C.UpdateStats(stats =>
+                        if (stats.CardsWon.ContainsKey((uint)droppedCard.CardId))
                         {
-                            if (stats.CardsWon.ContainsKey((uint)cardInfo.CardId))
-                            {
-                                stats.CardsWon[(uint)cardInfo.CardId] += 1;
-                            }
-                            else
-                            {
-                                stats.CardsWon[(uint)cardInfo.CardId] = 1;
-                            }
-                        });
-
-                        if (TriadAutomater.TempCardsWonList.ContainsKey((uint)cardInfo.CardId))
-                        {
-                            TriadAutomater.TempCardsWonList[(uint)cardInfo.CardId] += 1;
+                            stats.CardsWon[(uint)droppedCard.CardId] += 1;
                         }
+                        else
+                        {
+                            stats.CardsWon[(uint)droppedCard.CardId] = 1;
+                        }
+                    });
+
+                    if (TriadAutomater.TempCardsWonList.ContainsKey((uint)droppedCard.CardId))
+                    {
+                        TriadAutomater.TempCardsWonList[(uint)droppedCard.CardId] += 1;
                     }
                 }
             }
 
-            if (TriadAutomater.ShouldContinueTriadSession())
-            {
-                TriadAutomater.RequestRematch();
-            }
-            else
-            {
-                TriadAutomater.RequestSessionEndDismiss();
-                Svc.Framework.Run(TriadAutomater.TryDismissResultIfSessionEnded);
-            }
+            TriadAutomater.RecordMatchResultIfNeeded();
 
             C.Save();
         }
@@ -382,6 +362,12 @@ public sealed class Saucy : IDalamudPlugin
 
             var deltaSeconds = (float)framework.UpdateDelta.TotalSeconds;
             uiReaderScheduler.Update(deltaSeconds);
+            if (uiReaderPrep.HasMatchRequestUI || uiReaderPrep.HasDeckSelectionUI ||
+                TriadAutomater.IsMatchRegistrationVisible() || TriadAutomater.IsPrepDeckSelectVisible())
+            {
+                TriadAutomater.RefreshRunTargetFromPrep();
+            }
+
             if (TriadAutomater.IsAutomationFlowActive() || uiReaderGame.IsVisible)
             {
                 TTSolver.EnsureRunTargetNpcSynced();

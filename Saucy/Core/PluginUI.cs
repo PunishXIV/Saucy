@@ -68,17 +68,7 @@ public unsafe class PluginUI : Window
     public GameNpcInfo? CurrentNPC
     {
         get;
-        set
-        {
-            var newNpcId = value?.npcId ?? -1;
-            var oldNpcId = field?.npcId ?? -1;
-            if (newNpcId != oldNpcId)
-            {
-                TriadAutomater.TempCardsWonList.Clear();
-            }
-
-            field = value;
-        }
+        set => field = value;
     }
 
     public bool Enabled { get; set; } = false;
@@ -760,17 +750,25 @@ public unsafe class PluginUI : Window
         {
             using var subIndent = ImRaii.PushIndent();
 
-            TTSolver.EnsureRunTargetNpcSynced();
+            TriadAutomater.RefreshRunTargetFromPrep();
             var runTargetNpc = TriadAutomater.ResolveRunTargetNpc();
-            TriadAutomater.EnsureRunTargetCards(runTargetNpc);
+            var onMatchRegistration = Saucy.uiReaderPrep.HasMatchRequestUI || TriadAutomater.IsMatchRegistrationVisible();
 
             if (runTargetNpc != null)
             {
                 ImGui.TextDisabled($"NPC: {TriadNpcDB.Get().FindByID(runTargetNpc.npcId).Name}");
+                if (onMatchRegistration)
+                {
+                    ImGui.TextDisabled("(Match Registration)");
+                }
+            }
+            else if (onMatchRegistration)
+            {
+                ImGui.TextDisabled("NPC: reading Match Registration…");
             }
             else
             {
-                ImGui.TextDisabled("NPC: challenge an NPC to track reward cards.");
+                ImGui.TextDisabled("NPC: open Match Registration to see missing cards.");
             }
 
             var onlyUnobtained = C.OnlyUnobtainedCards;

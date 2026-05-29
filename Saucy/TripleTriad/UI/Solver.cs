@@ -756,7 +756,19 @@ public class Solver
 
     public void EnsureRunTargetNpcSynced(bool deckSelectScreen = false)
     {
-        if (!deckSelectScreen)
+        var onMatchRegistration = uiReaderPrep.HasMatchRequestUI || TriadAutomater.IsMatchRegistrationVisible();
+        var onDeckSelect = deckSelectScreen || uiReaderPrep.HasDeckSelectionUI || TriadAutomater.IsPrepDeckSelectVisible();
+
+        if (onMatchRegistration || onDeckSelect)
+        {
+            if (TrySyncNpcFromPrepState(uiReaderPrep.cachedState))
+            {
+                ApplyRunTargetNpc(preGameNpc!, startOptimizer: false);
+                return;
+            }
+        }
+
+        if (!deckSelectScreen && !onMatchRegistration)
         {
             uiReaderGame.RefreshFromVisibleAddon();
 

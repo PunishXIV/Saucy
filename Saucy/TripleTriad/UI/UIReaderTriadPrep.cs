@@ -2,6 +2,7 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using static ECommons.GenericHelpers;
 namespace Saucy.TripleTriad.UI;
 
 public class UIReaderTriadPrep
@@ -76,6 +77,26 @@ public class UIReaderTriadPrep
         (cachedState.screenPos, cachedState.screenSize) = GUINodeUtils.GetNodePosAndSize(baseNode->RootNode);
     }
 
+    public unsafe void SyncMatchRegistrationFromLiveAddon()
+    {
+        if (!TryGetAddonByName<AtkUnitBase>("TripleTriadRequest", out var addon) || !addon->IsVisible)
+        {
+            return;
+        }
+
+        OnAddonUpdateMatchRequest((nint)addon);
+    }
+
+    public unsafe void SyncDeckSelectFromLiveAddon()
+    {
+        if (!TryGetAddonByName<AtkUnitBase>("TripleTriadSelDeck", out var addon) || !addon->IsVisible)
+        {
+            return;
+        }
+
+        OnAddonUpdateDeckSelect((nint)addon);
+    }
+
     /// <summary>Re-parses deck rows from the live addon (e.g. after a profile deck write).</summary>
     public unsafe void RefreshDeckSelectList(nint addonPtr)
     {
@@ -131,35 +152,108 @@ public class UIReaderTriadPrep
 
     private unsafe void UpdateRequest(AtkUnitBase* baseNode)
     {
-        // 13 child nodes (sibling scan, root node list huge)
-        //     [6] match/tournament rules, simple node
-        //         [0] comp node with 3 children: [2] = text
-        //         [1] comp node with 3 children: [2] = text
-        //     [7] region rules, simple node
-        //         [0] comp node with 3 children: [2] = text
-        //         [1] comp node with 3 children: [2] = text
-        //     [8] npc, simple node
-        //         [0] text
+        cachedState.decks.Clear();
+        cachedState.npc = string.Empty;
 
         var nodeArrL0 = GUINodeUtils.GetImmediateChildNodes(baseNode->RootNode);
-        var nodeRulesA = GUINodeUtils.PickNode(nodeArrL0, 6, 13);
+        if (nodeArrL0 != null && nodeArrL0.Length >= 9)
+        {
+            UpdateRequestLegacy(nodeArrL0);
+        }
+
+        if (string.IsNullOrWhiteSpace(cachedState.npc))
+        {
+            cachedState.npc = TryFindNpcNameOnRequest(baseNode) ?? string.Empty;
+        }
+    }
+
+    private unsafe void UpdateRequestLegacy(AtkResNode*[] nodeArrL0)
+    {
+        var nodeRulesA = GUINodeUtils.PickNode(nodeArrL0, 6, nodeArrL0.Length);
         var nodeArrL1A = GUINodeUtils.GetImmediateChildNodes(nodeRulesA);
-        var nodeL2A1 = GUINodeUtils.PickNode(nodeArrL1A, 0, 6);
-        cachedState.rules[3] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2A1, 2, 3)) ?? "";
-        var nodeL2A2 = GUINodeUtils.PickNode(nodeArrL1A, 1, 6);
-        cachedState.rules[2] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2A2, 2, 3)) ?? "";
+        if (nodeArrL1A != null)
+        {
+            var nodeL2A1 = GUINodeUtils.PickNode(nodeArrL1A, 0, nodeArrL1A.Length);
+            cachedState.rules[3] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2A1, 2, 3)) ?? "";
+            var nodeL2A2 = GUINodeUtils.PickNode(nodeArrL1A, 1, nodeArrL1A.Length);
+            cachedState.rules[2] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2A2, 2, 3)) ?? "";
+        }
 
-        var nodeRulesB = GUINodeUtils.PickNode(nodeArrL0, 7, 13);
+        var nodeRulesB = GUINodeUtils.PickNode(nodeArrL0, 7, nodeArrL0.Length);
         var nodeArrL1B = GUINodeUtils.GetImmediateChildNodes(nodeRulesB);
-        var nodeL2B1 = GUINodeUtils.PickNode(nodeArrL1B, 0, 3);
-        cachedState.rules[1] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2B1, 2, 3)) ?? "";
-        var nodeL2B2 = GUINodeUtils.PickNode(nodeArrL1B, 1, 3);
-        cachedState.rules[0] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2B2, 2, 3)) ?? "";
+        if (nodeArrL1B != null)
+        {
+            var nodeL2B1 = GUINodeUtils.PickNode(nodeArrL1B, 0, nodeArrL1B.Length);
+            cachedState.rules[1] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2B1, 2, 3)) ?? "";
+            var nodeL2B2 = GUINodeUtils.PickNode(nodeArrL1B, 1, nodeArrL1B.Length);
+            cachedState.rules[0] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2B2, 2, 3)) ?? "";
+        }
 
-        var nodeNpc = GUINodeUtils.PickNode(nodeArrL0, 8, 13);
+        var nodeNpc = GUINodeUtils.PickNode(nodeArrL0, 8, nodeArrL0.Length);
         cachedState.npc = GUINodeUtils.GetNodeText(GUINodeUtils.GetChildNode(nodeNpc)) ?? "";
+    }
 
-        cachedState.decks.Clear();
+    private static unsafe string? TryFindNpcNameOnRequest(AtkUnitBase* baseNode)
+    {
+        var parseCtx = new GameUIParser();
+
+        for (var i = 0; i < baseNode->UldManager.NodeListCount; i++)
+        {
+            if (TryParseNpcLabel(parseCtx, GUINodeUtils.GetNodeText(baseNode->UldManager.NodeList[i]), out var npcName))
+            {
+                return npcName;
+            }
+        }
+
+        foreach (var node in GUINodeUtils.GetAllChildNodes(baseNode->RootNode) ?? [])
+        {
+            if (node == null)
+            {
+                continue;
+            }
+
+            if (TryParseNpcLabel(parseCtx, GUINodeUtils.GetNodeText(node), out var npcName))
+            {
+                return npcName;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool TryParseNpcLabel(GameUIParser parseCtx, string? text, out string? npcName)
+    {
+        npcName = null;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        text = text.Trim();
+        if (text.Length < 3)
+        {
+            return false;
+        }
+
+        if (text is "None" or "Challenge" or "Quit" or "Match Registration" or "Please confirm the rules and rewards." or
+            "Regional Rules" or "Match Rules" or "Possible Prize" or "Match Fee" or "Time Remaining")
+        {
+            return false;
+        }
+
+        if (int.TryParse(text, out _))
+        {
+            return false;
+        }
+
+        if (parseCtx.ParseNpc(text, markFailed: false) != null ||
+            parseCtx.ParseNpcNameStart(text, markFailed: false) != null)
+        {
+            npcName = text;
+            return true;
+        }
+
+        return false;
     }
 
     private unsafe void UpdateDeckSelect(AtkUnitBase* baseNode)

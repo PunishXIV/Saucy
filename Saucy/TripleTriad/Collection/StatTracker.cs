@@ -25,19 +25,9 @@ public class StatTracker
         savedStats.NumDraws += uiState.isDraw ? 1 : 0;
         savedStats.NumLosses += uiState.isLose ? 1 : 0;
 
-        if (uiState.cardItemId != 0)
+        if (uiState.isWin && TriadAutomater.TryGetVerifiedNpcCardDrop(out var droppedCard) && droppedCard != null)
         {
-            var cardId = -1;
-            var gameCardDB = GameCardDB.Get();
-            foreach (var kvp in gameCardDB.mapCards)
-            {
-                if (kvp.Value.ItemId == uiState.cardItemId)
-                {
-                    cardId = kvp.Value.CardId;
-                    break;
-                }
-            }
-
+            var cardId = droppedCard.CardId;
             if (cardId > 0)
             {
                 if (savedStats.Cards.TryGetValue(cardId, out var _))
