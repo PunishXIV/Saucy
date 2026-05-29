@@ -8,13 +8,26 @@ namespace Saucy.IPC;
 
 internal static class SubscriptionManager
 {
-    private static readonly Type[] IpcTypes = Assembly.GetExecutingAssembly()
-        .GetTypes()
-        .Where(type => type.GetCustomAttribute<IPCAttribute>() != null)
-        .ToArray();
+    private sealed record IpcEntry(Type Type, string PluginName);
 
+    private static IpcEntry[]? _ipcEntries;
     private static readonly Dictionary<string, EzIPCDisposalToken[]> InitializedIpcs = new();
     private static int _subscribeTick;
+
+    internal static void Prepare()
+    {
+        if (_ipcEntries != null)
+        {
+            return;
+        }
+
+        _ipcEntries = Assembly.GetExecutingAssembly()
+            .GetTypes()
+            .Select(type => (Type: type, Attr: type.GetCustomAttribute<IPCAttribute>()))
+            .Where(entry => entry.Attr != null)
+            .Select(entry => new IpcEntry(entry.Type, entry.Attr!.Name))
+            .ToArray();
+    }
 
     internal static bool IsInitialized(string plugin) =>
         InitializedIpcs.ContainsKey(plugin) && IsLoaded(plugin);
@@ -22,33 +35,46 @@ internal static class SubscriptionManager
     internal static bool IsLoaded(string pluginName) =>
         Svc.PluginInterface.InstalledPlugins.Any(x => x.InternalName == pluginName && x.IsLoaded);
 
-    internal static void Subscribe(IFramework framework)
+    internal static void Subscribe()
     {
         try
         {
-            var checkUnloadsOnly = InitializedIpcs.Count == IpcTypes.Length &&
-                                   ++_subscribeTick % 60 != 0;
+            Prepare();
+            var entries = _ipcEntries!;
+            var allInitialized = InitializedIpcs.Count == entries.Length;
+            _subscribeTick++;
 
-            foreach (var type in IpcTypes)
+            if (allInitialized)
             {
-                var attr = type.GetCustomAttribute<IPCAttribute>()!;
-                if (!IsInitialized(attr.Name))
+                if (_subscribeTick % 120 != 0)
                 {
-                    if (checkUnloadsOnly || !IsLoaded(attr.Name))
+                    return;
+                }
+            }
+            else if (_subscribeTick % 10 != 0)
+            {
+                return;
+            }
+
+            foreach (var entry in entries)
+            {
+                if (!IsInitialized(entry.PluginName))
+                {
+                    if (!IsLoaded(entry.PluginName))
                     {
                         continue;
                     }
 
-                    InitializedIpcs[attr.Name] = EzIPC.Init(type, attr.Name);
+                    InitializedIpcs[entry.PluginName] = EzIPC.Init(entry.Type, entry.PluginName);
                 }
-                else if (!IsLoaded(attr.Name))
+                else if (!IsLoaded(entry.PluginName))
                 {
-                    foreach (var token in InitializedIpcs[attr.Name])
+                    foreach (var token in InitializedIpcs[entry.PluginName])
                     {
                         token.Dispose();
                     }
 
-                    InitializedIpcs.Remove(attr.Name);
+                    InitializedIpcs.Remove(entry.PluginName);
                 }
             }
         }

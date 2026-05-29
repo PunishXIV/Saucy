@@ -486,6 +486,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
 
         ImGui.Spacing();
         var hasAvgRewards = StatTracker.GetAverageRewardPerMatchDesc(C.TriadCollection, npcInfo, out var avgRewardPerMatch);
+        var settingsDB = PlayerSettingsDB.Get();
         DrawIconTextRow(FontAwesomeIcon.ChartLine, null, () => statsWindow.SetupAndOpen(npcData.Item1), () =>
         {
             ImGui.Text("NPC stats" + (hasAvgRewards ? "," : ""));
@@ -500,11 +501,9 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
 
         ImGui.Spacing();
         ImGui.Text($"NPC reward: {numNotOwnedRewards}");
-        if (listNpcReward.Count > 0)
+        if (listNpcReward.Count > 0 &&
+            ImGui.BeginListBox("##cardReward", new(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 4.5f)))
         {
-            var settingsDB = PlayerSettingsDB.Get();
-
-            ImGui.BeginListBox("##cardReward", new(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 4.5f));
             for (var idx = 0; idx < listNpcReward.Count; idx++)
             {
                 (var cardOb, var cardListIdx) = listNpcReward[idx];
@@ -534,6 +533,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
                     ImGui.SetItemDefaultFocus();
                 }
             }
+
             ImGui.EndListBox();
         }
         else

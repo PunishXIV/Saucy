@@ -101,13 +101,15 @@ public sealed class Saucy : IDalamudPlugin
         GameCardDB.Get().memReader = memReaderTriadFunc;
         GameNpcDB.Get().memReader = memReaderTriadFunc;
 
-        Svc.Framework.Update += RunBot;
-
         LimbManager = new(C.LimbConfig);
         ModuleManager = new();
         C.EnabledModules.CollectionChanged += OnChange;
 
         _triadCollectionHost = new(pluginInterface);
+
+        SubscriptionManager.Prepare();
+        SubscriptionManager.Subscribe();
+        Svc.Framework.Update += RunBot;
     }
     public string Name => "Saucy";
     public static Configuration C { get; private set; } = null!;
@@ -387,7 +389,7 @@ public sealed class Saucy : IDalamudPlugin
     {
         try
         {
-            SubscriptionManager.Subscribe(framework);
+            SubscriptionManager.Subscribe();
 
             if (dataLoader.IsDataReady)
             {
