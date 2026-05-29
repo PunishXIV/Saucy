@@ -1,4 +1,4 @@
-using ECommons;
+using ECommons.GameHelpers;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Lumina.Excel.Sheets;
 using System.Numerics;
@@ -16,17 +16,6 @@ internal static class AetheryteHelper
 
     private const byte MapMarkerDataTypeAetheryte = 3;
     private const byte MapMarkerDataTypeAethernet = 4;
-
-    internal struct TravelPlan
-    {
-        public uint TeleportAetheryteId;
-        public uint AethernetShardId;
-        public string? AethernetShardName;
-        public string? AethernetSkipReason;
-
-        public readonly bool HasTeleport => TeleportAetheryteId != 0;
-        public readonly bool HasAethernet => AethernetShardId != 0;
-    }
 
     /// <summary>Finds the closest unlocked aetheryte in the territory to a world destination.</summary>
     public static uint FindClosestUnlockedAetheryte(uint territoryId, Vector3 destinationWorld)
@@ -64,7 +53,7 @@ internal static class AetheryteHelper
                 ? new Vector2(mainPos.Value.X, mainPos.Value.Z)
                 : (Vector2?)null;
 
-        var (useAethernet, skipReason) = EvaluateAethernet(
+        (var useAethernet, var skipReason) = EvaluateAethernet(
             walkFromPos,
             shardPos,
             destinationWorld,
@@ -74,10 +63,7 @@ internal static class AetheryteHelper
 
         return new()
         {
-            TeleportAetheryteId = inTargetTerritory ? 0 : mainAetheryteId,
-            AethernetShardId = useAethernet ? closestShard?.RowId ?? 0 : 0,
-            AethernetShardName = useAethernet ? closestShard?.Name : null,
-            AethernetSkipReason = useAethernet ? null : skipReason
+            TeleportAetheryteId = inTargetTerritory ? 0 : mainAetheryteId, AethernetShardId = useAethernet ? closestShard?.RowId ?? 0 : 0, AethernetShardName = useAethernet ? closestShard?.Name : null, AethernetSkipReason = useAethernet ? null : skipReason
         };
     }
 
@@ -157,7 +143,7 @@ internal static class AetheryteHelper
                 continue;
             }
 
-            if (Vector2.Distance(player, new Vector2(pos.Value.X, pos.Value.Z)) <= MainAetheryteInteractionRange)
+            if (Vector2.Distance(player, new(pos.Value.X, pos.Value.Z)) <= MainAetheryteInteractionRange)
             {
                 return true;
             }
@@ -168,8 +154,8 @@ internal static class AetheryteHelper
 
     private static Vector2 PlayerPosXZ()
     {
-        var pos = ECommons.GameHelpers.Player.Position;
-        return new Vector2(pos.X, pos.Z);
+        var pos = Player.Position;
+        return new(pos.X, pos.Z);
     }
 
     private static AethernetShardInfo? FindClosestUnlockedAethernetShard(uint territoryId, Vector3 destinationWorld)
@@ -202,7 +188,7 @@ internal static class AetheryteHelper
                 continue;
             }
 
-            var distSq = Vector2.DistanceSquared(dest, new Vector2(pos.Value.X, pos.Value.Z));
+            var distSq = Vector2.DistanceSquared(dest, new(pos.Value.X, pos.Value.Z));
             if (best == null || distSq < bestDistSq)
             {
                 bestDistSq = distSq;
@@ -255,8 +241,8 @@ internal static class AetheryteHelper
             var distSq = pos == null
                 ? 0f
                 : Vector2.DistanceSquared(
-                    new Vector2(destinationWorld.X, destinationWorld.Z),
-                    new Vector2(pos.Value.X, pos.Value.Z));
+                    new(destinationWorld.X, destinationWorld.Z),
+                    new(pos.Value.X, pos.Value.Z));
 
             if (bestId == 0 || distSq < bestDistSq)
             {
@@ -303,8 +289,8 @@ internal static class AetheryteHelper
             }
 
             var distSq = Vector2.DistanceSquared(
-                new Vector2(destinationWorld.X, destinationWorld.Z),
-                new Vector2(pos.Value.X, pos.Value.Z));
+                new(destinationWorld.X, destinationWorld.Z),
+                new(pos.Value.X, pos.Value.Z));
             if (distSq < bestDistSq)
             {
                 bestDistSq = distSq;
@@ -437,6 +423,17 @@ internal static class AetheryteHelper
         }
 
         return null;
+    }
+
+    internal struct TravelPlan
+    {
+        public uint TeleportAetheryteId;
+        public uint AethernetShardId;
+        public string? AethernetShardName;
+        public string? AethernetSkipReason;
+
+        public readonly bool HasTeleport => TeleportAetheryteId != 0;
+        public readonly bool HasAethernet => AethernetShardId != 0;
     }
 
     private readonly struct AethernetShardInfo(uint rowId, string name, Vector3 position)

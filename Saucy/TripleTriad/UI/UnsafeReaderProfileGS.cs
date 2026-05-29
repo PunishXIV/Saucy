@@ -80,7 +80,7 @@ public unsafe class UnsafeReaderProfileGS
     }
 
     /// <summary>
-    /// Writes five card ids into a Gold Saucer profile deck slot (0–4).
+    ///     Writes five card ids into a Gold Saucer profile deck slot (0–4).
     /// </summary>
     public bool TryWritePlayerDeck(int deckIdx, ushort[] cardIds, string? deckName = null)
     {

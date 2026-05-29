@@ -9,51 +9,12 @@ public class UIReaderTriadResults : IUIReader
     private const int ResultNotifyFallbackFrames = 30;
 
     private UIStateTriadResults cachedState = new();
+    private int framesSinceShown;
 
     private bool needsNotify;
-    private int framesSinceShown;
     public Action<UIStateTriadResults>? OnUpdated;
 
     public string GetAddonName() => "TripleTriadResult";
-
-    /// <summary>
-    /// Invoked when the scheduler misses result updates; runs the normal CheckResults path.
-    /// </summary>
-    public unsafe void ForceNotifyFromFallback(nint addonPtr = default)
-    {
-        AtkUnitBase* baseNode;
-        if (addonPtr != nint.Zero)
-        {
-            baseNode = (AtkUnitBase*)addonPtr;
-        }
-        else if (!TryGetAddonByName<AtkUnitBase>("TripleTriadResult", out baseNode))
-        {
-            return;
-        }
-
-        if (baseNode == null || !baseNode->IsVisible)
-        {
-            return;
-        }
-
-        nint agentPtr = Svc.GameGui.FindAgentInterface((nint)baseNode);
-        if (agentPtr != nint.Zero)
-        {
-            var agent = (AgentTripleTriad*)agentPtr;
-            cachedState.cardItemId = agent->rewardItemId;
-        }
-
-        UpdateCachedState(baseNode);
-
-        if (cachedState.numMGP < 0)
-        {
-            cachedState.numMGP = 0;
-        }
-
-        needsNotify = false;
-        framesSinceShown = 0;
-        OnUpdated?.Invoke(cachedState);
-    }
 
     public void OnAddonLost()
     {
@@ -110,6 +71,45 @@ public class UIReaderTriadResults : IUIReader
         }
     }
 
+    /// <summary>
+    ///     Invoked when the scheduler misses result updates; runs the normal CheckResults path.
+    /// </summary>
+    public unsafe void ForceNotifyFromFallback(nint addonPtr = default)
+    {
+        AtkUnitBase* baseNode;
+        if (addonPtr != nint.Zero)
+        {
+            baseNode = (AtkUnitBase*)addonPtr;
+        }
+        else if (!TryGetAddonByName("TripleTriadResult", out baseNode))
+        {
+            return;
+        }
+
+        if (baseNode == null || !baseNode->IsVisible)
+        {
+            return;
+        }
+
+        nint agentPtr = Svc.GameGui.FindAgentInterface((nint)baseNode);
+        if (agentPtr != nint.Zero)
+        {
+            var agent = (AgentTripleTriad*)agentPtr;
+            cachedState.cardItemId = agent->rewardItemId;
+        }
+
+        UpdateCachedState(baseNode);
+
+        if (cachedState.numMGP < 0)
+        {
+            cachedState.numMGP = 0;
+        }
+
+        needsNotify = false;
+        framesSinceShown = 0;
+        OnUpdated?.Invoke(cachedState);
+    }
+
     private unsafe bool IsResultReadyToNotify(AtkUnitBase* baseNode)
     {
         if (!cachedState.isDraw && !cachedState.isLose && !cachedState.isWin)
@@ -157,7 +157,7 @@ public class UIReaderTriadResults : IUIReader
         {
             foreach (var node in nodeArrL0)
             {
-                if (TryReadResultFlags(GUINodeUtils.GetImmediateChildNodes(node), expectedLength: 3))
+                if (TryReadResultFlags(GUINodeUtils.GetImmediateChildNodes(node)))
                 {
                     break;
                 }

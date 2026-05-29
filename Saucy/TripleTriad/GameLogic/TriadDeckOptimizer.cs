@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 namespace Saucy.TripleTriad.GameLogic;
@@ -37,7 +36,6 @@ public class TriadDeckOptimizer
     private bool isPaused;
 
     private TriadNpc npc;
-    private long numMsElapsed;
     private long numPossibleDecks;
     private long numTestedDecks;
     public TriadDeck optimizedDeck;
@@ -102,7 +100,6 @@ public class TriadDeckOptimizer
         this.npc = npc;
         numPossibleDecks = 1;
         numTestedDecks = 0;
-        numMsElapsed = 0;
 
         var playerDB = PlayerSettingsDB.Get();
 
@@ -126,7 +123,6 @@ public class TriadDeckOptimizer
     {
         this.npc = npc;
         numTestedDecks = 0;
-        numMsElapsed = 0;
         bAbort = false;
 
         return Task.Run(() => { FindDecksScored(regionMods, lockedCards); });
@@ -660,29 +656,6 @@ public class TriadDeckOptimizer
         }
 
         return 0;
-    }
-
-    public string GetNumTestedDesc() => Interlocked.Read(ref numTestedDecks).ToString("N0", CultureInfo.InvariantCulture);
-
-    public string GetNumPossibleDecksDesc() => numPossibleDecks.ToString("N0", CultureInfo.InvariantCulture);
-
-    public int GetSecondsRemaining(int ElapsedMs)
-    {
-        numMsElapsed += ElapsedMs;
-
-        var numTestedDecksSafe = Interlocked.Read(ref numTestedDecks);
-        var numTestedPerMs = numTestedDecksSafe / numMsElapsed;
-        var numMsPerTest = (numTestedDecksSafe == 0) ? 1 : (numMsElapsed / numTestedDecksSafe);
-        var numTestsRemaning = numPossibleDecks - numTestedDecksSafe;
-
-        var numSecRemaning = (numTestedPerMs > 0)
-            ? ((numTestsRemaning / numTestedPerMs) / 1000)
-            : ((numTestsRemaning * numMsPerTest) / 1000);
-
-        var numIntervalsDesc = numSecRemaning.ToString();
-        int.TryParse(numIntervalsDesc, out var numSeconds);
-
-        return Math.Max(0, numSeconds);
     }
 
     public void SetPaused(bool wantsPaused)

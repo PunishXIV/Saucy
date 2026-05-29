@@ -580,8 +580,6 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
                 GameCardCollectionFilter.All;
 
             var collectionPos = cardInfo.Collection[(int)filterEnum];
-
-            //Svc.Log.Info($"Card selection! {cardOb.Name}, filter:{filterEnum} ({filterMode}) => page:{collectionPos.PageIndex}, cell:{collectionPos.CellIndex}");
             uiReaderCardList.SetPageAndGridView(collectionPos.PageIndex, collectionPos.CellIndex);
         }
     }

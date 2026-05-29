@@ -13,9 +13,6 @@ public class GameNpcInfo
 
     public MapLinkPayload? Location;
 
-    /// <summary>World position from Level sheet; use for vnav when map flags are unavailable.</summary>
-    public Vector3? WorldPosition;
-
     public int matchFee;
     public int npcId;
     public List<int> rewardCards = [];
@@ -24,6 +21,9 @@ public class GameNpcInfo
     public uint UnlockQuestId;
 
     public string? UnlockQuestName;
+
+    /// <summary>World position from Level sheet; use for vnav when map flags are unavailable.</summary>
+    public Vector3? WorldPosition;
 
     public bool IsExcludedFromAchievementTracker => (achievementId == 0xffff);
 }

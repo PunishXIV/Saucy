@@ -2,7 +2,6 @@ using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using ECommons.GameHelpers;
 using Saucy.IPC;
-using Saucy.TripleTriad.Data;
 using System;
 using System.Globalization;
 using System.Numerics;
@@ -29,7 +28,7 @@ internal static class TriadMapNavigation
     {
         if (npc != null)
         {
-            TTSolver.OnNpcSelected(npc, [], startOptimizer: true);
+            TTSolver.OnNpcSelected(npc, [], true);
         }
 
         if (TryBeginNavigation(location, npc: npc))
@@ -237,7 +236,7 @@ internal static class TriadMapNavigation
             pointOnFloor,
             fly,
             targetTerritoryId,
-            npc: null,
+            null,
             aethernetShardId: travelPlan.AethernetShardId,
             aethernetShardName: travelPlan.AethernetShardName);
 
@@ -265,9 +264,7 @@ internal static class TriadMapNavigation
     {
         var context = new MultiAreaRouteExecutor.MultiAreaRouteContext
         {
-            Location = location,
-            Destination = pointOnFloor,
-            TargetTerritoryId = targetTerritoryId
+            Location = location, Destination = pointOnFloor, TargetTerritoryId = targetTerritoryId
         };
 
         if (!MultiAreaRouteExecutor.TryBeginRoute(route, context, out var execution, out var beginMessage))
@@ -285,7 +282,7 @@ internal static class TriadMapNavigation
             fly,
             targetTerritoryId,
             npc,
-            routeExecution: execution,
+            execution,
             startingPhase: startsWithTeleport
                 ? NavigationPhase.WaitingForLifestream
                 : NavigationPhase.ExecutingRoute);
@@ -724,22 +721,22 @@ internal static class TriadMapNavigation
 
     private sealed class PendingNavigation
     {
+        public uint ActiveAethernetShardId;
+        public DateTime? AethernetBusyClearedUtc;
+        public bool AethernetSeenBusy;
+        public Vector3? AethernetShardPosition;
+        public Vector3? AethernetStartPosition;
+        public bool ArrivedViaMultiAreaRoute;
         public required Vector3 Destination;
         public required bool Fly;
         public required MapLinkPayload Location;
         public TriadNpc? Npc;
-        public NavigationPhase Phase;
-        public DateTime PhaseStartedUtc;
-        public DateTime StartedUtc;
-        public required uint TargetTerritoryId;
-        public MultiAreaRouteExecutor.RouteExecution? RouteExecution;
         public uint PendingAethernetShardId;
         public string? PendingAethernetShardName;
-        public uint ActiveAethernetShardId;
-        public Vector3? AethernetStartPosition;
-        public Vector3? AethernetShardPosition;
-        public bool AethernetSeenBusy;
-        public DateTime? AethernetBusyClearedUtc;
-        public bool ArrivedViaMultiAreaRoute;
+        public NavigationPhase Phase;
+        public DateTime PhaseStartedUtc;
+        public MultiAreaRouteExecutor.RouteExecution? RouteExecution;
+        public DateTime StartedUtc;
+        public required uint TargetTerritoryId;
     }
 }

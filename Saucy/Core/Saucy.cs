@@ -13,9 +13,7 @@ using Saucy.CuffACur;
 using Saucy.Framework;
 using Saucy.IPC;
 using Saucy.OutOnALimb;
-using Saucy.TripleTriad;
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
@@ -41,12 +39,12 @@ public sealed class Saucy : IDalamudPlugin
     public static ModuleManager ModuleManager = null!;
 
     private readonly object _lockObj = new();
+    private readonly PluginUI _pluginUi = new();
+    private bool _autoOpenedForTriadFlow;
     private Mp3FileReader? _currentReader;
     private WaveOutEvent? _currentWaveOut;
 
     private TriadCollectionHost? _triadCollectionHost;
-    private readonly PluginUI _pluginUi = new();
-    private bool _autoOpenedForTriadFlow;
 
     public LimbManager LimbManager = null!;
     public Saucy(IDalamudPluginInterface pluginInterface)
@@ -87,10 +85,10 @@ public sealed class Saucy : IDalamudPlugin
         uiReaderPrep.OnMatchRequestChanged += OnTriadPrepUiChanged;
         uiReaderPrep.OnDeckSelectionChanged += OnTriadPrepUiChanged;
 
-        uiReaderMatchResults = new UIReaderTriadResults();
+        uiReaderMatchResults = new();
         uiReaderMatchResults.OnUpdated += CheckResults;
 
-        uiReaderGamesResults = new(Svc.GameGui);
+        uiReaderGamesResults = new();
         uiReaderGamesResults.OnCuffUpdated += CheckCuffResults;
         uiReaderGamesResults.OnLimbUpdated += CheckLimbResults;
 

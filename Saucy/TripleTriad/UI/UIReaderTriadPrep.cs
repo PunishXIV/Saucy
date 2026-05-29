@@ -1,4 +1,4 @@
-using FFXIVClientStructs.FFXIV.Component.GUI;
+﻿using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -46,7 +46,7 @@ public class UIReaderTriadPrep
             return;
         }
 
-        ApplyMatchRequestState(baseNode, notifyDeckEval: true);
+        ApplyMatchRequestState(baseNode, true);
     }
 
     public unsafe void SyncMatchRegistrationFromLiveAddon()
@@ -56,7 +56,7 @@ public class UIReaderTriadPrep
             return;
         }
 
-        ApplyMatchRequestState(addon, notifyDeckEval: false);
+        ApplyMatchRequestState(addon, false);
 
         if (TriadAutomater.IsCardFarmModeActive() || TriadAutomater.CardFarmSessionActive)
         {
@@ -250,13 +250,13 @@ public class UIReaderTriadPrep
             return false;
         }
 
-        if (int.TryParse(text, out _))
+        if (int.TryParse(text, out var _))
         {
             return false;
         }
 
-        if (parseCtx.ParseNpc(text, markFailed: false) != null ||
-            parseCtx.ParseNpcNameStart(text, markFailed: false) != null)
+        if (parseCtx.ParseNpc(text, false) != null ||
+            parseCtx.ParseNpcNameStart(text, false) != null)
         {
             npcName = text;
             return true;
@@ -301,9 +301,7 @@ public class UIReaderTriadPrep
 
                 var deckOb = new UIStateTriadPrepDeck
                 {
-                    id = parsedRows.Count,
-                    rootNodeAddr = (ulong)rowNode,
-                    name = deckName ?? string.Empty
+                    id = parsedRows.Count, rootNodeAddr = (ulong)rowNode, name = deckName ?? string.Empty
                 };
 
                 if (shouldScanDeckData)
@@ -380,7 +378,10 @@ public class UIReaderTriadPrep
 
     private static unsafe string? ExtractDeckRowName(AtkResNode* rowNode)
     {
-        foreach (var childCount in new[] { 12, 13, 11, 10, 14 })
+        foreach (var childCount in new[]
+        {
+            12, 13, 11, 10, 14
+        })
         {
             var nameNode = GUINodeUtils.PickChildNode(rowNode, 11, childCount);
             var name = GUINodeUtils.GetNodeText(nameNode);

@@ -1,4 +1,3 @@
-using Dalamud.Plugin.Services;
 using ECommons.EzIpcManager;
 using System;
 using System.Collections.Generic;
@@ -8,8 +7,6 @@ namespace Saucy.IPC;
 
 internal static class SubscriptionManager
 {
-    private sealed record IpcEntry(Type Type, string PluginName);
-
     private static IpcEntry[]? _ipcEntries;
     private static readonly Dictionary<string, EzIPCDisposalToken[]> InitializedIpcs = new();
     private static int _subscribeTick;
@@ -97,4 +94,5 @@ internal static class SubscriptionManager
         InitializedIpcs.Clear();
         QuestionableTriad.ClearUnsupportedCache();
     }
+    private sealed record IpcEntry(Type Type, string PluginName);
 }

@@ -1,6 +1,5 @@
 ﻿using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
-using ECommons.Automation;
 using ECommons.Automation.UIInput;
 using ECommons.Throttlers;
 using FFXIVClientStructs.FFXIV.Client.UI;

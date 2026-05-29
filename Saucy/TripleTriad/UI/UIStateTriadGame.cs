@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 namespace Saucy.TripleTriad.UI;
 
@@ -185,8 +185,7 @@ public class UIStateTriadGame : IEquatable<UIStateTriadGame>
     {
         var screenOb = new ScannerTriad.GameState
         {
-            mods = ToTriadModifier(ctx, markFailed),
-            turnState = (move == 0) ? ScannerTriad.ETurnState.Waiting : ScannerTriad.ETurnState.Active
+            mods = ToTriadModifier(ctx, markFailed), turnState = (move == 0) ? ScannerTriad.ETurnState.Waiting : ScannerTriad.ETurnState.Active
         };
 
         for (var idx = 0; idx < board.Length; idx++)

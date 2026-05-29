@@ -4,9 +4,8 @@ using System;
 using System.Linq;
 namespace Saucy;
 
-public class UIReaderGamesResults(IGameGui gameGui) : IUIReader
+public class UIReaderGamesResults : IUIReader
 {
-    private readonly IGameGui gameGui = gameGui;
     private UIStateCuffResults cuffResults = new();
     private UIStateLimbResults limbResults = new();
 
@@ -83,7 +82,6 @@ public class UIReaderGamesResults(IGameGui gameGui) : IUIReader
             {
                 limbResults.numMGP = -1;
             }
-
         }
     }
 }

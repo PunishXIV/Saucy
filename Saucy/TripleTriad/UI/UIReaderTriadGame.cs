@@ -1,8 +1,7 @@
-using FFXIVClientStructs.FFXIV.Client.UI;
+﻿using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
 using static ECommons.GenericHelpers;
 namespace Saucy.TripleTriad.UI;
 
@@ -56,8 +55,8 @@ public class UIReaderTriadGame : IUIReader
     }
 
     /// <summary>
-    /// Re-reads the live addon and updates <see cref="currentState"/> without Equals gating.
-    /// Used by automation so solver ticks every frame during the player's turn.
+    ///     Re-reads the live addon and updates <see cref="currentState" /> without Equals gating.
+    ///     Used by automation so solver ticks every frame during the player's turn.
     /// </summary>
     public unsafe void SyncCurrentFromAddon(nint addonPtr)
     {
@@ -281,38 +280,5 @@ public class UIReaderTriadGame : IUIReader
         }
 
         return resultOb;
-    }
-
-    private unsafe (Vector2, Vector2) GetCardPosAndSize(AddonTripleTriad.TripleTriadCard addonCard)
-    {
-        if (addonCard.CardDropControl != null && addonCard.CardDropControl->OwnerNode != null)
-        {
-            var resNode = &addonCard.CardDropControl->OwnerNode->AtkResNode;
-            return GUINodeUtils.GetNodePosAndSize(resNode);
-        }
-
-        return (Vector2.Zero, Vector2.Zero);
-    }
-
-    public unsafe (Vector2, Vector2) GetBlueCardPosAndSize(int idx)
-    {
-        if (addonPtr != nint.Zero && idx is >= 0 and < 5)
-        {
-            var addon = (AddonTripleTriad*)addonPtr;
-            return GetCardPosAndSize(addon->BlueDeck[idx]);
-        }
-
-        return (Vector2.Zero, Vector2.Zero);
-    }
-
-    public unsafe (Vector2, Vector2) GetBoardCardPosAndSize(int idx)
-    {
-        if (addonPtr != nint.Zero && idx is >= 0 and < 9)
-        {
-            var addon = (AddonTripleTriad*)addonPtr;
-            return GetCardPosAndSize(addon->Board[idx]);
-        }
-
-        return (Vector2.Zero, Vector2.Zero);
     }
 }

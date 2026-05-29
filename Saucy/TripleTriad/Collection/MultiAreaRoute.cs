@@ -7,7 +7,6 @@ using ECommons.Throttlers;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
-using Lumina.Excel.Sheets;
 using Saucy.IPC;
 using System;
 using System.Collections.Generic;
@@ -89,23 +88,6 @@ internal static unsafe class MultiAreaRouteExecutor
     private const uint GeneralActionDismount = 23;
     private const uint GeneralActionFlyingMountRoulette = 24;
 
-    internal sealed class RouteExecution
-    {
-        public required MultiAreaRoute Route;
-        public required MultiAreaRouteContext Context;
-        public int StepIndex;
-        public bool StepActionStarted;
-        public bool Failed;
-        public DateTime StepStartedUtc;
-    }
-
-    internal sealed class MultiAreaRouteContext
-    {
-        public required MapLinkPayload Location;
-        public required Vector3 Destination;
-        public required uint TargetTerritoryId;
-    }
-
     public static bool TryBeginRoute(
         MultiAreaRoute route,
         MultiAreaRouteContext context,
@@ -123,10 +105,7 @@ internal static unsafe class MultiAreaRouteExecutor
 
         execution = new()
         {
-            Route = route,
-            Context = context,
-            StepIndex = startIndex,
-            StepStartedUtc = DateTime.UtcNow
+            Route = route, Context = context, StepIndex = startIndex, StepStartedUtc = DateTime.UtcNow
         };
 
         var step = route.Steps[startIndex];
@@ -163,7 +142,7 @@ internal static unsafe class MultiAreaRouteExecutor
             MultiAreaRouteStepKind.MoveTo => TickMoveTo(step, execution),
             MultiAreaRouteStepKind.Interact => TickInteract(step),
             MultiAreaRouteStepKind.WaitForZone => TickWaitForZone(execution),
-            _ => false
+            var _ => false
         };
 
         if (execution.Failed)
@@ -325,7 +304,7 @@ internal static unsafe class MultiAreaRouteExecutor
         }
 
         if (!execution.Route.IsInDestinationTerritory(
-                Svc.ClientState.TerritoryType, execution.Context.TargetTerritoryId))
+            Svc.ClientState.TerritoryType, execution.Context.TargetTerritoryId))
         {
             if (DateTime.UtcNow - execution.StepStartedUtc > TimeSpan.FromSeconds(30))
             {
@@ -399,6 +378,23 @@ internal static unsafe class MultiAreaRouteExecutor
     }
 
     private static bool IsBetweenAreas() => Svc.Condition[ConditionFlag.BetweenAreas];
+
+    internal sealed class RouteExecution
+    {
+        public required MultiAreaRouteContext Context;
+        public bool Failed;
+        public required MultiAreaRoute Route;
+        public bool StepActionStarted;
+        public int StepIndex;
+        public DateTime StepStartedUtc;
+    }
+
+    internal sealed class MultiAreaRouteContext
+    {
+        public required Vector3 Destination;
+        public required MapLinkPayload Location;
+        public required uint TargetTerritoryId;
+    }
 }
 
 internal static class JeunoFirstWalkRoute
@@ -422,17 +418,26 @@ internal static class JeunoFirstWalkRoute
         Timeout = TimeSpan.FromSeconds(180),
         Steps =
         [
-            new() { Kind = MultiAreaRouteStepKind.Teleport, AetheryteId = MamookAetheryteId },
-            new() { Kind = MultiAreaRouteStepKind.Mount },
             new()
             {
-                Kind = MultiAreaRouteStepKind.MoveTo,
-                Position = YakTelPortalApproachPoint,
-                Fly = true,
-                ArrivalObjectDataId = EntranceDataId
+                Kind = MultiAreaRouteStepKind.Teleport, AetheryteId = MamookAetheryteId
             },
-            new() { Kind = MultiAreaRouteStepKind.Interact, ObjectDataId = EntranceDataId, Range = 6f },
-            new() { Kind = MultiAreaRouteStepKind.WaitForZone }
+            new()
+            {
+                Kind = MultiAreaRouteStepKind.Mount
+            },
+            new()
+            {
+                Kind = MultiAreaRouteStepKind.MoveTo, Position = YakTelPortalApproachPoint, Fly = true, ArrivalObjectDataId = EntranceDataId
+            },
+            new()
+            {
+                Kind = MultiAreaRouteStepKind.Interact, ObjectDataId = EntranceDataId, Range = 6f
+            },
+            new()
+            {
+                Kind = MultiAreaRouteStepKind.WaitForZone
+            }
         ]
     };
 }

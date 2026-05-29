@@ -3,7 +3,6 @@ using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Threading.Tasks;
 using TriadNpcSheet = Lumina.Excel.Sheets.TripleTriad;
 namespace Saucy.TripleTriad.Data;

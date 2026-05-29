@@ -10,7 +10,6 @@ using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
 using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
 using Saucy.OtherGames;
-using Saucy.TripleTriad;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -18,8 +17,6 @@ using System.Linq;
 using System.Numerics;
 namespace Saucy;
 
-// It is good to have this be disposable in general, in case you ever need it
-// to do any cleanup
 public unsafe class PluginUI : Window
 {
     private const long DeltaVisibleMs = 30_000;
@@ -59,19 +56,15 @@ public unsafe class PluginUI : Window
         };
     }
 
+    public GameNpcInfo? CurrentNPC { get; set; }
+
+    public bool Enabled { get; set; } = false;
+
     public void OpenForTriad()
     {
         _selectedNav = NavItem.TripleTriad;
         IsOpen = true;
     }
-
-    public GameNpcInfo? CurrentNPC
-    {
-        get;
-        set => field = value;
-    }
-
-    public bool Enabled { get; set; } = false;
 
     private static float CalcSidebarWidth()
     {
@@ -440,8 +433,8 @@ public unsafe class PluginUI : Window
             C.SessionStats = new();
             C.SessionStartTime = DateTime.UtcNow;
         }
-		ImGui.EndDisabled();
-        ImGui.Dummy(new (0, 2));
+        ImGui.EndDisabled();
+        ImGui.Dummy(new(0, 2));
     }
 
     private static string TriadHeadline(Stats s)
@@ -583,7 +576,9 @@ public unsafe class PluginUI : Window
 
         ImGui.TableNextColumn();
         if (perHour != null)
+        {
             RightAlignCellText(perHour, col);
+        }
     }
 
     private static void RightAlignCellText(string text, Vector4 color)
@@ -605,7 +600,10 @@ public unsafe class PluginUI : Window
     private static string SessionMgpPerHour(int sessionMgp)
     {
         var hours = (DateTime.UtcNow - C.SessionStartTime).TotalHours;
-        if (hours < 0.001 || sessionMgp == 0) return "—";
+        if (hours < 0.001 || sessionMgp == 0)
+        {
+            return "—";
+        }
         return $"{(int)(sessionMgp / hours):N0}";
     }
 
@@ -773,7 +771,7 @@ public unsafe class PluginUI : Window
 
             TriadAutomater.RefreshRunTargetFromPrep();
             var runTargetNpc = TriadAutomater.ResolveRunTargetNpc();
-            var onMatchRegistration = Saucy.uiReaderPrep.HasMatchRequestUI || TriadAutomater.IsMatchRegistrationVisible();
+            var onMatchRegistration = uiReaderPrep.HasMatchRequestUI || TriadAutomater.IsMatchRegistrationVisible();
 
             if (runTargetNpc != null)
             {

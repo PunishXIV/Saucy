@@ -1,12 +1,7 @@
 #nullable disable
-using Dalamud.Utility;
-using ECommons.Automation;
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
-using Saucy.TripleTriad.Data;
-using Saucy.TripleTriad.GameLogic;
 namespace Saucy.TripleTriad.UI;
 
 public class Solver
@@ -21,6 +16,18 @@ public class Solver
         FailedToParseNpc
     }
 
+    private const int PlaceRetryCooldownFrames = 3;
+    private const int MaxPlaceAttempts = 40;
+
+    private const int RecommendedDeckOptimizerTimeoutMs = 25000;
+
+    /// <summary>Max frames to wait for profile deck ranking before falling back.</summary>
+    private const int DeckSelectPrepWaitFrames = 90;
+
+    /// <summary>Frames to wait after writing an optimized deck before selecting on the prep screen.</summary>
+    public const int DeckSelectPostProfileWriteFrames = 45;
+    private static readonly List<TriadCard> UnlockedDeckSlots = [null, null, null, null, null];
+
     private readonly object preGameLock = new();
 
     public ScannerTriad.GameState cachedScreenState;
@@ -28,40 +35,36 @@ public class Solver
 
     // optimizer
     public TriadDeckOptimizer deckOptimizer = new();
+
+    private int deckSelectPostWriteCooldownFrames;
     public bool hasMove;
 
+    private int lastAppliedRunTargetNpcId = -1;
+
     private byte lastGameMove = byte.MaxValue;
-    private ScannerTriad.ETurnState lastTurnState = ScannerTriad.ETurnState.Waiting;
-    private bool solveInProgress;
-
-    private int pendingPlaceCardIdx = -1;
-    private int pendingPlaceBoardIdx = -1;
-    private int placeAttemptCount;
-    private int placeRetryCooldown;
-
-    private const int PlaceRetryCooldownFrames = 3;
-    private const int MaxPlaceAttempts = 40;
 
     public TriadNpc lastGameNpc;
+    private string lastOptimizerSkipKey = string.Empty;
+    private ScannerTriad.ETurnState lastTurnState = ScannerTriad.ETurnState.Waiting;
     public int moveBoardIdx;
     public int moveCardIdx;
     public SolverResult moveWinChance;
+    private bool optimizerInProgress;
+
+    private int optimizerPassId;
+    private string optimizerSessionKey = string.Empty;
+    private DateTime optimizerStartUtc;
+    private int optimizerTargetDeckId = -1;
+    private Task optimizerTask;
+    private bool optimizerTimedOut;
     private bool pauseOptimizerForDeckEval;
     private bool pauseOptimizerForOptimizedEval;
     private bool pauseOptimizerForSolver;
+    private int pendingPlaceBoardIdx = -1;
 
-    private const int RecommendedDeckOptimizerTimeoutMs = 25000;
-    private static readonly List<TriadCard> UnlockedDeckSlots = [null, null, null, null, null];
-
-    private int optimizerPassId;
-    private bool optimizerInProgress;
-    private bool optimizerTimedOut;
-    private bool optimizerApplied;
-    private int optimizerTargetDeckId = -1;
-    private string optimizerSessionKey = string.Empty;
-    private string lastOptimizerSkipKey = string.Empty;
-    private DateTime optimizerStartUtc;
-    private Task optimizerTask;
+    private int pendingPlaceCardIdx = -1;
+    private int placeAttemptCount;
+    private int placeRetryCooldown;
 
     public int preGameBestId = -1;
     public Dictionary<int, DeckData> preGameDecks = [];
@@ -72,15 +75,29 @@ public class Solver
     private int preGameSolved;
 
     public UnsafeReaderProfileGS profileGS;
+    private bool solveInProgress;
 
     public Status status;
 
     public Solver() => TriadGameSimulation.StaticInitialize();
 
     public TriadGameScreenMemory DebugScreenMemory { get; } = new();
-    public bool HasOptimizedDeckApplied => optimizerApplied;
+    public bool HasOptimizedDeckApplied { get; private set; }
 
-    public int OptimizedDeckSlotId => optimizerApplied ? optimizerTargetDeckId : -1;
+    public int OptimizedDeckSlotId => HasOptimizedDeckApplied ? optimizerTargetDeckId : -1;
+    public bool HasErrors => status != Status.NoErrors;
+    public bool HasAllProfileDecksEmpty { get; private set; }
+
+    public bool IsDeckEvalInProgress
+    {
+        get
+        {
+            lock (preGameLock)
+            {
+                return preGameDecks.Count > 0 && preGameSolved < preGameDecks.Count;
+            }
+        }
+    }
 
     public string GetExpectedSaucyDeckName() =>
         preGameNpc != null ? $"{preGameNpc.Name} (Saucy)" : string.Empty;
@@ -94,7 +111,7 @@ public class Solver
 
         lock (preGameLock)
         {
-            if (optimizerApplied && optimizerTargetDeckId >= 0)
+            if (HasOptimizedDeckApplied && optimizerTargetDeckId >= 0)
             {
                 return;
             }
@@ -159,23 +176,10 @@ public class Solver
 
         return false;
     }
-    public bool HasErrors => status != Status.NoErrors;
-    public bool HasAllProfileDecksEmpty { get; private set; }
-
-    public bool IsDeckEvalInProgress
-    {
-        get
-        {
-            lock (preGameLock)
-            {
-                return preGameDecks.Count > 0 && preGameSolved < preGameDecks.Count;
-            }
-        }
-    }
 
     /// <summary>
-    /// Resolves a deck index safe to pass to TripleTriadSelDeck.
-    /// When <paramref name="useRecommended"/> is true, returns false while deck evaluation is still running.
+    ///     Resolves a deck index safe to pass to TripleTriadSelDeck.
+    ///     When <paramref name="useRecommended" /> is true, returns false while deck evaluation is still running.
     /// </summary>
     public bool TryResolveDeckIndex(bool useRecommended, int manualDeckIndex, out int deckIndex)
     {
@@ -194,14 +198,6 @@ public class Solver
 
         return true;
     }
-
-    /// <summary>Max frames to wait for profile deck ranking before falling back.</summary>
-    private const int DeckSelectPrepWaitFrames = 90;
-
-    /// <summary>Frames to wait after writing an optimized deck before selecting on the prep screen.</summary>
-    public const int DeckSelectPostProfileWriteFrames = 45;
-
-    private int deckSelectPostWriteCooldownFrames;
 
     public void TickDeckSelectPostWriteCooldown()
     {
@@ -228,7 +224,7 @@ public class Solver
 
         lock (preGameLock)
         {
-            if (optimizerApplied && optimizerTargetDeckId >= 0)
+            if (HasOptimizedDeckApplied && optimizerTargetDeckId >= 0)
             {
                 return false;
             }
@@ -238,18 +234,18 @@ public class Solver
                 return true;
             }
 
-            if (optimizerInProgress && !optimizerApplied && !optimizerTimedOut)
+            if (optimizerInProgress && !HasOptimizedDeckApplied && !optimizerTimedOut)
             {
                 return true;
             }
 
-            if (preGameNpc != null && !optimizerApplied && !optimizerTimedOut &&
+            if (preGameNpc != null && !HasOptimizedDeckApplied && !optimizerTimedOut &&
                 !string.IsNullOrEmpty(optimizerSessionKey))
             {
                 return true;
             }
 
-            if (!optimizerApplied && preGameDecks.Count > 0 && preGameSolved < preGameDecks.Count &&
+            if (!HasOptimizedDeckApplied && preGameDecks.Count > 0 && preGameSolved < preGameDecks.Count &&
                 TriadAutomater.DeckSelectFramesOpen < DeckSelectPrepWaitFrames)
             {
                 return true;
@@ -269,7 +265,6 @@ public class Solver
 
         lock (preGameLock)
         {
-
             foreach (var candidate in GetOrderedDeckCandidatesLocked(useRecommended, manualDeckIndex))
             {
                 if (excluded is { Count: > 0 } && excluded.Contains(candidate))
@@ -307,7 +302,7 @@ public class Solver
         if (stateOb != null)
         {
             var parseCtx = new GameUIParser();
-            screenOb = stateOb.ToTriadScreenState(parseCtx, markFailed: false);
+            screenOb = stateOb.ToTriadScreenState(parseCtx, false);
             currentNpc = stateOb.ToTriadNpc(parseCtx);
             EnsureScreenMods(screenOb);
 
@@ -379,8 +374,8 @@ public class Solver
     }
 
     /// <summary>
-    /// Called from <see cref="TriadAutomater.RunModule"/> when the UI reader has not fired
-    /// (unchanged Equals state) but the player can act on the TripleTriad addon.
+    ///     Called from <see cref="TriadAutomater.RunModule" /> when the UI reader has not fired
+    ///     (unchanged Equals state) but the player can act on the TripleTriad addon.
     /// </summary>
     public void EnsurePlayerMove(UIStateTriadGame? stateOb)
     {
@@ -529,8 +524,8 @@ public class Solver
         if (!string.IsNullOrEmpty(uiReaderPrep.cachedState.npc))
         {
             var ctx = new GameUIParser();
-            var fromPrep = ctx.ParseNpc(uiReaderPrep.cachedState.npc, markFailed: false) ??
-                           ctx.ParseNpcNameStart(uiReaderPrep.cachedState.npc, markFailed: false);
+            var fromPrep = ctx.ParseNpc(uiReaderPrep.cachedState.npc, false) ??
+                           ctx.ParseNpcNameStart(uiReaderPrep.cachedState.npc, false);
             if (fromPrep != null)
             {
                 lastGameNpc = fromPrep;
@@ -661,7 +656,7 @@ public class Solver
         }
     }
 
-    public void OnNpcSelected(TriadNpc npc) => OnNpcSelected(npc, [], startOptimizer: false);
+    public void OnNpcSelected(TriadNpc npc) => OnNpcSelected(npc, [], false);
 
     public void OnNpcSelected(TriadNpc npc, List<TriadGameModifier> regionMods, bool startOptimizer = false)
     {
@@ -676,8 +671,6 @@ public class Solver
         ApplyRunTargetNpc(npc, startOptimizer);
     }
 
-    private int lastAppliedRunTargetNpcId = -1;
-
     public void ResetRunTargetNpcSession() => lastAppliedRunTargetNpcId = -1;
 
     public void EnsureRunTargetNpcSynced(bool deckSelectScreen = false)
@@ -689,7 +682,7 @@ public class Solver
         {
             if (TrySyncNpcFromPrepState(uiReaderPrep.cachedState))
             {
-                ApplyRunTargetNpc(preGameNpc!, startOptimizer: false);
+                ApplyRunTargetNpc(preGameNpc!);
                 return;
             }
         }
@@ -703,7 +696,7 @@ public class Solver
                 var npc = ResolveNpcForGame(uiReaderGame.currentState);
                 if (npc != null)
                 {
-                    ApplyRunTargetNpc(npc, startOptimizer: false);
+                    ApplyRunTargetNpc(npc);
                     return;
                 }
             }
@@ -711,13 +704,12 @@ public class Solver
 
         if (TrySyncNpcFromPrepState(uiReaderPrep.cachedState))
         {
-            ApplyRunTargetNpc(preGameNpc!, startOptimizer: false);
+            ApplyRunTargetNpc(preGameNpc!);
             return;
         }
 
         if (preGameNpc != null)
         {
-            return;
         }
     }
 
@@ -777,7 +769,7 @@ public class Solver
             return;
         }
 
-        ApplyRunTargetNpc(preGameNpc!, startOptimizer: true);
+        ApplyRunTargetNpc(preGameNpc!, true);
     }
 
     private static List<TriadGameModifier> ParsePrepRegionMods(UIStateTriadPrep state, GameUIParser parseCtx)
@@ -846,7 +838,7 @@ public class Solver
                 return;
             }
 
-            var preserveOptimizedDeck = optimizerApplied && optimizerTargetDeckId >= 0;
+            var preserveOptimizedDeck = HasOptimizedDeckApplied && optimizerTargetDeckId >= 0;
 
             preGameNpc = newPreGameNpc ?? preGameNpc;
             preGameMods = newPreGameMods;
@@ -927,7 +919,7 @@ public class Solver
 
     private void ResetRecommendedDeckOptimizer()
     {
-        if (!optimizerInProgress && !optimizerApplied)
+        if (!optimizerInProgress && !HasOptimizedDeckApplied)
         {
             return;
         }
@@ -936,7 +928,7 @@ public class Solver
         optimizerPassId++;
         optimizerInProgress = false;
         optimizerTimedOut = false;
-        optimizerApplied = false;
+        HasOptimizedDeckApplied = false;
         optimizerTargetDeckId = -1;
         optimizerSessionKey = string.Empty;
     }
@@ -1128,7 +1120,7 @@ public class Solver
 
     private bool IsRecommendedDeckOptimizerBlockingLocked()
     {
-        if (!optimizerInProgress || optimizerApplied)
+        if (!optimizerInProgress || HasOptimizedDeckApplied)
         {
             return false;
         }
@@ -1180,7 +1172,7 @@ public class Solver
 
         var optimizerKey = BuildOptimizerSessionKey(npc, regionMods);
 
-        if (optimizerApplied && optimizerKey == optimizerSessionKey)
+        if (HasOptimizedDeckApplied && optimizerKey == optimizerSessionKey)
         {
             return;
         }
@@ -1220,7 +1212,7 @@ public class Solver
         var passId = optimizerPassId;
         optimizerInProgress = true;
         optimizerTimedOut = false;
-        optimizerApplied = false;
+        HasOptimizedDeckApplied = false;
         optimizerTargetDeckId = -1;
         optimizerSessionKey = optimizerKey;
         optimizerStartUtc = DateTime.UtcNow;
@@ -1359,7 +1351,7 @@ public class Solver
             }
 
             optimizerTargetDeckId = deckIdx;
-            optimizerApplied = true;
+            HasOptimizedDeckApplied = true;
             preGameBestId = deckIdx;
             optimizerSessionKey = BuildOptimizerSessionKey(npc, regionMods);
             preGameDecks[deckIdx] = deckData;
@@ -1413,14 +1405,12 @@ public class Solver
         }
 
         optimizerTargetDeckId = targetDeckId;
-        optimizerApplied = true;
+        HasOptimizedDeckApplied = true;
         preGameBestId = targetDeckId;
 
         var deckData = new DeckData
         {
-            id = targetDeckId,
-            name = deckName,
-            solverDeck = optimizedDeck
+            id = targetDeckId, name = deckName, solverDeck = optimizedDeck
         };
 
         preGameDecks[targetDeckId] = deckData;
@@ -1474,7 +1464,7 @@ public class Solver
 
     private IEnumerable<int> GetOrderedDeckCandidatesLocked(int preferredDeckId, int fallbackDeckId)
     {
-        var optimizedId = optimizerApplied ? optimizerTargetDeckId : -1;
+        var optimizedId = HasOptimizedDeckApplied ? optimizerTargetDeckId : -1;
 
         if (optimizedId >= 0)
         {
@@ -1537,7 +1527,7 @@ public class Solver
             return false;
         }
 
-        if (optimizerApplied && deckId == optimizerTargetDeckId)
+        if (HasOptimizedDeckApplied && deckId == optimizerTargetDeckId)
         {
             return IsProfileDeckSelectable(deckId);
         }
@@ -1606,4 +1596,3 @@ public class Solver
         public TriadGameSolver solver;
     }
 }
-                                                                      

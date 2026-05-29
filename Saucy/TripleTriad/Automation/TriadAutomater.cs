@@ -5,11 +5,9 @@ using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel.Sheets;
-using Saucy.TripleTriad.Utils;
 using System;
 using System.Collections.Generic;
 using static ECommons.GenericHelpers;
-using static Saucy.Saucy;
 
 namespace Saucy.TripleTriad;
 
@@ -19,19 +17,23 @@ internal static unsafe class TriadAutomater
     private const int DeckSelectRetryCooldownFrames = 15;
     private const int DeckSelectPostOptimizerCooldownFrames = Solver.DeckSelectPostProfileWriteFrames;
     private const int MaxDeckSelectMethods = 5;
+    private const int ResultOutcomeFallbackFrames = 45;
 
-    public static int DeckSelectFramesOpen { get; private set; }
+    private const int RematchRetryCooldownFrames = 15;
+    private const int MatchAcceptRetryCooldownFrames = 15;
+    private const ushort ResultQuitNodeId = 20;
+    private const ushort ResultRematchNodeId = 21;
 
     public static bool ModuleEnabled = false;
     public static Dictionary<uint, int> TempCardsWonList = [];
 
-    public static bool PlayXTimes = false;
-    public static bool PlayUntilCardDrops = false;
+    public static bool PlayXTimes;
+    public static bool PlayUntilCardDrops;
     public static int NumberOfTimes = 1;
     public static bool LogOutAfterCompletion = false;
-    public static bool PlayUntilAllCardsDropOnce = false;
+    public static bool PlayUntilAllCardsDropOnce;
 
-    public static int MatchesCompletedThisSession = 0;
+    public static int MatchesCompletedThisSession;
     public static int SessionInitialPlayCount = 1;
 
     private static readonly HashSet<int> attemptedDeckIndices = [];
@@ -42,26 +44,25 @@ internal static unsafe class TriadAutomater
     private static int framesSinceDeckSelectAttempt;
     private static bool rematchPending;
     private static bool sessionEndDismissRequested;
-    private static bool cardFarmSessionActive;
     private static int pendingDeckIndex = -1;
     private static int pendingSelectMethod;
     private static bool awaitingDeckSelectConfirm;
     private static int framesSinceSessionEndDismiss;
     private static nint lastRecordedResultAddonPtr;
     private static int framesWaitingForResultOutcome;
-    private const int ResultOutcomeFallbackFrames = 45;
     private static readonly HashSet<int> ownedRewardCardsAtMatchStart = [];
     private static bool matchRewardOwnershipSnapshotted;
-
-    private const int RematchRetryCooldownFrames = 15;
-    private const int MatchAcceptRetryCooldownFrames = 15;
-    private const ushort ResultQuitNodeId = 20;
-    private const ushort ResultRematchNodeId = 21;
 
     private static nint cachedResultButtonAddonPtr;
     private static ushort resolvedRematchNodeId;
     private static ushort resolvedQuitNodeId;
     private static bool resultButtonsResolved;
+
+    private static int lastTargetNpcId = -1;
+
+    public static int DeckSelectFramesOpen { get; private set; }
+
+    public static bool CardFarmSessionActive { get; private set; }
 
     public static bool PlaceCard(int which, int slot)
     {
@@ -187,7 +188,7 @@ internal static unsafe class TriadAutomater
         if (canPlace)
         {
             TTSolver.TickPlaceRetryCooldown();
-            TTSolver.UpdateGame(uiReaderGame.currentState, automationTick: true);
+            TTSolver.UpdateGame(uiReaderGame.currentState, true);
         }
 
         if (canPlace && TTSolver.ShouldAttemptPlace())
@@ -234,8 +235,6 @@ internal static unsafe class TriadAutomater
     /// <summary>True while any tracked NPC reward card is below the per-card target count.</summary>
     public static bool IsCardFarmModeActive() => ModuleEnabled && PlayUntilAllCardsDropOnce;
 
-    public static bool CardFarmSessionActive => cardFarmSessionActive;
-
     /// <summary>True only when every tracked card reached the per-card target count.</summary>
     public static bool IsCardFarmComplete()
     {
@@ -258,14 +257,14 @@ internal static unsafe class TriadAutomater
 
     public static bool CardFarmHasPendingDrops()
     {
-        if (!cardFarmSessionActive && !IsCardFarmModeActive())
+        if (!CardFarmSessionActive && !IsCardFarmModeActive())
         {
             return false;
         }
 
         if (TempCardsWonList.Count == 0)
         {
-            return cardFarmSessionActive;
+            return CardFarmSessionActive;
         }
 
         return !IsCardFarmComplete();
@@ -278,7 +277,7 @@ internal static unsafe class TriadAutomater
             return;
         }
 
-        cardFarmSessionActive = true;
+        CardFarmSessionActive = true;
         if (TempCardsWonList.Count == 0)
         {
             StartCardFarmTargets(ResolveRunTargetNpc());
@@ -287,15 +286,12 @@ internal static unsafe class TriadAutomater
 
     public static void ActivateCardFarmSession(GameNpcInfo? npcInfo = null)
     {
-        cardFarmSessionActive = true;
+        CardFarmSessionActive = true;
         TTSolver.EnsureRunTargetNpcSynced();
         StartCardFarmTargets(npcInfo ?? ResolveRunTargetNpc());
     }
 
-    public static void DeactivateCardFarmSession()
-    {
-        cardFarmSessionActive = false;
-    }
+    public static void DeactivateCardFarmSession() => CardFarmSessionActive = false;
 
     public static void StartCardFarmTargets(GameNpcInfo? npcInfo)
     {
@@ -359,7 +355,7 @@ internal static unsafe class TriadAutomater
     /// <summary>Call when run mode or play count changes in the UI mid-session.</summary>
     public static void SyncPlayXTimesSession(int desiredPlayCount)
     {
-        if (!PlayXTimes || PlayUntilAllCardsDropOnce || cardFarmSessionActive)
+        if (!PlayXTimes || PlayUntilAllCardsDropOnce || CardFarmSessionActive)
         {
             return;
         }
@@ -405,7 +401,7 @@ internal static unsafe class TriadAutomater
             return;
         }
 
-        if (cardFarmSessionActive)
+        if (CardFarmSessionActive)
         {
             DeactivateCardFarmSession();
         }
@@ -469,8 +465,8 @@ internal static unsafe class TriadAutomater
     }
 
     /// <summary>
-    /// True only when an NPC reward card was not owned at match start and is owned now.
-    /// Agent rewardItemId alone is not reliable (can reflect the reward pool, not an actual drop).
+    ///     True only when an NPC reward card was not owned at match start and is owned now.
+    ///     Agent rewardItemId alone is not reliable (can reflect the reward pool, not an actual drop).
     /// </summary>
     public static bool TryGetVerifiedNpcCardDrop(out GameCardInfo? droppedCard)
     {
@@ -521,8 +517,8 @@ internal static unsafe class TriadAutomater
     }
 
     /// <summary>
-    /// Records one completed match per result addon instance and requests rematch or quit.
-    /// Called from CheckResults; TryRematch uses the overload with requireActionButtons when UI parsing fails.
+    ///     Records one completed match per result addon instance and requests rematch or quit.
+    ///     Called from CheckResults; TryRematch uses the overload with requireActionButtons when UI parsing fails.
     /// </summary>
     public static void RecordMatchResultIfNeeded(nint resultAddonPtr = default, bool requireActionButtons = false)
     {
@@ -639,8 +635,6 @@ internal static unsafe class TriadAutomater
         IsMatchRegistrationVisible() ||
         IsPrepDeckSelectVisible();
 
-    private static int lastTargetNpcId = -1;
-
     public static GameNpcInfo? ResolveRunTargetNpc()
     {
         TTSolver.EnsureRunTargetNpcSynced();
@@ -698,7 +692,7 @@ internal static unsafe class TriadAutomater
 
         if (lastTargetNpcId != npcInfo.npcId)
         {
-            if (cardFarmSessionActive && lastTargetNpcId >= 0 && TempCardsWonList.Count > 0)
+            if (CardFarmSessionActive && lastTargetNpcId >= 0 && TempCardsWonList.Count > 0)
             {
                 return;
             }
@@ -751,7 +745,7 @@ internal static unsafe class TriadAutomater
                 deckSelectScreen: uiReaderPrep.HasDeckSelectionUI && !IsMatchRegistrationVisible());
             EnsureRunTargetCards(ResolveRunTargetNpc());
 
-            if (ModuleEnabled && cardFarmSessionActive && TempCardsWonList.Count == 0)
+            if (ModuleEnabled && CardFarmSessionActive && TempCardsWonList.Count == 0)
             {
                 StartCardFarmTargets(ResolveRunTargetNpc());
             }
@@ -802,7 +796,7 @@ internal static unsafe class TriadAutomater
             !IsResultMatchRecorded((nint)addon) &&
             IsTriadResultScreenReady(addon))
         {
-            RecordMatchResultIfNeeded((nint)addon, requireActionButtons: true);
+            RecordMatchResultIfNeeded((nint)addon, true);
         }
 
         if (sessionEndDismissRequested)
@@ -868,7 +862,7 @@ internal static unsafe class TriadAutomater
                 return true;
             }
 
-            TryClickResultButton(addon, resolvedRematchNodeId, requireEnabled: false);
+            TryClickResultButton(addon, resolvedRematchNodeId, false);
 
             if (DidEnterRematchFlow())
             {
@@ -894,7 +888,7 @@ internal static unsafe class TriadAutomater
         EnsureResultButtonsResolved(addon);
 
         if (resolvedQuitNodeId != 0 &&
-            TryClickResultButton(addon, resolvedQuitNodeId, requireEnabled: false))
+            TryClickResultButton(addon, resolvedQuitNodeId, false))
         {
             return true;
         }
@@ -924,7 +918,7 @@ internal static unsafe class TriadAutomater
     private static bool TryClickResultButton(AtkUnitBase* addon, ushort nodeId, bool requireEnabled = true) =>
         TryClickAddonButton(addon, FindResultButton(addon, nodeId), requireEnabled);
 
-    private static unsafe bool IsResultScreenReadyForRematch(AtkUnitBase* addon)
+    private static bool IsResultScreenReadyForRematch(AtkUnitBase* addon)
     {
         if (!addon->IsReady)
         {
@@ -941,7 +935,7 @@ internal static unsafe class TriadAutomater
                rematchButton->AtkResNode->IsVisible();
     }
 
-    private static unsafe bool EnsureResultButtonsResolved(AtkUnitBase* addon)
+    private static bool EnsureResultButtonsResolved(AtkUnitBase* addon)
     {
         var addonPtr = (nint)addon;
         if (resultButtonsResolved && cachedResultButtonAddonPtr == addonPtr)
@@ -994,9 +988,9 @@ internal static unsafe class TriadAutomater
         }
 
         foreach (var token in new[]
-                 {
-                     "Rematch", "Revanche", "Erneutes Spiel", "Revenge", "再戦", "再戦する", "リマッチ"
-                 })
+        {
+            "Rematch", "Revanche", "Erneutes Spiel", "Revenge", "再戦", "再戦する", "リマッチ"
+        })
         {
             if (label.Contains(token, StringComparison.OrdinalIgnoreCase))
             {
@@ -1015,9 +1009,9 @@ internal static unsafe class TriadAutomater
         }
 
         foreach (var token in new[]
-                 {
-                     "Quit", "Beenden", "Quitter", "Abandon", "Exit", "やめる", "終了"
-                 })
+        {
+            "Quit", "Beenden", "Quitter", "Abandon", "Exit", "やめる", "終了"
+        })
         {
             if (label.Contains(token, StringComparison.OrdinalIgnoreCase))
             {
@@ -1028,7 +1022,7 @@ internal static unsafe class TriadAutomater
         return false;
     }
 
-    private static unsafe string? GetResultButtonLabel(AtkComponentButton* button)
+    private static string? GetResultButtonLabel(AtkComponentButton* button)
     {
         if (button == null)
         {
@@ -1083,7 +1077,7 @@ internal static unsafe class TriadAutomater
         return null;
     }
 
-    internal static unsafe bool HasVisibleResultActionButtons(AtkUnitBase* addon)
+    internal static bool HasVisibleResultActionButtons(AtkUnitBase* addon)
     {
         foreach (var node in GUINodeUtils.GetAllChildNodes(addon->RootNode) ?? [])
         {
@@ -1098,7 +1092,7 @@ internal static unsafe class TriadAutomater
         return false;
     }
 
-    private static unsafe AtkComponentButton* TryGetButtonFromNode(AtkResNode* node)
+    private static AtkComponentButton* TryGetButtonFromNode(AtkResNode* node)
     {
         if (node == null)
         {
@@ -1123,7 +1117,7 @@ internal static unsafe class TriadAutomater
         return null;
     }
 
-    private static unsafe AtkComponentButton* FindResultButton(AtkUnitBase* addon, ushort targetNodeId)
+    private static AtkComponentButton* FindResultButton(AtkUnitBase* addon, ushort targetNodeId)
     {
         for (var i = 0; i < addon->UldManager.NodeListCount; i++)
         {
@@ -1157,7 +1151,7 @@ internal static unsafe class TriadAutomater
         return null;
     }
 
-    internal static unsafe bool IsTriadResultScreenReady(AtkUnitBase* addon) =>
+    internal static bool IsTriadResultScreenReady(AtkUnitBase* addon) =>
         FindResultButton(addon, ResultQuitNodeId) != null ||
         FindResultButton(addon, ResultRematchNodeId) != null ||
         HasVisibleResultActionButtons(addon);
@@ -1295,7 +1289,7 @@ internal static unsafe class TriadAutomater
             }
 
             if (!TTSolver.TryGetDeckSelectCandidate(C.UseRecommendedDeck, C.SelectedDeckIndex, attemptedDeckIndices,
-                    out var deck))
+                out var deck))
             {
                 if (C.UseRecommendedDeck && TTSolver.HasOptimizedDeckApplied &&
                     TryRecommendedDeckButton(addon))
@@ -1358,7 +1352,10 @@ internal static unsafe class TriadAutomater
     private static bool TryBlindDeckSelect(AtkUnitBase* addon)
     {
         Svc.Chat.Print("[Saucy] Selecting first deck...");
-        foreach (var listIndex in new[] { 0, 1, 2, 3, 4 })
+        foreach (var listIndex in new[]
+        {
+            0, 1, 2, 3, 4
+        })
         {
             TryClickDeckListRow(addon, listIndex);
             TryClickDeckConfirmButton(addon);
@@ -1369,12 +1366,15 @@ internal static unsafe class TriadAutomater
             }
         }
 
-        return TryRecommendedDeckButton(addon) || TryClickAnyAddonButton(addon, skipRandom: true);
+        return TryRecommendedDeckButton(addon) || TryClickAnyAddonButton(addon, true);
     }
 
     private static bool TryClickAnyAddonButton(AtkUnitBase* addon, bool skipRandom = false)
     {
-        foreach (var buttonId in new uint[] { 0, 1, 2, 3, 4, 5, 6 })
+        foreach (var buttonId in new uint[]
+        {
+            0, 1, 2, 3, 4, 5, 6
+        })
         {
             if (skipRandom && buttonId == 3)
             {
@@ -1473,7 +1473,10 @@ internal static unsafe class TriadAutomater
 
     private static bool TryRecommendedDeckButton(AtkUnitBase* addon)
     {
-        foreach (var buttonId in new uint[] { 0, 2, 4, 1, 3, 5 })
+        foreach (var buttonId in new uint[]
+        {
+            0, 2, 4, 1, 3, 5
+        })
         {
             var button = addon->GetComponentButtonById(buttonId);
             if (button == null || !button->IsEnabled || button->AtkResNode == null || !button->AtkResNode->IsVisible())
@@ -1499,7 +1502,10 @@ internal static unsafe class TriadAutomater
 
     private static bool TryClickDeckConfirmButton(AtkUnitBase* addon)
     {
-        foreach (var buttonId in new uint[] { 1, 0, 5 })
+        foreach (var buttonId in new uint[]
+        {
+            1, 0, 5
+        })
         {
             var button = addon->GetComponentButtonById(buttonId);
             if (button == null || !button->IsEnabled || button->AtkResNode == null || !button->AtkResNode->IsVisible())
@@ -1717,7 +1723,7 @@ internal static unsafe class TriadAutomater
 
             if (PlayUntilAllCardsDropOnce)
             {
-                if (!cardFarmSessionActive)
+                if (!CardFarmSessionActive)
                 {
                     ActivateCardFarmSession(ResolveRunTargetNpc());
                 }
