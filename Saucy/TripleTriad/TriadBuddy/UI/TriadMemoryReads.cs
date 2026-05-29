@@ -11,7 +11,7 @@ internal static class TriadMemoryReads
 
     public static unsafe bool TryIsCardOwned(int cardId)
     {
-        if (cardId <= 0)
+        if (cardId <= 0 || cardId > ushort.MaxValue)
             return false;
 
         try
@@ -20,7 +20,8 @@ internal static class TriadMemoryReads
             if (uiState == null)
                 return false;
 
-            return uiState->UnlockedTripleTriadCardsBitArray.Get(cardId);
+            // Prefer the game helper over raw bit-array indexing (row id vs bit index can diverge).
+            return uiState->IsTripleTriadCardUnlocked((ushort)cardId);
         }
         catch (Exception ex)
         {

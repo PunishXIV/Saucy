@@ -566,7 +566,7 @@ public unsafe class PluginUI : Window
         ImGuiComponents.HelpMarker("Shows card/NPC search panels beside the in-game Gold Saucer card list.");
 
         if (CurrentNPC != null)
-            global::Saucy.TripleTriad.TriadNpcQuestUi.DrawUnlockQuest(CurrentNPC);
+            global::Saucy.TripleTriad.TriadNpcQuestUi.DrawUnlockQuestIconRow(CurrentNPC);
 
         ImGui.Dummy(new Vector2(0, 4));
 

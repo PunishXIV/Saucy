@@ -16,6 +16,7 @@ internal sealed class TriadBuddyHost : IDisposable
     private readonly PluginWindowCardSearch _cardSearchWindow;
     private readonly PluginWindowCardInfo _cardInfoWindow;
     private readonly PluginWindowNpcStats _npcStatsWindow;
+    private bool _sawGameDataReady;
 
     public TriadBuddyHost(IDalamudPluginInterface pluginInterface)
     {
@@ -27,7 +28,7 @@ internal sealed class TriadBuddyHost : IDisposable
         _windowSystem.AddWindow(_cardInfoWindow);
         _windowSystem.AddWindow(_npcStatsWindow);
 
-        QuestionableInterop.Init(pluginInterface);
+        QuestionableInterop.Refresh();
         pluginInterface.UiBuilder.Draw += OnDraw;
     }
 
@@ -44,6 +45,8 @@ internal sealed class TriadBuddyHost : IDisposable
         if (!Saucy.C.TriadBuddyCollectionUiEnabled)
             return;
 
+        QuestionableInterop.Refresh();
+
         if (!Svc.ClientState.IsLoggedIn)
             return;
 
@@ -54,6 +57,12 @@ internal sealed class TriadBuddyHost : IDisposable
 
         if (!Saucy.dataLoader.IsDataReady)
             return;
+
+        if (!_sawGameDataReady)
+        {
+            _sawGameDataReady = true;
+            _cardSearchWindow.OnGameDataReady();
+        }
 
         _cardSearchWindow.SyncVisibility();
         _cardInfoWindow.SyncVisibility();

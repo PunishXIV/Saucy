@@ -94,16 +94,26 @@ public class UIReaderTriadCardList : IUIReader
         var descNode = (AtkResNode*)cachedState.descNodeAddr;
         (cachedState.descriptionPos, cachedState.descriptionSize) = GUINodeUtils.GetNodePosAndSize(descNode);
 
-        // Addon FilterMode: 0xD = all, 0x3 = owned only, 0xC = missing only (see struct comment)
-        var newFilterMode = addon->FilterMode switch
-        {
-            0x3 => (byte)1,
-            0xC => (byte)2,
-            _ => (byte)0,
-        };
+        var newPageIndex = addon->PageIndex;
+        var newCardIndex = addon->CardIndex;
+        var newFilterMode = DecodeAddonFilterMode(addon->FilterMode);
 
-        if (cachedState.pageIndex != addon->PageIndex ||
-            cachedState.cardIndex != addon->CardIndex ||
+        if (cachedAddonAgentPtr != nint.Zero)
+        {
+            var addonAgent = (AgentTriadCardList*)cachedAddonAgentPtr;
+            if (addonAgent->PageIndex >= 0 && addonAgent->PageIndex < GameCardDB.MaxGridPages)
+            {
+                newPageIndex = (byte)addonAgent->PageIndex;
+            }
+
+            if (addonAgent->FilterMode <= 2)
+            {
+                newFilterMode = addonAgent->FilterMode;
+            }
+        }
+
+        if (cachedState.pageIndex != newPageIndex ||
+            cachedState.cardIndex != newCardIndex ||
             cachedState.filterMode != newFilterMode ||
             cachedState.numU != addon->NumSideU)
         {
@@ -114,8 +124,8 @@ public class UIReaderTriadCardList : IUIReader
             cachedState.rarity = addon->CardRarity;
             cachedState.type = addon->CardType;
             cachedState.iconId = addon->CardIconId;
-            cachedState.pageIndex = addon->PageIndex;
-            cachedState.cardIndex = addon->CardIndex;
+            cachedState.pageIndex = newPageIndex;
+            cachedState.cardIndex = newCardIndex;
             cachedState.filterMode = newFilterMode;
 
             OnUIStateChanged?.Invoke(cachedState);
@@ -191,6 +201,14 @@ public class UIReaderTriadCardList : IUIReader
         }
     }
 
+    private static byte DecodeAddonFilterMode(byte addonFilterMode) =>
+        addonFilterMode switch
+        {
+            0x3 or 0x7 => 1, // owned only
+            0xC or 0xA => 2, // missing only
+            _ => 0, // all (0xD and other values)
+        };
+
     private unsafe bool FindTextNodeAddresses(AddonTriadCardList* addon)
     {
         // 9 child nodes (sibling scan)
@@ -263,11 +281,26 @@ public class UIStateTriadCardList
 
     public TriadCard? ToTriadCard(GameUIParser ctx)
     {
-        var matchOb = ctx.ParseCard(numU, numL, numD, numR, (ETriadCardType)type, (ETriadCardRarity)rarity, false);
-        if (matchOb == null || matchOb.SameNumberId >= 0)
+        if (iconId >= 88000)
         {
-            // number match is increasing unreliable, use grid location instead
-            return ctx.ParseCardByGridLocation(pageIndex, cardIndex, filterMode);
+            return ctx.cards.FindById(iconId - 88000);
+        }
+
+        if (iconId == 0 && numU == 0 && numL == 0 && numD == 0 && numR == 0)
+        {
+            return null;
+        }
+
+        var matchOb = ctx.ParseCard(numU, numL, numD, numR, (ETriadCardType)type, (ETriadCardRarity)rarity, false);
+        if (matchOb != null && matchOb.SameNumberId < 0)
+        {
+            return matchOb;
+        }
+
+        var gridMatch = ctx.ParseCardByGridLocation(pageIndex, cardIndex, filterMode, markFailed: false);
+        if (gridMatch != null)
+        {
+            return gridMatch;
         }
 
         return matchOb;

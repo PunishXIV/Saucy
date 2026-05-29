@@ -2,6 +2,7 @@ using Dalamud.Configuration;
 using ECommons.Configuration;
 using Newtonsoft.Json;
 using Saucy.OutOnALimb;
+using Saucy.TripleTriad;
 using System;
 using System.Collections.ObjectModel;
 namespace Saucy;

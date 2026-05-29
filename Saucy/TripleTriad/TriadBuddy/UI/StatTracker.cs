@@ -1,5 +1,5 @@
 ﻿using FFTriadBuddy;
-using Saucy;
+using Saucy.TripleTriad;
 
 namespace TriadBuddyPlugin;
 

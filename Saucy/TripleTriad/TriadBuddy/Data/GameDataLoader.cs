@@ -80,8 +80,13 @@ public class GameDataLoader
             FixLocalizedNameCasing();
             cardInfoDB.OnLoaded();
 
-            Svc.Log.Info($"Loaded game data for cards:{cardDB.cards.Count}, npcs:{npcDB.npcs.Count}");
-            IsDataReady = true;
+            var cardCount = cardDB.cards.Count;
+            var npcCount = npcDB.npcs.Count;
+            Svc.Framework.Run(() =>
+            {
+                IsDataReady = true;
+                Svc.Log.Info($"Loaded game data for cards:{cardCount}, npcs:{npcCount}");
+            });
         }
         else
         {
@@ -397,32 +402,23 @@ public class GameDataLoader
 
     private bool ParseNpcUnlockQuests()
     {
-        var cardResidentSheet = Svc.Data.GetExcelSheet<TripleTriadCardResident>();
         var npcSheet = Svc.Data.GetExcelSheet<TripleTriad>();
-        if (cardResidentSheet == null || npcSheet == null)
+        if (npcSheet == null)
             return true;
 
-        foreach (var npcRow in npcSheet)
+        foreach (var row in npcSheet)
         {
-            if (npcRow.RowId == 0)
+            if (row.RowId == 0)
                 continue;
 
-            uint? questId = null;
-            foreach (var cardRef in npcRow.TripleTriadCardFixed)
+            foreach (var questRef in row.PreviousQuest)
             {
-                if (cardRef.RowId == 0)
+                if (questRef.RowId == 0)
                     continue;
 
-                var resident = cardResidentSheet.GetRowOrDefault(cardRef.RowId);
-                if (resident == null || resident.Value.Quest.RowId == 0)
-                    continue;
-
-                questId = resident.Value.Quest.RowId;
+                mapNpcUnlockQuestId[row.RowId] = questRef.RowId;
                 break;
             }
-
-            if (questId != null)
-                mapNpcUnlockQuestId[npcRow.RowId] = questId.Value;
         }
 
         return true;

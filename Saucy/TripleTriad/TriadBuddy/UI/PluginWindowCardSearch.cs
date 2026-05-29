@@ -50,6 +50,10 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
     private bool showNpcMatchesOnly;
 
     private bool npcFilterDataStale = true;
+    private bool sawGameDataReady;
+    private DateTime lastOwnershipRefreshUtc = DateTime.MinValue;
+
+    private static bool IsGameDataReady => dataLoader.IsDataReady;
 
     public PluginWindowCardSearch(UIReaderTriadCardList uiReaderCardList, PluginWindowNpcStats statsWindow) : base("Card Search")
     {
@@ -124,8 +128,26 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         UpdateWindowData();
     }
 
+    internal void OnGameDataReady()
+    {
+        if (sawGameDataReady)
+            return;
+
+        sawGameDataReady = true;
+        filterMode = -1;
+        listCards.Clear();
+        listNpcs.Clear();
+        selectedCardIdx = -1;
+        selectedNpcIdx = -1;
+        lastOwnershipRefreshUtc = DateTime.MinValue;
+        TriadNpcQuestUi.InvalidateCache();
+    }
+
     private void UpdateWindowData()
     {
+        if (!IsGameDataReady)
+            return;
+
         var wasOpen = IsOpen;
         IsOpen = uiReaderCardList.IsVisible;
 
@@ -145,11 +167,15 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
             OnUIStateChanged(uiReaderCardList.cachedState);
             TryPopulateNpcList();
         }
+        else if (!IsOpen && wasOpen)
+        {
+            TriadNpcQuestUi.InvalidateCache();
+        }
     }
 
     private void TryPopulateNpcList()
     {
-        if (!IsOpen || !dataLoader.IsDataReady)
+        if (!IsOpen || !IsGameDataReady)
             return;
 
         if (GameNpcDB.Get().mapNpcs.Count == 0)
@@ -163,7 +189,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
 
     private void RefreshNpcProgress()
     {
-        if (!dataLoader.IsDataReady || GameNpcDB.Get().mapNpcs.Count == 0)
+        if (!IsGameDataReady || GameNpcDB.Get().mapNpcs.Count == 0)
             return;
 
         if (TriadMemoryReads.IsAvailable)
@@ -180,16 +206,17 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
 
     private void RebuildCardList(UIStateTriadCardList uiState)
     {
-        if (filterMode == uiState.filterMode && listCards.Count > 0)
+        var needsOwnership = showNotOwnedOnly || uiState.filterMode != 0;
+        if (filterMode == uiState.filterMode && listCards.Count > 0 && (!needsOwnership || GameCardDB.Get().ownedCardIds.Count > 0))
             return;
 
         filterMode = uiState.filterMode;
         listCards.Clear();
 
-        if (!dataLoader.IsDataReady)
+        if (!IsGameDataReady)
             return;
 
-        if (TriadMemoryReads.IsAvailable)
+        if (TriadMemoryReads.IsAvailable && needsOwnership)
             GameCardDB.Get().Refresh();
 
         var cardDB = TriadCardDB.Get();
@@ -218,17 +245,30 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         selectedCardIdx = -1;
     }
 
-    public override void PreDraw() =>
+    public override void PreDraw()
+    {
+        if (!IsGameDataReady || !uiReaderCardList.IsVisible)
+            return;
+
         Position = new Vector2(
             uiReaderCardList.cachedState.screenPos.X + uiReaderCardList.cachedState.screenSize.X + 10,
             uiReaderCardList.cachedState.screenPos.Y);
+    }
 
     public override void Draw()
     {
+        UpdateLocalizationCache();
+
+        if (!IsGameDataReady)
+        {
+            ImGui.TextDisabled("Loading card data…");
+            return;
+        }
+
+        OnGameDataReady();
+
         if (ImGui.BeginTabBar("##CollectionSearch"))
         {
-            UpdateLocalizationCache();
-
             if (ImGui.BeginTabItem(locTabCards))
             {
                 DrawCardsTab();
@@ -248,13 +288,33 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
     private static bool IsCardOwned(int cardId)
     {
         var db = GameCardDB.Get();
-        if (db.memReader is { HasErrors: false })
-            return db.memReader.IsCardOwned(cardId);
-        return db.ownedCardIds.Contains(cardId);
+        if (db.ownedCardIds.Contains(cardId))
+            return true;
+
+        if (!TriadMemoryReads.IsAvailable)
+            return false;
+
+        return TriadMemoryReads.TryIsCardOwned(cardId);
+    }
+
+    private void RefreshOwnershipIfNeeded(bool force = false)
+    {
+        if (!TriadMemoryReads.IsAvailable)
+            return;
+
+        var now = DateTime.UtcNow;
+        if (!force && (now - lastOwnershipRefreshUtc) < TimeSpan.FromSeconds(1))
+            return;
+
+        lastOwnershipRefreshUtc = now;
+        GameCardDB.Get().Refresh();
     }
 
     private void DrawCardsTab()
     {
+        if (showNotOwnedOnly)
+            RefreshOwnershipIfNeeded();
+
         RebuildCardList(uiReaderCardList.cachedState);
         searchFilterCard.Draw("", WindowContentWidth * ImGuiHelpers.GlobalScale);
 
@@ -297,8 +357,8 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
 
         if (ImGui.Checkbox(locNotOwnedOnly, ref showNotOwnedOnly))
         {
-            if (TriadMemoryReads.IsAvailable)
-                GameCardDB.Get().Refresh();
+            if (showNotOwnedOnly)
+                RefreshOwnershipIfNeeded(force: true);
             C.TriadCollection.CheckCardNotOwnedOnly = showNotOwnedOnly;
             C.Save();
         }
@@ -321,7 +381,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
 
         searchFilterNpc.Draw("", WindowContentWidth * ImGuiHelpers.GlobalScale);
 
-        if (!dataLoader.IsDataReady)
+        if (!IsGameDataReady)
         {
             ImGui.TextColored(SaucyTheme.ColorOr(SaucyTheme.BodyText, ImGuiCol.TextDisabled), "Loading NPC data…");
             return;
@@ -413,11 +473,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
                 $"{npcInfo.Location.PlaceName} {npcInfo.Location.CoordinateString}");
         }
 
-        if (npcInfo.UnlockQuestId != 0)
-        {
-            ImGui.Spacing();
-            TriadNpcQuestUi.DrawUnlockQuest(npcInfo);
-        }
+        TriadNpcQuestUi.DrawUnlockQuestIconRow(npcInfo);
 
         ImGui.Spacing();
         var hasAvgRewards = StatTracker.GetAverageRewardPerMatchDesc(C.TriadCollection, npcInfo, out var avgRewardPerMatch);
