@@ -1,13 +1,13 @@
-using Dalamud.Utility;
+﻿using Dalamud.Utility;
 using ECommons.Automation;
 using ECommons.Automation.UIInput;
 using ECommons.UIHelpers.AddonMasterImplementations;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using static ECommons.GenericHelpers;
-using static Saucy.TripleTriad.UI.UIReaderTriadGame;
 
 namespace Saucy.TripleTriad;
 
@@ -32,7 +32,7 @@ internal static unsafe class TriadAutomater
             {
                 Callback.Fire(&addon->AtkUnitBase, true, 14, (uint)slot + ((uint)which << 16));
                 addon->AtkUnitBase.Update(0);
-                addon->TurnState = 0;
+                addon->TurnState = TurnState.Waiting;
             }
         }
         catch (Exception ex)
@@ -77,8 +77,11 @@ internal static unsafe class TriadAutomater
             {
                 if (C.SelectedDeckIndex == -1 && !C.UseRecommendedDeck)
                 {
-                    var button = addon->UldManager.NodeList[3]->GetAsAtkComponentButton();
-                    button->ClickAddonButton(addon);
+                    var button = GetRandomDeckButton(addon);
+                    if (button != null && button->IsEnabled)
+                    {
+                        button->ClickAddonButton(addon);
+                    }
                 }
                 else
                 {
@@ -98,6 +101,22 @@ internal static unsafe class TriadAutomater
         {
             Svc.Log.Error(ex, "[TriadAutomater] DeckSelect failed");
         }
+    }
+
+    private static AtkComponentButton* GetRandomDeckButton(AtkUnitBase* addon)
+    {
+        var button = addon->GetComponentButtonById(3);
+        if (button != null)
+        {
+            return button;
+        }
+
+        if (addon->UldManager.NodeListCount > 3)
+        {
+            return addon->UldManager.NodeList[3]->GetAsAtkComponentButton();
+        }
+
+        return null;
     }
 
     private static void AcceptTriadMatch()

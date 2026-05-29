@@ -6,7 +6,6 @@ using ECommons.Throttlers;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.Framework;
-using Saucy.OutOnALimb.ECEmbedded;
 using System;
 using static ECommons.GenericHelpers;
 namespace Saucy.MiniCactpot;
@@ -51,7 +50,7 @@ public unsafe class MiniCactpot : Module
             return;
         }
 
-        var stage = new Reader((AtkUnitBase*)addon).Stage;
+        var stage = GetStage(addon);
 
         if (stage == 5 && EzThrottler.Throttle("CloseGame") && !TaskManager.IsBusy)
         {
@@ -91,6 +90,18 @@ public unsafe class MiniCactpot : Module
 
         addon = null;
         return false;
+    }
+
+    private static int GetStage(AddonLotteryDaily* addon)
+    {
+        var unit = &addon->AtkUnitBase;
+        if (unit->AtkValuesCount < 1)
+        {
+            return -1;
+        }
+
+        var value = unit->AtkValues[0];
+        return value.Type == AtkValueType.Int ? value.Int : -1;
     }
 
     private static void ReadBoardState(AddonLotteryDaily* addon, int[] dest)
@@ -255,9 +266,15 @@ public unsafe class MiniCactpot : Module
                     return true;
                 }
 
+                var tile = addon->GameBoard[first];
+                if (tile == null)
+                {
+                    return true;
+                }
+
                 if (EzThrottler.Throttle($"ClickButton_{first}", 100))
                 {
-                    Callback.Fire((AtkUnitBase*)addon, true, 1, first);
+                    ((AtkComponentButton*)tile)->ClickAddonButton((AtkUnitBase*)addon);
                     return true;
                 }
 
@@ -272,7 +289,7 @@ public unsafe class MiniCactpot : Module
             return true;
         }
 
-        var stage = new Reader((AtkUnitBase*)addon).Stage;
+        var stage = GetStage(addon);
         if (expectedStage == 5)
         {
             if (stage != 5)
@@ -318,9 +335,4 @@ public unsafe class MiniCactpot : Module
             7 => 4,
             var _ => throw new ArgumentOutOfRangeException($"{nameof(lane)}", lane, "Must be between 0 and 8 (inclusive)")
         };
-
-    public class Reader(AtkUnitBase* unitBase, int beginOffset = 0) : AtkReader(unitBase, beginOffset)
-    {
-        public int Stage => ReadInt(0) ?? -1;
-    }
 }

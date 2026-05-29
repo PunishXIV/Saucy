@@ -97,10 +97,6 @@ public sealed class Saucy : IDalamudPlugin
         uiReaderScheduler.AddObservedAddon(uiReaderMatchResults);
         uiReaderScheduler.AddObservedAddon(uiReaderGamesResults);
 
-        var memReaderTriadFunc = new UnsafeReaderTriadCards();
-        GameCardDB.Get().memReader = memReaderTriadFunc;
-        GameNpcDB.Get().memReader = memReaderTriadFunc;
-
         LimbManager = new(C.LimbConfig);
         ModuleManager = new();
         C.EnabledModules.CollectionChanged += OnChange;

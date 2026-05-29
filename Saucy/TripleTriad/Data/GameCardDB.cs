@@ -43,7 +43,6 @@ public class GameCardDB
     private int maxCardId;
     private int maxGridPageIndex;
 
-    public UnsafeReaderTriadCards? memReader;
     public List<int> ownedCardIds = [];
 
     /// <summary>Exclusive upper bound for page indices (pages 0..MaxGridPages-1).</summary>
@@ -102,18 +101,14 @@ public class GameCardDB
         ownedCardIds.Clear();
         maxGridPageIndex = 0;
 
-        if (memReader == null || memReader.HasErrors || maxCardId <= 0)
+        if (!TriadMemoryReads.IsAvailable || maxCardId <= 0)
         {
             return;
         }
 
-        // consider switching to memory read for bulk checks? not that UI itself cares about it...
-        // check IsTriadCardOwned() for details, uiState+0x15ce5 is a byte array of szie 0x29 used as a bitmask with cardId => buffer[id / 8] & (1 << (id % 8))
-
         for (var id = 1; id <= maxCardId; id++)
         {
-            var isOwned = memReader.IsCardOwned(id);
-            if (isOwned)
+            if (TriadMemoryReads.TryIsCardOwned(id))
             {
                 ownedCardIds.Add(id);
             }

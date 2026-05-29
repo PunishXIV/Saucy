@@ -3,7 +3,6 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Numerics;
-using System.Runtime.InteropServices;
 namespace Saucy.TripleTriad.UI;
 
 public class UIReaderTriadCardList : IUIReader
@@ -30,10 +29,7 @@ public class UIReaderTriadCardList : IUIReader
 
     public void OnAddonLost()
     {
-        // reset cached pointers when addon address changes
-        cachedState.descNodeAddr = 0;
         cachedAddonAgentPtr = nint.Zero;
-
         SetStatus(Status.AddonNotFound);
     }
 
@@ -43,7 +39,6 @@ public class UIReaderTriadCardList : IUIReader
 
         if (cachedAddonAgentPtr == nint.Zero)
         {
-            // failsafe, likely to break with patch
             cachedAddonAgentPtr = LoadFailsafeAgent();
 #if DEBUG
             Svc.Log.Info($"using agentPtr from failsafe: {(ulong)cachedAddonAgentPtr:X}");
@@ -52,7 +47,7 @@ public class UIReaderTriadCardList : IUIReader
 
         if (addonPtr != nint.Zero)
         {
-            var addon = (AddonTriadCardList*)addonPtr;
+            var addon = (AddonGSInfoCardList*)addonPtr;
             if (addon->AtkUnitBase.RootNode != null)
             {
                 (cachedState.screenPos, cachedState.screenSize) =
@@ -65,37 +60,32 @@ public class UIReaderTriadCardList : IUIReader
 
     public unsafe void OnAddonUpdate(nint addonPtr)
     {
-        var addon = (AddonTriadCardList*)addonPtr;
+        var addon = (AddonGSInfoCardList*)addonPtr;
         (cachedState.screenPos, cachedState.screenSize) = GUINodeUtils.GetNodePosAndSize(addon->AtkUnitBase.RootNode);
 
-        if (cachedState.descNodeAddr == 0)
+        var descNode = addon->SelectedCardDescription;
+        if (descNode == null)
         {
-            if (!FindTextNodeAddresses(addon))
-            {
-                SetStatus(Status.NodesNotReady);
-                return;
-            }
+            SetStatus(Status.NodesNotReady);
+            return;
         }
 
-        var descNode = (AtkResNode*)cachedState.descNodeAddr;
-        (cachedState.descriptionPos, cachedState.descriptionSize) = GUINodeUtils.GetNodePosAndSize(descNode);
+        (cachedState.descriptionPos, cachedState.descriptionSize) =
+            GUINodeUtils.GetNodePosAndSize(&descNode->AtkResNode);
 
-        var newPageIndex = addon->PageIndex;
-        var newCardIndex = addon->CardIndex;
-        var newFilterMode = DecodeAddonFilterMode(addon->FilterMode);
+        var newPageIndex = (byte)addon->SelectedPage;
+        var newCardIndex = (byte)addon->SelectedCardIndex;
+        var newFilterMode = (byte)CardListFilterMode.All;
 
         if (cachedAddonAgentPtr != nint.Zero)
         {
-            var addonAgent = (AgentTriadCardList*)cachedAddonAgentPtr;
-            if (addonAgent->PageIndex >= 0 && addonAgent->PageIndex < GameCardDB.MaxGridPages)
+            var agent = (AgentGoldSaucer*)cachedAddonAgentPtr;
+            if (agent->EditDeckSelectedPage >= 0 && agent->EditDeckSelectedPage < GameCardDB.MaxGridPages)
             {
-                newPageIndex = (byte)addonAgent->PageIndex;
+                newPageIndex = (byte)agent->EditDeckSelectedPage;
             }
 
-            if (addonAgent->FilterMode <= 2)
-            {
-                newFilterMode = addonAgent->FilterMode;
-            }
+            newFilterMode = (byte)agent->CardListFilterMode;
         }
 
         if (cachedState.pageIndex != newPageIndex ||
@@ -108,7 +98,7 @@ public class UIReaderTriadCardList : IUIReader
             cachedState.numD = addon->NumSideD;
             cachedState.numR = addon->NumSideR;
             cachedState.rarity = addon->CardRarity;
-            cachedState.type = addon->CardType;
+            cachedState.type = (byte)addon->CardType;
             cachedState.iconId = addon->CardIconId;
             cachedState.pageIndex = newPageIndex;
             cachedState.cardIndex = newCardIndex;
@@ -155,27 +145,21 @@ public class UIReaderTriadCardList : IUIReader
 
     public unsafe bool SetPageAndGridView(int pageIndex, int cellIndex)
     {
-        // doesn't really belong to a ui "reader", but won't be making a class just for calling one function
-        // (there is no UnsafeReaderTriadCards, it's a um.. just a trick of light)
-
-        // basic sanity checks on values before writing them to memory
-        // this will NOT be enough when filters are active!
         if (pageIndex < 0 || pageIndex >= GameCardDB.MaxGridPages || cellIndex < 0 || cellIndex >= GameCardDB.MaxGridCells)
         {
             return false;
         }
 
-        // refresh cached pointers before using them
         var addonPtr = ResolveAddonPtr();
         OnAddonShown(addonPtr);
 
         if (addonPtr != nint.Zero && cachedAddonAgentPtr != nint.Zero)
         {
-            var addon = (AddonTriadCardList*)addonPtr;
-            var addonAgent = (AgentTriadCardList*)cachedAddonAgentPtr;
+            var addon = (AddonGSInfoCardList*)addonPtr;
+            var agent = (AgentGoldSaucer*)cachedAddonAgentPtr;
 
-            addonAgent->PageIndex = pageIndex;
-            addon->CardIndex = (byte)cellIndex;
+            agent->EditDeckSelectedPage = pageIndex;
+            addon->SelectedCardIndex = cellIndex;
             return true;
         }
 
@@ -200,69 +184,11 @@ public class UIReaderTriadCardList : IUIReader
             }
         }
     }
-
-    private static byte DecodeAddonFilterMode(byte addonFilterMode) =>
-        addonFilterMode switch
-        {
-            0x3 or 0x7 => 1, // owned only
-            0xC or 0xA => 2, // missing only
-            var _ => 0 // all (0xD and other values)
-        };
-
-    private unsafe bool FindTextNodeAddresses(AddonTriadCardList* addon)
-    {
-        // 9 child nodes (sibling scan)
-        //     [1] aqcuire section, simple node, 5 children
-        //         [2] text
-        //     [2] description section, simple node, 4 children
-        //         [0] text
-
-        var nodeArrL0 = GUINodeUtils.GetImmediateChildNodes(addon->AtkUnitBase.RootNode);
-        var nodeDescripion = GUINodeUtils.PickNode(nodeArrL0, 2, 9);
-        cachedState.descNodeAddr = (ulong)GUINodeUtils.GetChildNode(nodeDescripion);
-
-        return cachedState.descNodeAddr != 0;
-    }
-
-    [StructLayout(LayoutKind.Explicit, Size = 0x520)] // it's around 0x550?
-    private unsafe struct AddonTriadCardList
-    {
-        [FieldOffset(0x0)] public AtkUnitBase AtkUnitBase;
-        [FieldOffset(0xe0)] public AtkCollisionNode* SelectedCardColisionNode;
-
-        [FieldOffset(0x2a0)] public byte CardRarity; // 1..5
-        [FieldOffset(0x2a1)] public byte CardType; // 0: no type, 1: primal, 2: scion, 3: beastman, 4: garland
-        [FieldOffset(0x2a3)] public byte NumSideU;
-        [FieldOffset(0x2a4)] public byte NumSideD;
-        [FieldOffset(0x2a5)] public byte NumSideR;
-        [FieldOffset(0x2a6)] public byte NumSideL;
-        [FieldOffset(0x2a8)] public int CardIconId; // texture id for button (82100+) or 0 when missing
-
-        [FieldOffset(0x334)] public byte FilterMode; // 0xD = all, 0x3 = only owned, 0xC = only missing
-        [FieldOffset(0x52c)] public byte PageIndex; // ignores writes
-        [FieldOffset(0x534)] public byte CardIndex; // can be written to, yay!
-    }
-
-    [StructLayout(LayoutKind.Explicit, Size = 0x110)] // it's around 0x200?
-    public struct AgentTriadCardList
-    {
-        [FieldOffset(0x100)] public int PageIndex; // can be written to
-        [FieldOffset(0x108)] public int CardIndex; // ignores writes
-        [FieldOffset(0x10c)] public byte FilterMode; // 0 = all, 1 = only owned, 2 = only missing
-
-        [FieldOffset(0x120)] public ushort FilterDeckTypeRarity;
-        [FieldOffset(0x122)] public ushort FilterDeckSides;
-        [FieldOffset(0x124)] public byte FilterDeckSorting;
-
-        // 0x28 card data iterator start?
-        // 0x30 card data iterator end
-    }
 }
 
 public class UIStateTriadCardList
 {
     public byte cardIndex;
-    public ulong descNodeAddr;
     public Vector2 descriptionPos;
     public Vector2 descriptionSize;
     public byte filterMode;

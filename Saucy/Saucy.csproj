@@ -22,10 +22,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Remove="TripleTriad\TriadBuddy\**"/>
-    </ItemGroup>
-
-    <ItemGroup>
         <None Update="Saucy.json">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>

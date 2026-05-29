@@ -1,8 +1,8 @@
-﻿using FFXIVClientStructs.FFXIV.Component.GUI;
+﻿using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Runtime.InteropServices;
 namespace Saucy.TripleTriad.UI;
 
 public class UIReaderTriadGame : IUIReader
@@ -55,7 +55,7 @@ public class UIReaderTriadGame : IUIReader
 
         if (status == Status.NoErrors)
         {
-            newState.move = addon->TurnState;
+            newState.move = (byte)addon->TurnState;
             if (newState.move > 2)
             {
                 SetStatus(Status.FailedToReadMove);
@@ -64,33 +64,20 @@ public class UIReaderTriadGame : IUIReader
 
         if (status == Status.NoErrors)
         {
-            newState.blueDeck[0] = GetCardData(addon->BlueDeck0);
-            newState.blueDeck[1] = GetCardData(addon->BlueDeck1);
-            newState.blueDeck[2] = GetCardData(addon->BlueDeck2);
-            newState.blueDeck[3] = GetCardData(addon->BlueDeck3);
-            newState.blueDeck[4] = GetCardData(addon->BlueDeck4);
+            for (var idx = 0; idx < 5; idx++)
+            {
+                newState.blueDeck[idx] = GetCardData(addon->BlueDeck[idx]);
+                newState.redDeck[idx] = GetCardData(addon->RedDeck[idx]);
+            }
 
-            newState.redDeck[0] = GetCardData(addon->RedDeck0);
-            newState.redDeck[1] = GetCardData(addon->RedDeck1);
-            newState.redDeck[2] = GetCardData(addon->RedDeck2);
-            newState.redDeck[3] = GetCardData(addon->RedDeck3);
-            newState.redDeck[4] = GetCardData(addon->RedDeck4);
-
-            newState.board[0] = GetCardData(addon->Board0);
-            newState.board[1] = GetCardData(addon->Board1);
-            newState.board[2] = GetCardData(addon->Board2);
-            newState.board[3] = GetCardData(addon->Board3);
-            newState.board[4] = GetCardData(addon->Board4);
-            newState.board[5] = GetCardData(addon->Board5);
-            newState.board[6] = GetCardData(addon->Board6);
-            newState.board[7] = GetCardData(addon->Board7);
-            newState.board[8] = GetCardData(addon->Board8);
+            for (var idx = 0; idx < 9; idx++)
+            {
+                newState.board[idx] = GetCardData(addon->Board[idx]);
+            }
         }
 
         SetCurrentState(status == Status.NoErrors ? newState : null);
 
-        // pvp status is part of UI state, allow setting detection, just make sure that solver will be disabled
-        // if this flag is not set in pvp match, red player description will not match known npc and solver will be in failed state anyway
         if (newState.isPvP)
         {
             SetStatus(Status.PvPMatch);
@@ -142,8 +129,6 @@ public class UIReaderTriadGame : IUIReader
         var nodeArrNameL1 = GUINodeUtils.GetImmediateChildNodes(nodeName0);
         var nodeNameL1 = GUINodeUtils.PickNode(nodeArrNameL1, 0, 5);
         var nodeArrNameL2 = GUINodeUtils.GetAllChildNodes(nodeNameL1);
-        // there are multiple text boxes, for holding different combinations of name & titles?
-        // idk, too lazy to investigate, grab everything inside
         var numParsed = 0;
         if (nodeArrNameL2 != null)
         {
@@ -197,22 +182,12 @@ public class UIReaderTriadGame : IUIReader
 
     private unsafe bool GetUIStatePvP(AtkResNode*[]? level0)
     {
-        // verify, is that for both pvp and tournament games?
         var nodePvPButton = GUINodeUtils.PickNode(level0, 11, 12);
-        if (nodePvPButton != null && nodePvPButton->IsVisible())
-        {
-            return true;
-        }
-
-        return false;
+        return nodePvPButton != null && nodePvPButton->IsVisible();
     }
 
-    private unsafe (string, bool) GetCardTextureData(AddonTripleTriadCard addonCard)
+    private unsafe (string, bool) GetCardTextureData(AddonTripleTriad.TripleTriadCard addonCard)
     {
-        // DragDrop Component
-        // [1] Icon Component
-        //     [0] Base Component <- locked out colors here
-        //         [3] Image Node
         var nodeA = GUINodeUtils.PickChildNode(addonCard.CardDropControl, 1, 3);
         var nodeB = GUINodeUtils.PickChildNode(nodeA, 0, 2);
         var nodeC = GUINodeUtils.PickChildNode(nodeB, 3, 21);
@@ -227,13 +202,13 @@ public class UIReaderTriadGame : IUIReader
         return (texPath ?? "", isLocked);
     }
 
-    private UIStateTriadCard GetCardData(AddonTripleTriadCard addonCard)
+    private UIStateTriadCard GetCardData(AddonTripleTriad.TripleTriadCard addonCard)
     {
         var resultOb = new UIStateTriadCard();
         if (addonCard.HasCard)
         {
             resultOb.isPresent = true;
-            resultOb.owner = addonCard.CardOwner;
+            resultOb.owner = (byte)addonCard.CardOwner;
 
             var isKnown = (addonCard.NumSideU != 0);
             if (isKnown)
@@ -243,7 +218,7 @@ public class UIReaderTriadGame : IUIReader
                 resultOb.numD = addonCard.NumSideD;
                 resultOb.numR = addonCard.NumSideR;
                 resultOb.rarity = addonCard.CardRarity;
-                resultOb.type = addonCard.CardType;
+                resultOb.type = (byte)addonCard.CardType;
 
                 (resultOb.texturePath, resultOb.isLocked) = GetCardTextureData(addonCard);
             }
@@ -252,7 +227,7 @@ public class UIReaderTriadGame : IUIReader
         return resultOb;
     }
 
-    private unsafe (Vector2, Vector2) GetCardPosAndSize(AddonTripleTriadCard addonCard)
+    private unsafe (Vector2, Vector2) GetCardPosAndSize(AddonTripleTriad.TripleTriadCard addonCard)
     {
         if (addonCard.CardDropControl != null && addonCard.CardDropControl->OwnerNode != null)
         {
@@ -265,17 +240,10 @@ public class UIReaderTriadGame : IUIReader
 
     public unsafe (Vector2, Vector2) GetBlueCardPosAndSize(int idx)
     {
-        if (addonPtr != nint.Zero)
+        if (addonPtr != nint.Zero && idx is >= 0 and < 5)
         {
             var addon = (AddonTripleTriad*)addonPtr;
-            switch (idx)
-            {
-                case 0: return GetCardPosAndSize(addon->BlueDeck0);
-                case 1: return GetCardPosAndSize(addon->BlueDeck1);
-                case 2: return GetCardPosAndSize(addon->BlueDeck2);
-                case 3: return GetCardPosAndSize(addon->BlueDeck3);
-                case 4: return GetCardPosAndSize(addon->BlueDeck4);
-            }
+            return GetCardPosAndSize(addon->BlueDeck[idx]);
         }
 
         return (Vector2.Zero, Vector2.Zero);
@@ -283,70 +251,12 @@ public class UIReaderTriadGame : IUIReader
 
     public unsafe (Vector2, Vector2) GetBoardCardPosAndSize(int idx)
     {
-        if (addonPtr != nint.Zero)
+        if (addonPtr != nint.Zero && idx is >= 0 and < 9)
         {
             var addon = (AddonTripleTriad*)addonPtr;
-            switch (idx)
-            {
-                case 0: return GetCardPosAndSize(addon->Board0);
-                case 1: return GetCardPosAndSize(addon->Board1);
-                case 2: return GetCardPosAndSize(addon->Board2);
-                case 3: return GetCardPosAndSize(addon->Board3);
-                case 4: return GetCardPosAndSize(addon->Board4);
-                case 5: return GetCardPosAndSize(addon->Board5);
-                case 6: return GetCardPosAndSize(addon->Board6);
-                case 7: return GetCardPosAndSize(addon->Board7);
-                case 8: return GetCardPosAndSize(addon->Board8);
-            }
+            return GetCardPosAndSize(addon->Board[idx]);
         }
 
         return (Vector2.Zero, Vector2.Zero);
-    }
-
-    [StructLayout(LayoutKind.Explicit, Size = 0x1000)] // no idea what size, last entries seems to be around +0xfc0? 
-    internal struct AddonTripleTriad
-    {
-        [FieldOffset(0x0)] public AtkUnitBase AtkUnitBase;
-        [FieldOffset(0x238)] public byte TurnState; // 0: waiting, 1: normal move, 2: masked move (order/chaos)
-
-        [FieldOffset(0x240)] public AddonTripleTriadCard BlueDeck0; // 2be = end of numbers
-        [FieldOffset(0x2e8)] public AddonTripleTriadCard BlueDeck1; // 366 = end of numbers
-        [FieldOffset(0x390)] public AddonTripleTriadCard BlueDeck2;
-        [FieldOffset(0x438)] public AddonTripleTriadCard BlueDeck3;
-        [FieldOffset(0x4e0)] public AddonTripleTriadCard BlueDeck4;
-
-        [FieldOffset(0x588)] public AddonTripleTriadCard RedDeck0;
-        [FieldOffset(0x630)] public AddonTripleTriadCard RedDeck1;
-        [FieldOffset(0x6d8)] public AddonTripleTriadCard RedDeck2;
-        [FieldOffset(0x780)] public AddonTripleTriadCard RedDeck3;
-        [FieldOffset(0x828)] public AddonTripleTriadCard RedDeck4;
-
-        [FieldOffset(0x8d0)] public AddonTripleTriadCard Board0;
-        [FieldOffset(0x978)] public AddonTripleTriadCard Board1;
-        [FieldOffset(0xa20)] public AddonTripleTriadCard Board2;
-        [FieldOffset(0xac8)] public AddonTripleTriadCard Board3;
-        [FieldOffset(0xb70)] public AddonTripleTriadCard Board4;
-        [FieldOffset(0xc18)] public AddonTripleTriadCard Board5;
-        [FieldOffset(0xcc0)] public AddonTripleTriadCard Board6;
-        [FieldOffset(0xd68)] public AddonTripleTriadCard Board7;
-        [FieldOffset(0xe10)] public AddonTripleTriadCard Board8;
-    }
-
-    [StructLayout(LayoutKind.Explicit, Size = 0xA8)]
-    internal unsafe struct AddonTripleTriadCard
-    {
-        [FieldOffset(0x8)] public AtkComponentBase* CardDropControl;
-        [FieldOffset(0x80)] public byte CardRarity; // 1..5
-        [FieldOffset(0x81)] public byte CardType; // 0: no type, 1: primal, 2: scion, 3: beastman, 4: garland
-        [FieldOffset(0x82)] public byte CardOwner; // 0: empty, 1: blue, 2: red
-        [FieldOffset(0x83)] public byte NumSideU;
-        [FieldOffset(0x84)] public byte NumSideD;
-        [FieldOffset(0x85)] public byte NumSideR;
-        [FieldOffset(0x86)] public byte NumSideL;
-        [FieldOffset(0xA4)] public bool HasCard;
-
-        // 0x87 - constant per card, changes between npcs
-        // 0x88 - fixed per card, not ID
-        // 0x89 - fixed per card, 40/41 ?
     }
 }

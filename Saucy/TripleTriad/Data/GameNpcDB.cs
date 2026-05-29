@@ -29,8 +29,6 @@ public class GameNpcDB
     private static readonly GameNpcDB instance = new();
     public Dictionary<int, GameNpcInfo> mapNpcs = [];
 
-    public UnsafeReaderTriadCards? memReader;
-
     public static GameNpcDB Get() => instance;
 
     public void Refresh() => RefreshCompleted();
