@@ -16,7 +16,8 @@ Automates certain Gold Saucer mini-games.
 <li>Out on a Limb</li>
 <li>Slice is Right</li>
 <li>Auto Cactpot</li>
+<li>Air Force One</li>
 
-Tracks Stats for Lifetime and Sessions and more!
+Tracks Stats for Lifetime, Sessions, Hourly MGP and more!
 
 <!-- Repository Header End -->
