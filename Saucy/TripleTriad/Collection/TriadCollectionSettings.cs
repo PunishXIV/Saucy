@@ -9,6 +9,7 @@ public class TriadCollectionSettings
     public bool CheckCardNotOwnedOnly { get; set; }
     public bool CheckNpcHideBeaten { get; set; }
     public bool CheckNpcHideCompleted { get; set; }
+
     public Dictionary<int, TriadNpcStatRecord> NpcStats { get; set; } = [];
 }
 

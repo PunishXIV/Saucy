@@ -25,12 +25,12 @@ public class UIReaderTriadPrep
     public bool HasMatchRequestUI { get; private set; }
     public bool HasDeckSelectionUI { get; private set; }
 
-    public void OnAddonLost()
+    public void OnMatchRequestLost() => SetIsMatchRequest(false);
+
+    public void OnDeckSelectLost()
     {
-        SetIsMatchRequest(false);
         SetIsDeckSelect(false);
 
-        // addon ptr changed? reset cached node ptrs
         foreach (var deckOb in cachedState.decks)
         {
             deckOb.rootNodeAddr = 0;
@@ -213,7 +213,7 @@ public class UIReaderTriadPrepMatchRequest : IUIReader
 
     public string GetAddonName() => "TripleTriadRequest";
 
-    public void OnAddonLost() => parentReader?.OnAddonLost();
+    public void OnAddonLost() => parentReader?.OnMatchRequestLost();
 
     public void OnAddonShown(nint addonPtr)
     {
@@ -230,7 +230,7 @@ public class UIReaderTriadPrepDeckSelect : IUIReader
 
     public string GetAddonName() => "TripleTriadSelDeck";
 
-    public void OnAddonLost() => parentReader?.OnAddonLost();
+    public void OnAddonLost() => parentReader?.OnDeckSelectLost();
 
     public void OnAddonShown(nint addonPtr)
     {

@@ -11,7 +11,7 @@ internal static class TriadNpcMapUi
     public static void DrawMapLocationRow(MapLinkPayload location, string showOnMapTooltip)
     {
         var label = $"{location.PlaceName} {location.CoordinateString}";
-        var tooltip = BuildTooltip(showOnMapTooltip);
+        var tooltip = BuildTooltip(location, showOnMapTooltip);
 
         ImGui.AlignTextToFramePadding();
         var rowY = ImGui.GetCursorPosY();
@@ -51,7 +51,7 @@ internal static class TriadNpcMapUi
         }
     }
 
-    private static string BuildTooltip(string showOnMapTooltip)
+    private static string BuildTooltip(MapLinkPayload location, string showOnMapTooltip)
     {
         if (!Vnavmesh.IsInstalled)
         {
@@ -61,7 +61,12 @@ internal static class TriadNpcMapUi
         var lines = $"{showOnMapTooltip}\nClick to move with vnavmesh.";
         if (Lifestream.IsInstalled)
         {
-            lines += "\nUses Lifestream to teleport to the nearest aetheryte first.";
+            lines += "\nUses Lifestream for travel (aetheryte or aethernet shard).";
+            var route = MultiAreaRouteRegistry.FindRoute(location);
+            if (route?.TooltipHint != null)
+            {
+                lines += $"\n{route.TooltipHint}";
+            }
         }
 
         return lines;

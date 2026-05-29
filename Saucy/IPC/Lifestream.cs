@@ -14,6 +14,9 @@ internal static class Lifestream
     [EzIPC]
     public static Func<bool> IsBusy = null!;
 
+    [EzIPC]
+    public static Func<uint, bool> AethernetTeleportById = null!;
+
     public static bool IsInstalled => SubscriptionManager.IsInitialized(IPCNames.Lifestream);
 
     public static bool IsBusyNow() => IsInstalled && IsBusy();
@@ -22,5 +25,11 @@ internal static class Lifestream
         IsInstalled &&
         aetheryteId != 0 &&
         Teleport.TryInvoke(aetheryteId, subIndex, out var started) &&
+        started;
+
+    public static bool TryAethernetTeleportById(uint aethernetShardRowId) =>
+        IsInstalled &&
+        aethernetShardRowId != 0 &&
+        AethernetTeleportById.TryInvoke(aethernetShardRowId, out var started) &&
         started;
 }

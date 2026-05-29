@@ -45,6 +45,8 @@ public sealed class Saucy : IDalamudPlugin
     private WaveOutEvent? _currentWaveOut;
 
     private TriadCollectionHost? _triadCollectionHost;
+    private readonly PluginUI _pluginUi = new();
+    private bool _autoOpenedForTriadFlow;
 
     public LimbManager LimbManager = null!;
     public Saucy(IDalamudPluginInterface pluginInterface)
@@ -59,7 +61,7 @@ public sealed class Saucy : IDalamudPlugin
         C.MigrateModuleSettings();
         P = this;
 
-        EzConfigGui.Init(new PluginUI());
+        EzConfigGui.Init(_pluginUi);
         Svc.PluginInterface.UiBuilder.OpenMainUi += EzConfigGui.Open;
 
         Svc.Commands.AddHandler(commandName, new(OnCommand)
@@ -82,6 +84,8 @@ public sealed class Saucy : IDalamudPlugin
             shouldScanDeckData = (TTSolver.profileGS == null) || TTSolver.profileGS.HasErrors
         };
         uiReaderPrep.OnUIStateChanged += TTSolver.UpdateDecks;
+        uiReaderPrep.OnMatchRequestChanged += OnTriadPrepUiChanged;
+        uiReaderPrep.OnDeckSelectionChanged += OnTriadPrepUiChanged;
 
         var uiReaderMatchResults = new UIReaderTriadResults();
         uiReaderMatchResults.OnUpdated += CheckResults;
@@ -386,21 +390,15 @@ public sealed class Saucy : IDalamudPlugin
         try
         {
             SubscriptionManager.Subscribe();
+            TriadMapNavigation.Tick();
 
-            if (dataLoader.IsDataReady)
-            {
-                var deltaSeconds = (float)framework.UpdateDelta.TotalSeconds;
-                uiReaderScheduler.Update(deltaSeconds);
-            }
+            var deltaSeconds = (float)framework.UpdateDelta.TotalSeconds;
+            uiReaderScheduler.Update(deltaSeconds);
+            UpdateTriadAutoOpen();
 
             if (C.AirForceEnabled)
             {
                 AirForceModule.OnUpdate();
-            }
-
-            if (C.OpenAutomatically && uiReaderPrep.HasMatchRequestUI && !TriadAutomater.ModuleEnabled)
-            {
-                EzConfigGui.Open();
             }
 
             if (CufModule.ModuleEnabled)
@@ -456,6 +454,61 @@ public sealed class Saucy : IDalamudPlugin
         {
             Svc.Log.Error(ex, "bot update failed");
         }
+    }
+
+    private void OnTriadPrepUiChanged(bool isActive)
+    {
+        if (isActive)
+        {
+            UpdateTriadAutoOpen();
+        }
+    }
+
+    private void UpdateTriadAutoOpen()
+    {
+        if (!C.OpenAutomatically || TriadAutomater.ModuleEnabled)
+        {
+            _autoOpenedForTriadFlow = false;
+            return;
+        }
+
+        if (!IsTriadFlowActive())
+        {
+            _autoOpenedForTriadFlow = false;
+            return;
+        }
+
+        if (_autoOpenedForTriadFlow)
+        {
+            return;
+        }
+
+        _pluginUi.OpenForTriad();
+        _autoOpenedForTriadFlow = true;
+    }
+
+    private static bool IsTriadFlowActive()
+    {
+        if (uiReaderPrep.HasMatchRequestUI ||
+            uiReaderPrep.HasDeckSelectionUI ||
+            uiReaderGame.IsVisible)
+        {
+            return true;
+        }
+
+        return IsTriadAddonVisible("TripleTriadRequest") ||
+               IsTriadAddonVisible("TripleTriadSelDeck") ||
+               IsTriadAddonVisible("TripleTriad");
+    }
+
+    private static unsafe bool IsTriadAddonVisible(string addonName)
+    {
+        if (!TryGetAddonByName<AtkUnitBase>(addonName, out var addon))
+        {
+            return false;
+        }
+
+        return addon->IsVisible;
     }
 
     private unsafe void SkipDialogue()

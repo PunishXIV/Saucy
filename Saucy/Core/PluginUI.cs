@@ -59,6 +59,12 @@ public unsafe class PluginUI : Window
         };
     }
 
+    public void OpenForTriad()
+    {
+        _selectedNav = NavItem.TripleTriad;
+        IsOpen = true;
+    }
+
     public GameNpcInfo? CurrentNPC
     {
         get;

@@ -18,6 +18,15 @@ internal static class Vnavmesh
     [EzIPC("Query.Mesh.PointOnFloor")]
     public static Func<Vector3, bool, float, Vector3?> QueryMeshPointOnFloor = null!;
 
+    [EzIPC("Path.IsRunning")]
+    public static Func<bool> PathIsRunning = null!;
+
+    [EzIPC("Path.Stop")]
+    public static Action PathStop = null!;
+
+    [EzIPC("SimpleMove.PathfindInProgress")]
+    public static Func<bool> SimpleMovePathfindInProgress = null!;
+
     public static bool IsInstalled => SubscriptionManager.IsInitialized(IPCNames.Vnavmesh);
 
     public static bool IsNavReady() =>
@@ -32,4 +41,23 @@ internal static class Vnavmesh
         IsInstalled && QueryMeshPointOnFloor.TryInvoke(position, allowUnlandable, halfExtentXz, out var point)
             ? point
             : null;
+
+    public static bool IsPathRunning() =>
+        IsInstalled && PathIsRunning();
+
+    public static bool IsPathfindInProgress() =>
+        IsInstalled && SimpleMovePathfindInProgress();
+
+    public static bool IsMoving() =>
+        IsPathRunning() || IsPathfindInProgress();
+
+    public static void StopPath()
+    {
+        if (!IsInstalled)
+        {
+            return;
+        }
+
+        PathStop?.Invoke();
+    }
 }

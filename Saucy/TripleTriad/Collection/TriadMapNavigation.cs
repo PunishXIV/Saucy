@@ -8,12 +8,16 @@ using Map = Lumina.Excel.Sheets.Map;
 namespace Saucy.TripleTriad;
 
 /// <summary>
-///     Map-link navigation: Lifestream to nearest aetheryte, then vnavmesh to the NPC.
+///     Map-link navigation: Lifestream teleport/aethernet, optional multi-area routes, then vnavmesh to the NPC.
 /// </summary>
 internal static class TriadMapNavigation
 {
-    private const float SkipTeleportDistance = 25f;
-    private static readonly TimeSpan NavigationTimeout = TimeSpan.FromSeconds(90);
+    private static readonly bool NavigationDebug = false;
+    private static readonly TimeSpan DefaultNavigationTimeout = TimeSpan.FromSeconds(90);
+    private static readonly TimeSpan AethernetStartupTimeout = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan AethernetSettleDelay = TimeSpan.FromSeconds(1.5);
+    private static readonly float AethernetMinMoveDistance = 3f;
+    private static readonly float AethernetNearShardDistance = 8f;
 
     private static PendingNavigation? _pending;
     private static bool _frameworkSubscribed;
@@ -36,7 +40,8 @@ internal static class TriadMapNavigation
             return;
         }
 
-        if (DateTime.UtcNow - pending.StartedUtc > NavigationTimeout)
+        var timeout = pending.RouteExecution?.Route.Timeout ?? DefaultNavigationTimeout;
+        if (DateTime.UtcNow - pending.StartedUtc > timeout)
         {
             Svc.Chat.PrintError("[Saucy] Navigation timed out.");
             ClearPending();
@@ -45,8 +50,21 @@ internal static class TriadMapNavigation
 
         switch (pending.Phase)
         {
-            case NavigationPhase.WaitingForTeleport:
-                if (!IsTravelComplete(pending.TargetTerritoryId))
+            case NavigationPhase.WaitingForLifestream:
+                SuppressVnavDuringLifestream();
+                if (!IsLifestreamTravelComplete(pending))
+                {
+                    return;
+                }
+
+                if (pending.RouteExecution != null)
+                {
+                    pending.Phase = NavigationPhase.ExecutingRoute;
+                    pending.PhaseStartedUtc = DateTime.UtcNow;
+                    return;
+                }
+
+                if (TryBeginPendingAethernet(pending))
                 {
                     return;
                 }
@@ -55,7 +73,46 @@ internal static class TriadMapNavigation
                 pending.PhaseStartedUtc = DateTime.UtcNow;
                 return;
 
+            case NavigationPhase.ExecutingRoute:
+                if (pending.RouteExecution == null)
+                {
+                    ClearPending();
+                    return;
+                }
+
+                if (pending.RouteExecution.Failed)
+                {
+                    ClearPending();
+                    return;
+                }
+
+                if (MultiAreaRouteExecutor.Tick(pending.RouteExecution))
+                {
+                    ContinueAfterZoneArrival(pending);
+                }
+
+                return;
+
+            case NavigationPhase.WaitingForAethernet:
+                SuppressVnavDuringLifestream();
+                if (!IsLifestreamTravelComplete(pending))
+                {
+                    return;
+                }
+
+                DebugLog(pending, "Aethernet complete, waiting for nav ready.");
+                pending.PendingAethernetShardId = 0;
+                pending.PendingAethernetShardName = null;
+                pending.Phase = NavigationPhase.WaitingForNavReady;
+                pending.PhaseStartedUtc = DateTime.UtcNow;
+                return;
+
             case NavigationPhase.WaitingForNavReady:
+                if (Lifestream.IsBusyNow() || Vnavmesh.IsMoving())
+                {
+                    return;
+                }
+
                 if (!Player.Interactable || IsBetweenAreas())
                 {
                     return;
@@ -103,13 +160,6 @@ internal static class TriadMapNavigation
         var pointOnFloor = destination.Value;
         var targetTerritoryId = location.TerritoryType.RowId;
         var inTargetTerritory = targetTerritoryId == Svc.ClientState.TerritoryType;
-        var closeEnough = inTargetTerritory &&
-                          Vector3.Distance(Player.Position, pointOnFloor) <= SkipTeleportDistance;
-
-        if (closeEnough)
-        {
-            return TryStartVnavImmediate(location, pointOnFloor, fly);
-        }
 
         if (!Lifestream.IsInstalled)
         {
@@ -123,46 +173,245 @@ internal static class TriadMapNavigation
             return TryStartVnavImmediate(location, pointOnFloor, fly);
         }
 
-        var aetheryteId = AetheryteHelper.FindClosestUnlockedAetheryte(targetTerritoryId, pointOnFloor);
-        if (aetheryteId == 0)
-        {
-            if (!inTargetTerritory)
-            {
-                Svc.Chat.Print(
-                    $"[Saucy] No unlocked aetheryte found for {location.PlaceName}. Opening map.");
-                return false;
-            }
-
-            return TryStartVnavImmediate(location, pointOnFloor, fly);
-        }
-
         if (Lifestream.IsBusyNow())
         {
             Svc.Chat.Print("[Saucy] Lifestream is busy. Try again in a moment.");
             return false;
         }
 
-        if (!Lifestream.TryTeleport(aetheryteId))
+        var route = MultiAreaRouteRegistry.FindRoute(location);
+        if (route != null && !inTargetTerritory)
+        {
+            return TryBeginMultiAreaRoute(location, pointOnFloor, fly, targetTerritoryId, route);
+        }
+
+        var travelPlan = AetheryteHelper.FindBestTravelPlan(targetTerritoryId, pointOnFloor, inTargetTerritory);
+        if (!inTargetTerritory && !travelPlan.HasTeleport && !travelPlan.HasAethernet)
+        {
+            Svc.Chat.Print(
+                $"[Saucy] No unlocked aetheryte found for {location.PlaceName}. Opening map.");
+            return false;
+        }
+
+        if (inTargetTerritory)
+        {
+            if (travelPlan.HasAethernet &&
+                TryStartAethernetTravel(location, pointOnFloor, fly, targetTerritoryId, travelPlan))
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(travelPlan.AethernetSkipReason))
+            {
+                Svc.Chat.Print($"[Saucy] Walking: {travelPlan.AethernetSkipReason}.");
+            }
+
+            return TryStartVnavImmediate(location, pointOnFloor, fly);
+        }
+
+        if (!travelPlan.HasTeleport)
+        {
+            return TryStartVnavImmediate(location, pointOnFloor, fly);
+        }
+
+        if (!Lifestream.TryTeleport(travelPlan.TeleportAetheryteId))
         {
             Svc.Chat.PrintError("[Saucy] Lifestream could not start teleport.");
             return false;
         }
 
-        _pending = new()
+        StopVnavIfRunning();
+        BeginPending(
+            location,
+            pointOnFloor,
+            fly,
+            targetTerritoryId,
+            aethernetShardId: travelPlan.AethernetShardId,
+            aethernetShardName: travelPlan.AethernetShardName);
+
+        if (travelPlan.HasAethernet)
+        {
+            Svc.Chat.Print(
+                $"[Saucy] Teleporting to {location.PlaceName}, then aethernet to {travelPlan.AethernetShardName}, then moving to {location.CoordinateString}.");
+        }
+        else
+        {
+            Svc.Chat.Print(
+                $"[Saucy] Teleporting to {location.PlaceName}, then moving to {location.CoordinateString}.");
+        }
+
+        return true;
+    }
+
+    private static bool TryBeginMultiAreaRoute(
+        MapLinkPayload location,
+        Vector3 pointOnFloor,
+        bool fly,
+        uint targetTerritoryId,
+        MultiAreaRoute route)
+    {
+        var context = new MultiAreaRouteExecutor.MultiAreaRouteContext
         {
             Location = location,
             Destination = pointOnFloor,
+            TargetTerritoryId = targetTerritoryId
+        };
+
+        if (!MultiAreaRouteExecutor.TryBeginRoute(route, context, out var execution, out var beginMessage))
+        {
+            return false;
+        }
+
+        var startsWithTeleport = execution.StepIndex < route.Steps.Count &&
+                                 route.Steps[execution.StepIndex].Kind == MultiAreaRouteStepKind.Teleport &&
+                                 !MultiAreaRouteExecutor.IsTeleportStepComplete(execution, route.Steps[execution.StepIndex]);
+
+        BeginPending(
+            location,
+            pointOnFloor,
+            fly,
+            targetTerritoryId,
+            routeExecution: execution,
+            startingPhase: startsWithTeleport
+                ? NavigationPhase.WaitingForLifestream
+                : NavigationPhase.ExecutingRoute);
+
+        if (!string.IsNullOrEmpty(beginMessage))
+        {
+            Svc.Chat.Print(beginMessage);
+        }
+
+        return true;
+    }
+
+    private static void ContinueAfterZoneArrival(PendingNavigation pending)
+    {
+        var travelPlan = AetheryteHelper.FindBestTravelPlan(
+            pending.TargetTerritoryId,
+            pending.Destination,
+            inTargetTerritory: true);
+
+        if (travelPlan.HasAethernet &&
+            Lifestream.TryAethernetTeleportById(travelPlan.AethernetShardId))
+        {
+            pending.RouteExecution = null;
+            EnterWaitingForAethernet(pending, travelPlan.AethernetShardId);
+            Svc.Chat.Print($"[Saucy] Taking aethernet to {travelPlan.AethernetShardName}.");
+            return;
+        }
+
+        pending.RouteExecution = null;
+        pending.Phase = NavigationPhase.WaitingForNavReady;
+        pending.PhaseStartedUtc = DateTime.UtcNow;
+    }
+
+    private static bool TryStartAethernetTravel(
+        MapLinkPayload location,
+        Vector3 pointOnFloor,
+        bool fly,
+        uint targetTerritoryId,
+        AetheryteHelper.TravelPlan travelPlan)
+    {
+        if (!travelPlan.HasAethernet)
+        {
+            return false;
+        }
+
+        if (!Lifestream.TryAethernetTeleportById(travelPlan.AethernetShardId))
+        {
+            Svc.Chat.Print(
+                $"[Saucy] Lifestream could not start aethernet to {travelPlan.AethernetShardName}. Walking instead.");
+            return false;
+        }
+
+        StopVnavIfRunning();
+        BeginPending(
+            location,
+            pointOnFloor,
+            fly,
+            targetTerritoryId,
+            startingPhase: NavigationPhase.WaitingForAethernet,
+            activeAethernetShardId: travelPlan.AethernetShardId);
+        Svc.Chat.Print(
+            $"[Saucy] Taking aethernet to {travelPlan.AethernetShardName}, then moving to {location.CoordinateString}.");
+        return true;
+    }
+
+    private static bool TryBeginPendingAethernet(PendingNavigation pending)
+    {
+        if (pending.PendingAethernetShardId == 0)
+        {
+            return false;
+        }
+
+        var shardId = pending.PendingAethernetShardId;
+        var shardName = pending.PendingAethernetShardName;
+        pending.PendingAethernetShardId = 0;
+        pending.PendingAethernetShardName = null;
+
+        if (!Lifestream.TryAethernetTeleportById(shardId))
+        {
+            Svc.Chat.Print(
+                $"[Saucy] Could not take aethernet to {shardName}. Walking from here instead.");
+            return false;
+        }
+
+        EnterWaitingForAethernet(pending, shardId);
+        Svc.Chat.Print($"[Saucy] Taking aethernet to {shardName}.");
+        return true;
+    }
+
+    private static void EnterWaitingForAethernet(PendingNavigation pending, uint shardId)
+    {
+        StopVnavIfRunning();
+        pending.Phase = NavigationPhase.WaitingForAethernet;
+        pending.PhaseStartedUtc = DateTime.UtcNow;
+        pending.ActiveAethernetShardId = shardId;
+        pending.AethernetStartPosition = Player.Position;
+        pending.AethernetShardPosition = AetheryteHelper.GetAethernetShardWorldPosition(shardId);
+        pending.AethernetSeenBusy = false;
+        pending.AethernetBusyClearedUtc = null;
+        DebugLog(pending, $"Waiting for aethernet shard {shardId}.");
+    }
+
+    private static void BeginPending(
+        MapLinkPayload location,
+        Vector3 destination,
+        bool fly,
+        uint targetTerritoryId,
+        MultiAreaRouteExecutor.RouteExecution? routeExecution = null,
+        uint aethernetShardId = 0,
+        string? aethernetShardName = null,
+        uint activeAethernetShardId = 0,
+        NavigationPhase startingPhase = NavigationPhase.WaitingForLifestream)
+    {
+        if (startingPhase is NavigationPhase.WaitingForLifestream or NavigationPhase.WaitingForAethernet)
+        {
+            StopVnavIfRunning();
+        }
+
+        _pending = new()
+        {
+            Location = location,
+            Destination = destination,
             Fly = fly,
             TargetTerritoryId = targetTerritoryId,
-            Phase = NavigationPhase.WaitingForTeleport,
+            RouteExecution = routeExecution,
+            PendingAethernetShardId = aethernetShardId,
+            PendingAethernetShardName = aethernetShardName,
+            ActiveAethernetShardId = activeAethernetShardId,
+            AethernetStartPosition = activeAethernetShardId != 0 ? Player.Position : null,
+            AethernetShardPosition = activeAethernetShardId != 0
+                ? AetheryteHelper.GetAethernetShardWorldPosition(activeAethernetShardId)
+                : null,
+            Phase = startingPhase,
             StartedUtc = DateTime.UtcNow,
-            PhaseStartedUtc = DateTime.UtcNow
+            PhaseStartedUtc = DateTime.UtcNow,
+            AethernetSeenBusy = false,
+            AethernetBusyClearedUtc = null
         };
 
         EnsureFrameworkSubscription();
-        Svc.Chat.Print(
-            $"[Saucy] Teleporting to {location.PlaceName}, then moving to {location.CoordinateString}.");
-        return true;
     }
 
     private static bool TryStartVnavImmediate(MapLinkPayload location, Vector3 destination, bool fly)
@@ -186,6 +435,20 @@ internal static class TriadMapNavigation
 
     private static bool TryStartVnav(PendingNavigation pending)
     {
+        if (_pending != null &&
+            ReferenceEquals(_pending, pending) &&
+            pending.Phase != NavigationPhase.WaitingForNavReady)
+        {
+            DebugLog(pending, "Blocked vnav start while travel still active.");
+            return false;
+        }
+
+        if (Lifestream.IsBusyNow() || Vnavmesh.IsMoving())
+        {
+            DebugLog(pending, "Blocked vnav start while Lifestream or vnav is busy.");
+            return false;
+        }
+
         var pointOnFloor = Vnavmesh.TryGetPointOnFloor(pending.Destination) ?? pending.Destination;
 
         if (!Vnavmesh.TryPathfindAndMoveTo(pointOnFloor, pending.Fly))
@@ -199,19 +462,115 @@ internal static class TriadMapNavigation
         return true;
     }
 
-    private static bool IsTravelComplete(uint targetTerritoryId)
+    private static bool IsLifestreamTravelComplete(PendingNavigation pending)
     {
+        if (pending.Phase == NavigationPhase.WaitingForAethernet)
+        {
+            return IsAethernetTravelComplete(pending);
+        }
+
         if (Lifestream.IsBusyNow())
         {
             return false;
         }
 
-        if (Svc.ClientState.TerritoryType != targetTerritoryId)
+        if (!Player.Interactable || IsBetweenAreas() || Player.IsAnimationLocked)
         {
             return false;
         }
 
-        return Player.Interactable && !IsBetweenAreas() && !Player.IsAnimationLocked;
+        if (pending.RouteExecution != null && pending.Phase == NavigationPhase.WaitingForLifestream)
+        {
+            var step = pending.RouteExecution.Route.Steps[pending.RouteExecution.StepIndex];
+            return step.Kind == MultiAreaRouteStepKind.Teleport &&
+                   MultiAreaRouteExecutor.IsTeleportStepComplete(pending.RouteExecution, step);
+        }
+
+        return Svc.ClientState.TerritoryType == pending.TargetTerritoryId;
+    }
+
+    private static bool IsAethernetTravelComplete(PendingNavigation pending)
+    {
+        if (Lifestream.IsBusyNow() || Vnavmesh.IsMoving())
+        {
+            pending.AethernetSeenBusy = true;
+            pending.AethernetBusyClearedUtc = null;
+            DebugLog(pending, "Aethernet still active (Lifestream or vnav busy).");
+            return false;
+        }
+
+        if (!pending.AethernetSeenBusy)
+        {
+            if (DateTime.UtcNow - pending.PhaseStartedUtc > AethernetStartupTimeout)
+            {
+                Svc.Chat.PrintError("[Saucy] Aethernet travel did not start. Walking instead.");
+                return true;
+            }
+
+            DebugLog(pending, "Waiting for Lifestream aethernet task to start.");
+            return false;
+        }
+
+        if (pending.AethernetBusyClearedUtc == null)
+        {
+            pending.AethernetBusyClearedUtc = DateTime.UtcNow;
+            DebugLog(pending, "Lifestream idle; waiting for aethernet settle.");
+            return false;
+        }
+
+        if (DateTime.UtcNow - pending.AethernetBusyClearedUtc.Value < AethernetSettleDelay)
+        {
+            return false;
+        }
+
+        if (!Player.Interactable || IsBetweenAreas() || Player.IsAnimationLocked)
+        {
+            return false;
+        }
+
+        if (pending.AethernetStartPosition != null && pending.AethernetShardPosition != null)
+        {
+            var movedFromStart = Vector3.Distance(pending.AethernetStartPosition.Value, Player.Position);
+            var distToShard = Vector3.Distance(Player.Position, pending.AethernetShardPosition.Value);
+            if (movedFromStart < AethernetMinMoveDistance && distToShard > AethernetNearShardDistance)
+            {
+                DebugLog(pending,
+                    $"Still at aethernet start (moved {movedFromStart:F1}y, shard {distToShard:F1}y away).");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static void SuppressVnavDuringLifestream()
+    {
+        if (Vnavmesh.IsMoving())
+        {
+            DebugLog(_pending, "Stopping vnav during Lifestream travel.");
+            StopVnavIfRunning();
+        }
+    }
+
+    private static void StopVnavIfRunning()
+    {
+        if (!Vnavmesh.IsMoving())
+        {
+            return;
+        }
+
+        Vnavmesh.StopPath();
+    }
+
+    private static void DebugLog(PendingNavigation? pending, string message)
+    {
+        if (!NavigationDebug)
+        {
+            return;
+        }
+
+        var phase = pending?.Phase.ToString() ?? "none";
+        Svc.Chat.Print($"[Saucy nav] {phase}: {message}");
     }
 
     private static bool IsBetweenAreas() => Svc.Condition[ConditionFlag.BetweenAreas];
@@ -261,7 +620,9 @@ internal static class TriadMapNavigation
 
     private enum NavigationPhase
     {
-        WaitingForTeleport,
+        WaitingForLifestream,
+        ExecutingRoute,
+        WaitingForAethernet,
         WaitingForNavReady
     }
 
@@ -274,5 +635,13 @@ internal static class TriadMapNavigation
         public DateTime PhaseStartedUtc;
         public DateTime StartedUtc;
         public required uint TargetTerritoryId;
+        public MultiAreaRouteExecutor.RouteExecution? RouteExecution;
+        public uint PendingAethernetShardId;
+        public string? PendingAethernetShardName;
+        public uint ActiveAethernetShardId;
+        public Vector3? AethernetStartPosition;
+        public Vector3? AethernetShardPosition;
+        public bool AethernetSeenBusy;
+        public DateTime? AethernetBusyClearedUtc;
     }
 }

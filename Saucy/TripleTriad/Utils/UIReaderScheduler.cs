@@ -12,7 +12,7 @@ public interface IUIReader
 
 public class UIReaderScheduler(IGameGui gameGui)
 {
-    private const float slowCheckInterval = 0.5f;
+    private const float slowCheckInterval = 0.15f;
     private readonly List<AddonInfo> addons = [];
 
     private readonly IGameGui gameGui = gameGui;
