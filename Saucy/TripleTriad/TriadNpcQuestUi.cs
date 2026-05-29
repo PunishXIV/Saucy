@@ -23,21 +23,26 @@ internal static class TriadNpcQuestUi
 
         if (!QuestionableInterop.IsInstalled)
         {
-            ImGui.TextDisabled("Install Questionable (/qst) to auto-start this quest.");
+            ImGui.Spacing();
+            ImGui.TextWrapped("Install Questionable (/qst) to auto-start this quest.");
             return;
         }
 
         var ready = QuestionableInterop.TryGetReadyToAccept(npcInfo.UnlockQuestId);
         if (ready == false)
-            ImGui.TextDisabled("Quest not ready to accept yet (prerequisites may be incomplete).");
+        {
+            ImGui.Spacing();
+            ImGui.TextWrapped("Quest not ready to accept yet (prerequisites may be incomplete).");
+        }
 
+        ImGui.Spacing();
         using var dis = ImRaii.Disabled(ready == false);
         if (ImGui.Button("Start with Questionable"))
         {
             if (QuestionableInterop.TryStartQuest(npcInfo.UnlockQuestId))
                 Svc.Chat.Print($"[Saucy] Sent \"{questName}\" to Questionable.");
             else
-                Svc.Chat.PrintError($"[Saucy] Questionable could not start quest \"{questName}\".");
+                Svc.Chat.PrintError($"[Saucy] Could not start quest \"{questName}\" in Questionable.");
         }
     }
 

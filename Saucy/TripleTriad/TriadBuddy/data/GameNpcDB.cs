@@ -65,6 +65,9 @@ public class GameNpcDB
     public void RefreshBeatenOnce()
     {
         foreach (var kvp in mapNpcs)
-            kvp.Value.IsBeatenOnce = false;
+        {
+            kvp.Value.IsBeatenOnce = TriadMemoryReads.IsAvailable &&
+                                     TriadMemoryReads.TryIsNpcBeatenOnce(kvp.Value.triadId);
+        }
     }
 }

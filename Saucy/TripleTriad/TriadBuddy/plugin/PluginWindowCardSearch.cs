@@ -68,7 +68,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         var collection = C.TriadCollection;
         showNpcMatchesOnly = collection.CheckCardNpcMatchOnly;
         showNotOwnedOnly = collection.CheckCardNotOwnedOnly;
-        hideNpcBeatenOnce = false;
+        hideNpcBeatenOnce = collection.CheckNpcHideBeaten;
         hideNpcCompleted = collection.CheckNpcHideCompleted;
 
         // doesn't matter will be updated on next draw
@@ -137,6 +137,8 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
             filterMode = -1;
             searchFilterCard.Clear();
             GameNpcDB.Get().RefreshCompleted();
+            if (hideNpcBeatenOnce)
+                GameNpcDB.Get().RefreshBeatenOnce();
             searchFilterNpc.Clear();
             npcFilterDataStale = true;
 
@@ -169,43 +171,51 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
 
         if (hideNpcCompleted)
             GameNpcDB.Get().RefreshCompleted();
+
+        if (hideNpcBeatenOnce)
+            GameNpcDB.Get().RefreshBeatenOnce();
     }
 
-    public void OnUIStateChanged(UIStateTriadCardList uiState)
+    public void OnUIStateChanged(UIStateTriadCardList uiState) => RebuildCardList(uiState);
+
+    private void RebuildCardList(UIStateTriadCardList uiState)
     {
-        if (filterMode != uiState.filterMode)
+        if (filterMode == uiState.filterMode && listCards.Count > 0)
+            return;
+
+        filterMode = uiState.filterMode;
+        listCards.Clear();
+
+        if (!dataLoader.IsDataReady)
+            return;
+
+        if (TriadMemoryReads.IsAvailable)
+            GameCardDB.Get().Refresh();
+
+        var cardDB = TriadCardDB.Get();
+        var cardInfoDB = GameCardDB.Get();
+
+        var includeOwned = filterMode != 2;
+        var includeMissing = filterMode != 1;
+
+        foreach (var card in cardDB.cards)
         {
-            filterMode = uiState.filterMode;
-            listCards.Clear();
+            if (card == null || !card.IsValid())
+                continue;
 
-            var cardDB = TriadCardDB.Get();
-            var cardInfoDB = GameCardDB.Get();
+            var cardInfo = cardInfoDB.FindById(card.Id);
+            if (cardInfo == null)
+                continue;
 
-            var includeOwned = filterMode != 2;
-            var includeMissing = filterMode != 1;
-
-            foreach (var card in cardDB.cards)
-            {
-                if (card != null && card.IsValid())
-                {
-                    var cardInfo = cardInfoDB.FindById(card.Id);
-                    if (cardInfo != null)
-                    {
-                        if ((includeOwned && cardInfo.IsOwned) || (includeMissing && !cardInfo.IsOwned))
-                        {
-                            listCards.Add(new(card, cardInfo));
-                        }
-                    }
-                }
-            }
-
-            if (listCards.Count > 1)
-            {
-                listCards.Sort((a, b) => a.Item1.SortOrder.CompareTo(b.Item1.SortOrder));
-            }
-
-            selectedCardIdx = -1;
+            var isOwned = IsCardOwned(card.Id);
+            if ((includeOwned && isOwned) || (includeMissing && !isOwned))
+                listCards.Add(new(card, cardInfo));
         }
+
+        if (listCards.Count > 1)
+            listCards.Sort((a, b) => a.Item1.SortOrder.CompareTo(b.Item1.SortOrder));
+
+        selectedCardIdx = -1;
     }
 
     public override void PreDraw() =>
@@ -245,7 +255,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
 
     private void DrawCardsTab()
     {
-        filterMode = uiReaderCardList.cachedState.filterMode;
+        RebuildCardList(uiReaderCardList.cachedState);
         searchFilterCard.Draw("", WindowContentWidth * ImGuiHelpers.GlobalScale);
 
         if (ImGui.BeginListBox("##cards", new(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 10)))
@@ -303,7 +313,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
     {
         TryPopulateNpcList();
 
-        if (npcFilterDataStale && hideNpcCompleted)
+        if (npcFilterDataStale && (hideNpcBeatenOnce || hideNpcCompleted))
         {
             RefreshNpcProgress();
             npcFilterDataStale = false;
@@ -366,11 +376,14 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         }
 
         ImGui.Spacing();
-        ImGui.BeginDisabled();
-        ImGui.Checkbox(locHideBeatenNpc, ref hideNpcBeatenOnce);
-        ImGui.EndDisabled();
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Temporarily unavailable.");
+        if (ImGui.Checkbox(locHideBeatenNpc, ref hideNpcBeatenOnce))
+        {
+            npcFilterDataStale = true;
+            RefreshNpcProgress();
+            npcFilterDataStale = false;
+            C.TriadCollection.CheckNpcHideBeaten = hideNpcBeatenOnce;
+            C.Save();
+        }
 
         if (ImGui.Checkbox(locHideCompletedNpc, ref hideNpcCompleted))
         {
@@ -391,37 +404,26 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
     private void DrawNpcDetails()
     {
         var npcData = (selectedNpcIdx < 0 || selectedNpcIdx >= listNpcs.Count) ? null : listNpcs[selectedNpcIdx];
-        if (npcData != null && npcData.Item2 != null && npcData.Item2.Location != null)
+        if (npcData?.Item2 is not { } npcInfo)
+            return;
+
+        if (npcInfo.Location != null)
         {
-            var cursorY = ImGui.GetCursorPosY();
-            ImGui.SetCursorPosY(cursorY - ImGui.GetStyle().FramePadding.Y);
-            if (ImGuiComponents.IconButton(FontAwesomeIcon.Map))
-            {
-                Svc.GameGui.OpenMapWithMapLink(npcData.Item2.Location);
-            }
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.SetTooltip(locShowOnMap);
-            }
+            DrawIconTextRow(FontAwesomeIcon.Map, locShowOnMap, () => Svc.GameGui.OpenMapWithMapLink(npcInfo.Location),
+                $"{npcInfo.Location.PlaceName} {npcInfo.Location.CoordinateString}");
+        }
 
-            ImGui.SetCursorPosY(cursorY);
-            ImGui.SameLine();
-            ImGui.Text($"{npcData.Item2.Location.PlaceName} {npcData.Item2.Location.CoordinateString}");
+        if (npcInfo.UnlockQuestId != 0)
+        {
+            ImGui.Spacing();
+            TriadNpcQuestUi.DrawUnlockQuest(npcInfo);
+        }
 
-            TriadNpcQuestUi.DrawUnlockQuest(npcData.Item2);
-
-            cursorY += ImGui.GetTextLineHeight() + (ImGui.GetStyle().FramePadding.Y * 3);
-            ImGui.SetCursorPosY(cursorY - ImGui.GetStyle().FramePadding.Y);
-            if (ImGuiComponents.IconButton(FontAwesomeIcon.ChartLine))
-            {
-                statsWindow.SetupAndOpen(npcData.Item1);
-            }
-
-            var hasAvgRewards = StatTracker.GetAverageRewardPerMatchDesc(C.TriadCollection, npcData.Item2, out var avgRewardPerMatch);
-            ImGui.SetCursorPosY(cursorY);
-            ImGui.SameLine();
+        ImGui.Spacing();
+        var hasAvgRewards = StatTracker.GetAverageRewardPerMatchDesc(C.TriadCollection, npcInfo, out var avgRewardPerMatch);
+        DrawIconTextRow(FontAwesomeIcon.ChartLine, null, () => statsWindow.SetupAndOpen(npcData.Item1), () =>
+        {
             ImGui.Text(locNpcStats + (hasAvgRewards ? "," : ""));
-
             if (hasAvgRewards)
             {
                 ImGui.SameLine();
@@ -429,51 +431,62 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
                 ImGui.SameLine();
                 ImGui.Text(avgRewardPerMatch.ToString("0.#"));
             }
+        });
 
-            ImGui.Spacing();
+        ImGui.Spacing();
+        ImGui.Text($"{locNpcReward} {numNotOwnedRewards}");
+        if (listNpcReward.Count > 0)
+        {
+            var settingsDB = PlayerSettingsDB.Get();
 
-            ImGui.Text($"{locNpcReward} {numNotOwnedRewards}");
-            if (listNpcReward.Count > 0)
+            ImGui.BeginListBox("##cardReward", new(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 4.5f));
+            for (var idx = 0; idx < listNpcReward.Count; idx++)
             {
-                var settingsDB = PlayerSettingsDB.Get();
+                (var cardOb, var cardListIdx) = listNpcReward[idx];
+                var isCardOwned = settingsDB.ownedCards.Contains(cardOb);
 
-                ImGui.BeginListBox("##cardReward", new(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 4.5f));
-                for (var idx = 0; idx < listNpcReward.Count; idx++)
+                var itemDesc = $"{CardUtils.GetOrderDesc(cardOb)} {CardUtils.GetUIDesc(cardOb)}";
+                var isSelected = selectedCardIdx == cardListIdx;
+
+                if (isCardOwned)
+                    ImGui.PushStyleColor(ImGuiCol.Text, 0xffa8a8a8);
+
+                if (ImGui.Selectable($"{CardUtils.GetRarityDesc(cardOb)}  {itemDesc}", isSelected))
                 {
-                    (var cardOb, var cardListIdx) = listNpcReward[idx];
-                    var isCardOwned = settingsDB.ownedCards.Contains(cardOb);
-
-                    var itemDesc = $"{CardUtils.GetOrderDesc(cardOb)} {CardUtils.GetUIDesc(cardOb)}";
-                    var isSelected = selectedCardIdx == cardListIdx;
-
-                    if (isCardOwned)
-                    {
-                        ImGui.PushStyleColor(ImGuiCol.Text, 0xffa8a8a8);
-                    }
-
-                    if (ImGui.Selectable($"{CardUtils.GetRarityDesc(cardOb)}  {itemDesc}", isSelected))
-                    {
-                        selectedCardIdx = cardListIdx;
-                        OnCardSelectionChanged();
-                    }
-
-                    if (isCardOwned)
-                    {
-                        ImGui.PopStyleColor(1);
-                    }
-
-                    if (isSelected)
-                    {
-                        ImGui.SetItemDefaultFocus();
-                    }
+                    selectedCardIdx = cardListIdx;
+                    OnCardSelectionChanged();
                 }
-                ImGui.EndListBox();
+
+                if (isCardOwned)
+                    ImGui.PopStyleColor(1);
+
+                if (isSelected)
+                    ImGui.SetItemDefaultFocus();
             }
-            else
-            {
-                ImGui.TextColored(SaucyTheme.ColorOr(SaucyTheme.BodyText, ImGuiCol.TextDisabled), locNoAvail);
-            }
+            ImGui.EndListBox();
         }
+        else
+        {
+            ImGui.TextColored(SaucyTheme.ColorOr(SaucyTheme.BodyText, ImGuiCol.TextDisabled), locNoAvail);
+        }
+    }
+
+    private static void DrawIconTextRow(FontAwesomeIcon icon, string? tooltip, Action onIconClick, string text) =>
+        DrawIconTextRow(icon, tooltip, onIconClick, () => ImGui.Text(text));
+
+    private static void DrawIconTextRow(FontAwesomeIcon icon, string? tooltip, Action onIconClick, Action drawText)
+    {
+        ImGui.AlignTextToFramePadding();
+        var rowY = ImGui.GetCursorPosY();
+        ImGui.SetCursorPosY(rowY - ImGui.GetStyle().FramePadding.Y);
+        if (ImGuiComponents.IconButton(icon))
+            onIconClick();
+        if (!string.IsNullOrEmpty(tooltip) && ImGui.IsItemHovered())
+            ImGui.SetTooltip(tooltip);
+        ImGui.SetCursorPosY(rowY);
+        ImGui.SameLine();
+        ImGui.AlignTextToFramePadding();
+        drawText();
     }
 
     private void OnCardSelectionChanged()
