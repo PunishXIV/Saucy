@@ -146,7 +146,7 @@ public class GameUIParser
                           : trimmed);
         if (matchOb == null && markFailed)
         {
-            OnFailedNpc(desc);
+            OnFailedNpc(trimmed);
         }
 
         return matchOb;

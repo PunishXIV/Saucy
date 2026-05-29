@@ -135,7 +135,7 @@ public class Solver
             return true;
         }
 
-        string? targetName = null;
+        string targetName = null;
         if (profileGS != null && !profileGS.HasErrors)
         {
             var profileDecks = profileGS.GetPlayerDecks();
@@ -377,7 +377,7 @@ public class Solver
     ///     Called from <see cref="TriadAutomater.RunModule" /> when the UI reader has not fired
     ///     (unchanged Equals state) but the player can act on the TripleTriad addon.
     /// </summary>
-    public void EnsurePlayerMove(UIStateTriadGame? stateOb)
+    public void EnsurePlayerMove(UIStateTriadGame stateOb)
     {
         if (stateOb == null || solveInProgress)
         {
@@ -496,7 +496,7 @@ public class Solver
         placeRetryCooldown = 0;
     }
 
-    private TriadNpc? ResolveNpcForGame(UIStateTriadGame? stateOb)
+    private TriadNpc ResolveNpcForGame(UIStateTriadGame stateOb)
     {
         if (currentNpc != null)
         {
@@ -562,7 +562,7 @@ public class Solver
         moveWinChance = SolverResult.Zero;
     }
 
-    private void EnsureScreenMods(ScannerTriad.GameState? screenOb)
+    private void EnsureScreenMods(ScannerTriad.GameState screenOb)
     {
         if (screenOb == null || screenOb.mods.Count > 0)
         {
