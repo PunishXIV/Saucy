@@ -31,12 +31,16 @@ public unsafe class LimbManager
 
     private static readonly Dictionary<LimbDifficulty, int> Heights = new()
     {
-        [LimbDifficulty.Titan] = 20, [LimbDifficulty.Morbol] = 40, [LimbDifficulty.Cactuar] = 340
+        [LimbDifficulty.Titan] = 20,
+        [LimbDifficulty.Morbol] = 40,
+        [LimbDifficulty.Cactuar] = 340
     };
 
     private static readonly Dictionary<LimbDifficulty, uint> NodeIDs = new()
     {
-        [LimbDifficulty.Titan] = 41, [LimbDifficulty.Morbol] = 44, [LimbDifficulty.Cactuar] = 47
+        [LimbDifficulty.Titan] = 41,
+        [LimbDifficulty.Morbol] = 44,
+        [LimbDifficulty.Cactuar] = 47
     };
 
     private readonly List<HitResult> Results = [];
@@ -58,6 +62,21 @@ public unsafe class LimbManager
     {
         Cfg = conf;
         new EzFrameworkUpdate(Tick);
+    }
+
+    private void ToggleModule()
+    {
+        if (ModuleManager.GetModule<OutOnALimbModule>() is { } limbModule)
+        {
+            if (Cfg.EnableLimb && !C.EnabledModules.Contains(limbModule.InternalName))
+            {
+                C.EnabledModules.Add(limbModule.InternalName);
+            }
+            else if (!Cfg.EnableLimb && C.EnabledModules.Contains(limbModule.InternalName))
+            {
+                C.EnabledModules.Remove(limbModule.InternalName);
+            }
+        }
     }
 
     private void InteractWithClosestLimb()
@@ -120,7 +139,9 @@ public unsafe class LimbManager
 
         if (!found)
         {
-            GamesToPlay = 0;
+            DuoLog.Warning("No Out on a Limb machine nearby (maybe get closer if in front of one).");
+            Cfg.EnableLimb = false;
+            ToggleModule();
         }
     }
 
@@ -536,18 +557,10 @@ public unsafe class LimbManager
     {
         var save = false;
 
-        if (ImGui.Checkbox("Enable", ref Cfg.EnableLimb) && ModuleManager.GetModule<OutOnALimbModule>() is { } limbModule)
+        if (ImGui.Checkbox("Enable", ref Cfg.EnableLimb))
         {
-            if (Cfg.EnableLimb && !C.EnabledModules.Contains(limbModule.InternalName))
-            {
-                C.EnabledModules.Add(limbModule.InternalName);
-            }
-            else if (!Cfg.EnableLimb && C.EnabledModules.Contains(limbModule.InternalName))
-            {
-                C.EnabledModules.Remove(limbModule.InternalName);
-            }
-
-            save = true;
+            ToggleModule();
+            save |= true;
         }
 
         ImGui.SameLine();
