@@ -269,6 +269,61 @@ public class UIReaderTriadPrep
     {
         cachedState.decks.Clear();
 
+        if (TryUpdateDeckSelectLegacy(baseNode))
+        {
+            return;
+        }
+
+        TryUpdateDeckSelectGeneric(baseNode);
+    }
+
+    private unsafe bool TryUpdateDeckSelectLegacy(AtkUnitBase* baseNode)
+    {
+        var nodeA = baseNode->UldManager.NodeListCount >= 5 ? baseNode->UldManager.NodeList[4] : null;
+        if (nodeA == null || (int)nodeA->Type <= 1000)
+        {
+            return false;
+        }
+
+        var compNodeA = (AtkComponentNode*)nodeA;
+        var rowCount = compNodeA->Component->UldManager.NodeListCount;
+        if (rowCount <= 0)
+        {
+            return false;
+        }
+
+        for (var rowIdx = 0; rowIdx < rowCount; rowIdx++)
+        {
+            var rowNode = compNodeA->Component->UldManager.NodeList[rowIdx];
+            if (rowNode == null)
+            {
+                continue;
+            }
+
+            var cardRowNode = GUINodeUtils.PickChildNode(rowNode, 3, 12);
+            if (cardRowNode == null && !RowLooksLikeDeckRow(rowNode))
+            {
+                continue;
+            }
+
+            var deckOb = new UIStateTriadPrepDeck
+            {
+                id = cachedState.decks.Count, rootNodeAddr = (ulong)rowNode, name = ReadDeckRowName(rowNode)
+            };
+
+            if (shouldScanDeckData)
+            {
+                TryScanDeckRowCards(rowNode, deckOb);
+            }
+
+            cachedState.decks.Add(deckOb);
+        }
+
+        return cachedState.decks.Count > 0;
+    }
+
+    private unsafe void TryUpdateDeckSelectGeneric(AtkUnitBase* baseNode)
+    {
         for (var listIdx = 0; listIdx < baseNode->UldManager.NodeListCount; listIdx++)
         {
             var nodeA = baseNode->UldManager.NodeList[listIdx];
@@ -318,6 +373,17 @@ public class UIReaderTriadPrep
                 return;
             }
         }
+    }
+
+    private static unsafe string ReadDeckRowName(AtkResNode* rowNode)
+    {
+        var name = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(rowNode, 11, 12));
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            return name;
+        }
+
+        return ExtractDeckRowName(rowNode) ?? string.Empty;
     }
 
     private static unsafe void TryScanDeckRowCards(AtkResNode* rowNode, UIStateTriadPrepDeck deckOb)

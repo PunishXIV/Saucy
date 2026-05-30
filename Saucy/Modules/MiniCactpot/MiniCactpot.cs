@@ -2,6 +2,7 @@
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using ECommons.Automation.UIInput;
 using ECommons.Throttlers;
+using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.Framework;
@@ -11,6 +12,10 @@ namespace Saucy.MiniCactpot;
 
 public unsafe class MiniCactpot : Module
 {
+    // Shared throttle key + delay between any auto-click — feels less frantic and matches a human pace.
+    private const string ClickThrottleKey = "Saucy.MiniCactpot.Click";
+    private const int ClickThrottleMs = 600;
+
     private readonly int[] scratchState = new int[9];
     private readonly CactpotSolver solver = new();
     private int[]? boardState;
@@ -22,16 +27,71 @@ public unsafe class MiniCactpot : Module
     {
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "LotteryDaily", OnPostUpdate);
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "LotteryDaily", OnPreFinalize);
+        Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "SelectYesno", OnTicketPromptSetup);
     }
 
     public override void Disable()
     {
         Svc.AddonLifecycle.UnregisterListener(OnPostUpdate);
         Svc.AddonLifecycle.UnregisterListener(OnPreFinalize);
+        Svc.AddonLifecycle.UnregisterListener(OnTicketPromptSetup);
         TaskManager.Abort();
         boardState = null;
         pendingState = null;
         isProcessing = false;
+    }
+
+    private void OnTicketPromptSetup(AddonEvent type, AddonArgs args)
+    {
+        var addon = (AtkUnitBase*)args.Addon.Address;
+        if (addon == null || !addon->IsVisible)
+        {
+            return;
+        }
+
+        var prompt = ReadYesnoPromptText(addon);
+        // Game text varies by client locale and current MGP, so match on a stable substring.
+        if (string.IsNullOrEmpty(prompt) || !prompt.Contains("purchase a ticket", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!EzThrottler.Throttle("MiniCactpotTicketYes", 500))
+        {
+            return;
+        }
+
+        try
+        {
+            new AddonMaster.SelectYesno(addon).Yes();
+        }
+        catch (Exception ex)
+        {
+            LogVerbose($"Ticket Yes click failed: {ex.Message}");
+        }
+    }
+
+    private static string? ReadYesnoPromptText(AtkUnitBase* addon)
+    {
+        // Standard SelectYesno layout puts the prompt at NodeList[15].
+        if (addon->UldManager.NodeListCount <= 15)
+        {
+            return null;
+        }
+
+        var node = addon->UldManager.NodeList[15];
+        if (node == null)
+        {
+            return null;
+        }
+
+        var textNode = node->GetAsAtkTextNode();
+        if (textNode == null)
+        {
+            return null;
+        }
+
+        return textNode->NodeText.GetText();
     }
 
     private void OnPreFinalize(AddonEvent type, AddonArgs args)
@@ -224,14 +284,22 @@ public unsafe class MiniCactpot : Module
                 }
 
                 var lane = addon->LaneSelector[csLane];
-                if (lane == null)
+                if (lane == null || lane->AtkComponentButton.AtkResNode == null)
                 {
                     return true;
                 }
 
-                if (EzThrottler.Throttle($"ClickLane_{first}", 100))
+                if (EzThrottler.Throttle(ClickThrottleKey, ClickThrottleMs))
                 {
-                    lane->ClickRadioButton((AtkUnitBase*)addon);
+                    try
+                    {
+                        lane->ClickRadioButton((AtkUnitBase*)addon);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogVerbose($"Lane {first} click failed: {ex.Message}");
+                    }
+
                     return true;
                 }
 
@@ -240,7 +308,7 @@ public unsafe class MiniCactpot : Module
 
         TaskManager.Enqueue(() =>
         {
-            if (!EzThrottler.Throttle("ConfirmLane", 300))
+            if (!EzThrottler.Throttle(ClickThrottleKey, ClickThrottleMs))
             {
                 return false;
             }
@@ -271,9 +339,24 @@ public unsafe class MiniCactpot : Module
                     return true;
                 }
 
-                if (EzThrottler.Throttle($"ClickButton_{first}", 100))
+                var button = (AtkComponentButton*)tile;
+                // ClickAddonButton dereferences AtkResNode internally; a tile pointer can be non-null while the underlying node hasn't been initialized yet, which crashed the old call.
+                if (button->AtkResNode == null || !button->AtkResNode->IsVisible())
                 {
-                    ((AtkComponentButton*)tile)->ClickAddonButton((AtkUnitBase*)addon);
+                    return false;
+                }
+
+                if (EzThrottler.Throttle(ClickThrottleKey, ClickThrottleMs))
+                {
+                    try
+                    {
+                        button->ClickAddonButton((AtkUnitBase*)addon);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogVerbose($"Tile {first} click failed: {ex.Message}");
+                    }
+
                     return true;
                 }
 
@@ -312,7 +395,7 @@ public unsafe class MiniCactpot : Module
             return false;
         }
 
-        if (EzThrottler.Throttle("ClickConfirm", 100))
+        if (EzThrottler.Throttle(ClickThrottleKey, ClickThrottleMs))
         {
             confirmBtn->ClickAddonButton((AtkUnitBase*)addon);
             return true;

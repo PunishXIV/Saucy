@@ -20,6 +20,8 @@ public class Configuration : IPluginConfiguration
 
     public bool UseRecommendedDeck { get; set; } = false;
 
+    public bool LogTriadDeckOptimizerToChat { get; set; } = false;
+
     public int SelectedDeckIndex { get; set; } = -1;
 
     public Stats Stats { get; set; } = new();

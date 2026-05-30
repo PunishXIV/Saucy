@@ -35,27 +35,28 @@ public unsafe class UnsafeReaderProfileGS
             {
                 static PlayerDeck? ConvertToPlayerDeck(TripleTriadDeck* deckPtr, int deckId)
                 {
-                    if (deckPtr != null &&
-                        deckPtr->Cards[0] != 0 &&
-                        deckPtr->Cards[1] != 0 &&
-                        deckPtr->Cards[2] != 0 &&
-                        deckPtr->Cards[3] != 0 &&
-                        deckPtr->Cards[4] != 0)
+                    if (deckPtr == null)
                     {
-                        var deckOb = new PlayerDeck
-                        {
-                            id = deckId, name = Encoding.UTF8.GetString(deckPtr->Name).Trim('\0')
-                        };
-
-                        for (var idx = 0; idx < 5; idx++)
-                        {
-                            deckOb.cardIds[idx] = deckPtr->Cards[idx];
-                        }
-
-                        return deckOb;
+                        return null;
                     }
 
-                    return null;
+                    var deckName = Encoding.UTF8.GetString(deckPtr->Name).Trim('\0');
+                    if (string.IsNullOrWhiteSpace(deckName))
+                    {
+                        return null;
+                    }
+
+                    var deckOb = new PlayerDeck
+                    {
+                        id = deckId, name = deckName
+                    };
+
+                    for (var idx = 0; idx < 5; idx++)
+                    {
+                        deckOb.cardIds[idx] = deckPtr->Cards[idx];
+                    }
+
+                    return deckOb;
                 }
                 ;
 

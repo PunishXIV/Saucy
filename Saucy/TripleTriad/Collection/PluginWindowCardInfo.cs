@@ -53,17 +53,15 @@ public class PluginWindowCardInfo : Window, IDisposable
 
         if (uiReaderCardList != null &&
             uiReaderCardList.IsVisible &&
-            uiReaderCardList.cachedState != null &&
-            uiReaderCardList.cachedState.iconId == 0)
+            uiReaderCardList.cachedState != null)
         {
             if (!IsOpen && TriadMemoryReads.IsAvailable)
             {
-                // force refresh owned cards, required for parsing id based on collection index
                 GameCardDB.Get().Refresh();
             }
 
-            var parseCtx = new GameUIParser();
-            selectedCard = uiReaderCardList.cachedState.ToTriadCard(parseCtx);
+            uiReaderCardList.RefreshLiveSelectionState();
+            selectedCard = uiReaderCardList.ResolveSelectedCard();
 
             if (selectedCard != null)
             {
@@ -81,6 +79,9 @@ public class PluginWindowCardInfo : Window, IDisposable
 
     public override void PreDraw()
     {
+        uiReaderCardList.RefreshLiveSelectionState();
+        SyncSelectedCardFromReader();
+
         var requestedSize = uiReaderCardList.cachedState.descriptionSize / ImGuiHelpers.GlobalScale;
         if (ImGuiHelpers.GlobalScale > 1.0f)
         {
@@ -91,8 +92,30 @@ public class PluginWindowCardInfo : Window, IDisposable
         Size = requestedSize;
     }
 
+    private void SyncSelectedCardFromReader()
+    {
+        if (!uiReaderCardList.IsVisible)
+        {
+            return;
+        }
+
+        var card = uiReaderCardList.ResolveSelectedCard();
+        if (card?.Id == selectedCard?.Id)
+        {
+            return;
+        }
+
+        selectedCard = card;
+        selectedCardInfo = card != null ? GameCardDB.Get().FindById(card.Id) : null;
+        numRewardSources = selectedCardInfo?.RewardNpcs.Count ?? 0;
+        rewardSourceIdx = 0;
+        UpdateRewardSource();
+    }
+
     public override void Draw()
     {
+        SyncSelectedCardFromReader();
+
         if (selectedCard != null)
         {
             var colorName = SaucyTheme.ColorOr(SaucyTheme.SectionTitle, ImGuiCol.Text);

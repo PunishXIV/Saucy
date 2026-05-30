@@ -24,14 +24,14 @@ internal static class TriadMapNavigation
     private static PendingNavigation? _pending;
     private static bool _frameworkSubscribed;
 
-    public static void HandleMapClick(MapLinkPayload location, TriadNpc? npc = null)
+    public static void HandleMapClick(MapLinkPayload location, TriadNpc? npc = null, bool fly = true)
     {
         if (npc != null)
         {
             TTSolver.OnNpcSelected(npc, [], true);
         }
 
-        if (TryBeginNavigation(location, npc: npc))
+        if (TryBeginNavigation(location, fly, npc))
         {
             return;
         }
@@ -152,7 +152,7 @@ internal static class TriadMapNavigation
         }
     }
 
-    private static bool TryBeginNavigation(MapLinkPayload location, bool fly = false, TriadNpc? npc = null)
+    private static bool TryBeginNavigation(MapLinkPayload location, bool fly = true, TriadNpc? npc = null)
     {
         if (!Vnavmesh.IsInstalled)
         {

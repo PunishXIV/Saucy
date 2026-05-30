@@ -246,35 +246,30 @@ public sealed class Saucy : IDalamudPlugin
             {
                 C.UpdateStats(stats => stats.GamesWonWithSaucy++);
 
-                if (TriadAutomater.TryGetVerifiedNpcCardDrop(out var droppedCard) && droppedCard != null)
+                if (TriadAutomater.IsCardFarmModeActive())
                 {
-                    if (TriadAutomater.PlayUntilCardDrops)
+                    TriadAutomater.DetectAndProcessCardFarmDrops(obj.cardItemId);
+                    if (TriadAutomater.CardFarmHasPendingDrops())
                     {
-                        TriadAutomater.NumberOfTimes--;
+                        TriadAutomater.ScheduleCardDropVerification(obj.cardItemId);
                     }
-
-                    C.UpdateStats(stats => stats.CardsDroppedWithSaucy++);
-
-                    C.UpdateStats(stats =>
+                }
+                else if (TriadAutomater.PlayUntilCardDrops && obj.cardItemId > 0)
+                {
+                    var droppedCard = GameCardDB.Get().FindByItemId(obj.cardItemId);
+                    if (droppedCard != null)
                     {
-                        if (stats.CardsWon.ContainsKey((uint)droppedCard.CardId))
-                        {
-                            stats.CardsWon[(uint)droppedCard.CardId] += 1;
-                        }
-                        else
-                        {
-                            stats.CardsWon[(uint)droppedCard.CardId] = 1;
-                        }
-                    });
-
-                    if (TriadAutomater.TempCardsWonList.TryGetValue((uint)droppedCard.CardId, out var priorWins))
-                    {
-                        var target = Math.Max(1, TriadAutomater.NumberOfTimes);
-                        if (priorWins < target)
-                        {
-                            TriadAutomater.TempCardsWonList[(uint)droppedCard.CardId] = priorWins + 1;
-                        }
+                        TriadAutomater.ProcessVerifiedCardDrop(droppedCard);
                     }
+                    else
+                    {
+                        TriadAutomater.NotifyPlayUntilAnyCardDropped();
+                    }
+                }
+                else if (TriadAutomater.TryGetVerifiedNpcCardDrop(out var droppedCard, obj.cardItemId) &&
+                         droppedCard != null)
+                {
+                    TriadAutomater.ProcessVerifiedCardDrop(droppedCard);
                 }
             }
 
@@ -394,7 +389,7 @@ public sealed class Saucy : IDalamudPlugin
                             }
 
                             TriadAutomater.ModuleEnabled = false;
-                            TriadAutomater.TempCardsWonList.Clear();
+                            TriadAutomater.DeactivateCardFarmSession(clearProgress: true);
                             TriadAutomater.MatchesCompletedThisSession = 0;
                             TriadAutomater.NumberOfTimes = TriadAutomater.SessionInitialPlayCount;
                             TriadAutomater.ClearRematchPending();
@@ -630,6 +625,7 @@ public sealed class Saucy : IDalamudPlugin
         if (subCommand == "stop")
         {
             TriadAutomater.ModuleEnabled = false;
+            TriadAutomater.DeactivateCardFarmSession(clearProgress: true);
             Svc.Chat.Print("[Saucy] Triad Module Disabled!");
             return;
         }

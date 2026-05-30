@@ -19,7 +19,7 @@ public class Solver
     private const int PlaceRetryCooldownFrames = 3;
     private const int MaxPlaceAttempts = 40;
 
-    private const int RecommendedDeckOptimizerTimeoutMs = 25000;
+    private const int DeckOptimizerTimeoutMs = 25000;
 
     /// <summary>Max frames to wait for profile deck ranking before falling back.</summary>
     private const int DeckSelectPrepWaitFrames = 90;
@@ -104,35 +104,60 @@ public class Solver
 
     public void EnsureExistingSaucyDeckForPrep()
     {
-        if (!C.UseRecommendedDeck || preGameNpc == null)
+        if (preGameNpc == null)
+        {
+            return;
+        }
+
+        if (!C.UseRecommendedDeck && !TriadAutomater.IsCardFarmModeActive())
         {
             return;
         }
 
         lock (preGameLock)
         {
-            if (HasOptimizedDeckApplied && optimizerTargetDeckId >= 0)
+            if (HasOptimizedDeckApplied && optimizerTargetDeckId >= 0 &&
+                optimizerSessionKey == BuildOptimizerSessionKey(preGameNpc, preGameMods))
             {
                 return;
             }
 
-            TryAdoptExistingSaucyDeckLocked(preGameNpc, preGameMods);
+            if (TryAdoptExistingSaucyDeckLocked(preGameNpc, preGameMods))
+            {
+                return;
+            }
+
+            if (!optimizerInProgress && !optimizerTimedOut)
+            {
+                StartDeckOptimizer(preGameNpc, preGameMods);
+            }
         }
     }
 
     public bool TryResolveDeckListIndex(int profileDeckId, out int listIndex)
     {
         listIndex = -1;
-        var uiDecks = uiReaderPrep.cachedState.decks;
-        if (uiDecks.Count == 0)
+        if (profileDeckId < 0 || profileDeckId > 4)
         {
             return false;
         }
 
-        if (profileDeckId >= 0 && profileDeckId < uiDecks.Count && uiDecks[profileDeckId].id == profileDeckId)
+        uiReaderPrep.SyncDeckSelectFromLiveAddon();
+
+        if (TryResolveDeckListIndexFromCache(profileDeckId, uiReaderPrep.cachedState.decks, out listIndex))
         {
-            listIndex = profileDeckId;
             return true;
+        }
+
+        return false;
+    }
+
+    private bool TryResolveDeckListIndexFromCache(int profileDeckId, List<UIStateTriadPrepDeck> uiDecks, out int listIndex)
+    {
+        listIndex = -1;
+        if (uiDecks.Count == 0)
+        {
+            return false;
         }
 
         string targetName = null;
@@ -151,7 +176,7 @@ public class Solver
         {
             for (var idx = 0; idx < uiDecks.Count; idx++)
             {
-                if (uiDecks[idx].name.Equals(targetName, StringComparison.OrdinalIgnoreCase))
+                if (DeckNamesMatch(uiDecks[idx].name, targetName))
                 {
                     listIndex = idx;
                     return true;
@@ -177,6 +202,16 @@ public class Solver
         return false;
     }
 
+    private static bool DeckNamesMatch(string a, string b)
+    {
+        if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b))
+        {
+            return false;
+        }
+
+        return a.Trim().Equals(b.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>
     ///     Resolves a deck index safe to pass to TripleTriadSelDeck.
     ///     When <paramref name="useRecommended" /> is true, returns false while deck evaluation is still running.
@@ -193,7 +228,7 @@ public class Solver
         {
             var preferred = useRecommended ? preGameBestId : manualDeckIndex;
             var fallback = useRecommended ? manualDeckIndex : preGameBestId;
-            deckIndex = ResolveSelectableDeckIndexLocked(preferred, fallback);
+            deckIndex = ResolveSelectableDeckIndexLocked(preferred, fallback, useRecommended);
         }
 
         return true;
@@ -212,7 +247,7 @@ public class Solver
 
     public bool IsDeckSelectPrepBlocking(bool useRecommended)
     {
-        if (!useRecommended)
+        if (!useRecommended && !TriadAutomater.IsCardFarmModeActive())
         {
             return false;
         }
@@ -229,7 +264,7 @@ public class Solver
                 return false;
             }
 
-            if (IsRecommendedDeckOptimizerBlockingLocked())
+            if (IsDeckOptimizerBlockingLocked())
             {
                 return true;
             }
@@ -720,18 +755,29 @@ public class Solver
             return;
         }
 
+        var npcChanged = lastAppliedRunTargetNpcId != npc.Id;
+        var shouldManageDeck = C.UseRecommendedDeck || TriadAutomater.IsCardFarmModeActive();
+
         preGameNpc = npc;
         lastGameNpc = npc;
-        lastAppliedRunTargetNpcId = npc.Id;
 
         if (GameNpcDB.Get().mapNpcs.TryGetValue(npc.Id, out var npcInfo))
         {
             TriadAutomater.EnsureRunTargetCards(npcInfo);
         }
 
-        if (startOptimizer && C.UseRecommendedDeck)
+        if (npcChanged)
         {
-            StartRecommendedDeckOptimizer(npc, preGameMods);
+            lastAppliedRunTargetNpcId = npc.Id;
+            if (shouldManageDeck)
+            {
+                ResetDeckOptimizer();
+            }
+        }
+
+        if (shouldManageDeck && (npcChanged || startOptimizer))
+        {
+            StartDeckOptimizer(npc, preGameMods);
         }
     }
 
@@ -902,22 +948,31 @@ public class Solver
             pauseOptimizerForDeckEval = preGameDecks.Count > 0;
             UpdateDeckOptimizerPause();
 
-            if (C.UseRecommendedDeck && newPreGameNpc != null && !parseCtx.HasErrors)
+            var shouldManageDeck = C.UseRecommendedDeck || TriadAutomater.IsCardFarmModeActive();
+            if (shouldManageDeck && newPreGameNpc != null && !parseCtx.HasErrors)
             {
-                StartRecommendedDeckOptimizer(newPreGameNpc, newPreGameMods);
+                StartDeckOptimizer(newPreGameNpc, newPreGameMods);
             }
-            else
+            else if (!shouldManageDeck)
             {
-                ResetRecommendedDeckOptimizer();
+                ResetDeckOptimizer();
             }
         }
-        else if (!C.UseRecommendedDeck)
+        else if (!C.UseRecommendedDeck && !TriadAutomater.IsCardFarmModeActive())
         {
-            ResetRecommendedDeckOptimizer();
+            ResetDeckOptimizer();
         }
     }
 
-    private void ResetRecommendedDeckOptimizer()
+    public void ClearRecommendedDeckOverride()
+    {
+        lock (preGameLock)
+        {
+            ResetDeckOptimizer();
+        }
+    }
+
+    private void ResetDeckOptimizer()
     {
         if (!optimizerInProgress && !HasOptimizedDeckApplied)
         {
@@ -976,31 +1031,32 @@ public class Solver
 
     private DeckData ParseDeckDataFromProfile(UnsafeReaderProfileGS.PlayerDeck deckOb, GameUIParser ctx)
     {
-        // empty profile decks will result in nulls here
         if (deckOb == null)
         {
             return null;
         }
 
-        var deckData = new DeckData
-        {
-            id = deckOb.id, name = deckOb.name
-        };
-
         var cards = new TriadCard[5];
         for (var cardIdx = 0; cardIdx < 5; cardIdx++)
         {
-            int cardId = deckOb.cardIds[cardIdx];
-            cards[cardIdx] = ctx.cards.FindById(cardId);
+            var cardId = deckOb.cardIds[cardIdx];
+            if (cardId <= 0)
+            {
+                return null;
+            }
 
+            cards[cardIdx] = ctx.cards.FindById(cardId);
             if (cards[cardIdx] == null)
             {
                 ctx.OnFailedCard($"id:{cardId}");
+                return null;
             }
         }
 
-        deckData.solverDeck = ctx.HasErrors ? null : new TriadDeck(cards);
-        return deckData;
+        return new DeckData
+        {
+            id = deckOb.id, name = deckOb.name, solverDeck = new TriadDeck(cards)
+        };
     }
 
     private DeckData ParseDeckDataFromUI(UIStateTriadPrepDeck deckOb, GameUIParser ctx)
@@ -1118,7 +1174,7 @@ public class Solver
 
     private void UpdateDeckOptimizerPause() => deckOptimizer.SetPaused(pauseOptimizerForSolver || pauseOptimizerForDeckEval || pauseOptimizerForOptimizedEval);
 
-    private bool IsRecommendedDeckOptimizerBlockingLocked()
+    private bool IsDeckOptimizerBlockingLocked()
     {
         if (!optimizerInProgress || HasOptimizedDeckApplied)
         {
@@ -1131,7 +1187,7 @@ public class Solver
         }
 
         var elapsedMs = (DateTime.UtcNow - optimizerStartUtc).TotalMilliseconds;
-        if (elapsedMs < RecommendedDeckOptimizerTimeoutMs)
+        if (elapsedMs < DeckOptimizerTimeoutMs)
         {
             return true;
         }
@@ -1141,15 +1197,11 @@ public class Solver
         optimizerPassId++;
         deckOptimizer.AbortProcess();
         PrintOptimizerChat(
-            $"[Saucy] Deck optimizer timed out after {RecommendedDeckOptimizerTimeoutMs / 1000}s; using profile deck ranking.");
+            $"[Saucy] Deck optimizer timed out after {DeckOptimizerTimeoutMs / 1000}s; using profile deck ranking.");
         return false;
     }
 
-    private static void PrintOptimizerChat(string message)
-    {
-        Svc.Log.Info(message);
-        Svc.Framework.Run(() => Svc.Chat.Print(message));
-    }
+    private static void PrintOptimizerChat(string message) => TriadAutomater.PrintTriadDeckLog(message);
 
     private void AnnounceOptimizerSkipOnce(string skipKey, string message)
     {
@@ -1163,7 +1215,7 @@ public class Solver
         PrintOptimizerChat(message);
     }
 
-    private void StartRecommendedDeckOptimizer(TriadNpc npc, List<TriadGameModifier> regionMods)
+    private void StartDeckOptimizer(TriadNpc npc, List<TriadGameModifier> regionMods)
     {
         if (npc == null)
         {
@@ -1223,7 +1275,7 @@ public class Solver
         deckOptimizer.Initialize(npc, regionModsForOptimizer, UnlockedDeckSlots);
 
         optimizerTask = deckOptimizer.Process(npc, regionModsForOptimizer, UnlockedDeckSlots)
-            .ContinueWith(_ => OnRecommendedDeckOptimizerFinished(passId), TaskScheduler.Default);
+            .ContinueWith(_ => OnDeckOptimizerFinished(passId), TaskScheduler.Default);
     }
 
     private static string BuildOptimizerSessionKey(TriadNpc npc, List<TriadGameModifier> regionMods)
@@ -1271,7 +1323,7 @@ public class Solver
         return result.ToArray();
     }
 
-    private void OnRecommendedDeckOptimizerFinished(int passId)
+    private void OnDeckOptimizerFinished(int passId)
     {
         if (passId != optimizerPassId)
         {
@@ -1337,8 +1389,8 @@ public class Solver
                 continue;
             }
 
-            if (!profileDeck.name.Equals(expectedName, StringComparison.OrdinalIgnoreCase) &&
-                !profileDeck.name.Contains("(Saucy)", StringComparison.OrdinalIgnoreCase))
+            // Exact NPC match only — adopting any "(Saucy)" deck would reuse e.g. "Klynthota (Saucy)" while farming Fortemps Manservant and skip the optimizer pass for the actual NPC.
+            if (!profileDeck.name.Equals(expectedName, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -1423,8 +1475,7 @@ public class Solver
 
         var writeMessage =
             $"[Saucy] Optimized deck written to slot {targetDeckId + 1} for {preGameNpc?.Name ?? "match"}.";
-        Svc.Log.Info(writeMessage);
-        Svc.Chat.Print(writeMessage);
+        TriadAutomater.PrintTriadDeckLog(writeMessage);
 
         BeginDeckSelectPostWriteCooldown();
 
@@ -1442,9 +1493,9 @@ public class Solver
         return GetFirstProfileDeckIndex() >= 0 ? GetFirstProfileDeckIndex() : 0;
     }
 
-    private int ResolveSelectableDeckIndexLocked(int preferredDeckId, int fallbackDeckId)
+    private int ResolveSelectableDeckIndexLocked(int preferredDeckId, int fallbackDeckId, bool useRecommended)
     {
-        foreach (var candidate in GetOrderedDeckCandidatesLocked(preferredDeckId, fallbackDeckId))
+        foreach (var candidate in GetOrderedDeckCandidatesLocked(preferredDeckId, fallbackDeckId, useRecommended))
         {
             if (IsDeckSelectableLocked(candidate))
             {
@@ -1459,11 +1510,21 @@ public class Solver
     {
         var preferred = useRecommended ? preGameBestId : manualDeckIndex;
         var fallback = useRecommended ? manualDeckIndex : preGameBestId;
-        return GetOrderedDeckCandidatesLocked(preferred, fallback);
+        return GetOrderedDeckCandidatesLocked(preferred, fallback, useRecommended);
     }
 
-    private IEnumerable<int> GetOrderedDeckCandidatesLocked(int preferredDeckId, int fallbackDeckId)
+    private IEnumerable<int> GetOrderedDeckCandidatesLocked(int preferredDeckId, int fallbackDeckId, bool useRecommended)
     {
+        if (!useRecommended)
+        {
+            if (preferredDeckId >= 0)
+            {
+                yield return preferredDeckId;
+            }
+
+            yield break;
+        }
+
         var optimizedId = HasOptimizedDeckApplied ? optimizerTargetDeckId : -1;
 
         if (optimizedId >= 0)
@@ -1476,7 +1537,9 @@ public class Solver
             yield return preferredDeckId;
         }
 
-        if (fallbackDeckId >= 0 && fallbackDeckId != preferredDeckId && fallbackDeckId != optimizedId)
+        if (fallbackDeckId >= 0 &&
+            fallbackDeckId != preferredDeckId &&
+            fallbackDeckId != optimizedId)
         {
             yield return fallbackDeckId;
         }
@@ -1513,11 +1576,41 @@ public class Solver
                 continue;
             }
 
-            if (IsProfileDeckSelectable(deckIdx))
+            if (IsProfileDeckComplete(deckIdx))
             {
                 yield return deckIdx;
             }
         }
+    }
+
+    private bool IsProfileDeckComplete(int deckId)
+    {
+        if (profileGS == null || profileGS.HasErrors)
+        {
+            return false;
+        }
+
+        var profileDecks = profileGS.GetPlayerDecks();
+        if (profileDecks == null || deckId < 0 || deckId >= profileDecks.Length)
+        {
+            return false;
+        }
+
+        var deck = profileDecks[deckId];
+        if (deck == null)
+        {
+            return false;
+        }
+
+        for (var idx = 0; idx < 5; idx++)
+        {
+            if (deck.cardIds[idx] <= 0)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private bool IsDeckSelectableLocked(int deckId)
@@ -1537,7 +1630,12 @@ public class Solver
             return IsSolverDeckValid(deckData);
         }
 
-        return IsProfileDeckSelectable(deckId);
+        if (IsProfileDeckSelectable(deckId))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private static bool IsSolverDeckValid(DeckData deckData) =>

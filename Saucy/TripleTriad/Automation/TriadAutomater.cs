@@ -3,6 +3,7 @@ using ECommons.Automation;
 using ECommons.Automation.UIInput;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel.Sheets;
 using System;
@@ -14,9 +15,24 @@ namespace Saucy.TripleTriad;
 internal static unsafe class TriadAutomater
 {
     private const int MaxDeckSelectAttemptsPerScreen = 12;
-    private const int DeckSelectRetryCooldownFrames = 15;
+    // Long enough for the deck-select addon to close after a successful confirm; shorter values caused (2x) chat lines from method 0 + method 1 racing the settle check.
+    private const int DeckSelectRetryCooldownFrames = 30;
+    private const int DeckSelectStuckResetFrames = 300;
     private const int DeckSelectPostOptimizerCooldownFrames = Solver.DeckSelectPostProfileWriteFrames;
     private const int MaxDeckSelectMethods = 5;
+    private const int ManualDeckSelectMethods = 5;
+    private static readonly uint[] DeckSelectRecommendedButtonIds =
+    [
+        0, 2, 4
+    ];
+    private static readonly uint[] DeckSelectRandomButtonIds =
+    [
+        3
+    ];
+    private static readonly uint[] DeckSelectConfirmButtonIds =
+    [
+        5, 1
+    ];
     private const int ResultOutcomeFallbackFrames = 45;
 
     private const int RematchRetryCooldownFrames = 15;
@@ -38,13 +54,17 @@ internal static unsafe class TriadAutomater
 
     private static readonly HashSet<int> attemptedDeckIndices = [];
     private static bool deckSelectScreenActive;
+    private static bool deckSelectConfirmedThisScreen;
     private static int deckSelectAttemptCount;
     private static int framesSinceRematchAttempt;
     private static int framesSinceMatchAcceptAttempt;
     private static int framesSinceDeckSelectAttempt;
     private static bool rematchPending;
+    private static bool playUntilAnyCardDropped;
     private static bool sessionEndDismissRequested;
+    private static bool pendingRegistrationDismiss;
     private static int pendingDeckIndex = -1;
+    private static int pendingProfileDeckId = -1;
     private static int pendingSelectMethod;
     private static bool awaitingDeckSelectConfirm;
     private static int framesSinceSessionEndDismiss;
@@ -52,6 +72,11 @@ internal static unsafe class TriadAutomater
     private static int framesWaitingForResultOutcome;
     private static readonly HashSet<int> ownedRewardCardsAtMatchStart = [];
     private static bool matchRewardOwnershipSnapshotted;
+    private static bool triadBoardActiveForSnapshot;
+    private static int pendingCardDropVerifyFrames;
+    private static int pendingCardDropVerifyAttemptsLeft;
+    private static uint pendingCardDropVerifyItemId;
+    private static readonly HashSet<int> farmDropsCountedThisMatch = [];
 
     private static nint cachedResultButtonAddonPtr;
     private static ushort resolvedRematchNodeId;
@@ -84,6 +109,17 @@ internal static unsafe class TriadAutomater
         }
     }
 
+    public static void PrintTriadDeckLog(string message)
+    {
+        Svc.Log.Info(message);
+        if (C.LogTriadDeckOptimizerToChat)
+        {
+            Svc.Chat.Print(message);
+        }
+    }
+
+    private static void PrintManualDeckSelectLog(string message) => Svc.Log.Verbose(message);
+
     public static void RunModule()
     {
         if (PlayUntilAllCardsDropOnce)
@@ -92,7 +128,12 @@ internal static unsafe class TriadAutomater
             EnsureRunTargetCards(ResolveRunTargetNpc());
         }
 
-        if (TTSolver.preGameDecks.Count > 0)
+        if (TickPendingCardDropVerification())
+        {
+            DetectAndProcessCardFarmDrops(pendingCardDropVerifyItemId);
+        }
+
+        if (TTSolver.preGameDecks.Count > 0 && C.UseRecommendedDeck)
         {
             var selectedDeck = C.SelectedDeckIndex;
             if (selectedDeck >= 0 && !TTSolver.preGameDecks.ContainsKey(selectedDeck))
@@ -103,7 +144,12 @@ internal static unsafe class TriadAutomater
 
         if (IsTriadBoardVisible() || IsTriadResultVisible())
         {
-            ResetDeckSelectSession();
+            if (deckSelectScreenActive)
+            {
+                ResetDeckSelectSession();
+            }
+
+            TryForceCloseDeckSelectOverlay();
         }
 
         if (TryRunTriadBoard())
@@ -127,6 +173,17 @@ internal static unsafe class TriadAutomater
         {
             if (!ModuleEnabled)
             {
+                return;
+            }
+
+            // After a finished session, the game often re-pops Match Registration once the result dismisses. One-shot: click Quit so the player doesn't have to.
+            if (pendingRegistrationDismiss && IsMatchRegistrationVisible())
+            {
+                if (TryDismissMatchRegistration())
+                {
+                    pendingRegistrationDismiss = false;
+                }
+
                 return;
             }
 
@@ -167,6 +224,7 @@ internal static unsafe class TriadAutomater
     {
         if (!IsTriadBoardVisible())
         {
+            triadBoardActiveForSnapshot = false;
             return false;
         }
 
@@ -175,8 +233,14 @@ internal static unsafe class TriadAutomater
             return false;
         }
 
-        if (!matchRewardOwnershipSnapshotted)
+        if (IsDeckSelectOverlayVisible())
         {
+            TryForceCloseDeckSelectOverlay();
+        }
+
+        if (!triadBoardActiveForSnapshot)
+        {
+            triadBoardActiveForSnapshot = true;
             SnapshotMatchRewardOwnership();
         }
 
@@ -208,10 +272,12 @@ internal static unsafe class TriadAutomater
         TryGetAddonByName<AtkUnitBase>("TripleTriadRequest", out var addon) && addon->IsVisible;
 
     public static bool IsPrepDeckSelectVisible() =>
-        TryGetAddonByName<AtkUnitBase>("TripleTriadSelDeck", out var addon) &&
-        addon->IsVisible &&
+        IsDeckSelectOverlayVisible() &&
         !IsTriadBoardVisible() &&
         !IsTriadResultVisible();
+
+    private static bool IsDeckSelectOverlayVisible() =>
+        TryGetAddonByName<AtkUnitBase>("TripleTriadSelDeck", out var addon) && addon->IsVisible;
 
     public static void RequestRematch()
     {
@@ -235,7 +301,10 @@ internal static unsafe class TriadAutomater
     /// <summary>True while any tracked NPC reward card is below the per-card target count.</summary>
     public static bool IsCardFarmModeActive() => ModuleEnabled && PlayUntilAllCardsDropOnce;
 
-    /// <summary>True only when every tracked card reached the per-card target count.</summary>
+    /// <summary>Card-farm mode builds and selects Saucy decks even when recommended-deck mode is off.</summary>
+    public static bool ShouldAutoManageDeck() => C.UseRecommendedDeck || IsCardFarmModeActive();
+
+    /// <summary>True only when every tracked card has been obtained at least once this session.</summary>
     public static bool IsCardFarmComplete()
     {
         if (TempCardsWonList.Count == 0)
@@ -243,16 +312,29 @@ internal static unsafe class TriadAutomater
             return false;
         }
 
-        var targetPerCard = Math.Max(1, NumberOfTimes);
         foreach (var wins in TempCardsWonList.Values)
         {
-            if (wins < targetPerCard)
+            if (wins < 1)
             {
                 return false;
             }
         }
 
         return true;
+    }
+
+    public static int GetCardFarmCompletedCount()
+    {
+        var completed = 0;
+        foreach (var wins in TempCardsWonList.Values)
+        {
+            if (wins >= 1)
+            {
+                completed++;
+            }
+        }
+
+        return completed;
     }
 
     public static bool CardFarmHasPendingDrops()
@@ -284,14 +366,36 @@ internal static unsafe class TriadAutomater
         }
     }
 
-    public static void ActivateCardFarmSession(GameNpcInfo? npcInfo = null)
+    public static void ActivateCardFarmSession(GameNpcInfo? npcInfo = null, bool resetProgress = false)
     {
         CardFarmSessionActive = true;
         TTSolver.EnsureRunTargetNpcSynced();
-        StartCardFarmTargets(npcInfo ?? ResolveRunTargetNpc());
+        var targetNpc = npcInfo ?? ResolveRunTargetNpc();
+        if (resetProgress || TempCardsWonList.Count == 0)
+        {
+            StartCardFarmTargets(targetNpc);
+        }
+        else
+        {
+            EnsureRunTargetCards(targetNpc);
+        }
     }
 
-    public static void DeactivateCardFarmSession() => CardFarmSessionActive = false;
+    public static void DeactivateCardFarmSession(bool clearProgress = false)
+    {
+        CardFarmSessionActive = false;
+        if (clearProgress)
+        {
+            ClearCardFarmProgress();
+        }
+    }
+
+    public static void ClearCardFarmProgress()
+    {
+        TempCardsWonList.Clear();
+        lastTargetNpcId = -1;
+        farmDropsCountedThisMatch.Clear();
+    }
 
     public static void StartCardFarmTargets(GameNpcInfo? npcInfo)
     {
@@ -318,11 +422,94 @@ internal static unsafe class TriadAutomater
 
             TempCardsWonList[(uint)cardId] = 0;
         }
+
+        farmDropsCountedThisMatch.Clear();
+    }
+
+    public static void DetectAndProcessCardFarmDrops(uint resultRewardItemId = 0)
+    {
+        if (TempCardsWonList.Count == 0)
+        {
+            return;
+        }
+
+        GameCardDB.Get().Refresh();
+
+        if (resultRewardItemId > 0)
+        {
+            var hinted = GameCardDB.Get().FindByItemId(resultRewardItemId);
+            if (hinted != null && TryProcessNewFarmDrop(hinted, resultRewardItemId))
+            {
+                return;
+            }
+        }
+
+        if (matchRewardOwnershipSnapshotted &&
+            TryGetVerifiedNpcCardDrop(out var droppedCard, resultRewardItemId) &&
+            droppedCard != null)
+        {
+            TryProcessNewFarmDrop(droppedCard, resultRewardItemId);
+        }
+    }
+
+    private static bool TryProcessNewFarmDrop(GameCardInfo cardInfo, uint resultRewardItemId = 0)
+    {
+        if (!TempCardsWonList.ContainsKey((uint)cardInfo.CardId))
+        {
+            return false;
+        }
+
+        if (farmDropsCountedThisMatch.Contains(cardInfo.CardId))
+        {
+            return false;
+        }
+
+        var resultConfirmsDrop = resultRewardItemId > 0 && cardInfo.ItemId == resultRewardItemId;
+        if (resultConfirmsDrop)
+        {
+            RecordFarmCardDrop(cardInfo);
+            return true;
+        }
+
+        if (!matchRewardOwnershipSnapshotted || ownedRewardCardsAtMatchStart.Contains(cardInfo.CardId))
+        {
+            return false;
+        }
+
+        if (!TriadMemoryReads.TryIsCardOwned(cardInfo.CardId))
+        {
+            return false;
+        }
+
+        RecordFarmCardDrop(cardInfo);
+        return true;
+    }
+
+    private static void RecordFarmCardDrop(GameCardInfo cardInfo)
+    {
+        farmDropsCountedThisMatch.Add(cardInfo.CardId);
+        TempCardsWonList[(uint)cardInfo.CardId] = TempCardsWonList[(uint)cardInfo.CardId] + 1;
+
+        C.UpdateStats(stats =>
+        {
+            stats.CardsDroppedWithSaucy++;
+
+            if (stats.CardsWon.ContainsKey((uint)cardInfo.CardId))
+            {
+                stats.CardsWon[(uint)cardInfo.CardId] += 1;
+            }
+            else
+            {
+                stats.CardsWon[(uint)cardInfo.CardId] = 1;
+            }
+        });
+        C.Save();
     }
 
     public static void BeginAutomationSession()
     {
         MatchesCompletedThisSession = 0;
+        playUntilAnyCardDropped = false;
         if (PlayXTimes)
         {
             SyncPlayXTimesSession(NumberOfTimes);
@@ -336,7 +523,7 @@ internal static unsafe class TriadAutomater
 
             TTSolver.EnsureRunTargetNpcSynced();
             RefreshRunTargetFromPrep();
-            ActivateCardFarmSession(ResolveRunTargetNpc());
+            ActivateCardFarmSession(ResolveRunTargetNpc(), resetProgress: true);
         }
         else
         {
@@ -346,6 +533,7 @@ internal static unsafe class TriadAutomater
         ClearRematchPending();
         sessionEndDismissRequested = false;
         framesSinceSessionEndDismiss = 0;
+        pendingRegistrationDismiss = false;
         ResetResultMatchRecording();
         ResetMatchRewardOwnershipSnapshot();
         ResetDeckSelectSession();
@@ -381,9 +569,17 @@ internal static unsafe class TriadAutomater
         {
             SyncPlayXTimesSession(NumberOfTimes);
         }
-        else if (PlayUntilCardDrops && NumberOfTimes <= 0)
+        else if (PlayUntilCardDrops)
         {
-            NumberOfTimes = 1;
+            playUntilAnyCardDropped = false;
+            if (NumberOfTimes <= 0)
+            {
+                NumberOfTimes = 1;
+            }
+        }
+        else
+        {
+            playUntilAnyCardDropped = false;
         }
 
         if (PlayUntilAllCardsDropOnce)
@@ -417,6 +613,8 @@ internal static unsafe class TriadAutomater
         ClearRematchPending();
         sessionEndDismissRequested = true;
         framesSinceSessionEndDismiss = 0;
+        // After the result is dismissed, the registration screen often re-pops; mark it for one-shot auto-quit.
+        pendingRegistrationDismiss = true;
     }
 
     public static void ResetResultMatchRecording()
@@ -440,10 +638,12 @@ internal static unsafe class TriadAutomater
     {
         matchRewardOwnershipSnapshotted = false;
         ownedRewardCardsAtMatchStart.Clear();
+        farmDropsCountedThisMatch.Clear();
     }
 
     public static void SnapshotMatchRewardOwnership()
     {
+        farmDropsCountedThisMatch.Clear();
         ownedRewardCardsAtMatchStart.Clear();
         var npc = ResolveRunTargetNpc();
         if (npc == null)
@@ -465,10 +665,10 @@ internal static unsafe class TriadAutomater
     }
 
     /// <summary>
-    ///     True only when an NPC reward card was not owned at match start and is owned now.
-    ///     Agent rewardItemId alone is not reliable (can reflect the reward pool, not an actual drop).
+    ///     True when an NPC reward card was not owned at match start and is owned now.
+    ///     Uses ownership diff; optional result item id helps disambiguate multi-reward NPCs.
     /// </summary>
-    public static bool TryGetVerifiedNpcCardDrop(out GameCardInfo? droppedCard)
+    public static bool TryGetVerifiedNpcCardDrop(out GameCardInfo? droppedCard, uint resultRewardItemId = 0)
     {
         droppedCard = null;
         if (!matchRewardOwnershipSnapshotted)
@@ -483,37 +683,131 @@ internal static unsafe class TriadAutomater
             return false;
         }
 
+        if (resultRewardItemId > 0)
+        {
+            var hinted = GameCardDB.Get().FindByItemId(resultRewardItemId);
+            if (hinted != null && npc.rewardCards.Contains(hinted.CardId) &&
+                CanCountNpcRewardDrop(hinted.CardId))
+            {
+                droppedCard = hinted;
+                return true;
+            }
+        }
+
         foreach (var cardId in npc.rewardCards)
         {
-            if (ownedRewardCardsAtMatchStart.Contains(cardId))
+            if (!CanCountNpcRewardDrop(cardId))
             {
                 continue;
-            }
-
-            if (!TriadMemoryReads.TryIsCardOwned(cardId))
-            {
-                continue;
-            }
-
-            if (PlayUntilAllCardsDropOnce && TempCardsWonList.Count > 0 &&
-                !TempCardsWonList.ContainsKey((uint)cardId))
-            {
-                continue;
-            }
-
-            if (IsCardFarmModeActive() && TempCardsWonList.TryGetValue((uint)cardId, out var priorWins))
-            {
-                if (priorWins >= Math.Max(1, NumberOfTimes))
-                {
-                    continue;
-                }
             }
 
             droppedCard = GameCardDB.Get().FindById(cardId);
-            return droppedCard != null;
+            if (droppedCard != null)
+            {
+                return true;
+            }
         }
 
         return false;
+    }
+
+    private static bool CanCountNpcRewardDrop(int cardId)
+    {
+        if (ownedRewardCardsAtMatchStart.Contains(cardId))
+        {
+            return false;
+        }
+
+        if (!TriadMemoryReads.TryIsCardOwned(cardId))
+        {
+            return false;
+        }
+
+        if (PlayUntilAllCardsDropOnce && TempCardsWonList.Count > 0 &&
+            !TempCardsWonList.ContainsKey((uint)cardId))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public static void ScheduleCardDropVerification(uint resultRewardItemId)
+    {
+        if (resultRewardItemId > 0)
+        {
+            var hinted = GameCardDB.Get().FindByItemId(resultRewardItemId);
+            if (hinted != null && farmDropsCountedThisMatch.Contains(hinted.CardId))
+            {
+                return;
+            }
+        }
+
+        pendingCardDropVerifyFrames = 5;
+        pendingCardDropVerifyAttemptsLeft = 12;
+        pendingCardDropVerifyItemId = resultRewardItemId;
+    }
+
+    public static bool TickPendingCardDropVerification()
+    {
+        if (pendingCardDropVerifyAttemptsLeft <= 0)
+        {
+            return false;
+        }
+
+        if (--pendingCardDropVerifyFrames > 0)
+        {
+            return false;
+        }
+
+        pendingCardDropVerifyFrames = 5;
+        pendingCardDropVerifyAttemptsLeft--;
+
+        if (pendingCardDropVerifyItemId > 0)
+        {
+            var hinted = GameCardDB.Get().FindByItemId(pendingCardDropVerifyItemId);
+            if (hinted != null && farmDropsCountedThisMatch.Contains(hinted.CardId))
+            {
+                pendingCardDropVerifyAttemptsLeft = 0;
+                return false;
+            }
+        }
+
+        return TempCardsWonList.Count > 0;
+    }
+
+    public static void ProcessVerifiedCardDrop(GameCardInfo droppedCard)
+    {
+        if (droppedCard == null)
+        {
+            return;
+        }
+
+        if (IsCardFarmModeActive() && TempCardsWonList.ContainsKey((uint)droppedCard.CardId))
+        {
+            TryProcessNewFarmDrop(droppedCard, 0);
+            return;
+        }
+
+        if (PlayUntilCardDrops)
+        {
+            NotifyPlayUntilAnyCardDropped();
+        }
+
+        C.UpdateStats(stats =>
+        {
+            stats.CardsDroppedWithSaucy++;
+
+            if (stats.CardsWon.ContainsKey((uint)droppedCard.CardId))
+            {
+                stats.CardsWon[(uint)droppedCard.CardId] += 1;
+            }
+            else
+            {
+                stats.CardsWon[(uint)droppedCard.CardId] = 1;
+            }
+        });
+        C.Save();
     }
 
     /// <summary>
@@ -570,6 +864,14 @@ internal static unsafe class TriadAutomater
                 Svc.Framework.Run(TryDismissResultIfSessionEnded);
             }
 
+            return;
+        }
+
+        if (PlayUntilCardDrops && playUntilAnyCardDropped)
+        {
+            DeactivateCardFarmSession();
+            RequestSessionEndDismiss();
+            Svc.Framework.Run(TryDismissResultIfSessionEnded);
             return;
         }
 
@@ -653,6 +955,16 @@ internal static unsafe class TriadAutomater
         return null;
     }
 
+    public static void NotifyPlayUntilAnyCardDropped()
+    {
+        if (!PlayUntilCardDrops)
+        {
+            return;
+        }
+
+        playUntilAnyCardDropped = true;
+    }
+
     public static bool ShouldContinueTriadSession()
     {
         if (IsCardFarmModeActive())
@@ -662,7 +974,7 @@ internal static unsafe class TriadAutomater
 
         if (PlayUntilCardDrops)
         {
-            return ModuleEnabled && NumberOfTimes > 0;
+            return ModuleEnabled && !playUntilAnyCardDropped;
         }
 
         if (PlayXTimes && NumberOfTimes <= 0)
@@ -680,6 +992,11 @@ internal static unsafe class TriadAutomater
             return false;
         }
 
+        if (PlayUntilCardDrops && playUntilAnyCardDropped)
+        {
+            return false;
+        }
+
         return true;
     }
 
@@ -692,14 +1009,9 @@ internal static unsafe class TriadAutomater
 
         if (lastTargetNpcId != npcInfo.npcId)
         {
-            if (CardFarmSessionActive && lastTargetNpcId >= 0 && TempCardsWonList.Count > 0)
+            if (CardFarmSessionActive && TempCardsWonList.Count > 0)
             {
                 return;
-            }
-
-            if (lastTargetNpcId >= 0)
-            {
-                TempCardsWonList.Clear();
             }
 
             lastTargetNpcId = npcInfo.npcId;
@@ -744,11 +1056,6 @@ internal static unsafe class TriadAutomater
             TTSolver.EnsureRunTargetNpcSynced(
                 deckSelectScreen: uiReaderPrep.HasDeckSelectionUI && !IsMatchRegistrationVisible());
             EnsureRunTargetCards(ResolveRunTargetNpc());
-
-            if (ModuleEnabled && CardFarmSessionActive && TempCardsWonList.Count == 0)
-            {
-                StartCardFarmTargets(ResolveRunTargetNpc());
-            }
         }
         catch (Exception ex)
         {
@@ -1156,6 +1463,38 @@ internal static unsafe class TriadAutomater
         FindResultButton(addon, ResultRematchNodeId) != null ||
         HasVisibleResultActionButtons(addon);
 
+    internal static unsafe bool TryClickGoldSaucerCardGridButton(nint addonPtr, int pageIndex, int cellIndex)
+    {
+        if (addonPtr == nint.Zero || cellIndex < 0 || cellIndex >= 30)
+        {
+            return false;
+        }
+
+        var addon = (AddonGSInfoCardList*)addonPtr;
+        var atkUnit = (AtkUnitBase*)addon;
+
+        if (pageIndex >= 0 && pageIndex != addon->SelectedPage)
+        {
+            addon->RequestedPage = pageIndex;
+            addon->TabController.SetTabIndexAndCallBack(pageIndex);
+            atkUnit->Update(0);
+        }
+
+        return TryClickGoldSaucerCardCell(addonPtr, cellIndex);
+    }
+
+    internal static unsafe bool TryClickGoldSaucerCardCell(nint addonPtr, int cellIndex)
+    {
+        if (addonPtr == nint.Zero || cellIndex < 0 || cellIndex >= 30)
+        {
+            return false;
+        }
+
+        var addon = (AddonGSInfoCardList*)addonPtr;
+        var cardButton = (AtkComponentButton*)(*(nint*)((byte*)addon + 0x3D0 + (cellIndex * sizeof(nint))));
+        return TryClickAddonButton((AtkUnitBase*)addon, cardButton, requireEnabled: false);
+    }
+
     private static bool TryClickAddonButton(AtkUnitBase* addon, AtkComponentButton* button, bool requireEnabled = true)
     {
         if (button == null || button->AtkResNode == null || !button->AtkResNode->IsVisible())
@@ -1181,6 +1520,9 @@ internal static unsafe class TriadAutomater
         }
     }
 
+    private static bool IsDeckSelectionSettled(AtkUnitBase* addon) =>
+        addon == null || !addon->IsVisible || IsTriadBoardVisible();
+
     private static void DeckSelect()
     {
         try
@@ -1201,12 +1543,35 @@ internal static unsafe class TriadAutomater
                 return;
             }
 
+            if (IsTriadBoardVisible())
+            {
+                deckSelectConfirmedThisScreen = true;
+                ClearDeckSelectPending();
+                ResetDeckSelectSession();
+                return;
+            }
+
+            if (deckSelectConfirmedThisScreen)
+            {
+                if (IsDeckSelectionSettled(addon))
+                {
+                    return;
+                }
+
+                // If the addon never closed after we fired a confirm, fall back to retrying — but only after a generous wait so we don't double-fire on slow UI transitions.
+                if (DeckSelectFramesOpen < DeckSelectStuckResetFrames)
+                {
+                    return;
+                }
+
+                deckSelectConfirmedThisScreen = false;
+            }
+
             DeckSelectFramesOpen++;
 
             if (!deckSelectScreenActive)
             {
                 ResetDeckSelectSession();
-                ResetMatchRewardOwnershipSnapshot();
                 deckSelectScreenActive = true;
             }
 
@@ -1222,21 +1587,35 @@ internal static unsafe class TriadAutomater
 
             if (awaitingDeckSelectConfirm)
             {
-                if (!addon->IsVisible)
+                if (IsDeckSelectionSettled(addon))
                 {
+                    deckSelectConfirmedThisScreen = true;
                     ClearDeckSelectPending();
                     return;
                 }
 
-                if (pendingSelectMethod + 1 < MaxDeckSelectMethods)
+                if (pendingSelectMethod + 1 < GetMaxDeckSelectMethods())
                 {
                     pendingSelectMethod++;
                     TryApplyDeckSelection(addon, pendingDeckIndex, pendingSelectMethod);
                     framesSinceDeckSelectAttempt = DeckSelectRetryCooldownFrames;
+                    if (IsDeckSelectionSettled(addon))
+                    {
+                        deckSelectConfirmedThisScreen = true;
+                        ClearDeckSelectPending();
+                    }
+
                     return;
                 }
 
-                attemptedDeckIndices.Add(pendingDeckIndex);
+                if (IsDeckSelectionSettled(addon))
+                {
+                    deckSelectConfirmedThisScreen = true;
+                    ClearDeckSelectPending();
+                    return;
+                }
+
+                attemptedDeckIndices.Add(pendingProfileDeckId);
                 deckSelectAttemptCount++;
                 ClearDeckSelectPending();
                 return;
@@ -1258,13 +1637,15 @@ internal static unsafe class TriadAutomater
                 return;
             }
 
-            if (!awaitingDeckSelectConfirm && pendingSelectMethod == 0 && deckSelectAttemptCount == 0 &&
-                attemptedDeckIndices.Count == 0)
+            uiReaderPrep.RefreshDeckSelectList((nint)addon);
+
+            // Wait while the deck optimizer is still building the Saucy deck — otherwise we fire the in-game Recommended button before the optimized deck is written.
+            if (ShouldAutoManageDeck() && TTSolver.IsDeckSelectPrepBlocking(C.UseRecommendedDeck))
             {
-                uiReaderPrep.RefreshDeckSelectList((nint)addon);
+                return;
             }
 
-            if (C.UseRecommendedDeck && deckSelectAttemptCount == 0 && attemptedDeckIndices.Count == 0)
+            if (ShouldAutoManageDeck() && deckSelectAttemptCount == 0 && attemptedDeckIndices.Count == 0)
             {
                 if (TrySelectVisibleSaucyDeck(addon))
                 {
@@ -1288,7 +1669,7 @@ internal static unsafe class TriadAutomater
                 }
             }
 
-            if (!TTSolver.TryGetDeckSelectCandidate(C.UseRecommendedDeck, C.SelectedDeckIndex, attemptedDeckIndices,
+            if (!TTSolver.TryGetDeckSelectCandidate(ShouldAutoManageDeck(), C.SelectedDeckIndex, attemptedDeckIndices,
                 out var deck))
             {
                 if (C.UseRecommendedDeck && TTSolver.HasOptimizedDeckApplied &&
@@ -1311,7 +1692,7 @@ internal static unsafe class TriadAutomater
                     return;
                 }
 
-                if (TryRandomDeckButton(addon))
+                if (C.UseRecommendedDeck && TryRandomDeckButton(addon))
                 {
                     deckSelectAttemptCount++;
                     framesSinceDeckSelectAttempt = DeckSelectRetryCooldownFrames;
@@ -1325,9 +1706,6 @@ internal static unsafe class TriadAutomater
                 return;
             }
 
-            PrintDeckSelectAttemptMessage(deck);
-
-            var listIndex = deck;
             if (!TTSolver.TryResolveDeckListIndex(deck, out var resolvedListIndex))
             {
                 Svc.Chat.PrintError($"[Saucy] Could not find deck {deck + 1} in the selection list.");
@@ -1336,11 +1714,13 @@ internal static unsafe class TriadAutomater
                 return;
             }
 
-            listIndex = resolvedListIndex;
-            pendingDeckIndex = listIndex;
+            PrintDeckSelectAttemptMessage(deck, resolvedListIndex);
+
+            pendingProfileDeckId = deck;
+            pendingDeckIndex = resolvedListIndex;
             pendingSelectMethod = 0;
             awaitingDeckSelectConfirm = true;
-            TryApplyDeckSelection(addon, listIndex, 0);
+            TryApplyDeckSelection(addon, resolvedListIndex, 0);
             framesSinceDeckSelectAttempt = DeckSelectRetryCooldownFrames;
         }
         catch (Exception ex)
@@ -1349,56 +1729,175 @@ internal static unsafe class TriadAutomater
         }
     }
 
+    private static void TryHideDeckSelectOverlayOnly(AtkUnitBase* addon)
+    {
+        var agentHandle = Svc.GameGui.FindAgentInterface((nint)addon);
+        if (agentHandle.Address != nint.Zero)
+        {
+            var agent = (AgentInterface*)agentHandle.Address;
+            agent->HideAddon();
+            agent->Hide();
+            addon->Update(0);
+        }
+
+        try
+        {
+            addon->IsVisible = false;
+            addon->Update(0);
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Verbose(ex, "[TriadAutomater] Direct deck select hide failed");
+        }
+    }
+
+    private static int forceCloseDeckSelectCooldown;
+
+    private static void TryForceCloseDeckSelectOverlay()
+    {
+        if (!IsDeckSelectOverlayVisible())
+        {
+            forceCloseDeckSelectCooldown = 0;
+            return;
+        }
+
+        if (forceCloseDeckSelectCooldown > 0)
+        {
+            forceCloseDeckSelectCooldown--;
+            return;
+        }
+
+        if (!TryGetAddonByName("TripleTriadSelDeck", out AtkUnitBase* addon))
+        {
+            return;
+        }
+
+        forceCloseDeckSelectCooldown = 2;
+
+        if (IsTriadBoardVisible())
+        {
+            TryHideDeckSelectOverlayOnly(addon);
+            ClearDeckSelectPending();
+            return;
+        }
+
+        // Skip any confirm path once we've already confirmed this screen — otherwise the lingering overlay double-fires deck select (shows up as "(2x)" in chat).
+        var deckValue = pendingDeckIndex >= 0 ? pendingDeckIndex : pendingProfileDeckId;
+        if (!deckSelectConfirmedThisScreen && deckValue >= 0)
+        {
+            TryFireDeckCallback(addon, 0, deckValue);
+            TryFireDeckCallback(addon, 1, deckValue);
+            addon->Update(0);
+            if (IsDeckSelectionSettled(addon))
+            {
+                ClearDeckSelectPending();
+                return;
+            }
+
+            TryClickDeckConfirmButton(addon);
+            addon->Update(0);
+            if (IsDeckSelectionSettled(addon))
+            {
+                ClearDeckSelectPending();
+                return;
+            }
+        }
+
+        TryHideDeckSelectOverlayOnly(addon);
+        if (IsDeckSelectionSettled(addon))
+        {
+            ClearDeckSelectPending();
+        }
+    }
+
     private static bool TryBlindDeckSelect(AtkUnitBase* addon)
     {
-        Svc.Chat.Print("[Saucy] Selecting first deck...");
+        PrintTriadDeckLog("[Saucy] Selecting first deck...");
         foreach (var listIndex in new[]
         {
             0, 1, 2, 3, 4
         })
         {
-            TryClickDeckListRow(addon, listIndex);
-            TryClickDeckConfirmButton(addon);
+            TryFireDeckCallback(addon, 1, listIndex);
+            TryFireDeckCallback(addon, 0, listIndex);
             addon->Update(0);
-            if (!addon->IsVisible)
+            if (IsDeckSelectionSettled(addon))
             {
+                deckSelectConfirmedThisScreen = true;
                 return true;
             }
         }
 
-        return TryRecommendedDeckButton(addon) || TryClickAnyAddonButton(addon, true);
+        // Even if the addon didn't visibly settle in this loop, we've fired multiple confirms — block subsequent fallbacks to avoid (2x).
+        deckSelectConfirmedThisScreen = true;
+        return false;
+    }
+
+    private static void TryFireDeckCallback(AtkUnitBase* addon, int eventId, int deckValue)
+    {
+        try
+        {
+            var values = stackalloc AtkValue[1];
+            values[0] = new()
+            {
+                Type = AtkValueType.Int, Int = deckValue
+            };
+            addon->FireCallback((uint)eventId, values);
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Verbose(ex, "[TriadAutomater] Deck callback {0} failed for deck {1}", eventId, deckValue);
+        }
+    }
+
+    private static int GetMaxDeckSelectMethods() =>
+        ShouldAutoManageDeck() ? MaxDeckSelectMethods : ManualDeckSelectMethods;
+
+    private static bool IsDeckSelectSpecialButton(uint buttonId) =>
+        Array.IndexOf(DeckSelectRecommendedButtonIds, buttonId) >= 0 ||
+        Array.IndexOf(DeckSelectRandomButtonIds, buttonId) >= 0;
+
+    private static bool TryClickDeckSelectButton(AtkUnitBase* addon, uint buttonId)
+    {
+        var button = addon->GetComponentButtonById(buttonId);
+        if (button == null || !button->IsEnabled || button->AtkResNode == null || !button->AtkResNode->IsVisible())
+        {
+            return false;
+        }
+
+        try
+        {
+            button->ClickAddonButton(addon);
+            addon->Update(0);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Verbose(ex, "[TriadAutomater] Deck select button {0} click failed", buttonId);
+            return false;
+        }
     }
 
     private static bool TryClickAnyAddonButton(AtkUnitBase* addon, bool skipRandom = false)
     {
         foreach (var buttonId in new uint[]
         {
-            0, 1, 2, 3, 4, 5, 6
+            5, 1, 6
         })
         {
-            if (skipRandom && buttonId == 3)
+            if (skipRandom && Array.IndexOf(DeckSelectRandomButtonIds, buttonId) >= 0)
             {
                 continue;
             }
 
-            var button = addon->GetComponentButtonById(buttonId);
-            if (button == null || !button->IsEnabled || button->AtkResNode == null || !button->AtkResNode->IsVisible())
+            if (IsDeckSelectSpecialButton(buttonId))
             {
                 continue;
             }
 
-            try
+            if (TryClickDeckSelectButton(addon, buttonId) && !addon->IsVisible)
             {
-                button->ClickAddonButton(addon);
-                addon->Update(0);
-                if (!addon->IsVisible)
-                {
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Svc.Log.Verbose(ex, "[TriadAutomater] Addon button {0} click failed", buttonId);
+                return true;
             }
         }
 
@@ -1408,6 +1907,7 @@ internal static unsafe class TriadAutomater
     private static bool TrySelectVisibleSaucyDeck(AtkUnitBase* addon)
     {
         var expectedName = TTSolver.GetExpectedSaucyDeckName();
+        var npcName = TTSolver.preGameNpc?.Name ?? string.Empty;
         for (var idx = 0; idx < uiReaderPrep.cachedState.decks.Count; idx++)
         {
             var deck = uiReaderPrep.cachedState.decks[idx];
@@ -1416,20 +1916,20 @@ internal static unsafe class TriadAutomater
                 continue;
             }
 
-            var isSaucyDeck = deck.name.Contains("(Saucy)", StringComparison.OrdinalIgnoreCase);
+            // "(Sa" rather than "(Saucy)" — long NPC names can truncate the tag in the deck row.
+            var isSaucyDeck = deck.name.Contains("(Sa", StringComparison.OrdinalIgnoreCase);
             if (!isSaucyDeck)
             {
                 continue;
             }
 
-            if (!string.IsNullOrWhiteSpace(expectedName) &&
-                !deck.name.Equals(expectedName, StringComparison.OrdinalIgnoreCase) &&
-                !deck.name.StartsWith(TTSolver.preGameNpc?.Name ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrWhiteSpace(expectedName) && !DeckRowMatchesNpc(deck.name, expectedName, npcName))
             {
                 continue;
             }
 
-            Svc.Chat.Print($"[Saucy] Selecting \"{deck.name}\"...");
+            PrintTriadDeckLog($"[Saucy] Selecting \"{deck.name}\"...");
+            pendingProfileDeckId = deck.id;
             pendingDeckIndex = idx;
             pendingSelectMethod = 0;
             awaitingDeckSelectConfirm = true;
@@ -1440,6 +1940,42 @@ internal static unsafe class TriadAutomater
         return false;
     }
 
+    private static bool DeckRowMatchesNpc(string deckRowName, string expectedName, string npcName)
+    {
+        if (deckRowName.Equals(expectedName, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrEmpty(npcName) &&
+            deckRowName.StartsWith(npcName, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var deckBase = StripSaucyTagAndEllipsis(deckRowName);
+        if (deckBase.Length < 4)
+        {
+            return false;
+        }
+
+        // Long names get truncated by the game; accept when the deck-row base is a prefix of the NPC name.
+        return !string.IsNullOrEmpty(npcName) &&
+               npcName.StartsWith(deckBase, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string StripSaucyTagAndEllipsis(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return string.Empty;
+        }
+
+        var tagIdx = name.IndexOf("(Sa", StringComparison.OrdinalIgnoreCase);
+        var stripped = tagIdx > 0 ? name.Substring(0, tagIdx) : name;
+        return stripped.TrimEnd(' ', '.', '…');
+    }
+
     private static void TryApplyDeckSelection(AtkUnitBase* addon, int deckIndex, int method)
     {
         switch (method)
@@ -1448,13 +1984,13 @@ internal static unsafe class TriadAutomater
                 TryClickDeckListRow(addon, deckIndex);
                 break;
             case 1:
-                TryClickDeckConfirmButton(addon);
+                TryFireDeckCallback(addon, 1, deckIndex);
                 break;
             case 2:
-                TryClickDeckListRow(addon, deckIndex);
+                TryFireDeckCallback(addon, 0, deckIndex);
                 break;
             case 3:
-                TryClickAnyAddonButton(addon);
+                TryFireDeckCallback(addon, 2, deckIndex);
                 break;
             case 4:
                 TryClickDeckConfirmButton(addon);
@@ -1462,66 +1998,90 @@ internal static unsafe class TriadAutomater
         }
 
         addon->Update(0);
+
+        if (IsDeckSelectionSettled(addon))
+        {
+            deckSelectConfirmedThisScreen = true;
+            ClearDeckSelectPending();
+        }
     }
 
     private static void ClearDeckSelectPending()
     {
         pendingDeckIndex = -1;
+        pendingProfileDeckId = -1;
         pendingSelectMethod = 0;
         awaitingDeckSelectConfirm = false;
     }
 
-    private static bool TryRecommendedDeckButton(AtkUnitBase* addon)
+    private static bool TryClickDeckConfirmButton(AtkUnitBase* addon)
     {
-        foreach (var buttonId in new uint[]
+        if (TryClickDeckSelectButtonByLabel(addon, "Confirm", "OK", "Bestätigen", "決定"))
         {
-            0, 2, 4, 1, 3, 5
-        })
-        {
-            var button = addon->GetComponentButtonById(buttonId);
-            if (button == null || !button->IsEnabled || button->AtkResNode == null || !button->AtkResNode->IsVisible())
-            {
-                continue;
-            }
+            return true;
+        }
 
-            Svc.Chat.Print("[Saucy] Using recommended deck...");
-            try
+        foreach (var buttonId in DeckSelectConfirmButtonIds)
+        {
+            if (TryClickDeckSelectButton(addon, buttonId))
             {
-                button->ClickAddonButton(addon);
-                addon->Update(0);
                 return true;
-            }
-            catch (Exception ex)
-            {
-                Svc.Log.Verbose(ex, "[TriadAutomater] Recommended deck button {0} click failed", buttonId);
             }
         }
 
         return false;
     }
 
-    private static bool TryClickDeckConfirmButton(AtkUnitBase* addon)
+    private static bool TryClickDeckSelectButtonByLabel(AtkUnitBase* addon, params string[] labels)
     {
-        foreach (var buttonId in new uint[]
+        for (var i = 0; i < addon->UldManager.NodeListCount; i++)
         {
-            1, 0, 5
-        })
-        {
-            var button = addon->GetComponentButtonById(buttonId);
-            if (button == null || !button->IsEnabled || button->AtkResNode == null || !button->AtkResNode->IsVisible())
+            var node = addon->UldManager.NodeList[i];
+            if (node == null)
             {
                 continue;
             }
 
-            try
+            var button = TryGetButtonFromNode(node);
+            if (button == null)
             {
-                button->ClickAddonButton(addon);
-                addon->Update(0);
-                return true;
+                continue;
             }
-            catch (Exception ex)
+
+            var label = GetResultButtonLabel(button);
+            if (string.IsNullOrWhiteSpace(label))
             {
-                Svc.Log.Verbose(ex, "[TriadAutomater] Deck confirm button {0} click failed", buttonId);
+                continue;
+            }
+
+            foreach (var token in labels)
+            {
+                if (label.Contains(token, StringComparison.OrdinalIgnoreCase))
+                {
+                    return TryClickAddonButton(addon, button);
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryRecommendedDeckButton(AtkUnitBase* addon)
+    {
+        PrintTriadDeckLog("[Saucy] Using recommended deck...");
+        foreach (var buttonId in DeckSelectRecommendedButtonIds)
+        {
+            if (TryClickDeckSelectButton(addon, buttonId))
+            {
+                addon->Update(0);
+                // Latch the "we've fired a confirm" flag eagerly — addon close may lag by several frames and the early-exit needs to block the specific-deck fallback in the meantime.
+                deckSelectConfirmedThisScreen = true;
+                if (IsDeckSelectionSettled(addon))
+                {
+                    ClearDeckSelectPending();
+                }
+
+                return true;
             }
         }
 
@@ -1541,7 +2101,7 @@ internal static unsafe class TriadAutomater
             return false;
         }
 
-        Svc.Chat.Print("[Saucy] Using random deck...");
+        PrintTriadDeckLog("[Saucy] Using random deck...");
         try
         {
             button->ClickAddonButton(addon);
@@ -1555,19 +2115,34 @@ internal static unsafe class TriadAutomater
         }
     }
 
-    private static void PrintDeckSelectAttemptMessage(int deck)
+    private static void PrintDeckSelectAttemptMessage(int deck, int listIndex)
     {
+        string message;
         if (deckSelectAttemptCount > 0 || attemptedDeckIndices.Count > 0)
         {
-            Svc.Chat.Print($"[Saucy] Retrying with deck {deck + 1}...");
+            message = $"[Saucy] Retrying with deck {deck + 1}...";
         }
         else if (C.UseRecommendedDeck && TTSolver.HasOptimizedDeckApplied)
         {
-            Svc.Chat.Print($"[Saucy] Selecting optimized deck {deck + 1}...");
+            message = $"[Saucy] Selecting optimized deck {deck + 1}...";
         }
         else
         {
-            Svc.Chat.Print($"[Saucy] Selecting deck {deck + 1}...");
+            var deckName = listIndex >= 0 && listIndex < uiReaderPrep.cachedState.decks.Count
+                ? uiReaderPrep.cachedState.decks[listIndex].name
+                : null;
+            message = !string.IsNullOrWhiteSpace(deckName)
+                ? $"[Saucy] Selecting \"{deckName}\"..."
+                : $"[Saucy] Selecting deck {deck + 1}...";
+        }
+
+        if (C.UseRecommendedDeck)
+        {
+            PrintTriadDeckLog(message);
+        }
+        else
+        {
+            PrintManualDeckSelectLog(message);
         }
     }
 
@@ -1641,6 +2216,7 @@ internal static unsafe class TriadAutomater
     {
         ClearDeckSelectPending();
         deckSelectScreenActive = false;
+        deckSelectConfirmedThisScreen = false;
         attemptedDeckIndices.Clear();
         deckSelectAttemptCount = 0;
         framesSinceDeckSelectAttempt = 0;
@@ -1693,6 +2269,12 @@ internal static unsafe class TriadAutomater
                 return;
             }
 
+            // Hold the Challenge click until the deck optimizer is done — otherwise we open deck select before the Saucy deck exists and fall back to the in-game Recommended button.
+            if (ShouldAutoManageDeck() && TTSolver.IsDeckSelectPrepBlocking(C.UseRecommendedDeck))
+            {
+                return;
+            }
+
             if (framesSinceMatchAcceptAttempt > 0)
             {
                 framesSinceMatchAcceptAttempt--;
@@ -1723,14 +2305,8 @@ internal static unsafe class TriadAutomater
 
             if (PlayUntilAllCardsDropOnce)
             {
-                if (!CardFarmSessionActive)
-                {
-                    ActivateCardFarmSession(ResolveRunTargetNpc());
-                }
-                else if (TempCardsWonList.Count == 0)
-                {
-                    StartCardFarmTargets(ResolveRunTargetNpc());
-                }
+                EnsureCardFarmArmed();
+                EnsureRunTargetCards(ResolveRunTargetNpc());
             }
 
             SnapshotMatchRewardOwnership();
@@ -1739,6 +2315,91 @@ internal static unsafe class TriadAutomater
         {
             Svc.Log.Error(ex, "[TriadAutomater] AcceptTriadMatch failed");
         }
+    }
+
+    private static bool TryDismissMatchRegistration()
+    {
+        if (!TryGetAddonByName<AtkUnitBase>("TripleTriadRequest", out var addon) || !addon->IsVisible)
+        {
+            return true;
+        }
+
+        // Try the Quit button by label first (most reliable across game updates).
+        if (TryClickRegistrationButtonByLabel(addon, "Quit", "Beenden", "Quitter", "Abandon", "Decline", "やめる"))
+        {
+            return !addon->IsVisible;
+        }
+
+        // Fallback: common adjacent component IDs (Challenge is 41).
+        foreach (var buttonId in new uint[] { 42, 43, 50 })
+        {
+            var button = addon->GetComponentButtonById(buttonId);
+            if (button == null || button->AtkResNode == null || !button->AtkResNode->IsVisible() || !button->IsEnabled)
+            {
+                continue;
+            }
+
+            try
+            {
+                button->ClickAddonButton(addon);
+                addon->Update(0);
+                if (!addon->IsVisible)
+                {
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Svc.Log.Verbose(ex, "[TriadAutomater] Registration button {0} click failed", buttonId);
+            }
+        }
+
+        // Last resort: addon-level close.
+        try
+        {
+            addon->Close(true);
+            addon->Update(0);
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Verbose(ex, "[TriadAutomater] Registration Close(true) failed");
+        }
+
+        return !addon->IsVisible;
+    }
+
+    private static bool TryClickRegistrationButtonByLabel(AtkUnitBase* addon, params string[] labels)
+    {
+        for (var i = 0; i < addon->UldManager.NodeListCount; i++)
+        {
+            var node = addon->UldManager.NodeList[i];
+            if (node == null)
+            {
+                continue;
+            }
+
+            var button = TryGetButtonFromNode(node);
+            if (button == null)
+            {
+                continue;
+            }
+
+            var label = GetResultButtonLabel(button);
+            if (string.IsNullOrWhiteSpace(label))
+            {
+                continue;
+            }
+
+            foreach (var token in labels)
+            {
+                if (label.Contains(token, StringComparison.OrdinalIgnoreCase))
+                {
+                    return TryClickAddonButton(addon, button);
+                }
+            }
+        }
+
+        return false;
     }
 
     public static bool Logout()

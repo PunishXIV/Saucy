@@ -4,9 +4,11 @@ using Dalamud.Game.Text.SeStringHandling.Payloads;
 using ECommons.Automation;
 using ECommons.GameHelpers;
 using ECommons.Throttlers;
+using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.IPC;
 using System;
 using System.Collections.Generic;
@@ -19,9 +21,11 @@ namespace Saucy.TripleTriad;
 internal enum MultiAreaRouteStepKind
 {
     Teleport,
+    Aethernet,
     Mount,
     MoveTo,
     Interact,
+    SelectYesno,
     WaitForZone
 }
 
@@ -29,12 +33,14 @@ internal sealed class MultiAreaRouteStep
 {
     public required MultiAreaRouteStepKind Kind { get; init; }
     public uint AetheryteId { get; init; }
+    public string? AethernetShardName { get; init; }
     public Vector3 Position { get; init; }
     public bool Fly { get; init; }
     public uint ObjectDataId { get; init; }
     public uint ArrivalObjectDataId { get; init; }
     public float Range { get; init; } = 6f;
     public bool DismountFirst { get; init; }
+    public string? YesnoPromptText { get; init; }
 }
 
 internal sealed class MultiAreaRoute
@@ -74,13 +80,55 @@ internal static class MultiAreaRouteRegistry
 {
     private static readonly IReadOnlyList<MultiAreaRoute> Routes =
     [
-        JeunoFirstWalkRoute.Route
+        JeunoFirstWalkRoute.Route,
+        FortempsManservantRoute.Route
     ];
 
     public static MultiAreaRoute? FindRoute(MapLinkPayload location) =>
         Routes.FirstOrDefault(route => route.Matches(location));
 
     public static bool MatchesDestination(MapLinkPayload location) => FindRoute(location) != null;
+}
+
+internal static class AethernetShardLookup
+{
+    private static readonly Dictionary<string, uint> Cache = new(StringComparer.OrdinalIgnoreCase);
+
+    public static uint Resolve(string shardName)
+    {
+        if (string.IsNullOrEmpty(shardName))
+        {
+            return 0;
+        }
+
+        if (Cache.TryGetValue(shardName, out var cached))
+        {
+            return cached;
+        }
+
+        var sheet = Svc.Data.GetExcelSheet<AetheryteSheet>();
+        if (sheet == null)
+        {
+            return 0;
+        }
+
+        foreach (var row in sheet)
+        {
+            if (row.IsAetheryte)
+            {
+                continue;
+            }
+
+            var name = row.PlaceName.Value.Name.ToString();
+            if (name.Equals(shardName, StringComparison.OrdinalIgnoreCase))
+            {
+                Cache[shardName] = row.RowId;
+                return row.RowId;
+            }
+        }
+
+        return 0;
+    }
 }
 
 internal static unsafe class MultiAreaRouteExecutor
@@ -138,9 +186,11 @@ internal static unsafe class MultiAreaRouteExecutor
         var complete = step.Kind switch
         {
             MultiAreaRouteStepKind.Teleport => TickTeleport(step),
+            MultiAreaRouteStepKind.Aethernet => TickAethernet(step, execution),
             MultiAreaRouteStepKind.Mount => TickMount(),
             MultiAreaRouteStepKind.MoveTo => TickMoveTo(step, execution),
             MultiAreaRouteStepKind.Interact => TickInteract(step),
+            MultiAreaRouteStepKind.SelectYesno => TickSelectYesno(step),
             MultiAreaRouteStepKind.WaitForZone => TickWaitForZone(execution),
             var _ => false
         };
@@ -208,6 +258,92 @@ internal static unsafe class MultiAreaRouteExecutor
 
         var territoryId = GetAetheryteTerritoryId(step.AetheryteId);
         return territoryId != 0 && Svc.ClientState.TerritoryType == territoryId;
+    }
+
+    private static bool TickAethernet(MultiAreaRouteStep step, RouteExecution execution)
+    {
+        var shardId = ResolveShardId(step);
+        if (shardId == 0)
+        {
+            Svc.Chat.PrintError($"[Saucy] Could not resolve aethernet shard \"{step.AethernetShardName}\".");
+            execution.Failed = true;
+            return false;
+        }
+
+        if (!execution.StepActionStarted)
+        {
+            // Already at the shard? Treat as complete so we don't bounce the player on partial runs.
+            var shardPos = AetheryteHelper.GetAethernetShardWorldPosition(shardId);
+            if (shardPos != null && Vector3.Distance(Player.Position, shardPos.Value) <= 10f)
+            {
+                return true;
+            }
+
+            if (Lifestream.IsBusyNow() || !Player.Interactable || IsBetweenAreas() || Player.IsAnimationLocked)
+            {
+                return false;
+            }
+
+            if (!Lifestream.TryAethernetTeleportById(shardId))
+            {
+                Svc.Chat.PrintError($"[Saucy] Lifestream could not aethernet for {execution.Route.Name}.");
+                execution.Failed = true;
+                return false;
+            }
+
+            execution.StepActionStarted = true;
+            execution.StepStartedUtc = DateTime.UtcNow;
+            return false;
+        }
+
+        if (Lifestream.IsBusyNow() || IsBetweenAreas() || !Player.Interactable || Player.IsAnimationLocked)
+        {
+            return false;
+        }
+
+        // Settle window so vnav doesn't fire before the aethernet animation fully releases the player.
+        return DateTime.UtcNow - execution.StepStartedUtc > TimeSpan.FromSeconds(2);
+    }
+
+    private static uint ResolveShardId(MultiAreaRouteStep step)
+    {
+        if (!string.IsNullOrEmpty(step.AethernetShardName))
+        {
+            return AethernetShardLookup.Resolve(step.AethernetShardName);
+        }
+
+        return step.AetheryteId;
+    }
+
+    private static bool TickSelectYesno(MultiAreaRouteStep step)
+    {
+        if (string.IsNullOrEmpty(step.YesnoPromptText))
+        {
+            return false;
+        }
+
+        var addon = TriadAutomater.GetSpecificYesno(step.YesnoPromptText);
+        if (addon == null)
+        {
+            return false;
+        }
+
+        if (!EzThrottler.Throttle("SaucyRouteYesno"))
+        {
+            return false;
+        }
+
+        try
+        {
+            new AddonMaster.SelectYesno(addon).Yes();
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Verbose(ex, "[SaucyRoute] SelectYesno Yes click failed");
+            return false;
+        }
+
+        return true;
     }
 
     private static bool TickMount()
@@ -395,6 +531,62 @@ internal static unsafe class MultiAreaRouteExecutor
         public required MapLinkPayload Location;
         public required uint TargetTerritoryId;
     }
+}
+
+internal static class FortempsManservantRoute
+{
+    private const uint FoundationAetheryteId = 70;
+    private const uint GatekeeperNpcDataId = 1011217;
+    private const uint FortempsManorTerritoryId = 433;
+    private const string LastVigilShardName = "The Last Vigil";
+    private const string EnterManorPromptText = "Enter Fortemps Manor?";
+    private static readonly Vector3 GatekeeperApproachPoint = new(16.014f, 16.010f, -11.590f);
+    private static readonly uint[] FortempsManorTerritoryIds = [FortempsManorTerritoryId];
+
+    internal static readonly MultiAreaRoute Route = new()
+    {
+        Name = "Fortemps Manor",
+        TooltipHint = "Foundation aetheryte, aethernet to The Last Vigil, then into the manor.",
+        ArrivalTerritoryIds = FortempsManorTerritoryIds,
+        Matches = location =>
+        {
+            if (location.TerritoryType.RowId == FortempsManorTerritoryId)
+            {
+                return true;
+            }
+
+            var placeName = location.PlaceName.ToString();
+            return placeName.Contains("Fortemps Manor", StringComparison.OrdinalIgnoreCase);
+        },
+        Timeout = TimeSpan.FromSeconds(240),
+        Steps =
+        [
+            new()
+            {
+                Kind = MultiAreaRouteStepKind.Teleport, AetheryteId = FoundationAetheryteId
+            },
+            new()
+            {
+                Kind = MultiAreaRouteStepKind.Aethernet, AethernetShardName = LastVigilShardName
+            },
+            new()
+            {
+                Kind = MultiAreaRouteStepKind.MoveTo, Position = GatekeeperApproachPoint, Fly = false, ArrivalObjectDataId = GatekeeperNpcDataId
+            },
+            new()
+            {
+                Kind = MultiAreaRouteStepKind.Interact, ObjectDataId = GatekeeperNpcDataId, Range = 6f, DismountFirst = true
+            },
+            new()
+            {
+                Kind = MultiAreaRouteStepKind.SelectYesno, YesnoPromptText = EnterManorPromptText
+            },
+            new()
+            {
+                Kind = MultiAreaRouteStepKind.WaitForZone
+            }
+        ]
+    };
 }
 
 internal static class JeunoFirstWalkRoute

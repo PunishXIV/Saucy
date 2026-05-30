@@ -28,6 +28,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
     private ImGuiTextFilterPtr searchFilterCard;
     private ImGuiTextFilterPtr searchFilterNpc;
 
+    private int pluginNavTargetCardId = -1;
     private int selectedCardIdx;
     private int selectedNpcIdx;
     private bool showNotOwnedOnly;
@@ -182,7 +183,11 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         }
     }
 
-    public void OnUIStateChanged(UIStateTriadCardList uiState) => RebuildCardList(uiState);
+    public void OnUIStateChanged(UIStateTriadCardList uiState)
+    {
+        RebuildCardList(uiState);
+        SyncSelectionFromGame(uiState);
+    }
 
     private void RebuildCardList(UIStateTriadCardList uiState)
     {
@@ -193,6 +198,9 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         }
 
         filterMode = uiState.filterMode;
+        var preserveCardId = selectedCardIdx >= 0 && selectedCardIdx < listCards.Count
+            ? listCards[selectedCardIdx].Item1.Id
+            : -1;
         listCards.Clear();
 
         if (!IsGameDataReady)
@@ -236,7 +244,41 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
             listCards.Sort((a, b) => a.Item1.SortOrder.CompareTo(b.Item1.SortOrder));
         }
 
-        selectedCardIdx = -1;
+        if (preserveCardId >= 0)
+        {
+            selectedCardIdx = listCards.FindIndex(x => x.Item1.Id == preserveCardId);
+        }
+    }
+
+    private void SyncSelectionFromGame(UIStateTriadCardList uiState)
+    {
+        if (!IsGameDataReady || listCards.Count == 0)
+        {
+            return;
+        }
+
+        var card = uiReaderCardList.ResolveSelectedCard();
+        if (pluginNavTargetCardId >= 0)
+        {
+            if (card == null || card.Id != pluginNavTargetCardId)
+            {
+                return;
+            }
+
+            pluginNavTargetCardId = -1;
+        }
+
+        if (card == null)
+        {
+            selectedCardIdx = -1;
+            return;
+        }
+
+        var listIdx = listCards.FindIndex(x => x.Item1.Id == card.Id);
+        if (listIdx >= 0)
+        {
+            selectedCardIdx = listIdx;
+        }
     }
 
     public override void PreDraw()
@@ -314,7 +356,9 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
 
     private void DrawCardsTab()
     {
-        if (showNotOwnedOnly)
+        var showNotOwnedCheckbox = filterMode == 0;
+
+        if (showNotOwnedCheckbox && showNotOwnedOnly)
         {
             RefreshOwnershipIfNeeded();
         }
@@ -328,7 +372,7 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
             {
                 (var cardOb, var cardInfo) = listCards[idx];
                 if ((showNpcMatchesOnly && cardInfo.RewardNpcs.Count <= 0) ||
-                    (showNotOwnedOnly && IsCardOwned(cardOb.Id)))
+                    (showNotOwnedCheckbox && showNotOwnedOnly && IsCardOwned(cardOb.Id)))
                 {
                     continue;
                 }
@@ -359,17 +403,19 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
             C.Save();
         }
 
-        if (ImGui.Checkbox("Not owned only", ref showNotOwnedOnly))
+        if (showNotOwnedCheckbox)
         {
-            if (showNotOwnedOnly)
+            if (ImGui.Checkbox("Not owned only", ref showNotOwnedOnly))
             {
-                RefreshOwnershipIfNeeded(force: true);
+                if (showNotOwnedOnly)
+                {
+                    RefreshOwnershipIfNeeded(force: true);
+                }
+                C.TriadCollection.CheckCardNotOwnedOnly = showNotOwnedOnly;
+                C.Save();
             }
-            C.TriadCollection.CheckCardNotOwnedOnly = showNotOwnedOnly;
-            C.Save();
         }
-
-        if (filterMode != 0)
+        else if (filterMode != 0)
         {
             ImGui.TextColored(SaucyTheme.ColorOr(SaucyTheme.BodyText, ImGuiCol.TextDisabled), "(Collection filtering is active)");
         }
@@ -575,12 +621,14 @@ public unsafe class PluginWindowCardSearch : Window, IDisposable
         (var cardOb, var cardInfo) = listCards[selectedCardIdx];
         if (cardOb != null && cardInfo != null)
         {
+            pluginNavTargetCardId = cardOb.Id;
+
             var filterEnum = (filterMode == 1) ? GameCardCollectionFilter.OnlyOwned :
                 (filterMode == 2) ? GameCardCollectionFilter.OnlyMissing :
                 GameCardCollectionFilter.All;
 
             var collectionPos = cardInfo.Collection[(int)filterEnum];
-            uiReaderCardList.SetPageAndGridView(collectionPos.PageIndex, collectionPos.CellIndex);
+            uiReaderCardList.SetPageAndGridView(collectionPos.PageIndex, collectionPos.CellIndex, cardOb.Id);
         }
     }
 

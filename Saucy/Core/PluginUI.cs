@@ -359,7 +359,7 @@ public unsafe class PluginUI : Window
         {
             TriadAutomater.PlayUntilAllCardsDropOnce = false;
             TriadAutomater.PlayUntilCardDrops = false;
-            TriadAutomater.DeactivateCardFarmSession();
+            TriadAutomater.DeactivateCardFarmSession(clearProgress: true);
         }
 
         if (!TriadAutomater.PlayXTimes)
@@ -634,7 +634,7 @@ public unsafe class PluginUI : Window
             }
             else
             {
-                TriadAutomater.DeactivateCardFarmSession();
+                TriadAutomater.DeactivateCardFarmSession(clearProgress: true);
             }
         }
         ImGui.SameLine();
@@ -676,10 +676,29 @@ public unsafe class PluginUI : Window
         {
             C.UseRecommendedDeck = useAutoDeck;
             C.Save();
+            if (!useAutoDeck)
+            {
+                TTSolver.ClearRecommendedDeckOverride();
+            }
         }
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker("Runs the TriadBuddy deck simulator (~2000 simulated games per candidate) against the NPC's rules and reward pool to build the best deck from your owned cards, then writes it to a profile slot named \"{NPC} (Saucy)\". Does NOT click the in-game \"Recommended Deck\" button.");
 
         if (C.UseRecommendedDeck)
         {
+            using var indent = ImRaii.PushIndent();
+            var logDeckOptimizer = C.LogTriadDeckOptimizerToChat;
+            if (ImGui.Checkbox("Log deck optimizer to chat", ref logDeckOptimizer))
+            {
+                C.LogTriadDeckOptimizerToChat = logDeckOptimizer;
+                C.Save();
+            }
+
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip("Prints deck selection and optimizer messages to chat (off by default).");
+            }
+
             return;
         }
 
@@ -719,7 +738,7 @@ public unsafe class PluginUI : Window
             TriadAutomater.PlayXTimes = true;
             TriadAutomater.PlayUntilCardDrops = false;
             TriadAutomater.PlayUntilAllCardsDropOnce = false;
-            TriadAutomater.DeactivateCardFarmSession();
+            TriadAutomater.DeactivateCardFarmSession(clearProgress: true);
             if (TriadAutomater.NumberOfTimes <= 0)
             {
                 TriadAutomater.NumberOfTimes = 1;
@@ -733,7 +752,7 @@ public unsafe class PluginUI : Window
             TriadAutomater.PlayUntilCardDrops = true;
             TriadAutomater.PlayXTimes = false;
             TriadAutomater.PlayUntilAllCardsDropOnce = false;
-            TriadAutomater.DeactivateCardFarmSession();
+            TriadAutomater.DeactivateCardFarmSession(clearProgress: true);
             if (TriadAutomater.NumberOfTimes <= 0)
             {
                 TriadAutomater.NumberOfTimes = 1;
@@ -750,11 +769,11 @@ public unsafe class PluginUI : Window
             TriadAutomater.NumberOfTimes = 1;
             if (TriadAutomater.ModuleEnabled)
             {
-                TriadAutomater.ActivateCardFarmSession(CurrentNPC);
+                TriadAutomater.ActivateCardFarmSession(CurrentNPC, resetProgress: true);
             }
             else
             {
-                TriadAutomater.TempCardsWonList.Clear();
+                TriadAutomater.ClearCardFarmProgress();
             }
 
             TriadAutomater.OnRunModeSettingsChanged();
@@ -788,10 +807,9 @@ public unsafe class PluginUI : Window
             var onlyUnobtained = C.OnlyUnobtainedCards;
             if (ImGui.Checkbox("Only unobtained cards", ref onlyUnobtained))
             {
-                TriadAutomater.TempCardsWonList.Clear();
                 C.OnlyUnobtainedCards = onlyUnobtained;
                 C.Save();
-                TriadAutomater.EnsureRunTargetCards(runTargetNpc);
+                TriadAutomater.StartCardFarmTargets(runTargetNpc);
             }
 
             foreach (var entry in TriadAutomater.TempCardsWonList)
@@ -800,7 +818,7 @@ public unsafe class PluginUI : Window
                 var cardName = cardInfo != null
                     ? TriadCardDB.Get().FindById(cardInfo.CardId)?.Name ?? $"Card #{entry.Key}"
                     : $"Card #{entry.Key}";
-                ImGui.Text($"\u2022 {cardName} \u2014 {entry.Value}/{TriadAutomater.NumberOfTimes}");
+                ImGui.Text($"\u2022 {cardName} \u2014 {entry.Value}/1");
             }
 
             if (onlyUnobtained && TriadAutomater.TempCardsWonList.Count == 0)

@@ -60,6 +60,24 @@ public class GameCardDB
         return null;
     }
 
+    public GameCardInfo? FindByItemId(uint itemId)
+    {
+        if (itemId == 0)
+        {
+            return null;
+        }
+
+        foreach (var kvp in mapCards)
+        {
+            if (kvp.Value != null && kvp.Value.ItemId == itemId)
+            {
+                return kvp.Value;
+            }
+        }
+
+        return null;
+    }
+
     public GameCardInfo? FindByGridLocation(int pageIdx, int cellIdx, int filterMode)
     {
         if (pageIdx < 0 || cellIdx < 0 || filterMode < 0 || filterMode > 2)
