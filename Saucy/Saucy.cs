@@ -58,6 +58,7 @@ public sealed class Saucy : IDalamudPlugin
         PunishLibMain.Init(pluginInterface, "Saucy", new AboutPlugin() { Sponsor = "https://ko-fi.com/taurenkey" });
         EzConfig.Migrate<Configuration>();
         C = EzConfig.Init<Configuration>();
+        C.MigrateModuleSettings();
         P = this;
 
         EzConfigGui.Init(new PluginUI());
@@ -280,12 +281,12 @@ public sealed class Saucy : IDalamudPlugin
                 values[0] = new()
                 {
                     Type = AtkValueType.Int,
-                    Int = 0,
+                    Int = 0
                 };
                 values[1] = new()
                 {
                     Type = AtkValueType.UInt,
-                    UInt = 1,
+                    UInt = 1
                 };
                 addon->FireCallback(2, values);
             }
@@ -427,10 +428,10 @@ public sealed class Saucy : IDalamudPlugin
     public void Dispose()
     {
         Svc.Commands.RemoveHandler(commandName);
+        Svc.PluginInterface.UiBuilder.OpenMainUi -= EzConfigGui.Open;
         Svc.Framework.Update -= RunBot;
         lock (_lockObj) { DisposeAudio(); }
         CufModule.FuncHook?.Dispose();
-        LimbManager.Dispose();
         ModuleManager.Dispose();
         ECommonsMain.Dispose(); //Don't forget!
         P = null!; //necessary to free the reference for GC

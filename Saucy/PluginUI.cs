@@ -1,9 +1,12 @@
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using ECommons.ImGuiMethods;
 using FFTriadBuddy;
+using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
 using PunishLib.ImGuiMethods;
 using Saucy.CuffACur;
@@ -22,11 +25,59 @@ namespace Saucy;
 // to do any cleanup
 public unsafe class PluginUI : Window
 {
-    public PluginUI() : base("Saucy##Saucy")
+    public PluginUI() : base("Saucy###Saucy")
     {
-        Size = new Vector2(520, 420);
+        Size = new Vector2(310, 440);
         SizeCondition = ImGuiCond.FirstUseEver;
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new Vector2(280, 240),
+            MaximumSize = new Vector2(float.MaxValue, float.MaxValue),
+        };
     }
+
+    private static readonly string[] SidebarLabels =
+    {
+        "Out on a Limb", "Cuff-a-Cur",
+        "Slice is Right", "Wind Blows",
+        "Triple Triad", "Mini-Cactpot",
+        "Stats", "About",
+#if DEBUG
+        "Debug",
+#endif
+        "Saucy theme",
+        "MACHINES", "GATES", "OTHER GAMES",
+    };
+
+    private static float CalcSidebarWidth()
+    {
+        var style = ImGui.GetStyle();
+        float maxLabel = 0f;
+        foreach (var s in SidebarLabels)
+        {
+            var w = ImGui.CalcTextSize(s).X;
+            if (w > maxLabel) maxLabel = w;
+        }
+        var checkboxExtra = ImGui.GetFrameHeight() + style.ItemInnerSpacing.X;
+        return maxLabel + checkboxExtra + style.WindowPadding.X * 2f + style.FramePadding.X * 2f;
+    }
+
+    private enum NavItem
+    {
+        TripleTriad,
+        CuffACur,
+        OutOnALimb,
+        SliceIsRight,
+        AnyWayTheWindBlows,
+        MiniCactpot,
+        Stats,
+        About,
+#if DEBUG
+        Debug,
+#endif
+    }
+
+    private NavItem _selectedNav = NavItem.TripleTriad;
 
     public GameNpcInfo? CurrentNPC
     {
@@ -43,539 +94,637 @@ public unsafe class PluginUI : Window
 
     public bool Enabled { get; set; } = false;
 
-    public override void Draw()
+    private static int _lastMgp = -1;
+    private static long _lastMgpIncreaseMs;
+    private const long DeltaVisibleMs = 30_000;
+
+    public override void PreDraw()
     {
-        ImGuiEx.EzTabBar("###Games",
-            ("Cuff-a-Cur", DrawCufTab, null, false),
-            ("Triple Triad", DrawTriadTab, null, false),
-            ("Out on a Limb", () =>
-            {
-                ImGuiEx.EzTabBar("Out on a Limb",
-                    ("Main", P.LimbManager.DrawSettings, null, false),
-                    ("Debug", P.LimbManager.DrawDebug, null, false));
-            }, null, false),
-            ("Other Games", DrawOtherGamesTab, null, false),
-            ("Stats", DrawStatsTab, null, false),
-            ("About", () => AboutTab.Draw("Saucy"), null, false)
-#if DEBUG
-            , ("Debug", DrawDebugTab, null, false)
-#endif
-            );
+        if (C.SaucyThemeEnabled)
+            SaucyTheme.Push();
+
+        var info = BuildBannerInfo();
+
+        if (_lastMgp >= 0 && info.Mgp > _lastMgp)
+            _lastMgpIncreaseMs = Environment.TickCount64;
+        _lastMgp = info.Mgp;
+
+        var showDelta = info.SessionDelta > 0
+                     && Environment.TickCount64 - _lastMgpIncreaseMs < DeltaVisibleMs;
+        var delta = showDelta ? $"  +{info.SessionDelta:N0}" : "";
+        var status = info.ModuleStatus == "Idle" ? "Idle" : $"Enabled: {info.ModuleStatus}";
+        WindowName = $"Saucy  \u2022  {status}  \u2022  MGP {info.Mgp:N0}{delta}###Saucy";
     }
 
-    private void DrawOtherGamesTab()
+    public override void PostDraw()
     {
-        //ImGui.Checkbox("Enable Air Force One Module", ref AirForceOneModule.ModuleEnabled);
+        SaucyTheme.Pop();
+    }
 
-        if (ImGui.Checkbox("Enable Slice is Right Module", ref C.SliceIsRightModuleEnabled))
+    private const uint MgpItemId = 29;
+
+    public override void Draw()
+    {
+        var sidebarW = CalcSidebarWidth();
+        var availY = ImGui.GetContentRegionAvail().Y;
+
+        using (var sidebar = ImRaii.Child("##Sidebar", new Vector2(sidebarW, availY), true))
         {
-            if (C.SliceIsRightModuleEnabled)
-                C.EnabledModules.Add(ModuleManager.GetModule<SliceIsRight>()!.InternalName);
-            else
-                C.EnabledModules.Remove(ModuleManager.GetModule<SliceIsRight>()!.InternalName);
+            if (sidebar) DrawSidebar();
         }
 
-        if (ImGui.Checkbox("Enable Auto Mini-Cactpot", ref C.EnableAutoMiniCactpot))
+        ImGui.SameLine();
+
+        using (var panel = ImRaii.Child("##Panel", new Vector2(0, availY), false))
         {
-            if (C.EnableAutoMiniCactpot)
-                C.EnabledModules.Add(ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName);
-            else
-                C.EnabledModules.Remove(ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName);
+            if (panel) DrawPanel();
+        }
+    }
+
+    private void DrawSidebar()
+    {
+        DrawSidebarHeader("MACHINES");
+        NavSelectable("Out on a Limb", NavItem.OutOnALimb);
+        NavSelectable("Cuff-a-Cur", NavItem.CuffACur);
+
+        ImGui.Dummy(new Vector2(0, 6));
+        DrawSidebarHeader("GATES");
+        NavSelectable("Slice is Right", NavItem.SliceIsRight);
+        NavSelectable("Wind Blows", NavItem.AnyWayTheWindBlows);
+
+        ImGui.Dummy(new Vector2(0, 6));
+        DrawSidebarHeader("OTHER GAMES");
+        NavSelectable("Triple Triad", NavItem.TripleTriad);
+        NavSelectable("Mini-Cactpot", NavItem.MiniCactpot);
+
+        ImGui.Dummy(new Vector2(0, 6));
+        ImGui.Separator();
+        NavSelectable("Stats", NavItem.Stats);
+        NavSelectable("About", NavItem.About);
+#if DEBUG
+        NavSelectable("Debug", NavItem.Debug);
+#endif
+
+        var style = ImGui.GetStyle();
+        var checkboxH = ImGui.GetFrameHeight();
+        var bottomBlockH = style.ItemSpacing.Y + 1f + style.ItemSpacing.Y + checkboxH;
+        var targetY = ImGui.GetWindowHeight() - style.WindowPadding.Y - bottomBlockH;
+        if (targetY > ImGui.GetCursorPosY())
+            ImGui.SetCursorPosY(targetY);
+
+        ImGui.Separator();
+        var on = C.SaucyThemeEnabled;
+        if (ImGui.Checkbox("Saucy theme", ref on))
+        {
+            C.SaucyThemeEnabled = on;
+            C.Save();
+        }
+    }
+
+    private void NavSelectable(string label, NavItem item)
+    {
+        if (ImGui.Selectable(label, _selectedNav == item))
+            _selectedNav = item;
+    }
+
+    private static void DrawSidebarHeader(string label)
+    {
+        ImGui.TextColored(SaucyTheme.ColorOr(SaucyTheme.SectionTitle, ImGuiCol.TextDisabled), label);
+    }
+
+    private void DrawPanel()
+    {
+        switch (_selectedNav)
+        {
+            case NavItem.TripleTriad:        DrawTriadTab(); break;
+            case NavItem.CuffACur:           DrawCuffPanel(); break;
+            case NavItem.OutOnALimb:         DrawLimbPanel(); break;
+            case NavItem.SliceIsRight:       DrawSliceIsRightPanel(); break;
+            case NavItem.AnyWayTheWindBlows: DrawWindBlowsPanel(); break;
+            case NavItem.MiniCactpot:        DrawMiniCactpotPanel(); break;
+            case NavItem.Stats:              DrawStatsTab(); break;
+            case NavItem.About:              AboutTab.Draw("Saucy"); break;
+#if DEBUG
+            case NavItem.Debug:              DrawDebugTab(); break;
+#endif
+        }
+    }
+
+    private static void DrawPanelHeader(string title, string? subtitle = null)
+    {
+        ImGui.TextColored(SaucyTheme.ColorOr(SaucyTheme.SectionTitle, ImGuiCol.Text), title);
+        if (!string.IsNullOrEmpty(subtitle))
+        {
+            ImGui.SameLine();
+            ImGui.TextDisabled(" \u2014 " + subtitle);
+        }
+        ImGui.Separator();
+        ImGui.Dummy(new Vector2(0, 2));
+    }
+
+    private void DrawCuffPanel()
+    {
+        DrawPanelHeader("Cuff-a-Cur", "punch the cactuar");
+
+        var enabled = CufModule.ModuleEnabled;
+        if (ImGui.Checkbox("Enable##Cuff", ref enabled))
+        {
+            CufModule.ModuleEnabled = enabled;
+            C.EnableCuffModule = enabled;
+            ToggleEnabledModule("CuffACurModule", enabled);
+            if (enabled && TriadAutomater.ModuleEnabled)
+                TriadAutomater.ModuleEnabled = false;
         }
 
-        if (ImGui.Checkbox("Enable Any Way the Wind Blows Module", ref C.AnyWayTheWindowBlowsModuleEnabled))
+        ImGui.Dummy(new Vector2(0, 4));
+        DrawCuffBody();
+    }
+
+    private void DrawLimbPanel()
+    {
+        DrawPanelHeader("Out on a Limb", "swing the hatchet");
+        ImGuiEx.EzTabBar("###Limb",
+            ("Main", P.LimbManager.DrawSettings, null, false),
+            ("Debug", P.LimbManager.DrawDebug, null, false));
+    }
+
+    private static void DrawSliceIsRightPanel()
+    {
+        DrawPanelHeader("Slice is Right", "dodge the falling slices");
+        var enabled = C.SliceIsRightModuleEnabled;
+        if (ImGui.Checkbox("Enable##Slice", ref enabled))
         {
-            if (C.AnyWayTheWindowBlowsModuleEnabled)
-                C.EnabledModules.Add(ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName);
-            else
-                C.EnabledModules.Remove(ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName);
+            C.SliceIsRightModuleEnabled = enabled;
+            ToggleEnabledModule(ModuleManager.GetModule<SliceIsRight>()!.InternalName, enabled);
         }
+    }
+
+    private static void DrawWindBlowsPanel()
+    {
+        DrawPanelHeader("Any Way the Wind Blows", "chocobo wind reader");
+        var enabled = C.AnyWayTheWindBlowsModuleEnabled;
+        if (ImGui.Checkbox("Enable##Wind", ref enabled))
+        {
+            C.AnyWayTheWindBlowsModuleEnabled = enabled;
+            ToggleEnabledModule(ModuleManager.GetModule<AnyWayTheWindBlows>()!.InternalName, enabled);
+        }
+    }
+
+    private static void DrawMiniCactpotPanel()
+    {
+        DrawPanelHeader("Mini-Cactpot", "daily 3\u00d73 scratcher");
+        var enabled = C.EnableAutoMiniCactpot;
+        if (ImGui.Checkbox("Enable##Mini", ref enabled))
+        {
+            C.EnableAutoMiniCactpot = enabled;
+            ToggleEnabledModule(ModuleManager.GetModule<MiniCactpot.MiniCactpot>()!.InternalName, enabled);
+        }
+    }
+
+    private static BannerInfo BuildBannerInfo()
+    {
+        var im  = InventoryManager.Instance();
+        var mgp = im != null ? im->GetInventoryItemCount(MgpItemId, false, false, false, 0) : 0;
+
+        string status;
+        if (TriadAutomater.ModuleEnabled) status = "Triple Triad";
+        else if (CufModule.ModuleEnabled) status = "Cuff-a-Cur";
+        else if (P?.LimbManager?.Cfg?.EnableLimb == true) status = "Out on a Limb";
+        else if (C.SliceIsRightModuleEnabled) status = "Slice is Right";
+        else if (C.AnyWayTheWindBlowsModuleEnabled) status = "Any Way the Wind Blows";
+        else if (C.EnableAutoMiniCactpot) status = "Mini-Cactpot";
+        else status = "Idle";
+
+        var sessionDelta = C.SessionStats.MGPWon + C.SessionStats.CuffMGP + C.SessionStats.LimbMGP;
+
+        return new BannerInfo
+        {
+            Mgp = mgp,
+            SessionDelta = sessionDelta,
+            ModuleStatus = status,
+        };
+    }
+
+    private static void ToggleEnabledModule(string internalName, bool enabled)
+    {
+        if (enabled) C.EnabledModules.Add(internalName);
+        else C.EnabledModules.Remove(internalName);
+        C.Save();
+    }
+
+    private static void DrawCuffBody()
+    {
+        if (ImGui.Checkbox("Play X Amount of Times", ref TriadAutomater.PlayXTimes) && TriadAutomater.NumberOfTimes <= 0)
+            TriadAutomater.NumberOfTimes = 1;
+
+        if (!TriadAutomater.PlayXTimes) return;
+
+        ImGui.PushItemWidth(150f * ImGuiHelpers.GlobalScale);
+        ImGui.Text("How many times:");
+        ImGui.SameLine();
+        if (ImGui.InputInt("###NumberOfTimes", ref TriadAutomater.NumberOfTimes))
+        {
+            if (TriadAutomater.NumberOfTimes <= 0)
+                TriadAutomater.NumberOfTimes = 1;
+        }
+
+        ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
+
+        var playSound = C.PlaySound;
+        ImGui.Columns(2, default, false);
+        if (ImGui.Checkbox("Play sound upon completion", ref playSound))
+        {
+            C.PlaySound = playSound;
+            C.Save();
+        }
+        if (playSound)
+        {
+            ImGui.NextColumn();
+            DrawSoundPicker();
+        }
+        ImGui.Columns();
     }
 
     private void DrawStatsTab()
     {
-        if (ImGui.BeginTabBar("Stats"))
-        {
-            if (ImGui.BeginTabItem("Lifetime"))
-            {
-                DrawStatsTab(C.Stats, out var reset);
+        DrawStatsToolbar();
 
-                if (reset)
-                {
-                    C.Stats = new();
-                    C.Save();
-                }
+        var (life, sess) = (C.Stats, C.SessionStats);
 
-                ImGui.EndTabItem();
-            }
-            if (ImGui.BeginTabItem("Session"))
-            {
-                DrawStatsTab(C.SessionStats, out var reset);
-                if (reset)
-                    C.SessionStats = new();
-                ImGui.EndTabItem();
-            }
-
-            ImGui.EndTabBar();
-        }
+        DrawStatsCard("Triple Triad", TriadHeadline(life), () => DrawTriadRows(life, sess));
+        DrawStatsCard("Cuff-a-Cur", CuffHeadline(life), () => DrawCuffRows(life, sess));
+        DrawStatsCard("Out on a Limb", LimbHeadline(life), () => DrawLimbRows(life, sess));
     }
 
-    private void DrawStatsTab(Stats stat, out bool reset)
+    private static void DrawStatsToolbar()
     {
-        if (ImGui.BeginTabBar("Games"))
+        ImGui.TextDisabled("Hold Ctrl to confirm resets.");
+        ImGui.SameLine();
+        const string lifeLbl = "Reset Lifetime";
+        const string sessLbl = "Reset Session";
+        var pad = ImGui.GetStyle().FramePadding.X * 2f;
+        var lifeW = ImGui.CalcTextSize(lifeLbl).X + pad;
+        var sessW = ImGui.CalcTextSize(sessLbl).X + pad;
+        var spacing = ImGui.GetStyle().ItemSpacing.X;
+        var rightX = ImGui.GetWindowContentRegionMax().X - lifeW - sessW - spacing;
+        if (rightX > ImGui.GetCursorPosX())
+            ImGui.SetCursorPosX(rightX);
+        if (ImGui.Button(lifeLbl) && ImGui.GetIO().KeyCtrl)
         {
-            if (ImGui.BeginTabItem("Cuff-a-Cur"))
-            {
-                DrawCuffStats(stat);
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("Triple Triad"))
-            {
-                DrawTTStats(stat);
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem($"Out on a Limb"))
-            {
-                DrawLimbStats(stat);
-                ImGui.EndTabItem();
-            }
-
-            ImGui.EndTabBar();
+            C.Stats = new();
+            C.Save();
+        }
+        ImGui.SameLine();
+        if (ImGui.Button(sessLbl) && ImGui.GetIO().KeyCtrl)
+        {
+            C.SessionStats = new();
+            C.SessionStartTime = DateTime.UtcNow;
         }
 
-        ImGui.PushItemWidth(ImGui.GetContentRegionAvail().X);
-        reset = ImGui.Button("RESET STATS (Hold Ctrl)", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y)) && ImGui.GetIO().KeyCtrl;
+        ImGui.Dummy(new Vector2(0, 2));
     }
 
-    private void DrawLimbStats(Stats stat)
+    private static string TriadHeadline(Stats s)
     {
-        ImGui.BeginChild("Limb Stats", new Vector2(0, ImGui.GetContentRegionAvail().Y - 30f), true);
-        ImGui.Columns(3, default, false);
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText(ImGuiColors.DalamudRed, "Out on a Limb", true);
-        ImGuiHelpers.ScaledDummy(10f);
-        ImGui.Columns(2, default, false);
-        ImGui.NextColumn();
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText("Games Played", true);
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText("MGP Won", true);
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText($"{stat.LimbGamesPlayed:N0}");
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText($"{stat.LimbMGP:N0}");
-
-        ImGui.EndChild();
+        if (s.GamesPlayedWithSaucy == 0) return "no games played";
+        var pct = Math.Round(s.GamesWonWithSaucy / (double)s.GamesPlayedWithSaucy * 100, 1);
+        return $"{s.GamesPlayedWithSaucy:N0} games \u00b7 {pct}% win";
     }
 
-    private void DrawCuffStats(Stats stat)
+    private static string CuffHeadline(Stats s)
+        => s.CuffGamesPlayed == 0 ? "no games played" : $"{s.CuffGamesPlayed:N0} games";
+
+    private static string LimbHeadline(Stats s)
+        => s.LimbGamesPlayed == 0 ? "no games played" : $"{s.LimbGamesPlayed:N0} games";
+
+    private static void DrawTriadRows(Stats life, Stats sess)
     {
-        ImGui.BeginChild("Cuff Stats", new Vector2(0, ImGui.GetContentRegionAvail().Y - 30f), true);
-        ImGui.Columns(3, default, false);
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText(ImGuiColors.DalamudRed, "Cuff-a-cur", true);
-        ImGuiHelpers.ScaledDummy(10f);
-        ImGui.NextColumn();
-        ImGui.NextColumn();
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText("Games Played", true);
-        ImGui.NextColumn();
-        ImGui.NextColumn();
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText($"{stat.CuffGamesPlayed:N0}");
-        ImGui.NextColumn();
-        ImGui.NextColumn();
-        ImGui.Spacing();
-        ImGuiEx.CenterColumnText("BRUISING!", true);
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText("PUNISHING!!", true);
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText("BRUTAL!!!!", true);
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText($"{stat.CuffBruisings:N0}");
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText($"{stat.CuffPunishings:N0}");
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText($"{stat.CuffBrutals:N0}");
-        ImGui.NextColumn();
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText("MGP Won", true);
-        ImGui.NextColumn();
-        ImGui.NextColumn();
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText($"{stat.CuffMGP:N0}");
+        if (!BeginStatsTable("triad")) return;
+        StatsHeader();
+        StatsRow("Games", life.GamesPlayedWithSaucy, sess.GamesPlayedWithSaucy);
+        StatsRow("Wins", life.GamesWonWithSaucy, sess.GamesWonWithSaucy);
+        StatsRow("Losses", life.GamesLostWithSaucy, sess.GamesLostWithSaucy);
+        StatsRow("Draws", life.GamesDrawnWithSaucy, sess.GamesDrawnWithSaucy);
+        StatsRow("Cards won", life.CardsDroppedWithSaucy, sess.CardsDroppedWithSaucy);
+        StatsRow("Card drop value", $"{GetDroppedCardValues(life):N0}", $"{GetDroppedCardValues(sess):N0}");
+        StatsRow("MGP won", $"{life.MGPWon:N0}", $"{sess.MGPWon:N0}", true, SessionMgpPerHour(sess.MGPWon));
 
-        ImGui.EndChild();
+        var (lifeNpcCount, lifeNpcName) = TopNpcCell(life);
+        var (sessNpcCount, sessNpcName) = TopNpcCell(sess);
+        StatsRow("Most played NPC", lifeNpcCount, sessNpcCount, tooltipLife: lifeNpcName, tooltipSess: sessNpcName);
+
+        var (lifeCardCount, lifeCardName) = TopCardCell(life);
+        var (sessCardCount, sessCardName) = TopCardCell(sess);
+        StatsRow("Most won card", lifeCardCount, sessCardCount, tooltipLife: lifeCardName, tooltipSess: sessCardName);
+
+        ImGui.EndTable();
     }
 
-    private void DrawTTStats(Stats stat)
+    private static void DrawCuffRows(Stats life, Stats sess)
     {
-        ImGui.BeginChild("TT Stats", new Vector2(0, ImGui.GetContentRegionAvail().Y - 30f), true);
-        ImGui.Columns(3, default, false);
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText(ImGuiColors.DalamudRed, "Triple Triad", true);
-        ImGuiHelpers.ScaledDummy(10f);
-        ImGui.NextColumn();
-        ImGui.NextColumn();
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText("Games Played", true);
-        ImGui.NextColumn();
-        ImGui.NextColumn();
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText($"{stat.GamesPlayedWithSaucy:N0}");
-        ImGui.NextColumn();
-        ImGui.NextColumn();
-        ImGui.Spacing();
-        ImGuiEx.CenterColumnText("Wins", true);
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText("Losses", true);
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText("Draws", true);
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText($"{stat.GamesWonWithSaucy:N0}");
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText($"{stat.GamesLostWithSaucy:N0}");
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText($"{stat.GamesDrawnWithSaucy:N0}");
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText("Win Rate", true);
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText("Cards Won", true);
-        ImGui.NextColumn();
-        if (stat.NPCsPlayed.Count > 0)
-        {
-            ImGuiEx.CenterColumnText("Most Played NPC", true);
-            ImGui.NextColumn();
-        }
-        else
-        {
-            ImGui.NextColumn();
-        }
-
-        if (stat.GamesPlayedWithSaucy > 0)
-        {
-            ImGuiEx.CenterColumnText($"{Math.Round((stat.GamesWonWithSaucy / (double)stat.GamesPlayedWithSaucy) * 100, 2)}%");
-        }
-        else
-        {
-            ImGuiEx.CenterColumnText("");
-        }
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText($"{stat.CardsDroppedWithSaucy:N0}");
-        ImGui.NextColumn();
-
-        if (stat.NPCsPlayed.Count > 0)
-        {
-            ImGuiEx.CenterColumnText($"{stat.NPCsPlayed.OrderByDescending(x => x.Value).First().Key}");
-            ImGuiEx.CenterColumnText($"{stat.NPCsPlayed.OrderByDescending(x => x.Value).First().Value:N0} times");
-            ImGui.NextColumn();
-            ImGui.NextColumn();
-            ImGui.NextColumn();
-        }
-
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText("MGP Won", true);
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText("Total Card Drop Value", true);
-        ImGui.NextColumn();
-        if (stat.CardsWon.Count > 0)
-        {
-            ImGuiEx.CenterColumnText("Most Won Card", true);
-        }
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText($"{stat.MGPWon:N0} MGP");
-        ImGui.NextColumn();
-        ImGuiEx.CenterColumnText($"{GetDroppedCardValues(stat):N0} MGP");
-        ImGui.NextColumn();
-        if (stat.CardsWon.Count > 0)
-        {
-            ImGuiEx.CenterColumnText($"{TriadCardDB.Get().FindById((int)stat.CardsWon.OrderByDescending(x => x.Value).First().Key)!.Name.GetLocalized()}");
-            ImGui.NextColumn();
-            ImGui.NextColumn();
-            ImGui.NextColumn();
-            ImGuiEx.CenterColumnText($"{stat.CardsWon.OrderByDescending(x => x.Value).First().Value:N0} times");
-        }
-
-        ImGui.Columns(1);
-        ImGui.EndChild();
+        if (!BeginStatsTable("cuff")) return;
+        StatsHeader();
+        StatsRow("Games", life.CuffGamesPlayed, sess.CuffGamesPlayed);
+        StatsRow("Bruisings", life.CuffBruisings, sess.CuffBruisings);
+        StatsRow("Punishings", life.CuffPunishings, sess.CuffPunishings);
+        StatsRow("Brutals", life.CuffBrutals, sess.CuffBrutals);
+        StatsRow("MGP won", $"{life.CuffMGP:N0}", $"{sess.CuffMGP:N0}", true, SessionMgpPerHour(sess.CuffMGP));
+        ImGui.EndTable();
     }
 
-    private int GetDroppedCardValues(Stats stat)
+    private static void DrawLimbRows(Stats life, Stats sess)
+    {
+        if (!BeginStatsTable("limb")) return;
+        StatsHeader();
+        StatsRow("Games", life.LimbGamesPlayed, sess.LimbGamesPlayed);
+        StatsRow("MGP won", $"{life.LimbMGP:N0}", $"{sess.LimbMGP:N0}", true, SessionMgpPerHour(sess.LimbMGP));
+        ImGui.EndTable();
+    }
+
+    private static bool BeginStatsTable(string id)
+        => ImGui.BeginTable($"##stats_{id}", 4, ImGuiTableFlags.NoBordersInBody | ImGuiTableFlags.SizingStretchProp);
+
+    private static (string count, string? name) TopNpcCell(Stats s)
+    {
+        if (s.NPCsPlayed.Count == 0) return ("\u2014", null);
+        var top = s.NPCsPlayed.OrderByDescending(x => x.Value).First();
+        return ($"{top.Value:N0}", top.Key);
+    }
+
+    private static (string count, string? name) TopCardCell(Stats s)
+    {
+        if (s.CardsWon.Count == 0) return ("\u2014", null);
+        var top = s.CardsWon.OrderByDescending(x => x.Value).First();
+        return ($"{top.Value:N0}", TriadCardDB.Get().FindById((int)top.Key)!.Name.GetLocalized());
+    }
+
+    private static void StatsHeader()
+    {
+        ImGui.TableSetupColumn("Metric", ImGuiTableColumnFlags.WidthStretch, 0.30f);
+        ImGui.TableSetupColumn("Lifetime", ImGuiTableColumnFlags.WidthStretch, 0.25f);
+        ImGui.TableSetupColumn("Session", ImGuiTableColumnFlags.WidthStretch, 0.25f);
+        ImGui.TableSetupColumn("Per Hour", ImGuiTableColumnFlags.WidthStretch, 0.20f);
+
+        ImGui.TableNextRow();
+        ImGui.TableNextColumn();
+        ImGui.TableNextColumn();
+        RightAlignCellText("Lifetime", SaucyTheme.ColorOr(SaucyTheme.ColumnHeader, ImGuiCol.Text));
+        ImGui.TableNextColumn();
+        RightAlignCellText("Session", SaucyTheme.ColorOr(SaucyTheme.ColumnHeader, ImGuiCol.Text));
+        ImGui.TableNextColumn();
+        RightAlignCellText("Per Hour", SaucyTheme.ColorOr(SaucyTheme.ColumnHeader, ImGuiCol.Text));
+    }
+
+    private static void StatsRow(string label, int life, int sess, bool accent = false, string? perHour = null)
+        => StatsRow(label, life.ToString("N0"), sess.ToString("N0"), accent, perHour: perHour);
+
+    private static void StatsRow(string label, string life, string sess, bool accent = false,
+        string? tooltipLife = null, string? tooltipSess = null, string? perHour = null)
+    {
+        ImGui.TableNextRow();
+        ImGui.TableNextColumn();
+        ImGui.TextDisabled(label);
+
+        var col = accent
+            ? SaucyTheme.ColorOr(SaucyTheme.BodyTextAccent, ImGuiCol.Text)
+            : SaucyTheme.ColorOr(SaucyTheme.BodyText, ImGuiCol.Text);
+
+        ImGui.TableNextColumn();
+        RightAlignCellText(life, col);
+        if (tooltipLife != null && ImGui.IsItemHovered())
+            ImGui.SetTooltip(tooltipLife);
+
+        ImGui.TableNextColumn();
+        RightAlignCellText(sess, col);
+        if (tooltipSess != null && ImGui.IsItemHovered())
+            ImGui.SetTooltip(tooltipSess);
+
+        ImGui.TableNextColumn();
+        if (perHour != null)
+            RightAlignCellText(perHour, col);
+    }
+
+    private static void RightAlignCellText(string text, Vector4 color)
+    {
+        const float cellRightMargin = 6f;
+        var avail = ImGui.GetContentRegionAvail().X;
+        var tw = ImGui.CalcTextSize(text).X;
+        var ind = avail - tw - cellRightMargin;
+        if (ind > 0)
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ind);
+        ImGui.TextColored(color, text);
+    }
+
+    private static void DrawStatsCard(string name, string subtitle, Action body)
+        => SaucyTheme.DrawCard(name, subtitle, body);
+
+    private static string SessionMgpPerHour(int sessionMgp)
+    {
+        var hours = (DateTime.UtcNow - C.SessionStartTime).TotalHours;
+        if (hours < 0.001 || sessionMgp == 0) return "—";
+        return $"{(int)(sessionMgp / hours):N0}";
+    }
+
+    private static int GetDroppedCardValues(Stats stat)
     {
         var output = 0;
         foreach (var card in stat.CardsWon)
             output += GameCardDB.Get().FindById((int)card.Key)!.SaleValue * stat.CardsWon[card.Key];
-
         return output;
     }
 
     public void DrawTriadTab()
     {
+        if (GameNpcDB.Get().mapNpcs.TryGetValue(TTSolver.preGameNpc?.Id ?? -1, out var npcInfo))
+            CurrentNPC = npcInfo;
+        else
+            CurrentNPC = null;
+
         var enabled = TriadAutomater.ModuleEnabled;
-
-        ImGui.TextWrapped(@"How to use: Challenge an NPC you wish to play cards with. Once you have initiated the challenge, click ""Enable Triad Module"".");
-        ImGui.Separator();
-
         if (ImGui.Checkbox("Enable Triad Module", ref enabled))
         {
             TriadAutomater.ModuleEnabled = enabled;
-
             if (enabled)
                 CufModule.ModuleEnabled = false;
         }
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker("Challenge an NPC first, then enable the module here.");
 
         var autoOpen = C.OpenAutomatically;
-
-        if (ImGui.Checkbox("Open Saucy When Challenging an NPC", ref autoOpen))
+        if (ImGui.Checkbox("Open Saucy when challenging an NPC", ref autoOpen))
         {
             C.OpenAutomatically = autoOpen;
             C.Save();
         }
 
+        ImGui.Dummy(new Vector2(0, 4));
+
+        SaucyTheme.DrawCard("Deck", null, DrawTriadDeckBody);
+        SaucyTheme.DrawCard("Run mode", null, DrawTriadRunModeBody);
+        SaucyTheme.DrawCard("Notifications", null, DrawTriadNotificationsBody);
+    }
+
+    private static void DrawTriadDeckBody()
+    {
+        if (TTSolver.profileGS.GetPlayerDecks()!.Count() == 0)
+        {
+            ImGui.TextWrapped("Initiate a challenge with an NPC to populate your deck list.");
+            return;
+        }
+
+        var useAutoDeck = C.UseRecommendedDeck;
+        if (ImGui.Checkbox("Auto-pick deck with best win chance", ref useAutoDeck))
+        {
+            C.UseRecommendedDeck = useAutoDeck;
+            C.Save();
+        }
+
+        if (C.UseRecommendedDeck) return;
+
         var selectedDeck = C.SelectedDeckIndex;
+        var decks = TTSolver.profileGS.GetPlayerDecks()!;
+        string preview = (selectedDeck >= 0 && selectedDeck < decks.Count() && decks[selectedDeck] != null)
+            ? decks[selectedDeck]!.name : "";
 
-        if (TTSolver.profileGS.GetPlayerDecks()!.Count() > 0)
+        ImGui.SetNextItemWidth(220f * ImGuiHelpers.GlobalScale);
+        if (ImGui.BeginCombo("Select deck", preview))
         {
-            var useAutoDeck = C.UseRecommendedDeck;
-            if (ImGui.Checkbox("Automatically choose your deck with the best win chance", ref useAutoDeck))
+            if (ImGui.Selectable(""))
+                C.SelectedDeckIndex = -1;
+
+            foreach (var deck in decks)
             {
-                C.UseRecommendedDeck = useAutoDeck;
-                C.Save();
-            }
-
-            if (!C.UseRecommendedDeck)
-            {
-                ImGui.PushItemWidth(200);
-                string preview;
-                if (selectedDeck == -1 || TTSolver.profileGS.GetPlayerDecks()![selectedDeck] is null)
+                if (deck is null) continue;
+                if (ImGui.Selectable(deck.name, deck.id == selectedDeck))
                 {
-                    preview = "";
-                }
-                else
-                {
-                    preview = selectedDeck >= 0 ? TTSolver.profileGS.GetPlayerDecks()![selectedDeck]!.name : string.Empty;
-                }
-
-                if (ImGui.BeginCombo("Select Deck", preview))
-                {
-                    if (ImGui.Selectable(""))
-                    {
-                        C.SelectedDeckIndex = -1;
-                    }
-
-                    foreach (var deck in TTSolver.profileGS.GetPlayerDecks()!)
-                    {
-                        if (deck is null) continue;
-                        var index = deck.id;
-                        //var index = Saucy.TTSolver.preGameDecks.Where(x => x.Value == deck).First().Key;
-                        if (ImGui.Selectable(deck.name, index == selectedDeck))
-                        {
-                            C.SelectedDeckIndex = index;
-                            C.Save();
-                        }
-                    }
-
-                    ImGui.EndCombo();
+                    C.SelectedDeckIndex = deck.id;
+                    C.Save();
                 }
             }
+            ImGui.EndCombo();
         }
-        else
-        {
-            ImGui.TextWrapped("Please initiate a challenge with an NPC to populate your deck list.");
-        }
+    }
 
-        if (ImGui.Checkbox("Play X Amount of Times", ref TriadAutomater.PlayXTimes) && (TriadAutomater.NumberOfTimes <= 0 || TriadAutomater.PlayUntilCardDrops || TriadAutomater.PlayUntilAllCardsDropOnce))
+    private void DrawTriadRunModeBody()
+    {
+        if (ImGui.RadioButton("Play a set number of times", TriadAutomater.PlayXTimes))
         {
-            TriadAutomater.NumberOfTimes = 1;
+            TriadAutomater.PlayXTimes = true;
             TriadAutomater.PlayUntilCardDrops = false;
             TriadAutomater.PlayUntilAllCardsDropOnce = false;
+            if (TriadAutomater.NumberOfTimes <= 0) TriadAutomater.NumberOfTimes = 1;
         }
 
-        if (ImGui.Checkbox("Play Until Any Cards Drop", ref TriadAutomater.PlayUntilCardDrops) && (TriadAutomater.NumberOfTimes <= 0 || TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilAllCardsDropOnce))
+        if (ImGui.RadioButton("Play until any cards drop", TriadAutomater.PlayUntilCardDrops))
         {
-            TriadAutomater.NumberOfTimes = 1;
+            TriadAutomater.PlayUntilCardDrops = true;
             TriadAutomater.PlayXTimes = false;
             TriadAutomater.PlayUntilAllCardsDropOnce = false;
+            if (TriadAutomater.NumberOfTimes <= 0) TriadAutomater.NumberOfTimes = 1;
         }
 
-        if (GameNpcDB.Get().mapNpcs.TryGetValue(TTSolver.preGameNpc?.Id ?? -1, out var npcInfo))
+        if (ImGui.RadioButton("Play until all cards drop", TriadAutomater.PlayUntilAllCardsDropOnce))
         {
-            CurrentNPC = npcInfo;
-        }
-        else
-        {
-            CurrentNPC = null;
-        }
-
-        if (ImGui.Checkbox($"Play Until All Cards Drop from NPC at Least X Times {(CurrentNPC is null ? "" : $"({TriadNpcDB.Get().FindByID(CurrentNPC.npcId).Name.GetLocalized()})")}", ref TriadAutomater.PlayUntilAllCardsDropOnce))
-        {
+            TriadAutomater.PlayUntilAllCardsDropOnce = true;
+            TriadAutomater.PlayUntilCardDrops = false;
+            TriadAutomater.PlayXTimes = false;
+            TriadAutomater.NumberOfTimes = 1;
             TriadAutomater.TempCardsWonList.Clear();
-            TriadAutomater.PlayUntilCardDrops = false;
-            TriadAutomater.PlayXTimes = false;
-            TriadAutomater.NumberOfTimes = 1;
         }
-
-        var onlyUnobtained = C.OnlyUnobtainedCards;
 
         if (TriadAutomater.PlayUntilAllCardsDropOnce)
         {
-            ImGui.SameLine();
-            if (ImGui.Checkbox("Only Unobtained Cards", ref onlyUnobtained))
+            using var subIndent = ImRaii.PushIndent();
+
+            if (CurrentNPC != null)
+                ImGui.TextDisabled($"NPC: {TriadNpcDB.Get().FindByID(CurrentNPC.npcId).Name.GetLocalized()}");
+
+            var onlyUnobtained = C.OnlyUnobtainedCards;
+            if (ImGui.Checkbox("Only unobtained cards", ref onlyUnobtained))
             {
                 TriadAutomater.TempCardsWonList.Clear();
                 C.OnlyUnobtainedCards = onlyUnobtained;
                 C.Save();
             }
-        }
 
-        if (TriadAutomater.PlayUntilAllCardsDropOnce && CurrentNPC != null)
-        {
-            ImGui.Indent();
-            GameCardDB.Get().Refresh();
-            foreach (var card in CurrentNPC.rewardCards)
+            if (CurrentNPC != null)
             {
-                if ((C.OnlyUnobtainedCards && !GameCardDB.Get().FindById(card)!.IsOwned) || !C.OnlyUnobtainedCards)
+                GameCardDB.Get().Refresh();
+                foreach (var card in CurrentNPC.rewardCards)
                 {
-                    TriadAutomater.TempCardsWonList.TryAdd((uint)card, 0);
-                    ImGui.Text($"- {TriadCardDB.Get().FindById(GameCardDB.Get().FindById(card)!.CardId)!.Name.GetLocalized()} {TriadAutomater.TempCardsWonList[(uint)card]}/{TriadAutomater.NumberOfTimes}");
+                    if ((C.OnlyUnobtainedCards && !GameCardDB.Get().FindById(card)!.IsOwned) || !C.OnlyUnobtainedCards)
+                    {
+                        TriadAutomater.TempCardsWonList.TryAdd((uint)card, 0);
+                        ImGui.Text($"\u2022 {TriadCardDB.Get().FindById(GameCardDB.Get().FindById(card)!.CardId)!.Name.GetLocalized()} \u2014 {TriadAutomater.TempCardsWonList[(uint)card]}/{TriadAutomater.NumberOfTimes}");
+                    }
+                }
+
+                if (C.OnlyUnobtainedCards && TriadAutomater.TempCardsWonList.Count == 0)
+                {
+                    using var _ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
+                    ImGui.TextWrapped("You already have every card from this NPC. Untick \"Only unobtained cards\" or pick a different NPC.");
                 }
             }
-
-            if (C.OnlyUnobtainedCards && TriadAutomater.TempCardsWonList.Count == 0)
-            {
-                ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
-                ImGui.TextWrapped($@"You already have all cards from this NPC. This feature will not work until you untick ""Only Unobtained Cards"" or choose a different NPC.");
-                ImGui.PopStyleColor();
-            }
-            ImGui.Unindent();
         }
 
         if (TriadAutomater.PlayXTimes || TriadAutomater.PlayUntilCardDrops || TriadAutomater.PlayUntilAllCardsDropOnce)
         {
-            ImGui.PushItemWidth(150f);
-            ImGui.Text("How many times:");
-            ImGui.SameLine();
-
-            if (ImGui.InputInt("###NumberOfTimes", ref TriadAutomater.NumberOfTimes))
+            ImGui.SetNextItemWidth(120f * ImGuiHelpers.GlobalScale);
+            if (ImGui.InputInt("How many times", ref TriadAutomater.NumberOfTimes))
             {
                 if (TriadAutomater.NumberOfTimes <= 0)
                     TriadAutomater.NumberOfTimes = 1;
             }
-
-            ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
-
-            var playSound = C.PlaySound;
-
-            ImGui.Columns(2, default, false);
-            if (ImGui.Checkbox("Play sound upon completion", ref playSound))
-            {
-                C.PlaySound = playSound;
-                C.Save();
-            }
-
-            if (playSound)
-            {
-                ImGui.NextColumn();
-                ImGui.Text("Select Sound");
-                ImGui.SameLine();
-                ImGui.SetNextItemWidth(200f);
-                if (ImGui.BeginCombo("###SelectSound", C.SelectedSound))
-                {
-                    var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds");
-                    Directory.CreateDirectory(path);
-                    foreach (var file in new DirectoryInfo(path).GetFiles())
-                    {
-                        if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", C.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
-                        {
-                            C.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
-                            C.Save();
-                        }
-                    }
-
-                    ImGui.EndCombo();
-                }
-
-                ImGui.SameLine();
-                if (ImGui.Button("Open Sound Folder"))
-                {
-                    Process.Start("explorer.exe", @$"{Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds")}");
-                }
-                ImGuiComponents.HelpMarker("Drop any MP3 files into the sound folder to add your own custom sounds.");
-            }
-            ImGui.Columns(1);
         }
     }
 
-    public unsafe void DrawCufTab()
+    private static void DrawTriadNotificationsBody()
     {
-        var enabled = CufModule.ModuleEnabled;
+        ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
 
-        ImGui.TextWrapped(@"How to use: Click ""Enable Cuff Module"" then walk up to a Cuff-a-cur machine.");
-        ImGui.Separator();
-
-        if (ImGui.Checkbox("Enable Cuff Module", ref enabled))
+        var playSound = C.PlaySound;
+        if (ImGui.Checkbox("Play sound on completion", ref playSound))
         {
-            CufModule.ModuleEnabled = enabled;
-            if (enabled && TriadAutomater.ModuleEnabled)
-                TriadAutomater.ModuleEnabled = false;
+            C.PlaySound = playSound;
+            C.Save();
         }
 
-        if (ImGui.Checkbox("Play X Amount of Times", ref TriadAutomater.PlayXTimes) && TriadAutomater.NumberOfTimes <= 0)
+        if (playSound)
         {
-            TriadAutomater.NumberOfTimes = 1;
+            using var _ = ImRaii.PushIndent();
+            DrawSoundPicker();
+        }
+    }
+
+    private static void DrawSoundPicker()
+    {
+        ImGui.SetNextItemWidth(140f * ImGuiHelpers.GlobalScale);
+        if (ImGui.BeginCombo("###SelectSound", C.SelectedSound))
+        {
+            var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds");
+            Directory.CreateDirectory(path);
+            foreach (var file in new DirectoryInfo(path).GetFiles())
+            {
+                var name = Path.GetFileNameWithoutExtension(file.FullName);
+                if (ImGui.Selectable(name, C.SelectedSound == name))
+                {
+                    C.SelectedSound = name;
+                    C.Save();
+                }
+            }
+
+            ImGui.EndCombo();
         }
 
-        if (TriadAutomater.PlayXTimes)
+        ImGui.SameLine();
+        if (ImGuiComponents.IconButton(FontAwesomeIcon.FolderOpen))
         {
-            ImGui.PushItemWidth(150f);
-            ImGui.Text("How many times:");
-            ImGui.SameLine();
+            Process.Start("explorer.exe", Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds"));
+        }
 
-            if (ImGui.InputInt("###NumberOfTimes", ref TriadAutomater.NumberOfTimes))
-            {
-                if (TriadAutomater.NumberOfTimes <= 0)
-                    TriadAutomater.NumberOfTimes = 1;
-            }
-
-            ImGui.Checkbox("Log out after finishing", ref TriadAutomater.LogOutAfterCompletion);
-
-            var playSound = C.PlaySound;
-
-            ImGui.Columns(2, default, false);
-            if (ImGui.Checkbox("Play sound upon completion", ref playSound))
-            {
-                C.PlaySound = playSound;
-                C.Save();
-            }
-
-            if (playSound)
-            {
-                ImGui.NextColumn();
-                ImGui.Text("Select Sound");
-                if (ImGui.BeginCombo("###SelectSound", C.SelectedSound))
-                {
-                    var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds");
-                    foreach (var file in new DirectoryInfo(path).GetFiles())
-                    {
-                        if (ImGui.Selectable($"{Path.GetFileNameWithoutExtension(file.FullName)}", C.SelectedSound == Path.GetFileNameWithoutExtension(file.FullName)))
-                        {
-                            C.SelectedSound = Path.GetFileNameWithoutExtension(file.FullName);
-                            C.Save();
-                        }
-                    }
-
-                    ImGui.EndCombo();
-                }
-
-                if (ImGui.Button("Open Sound Folder"))
-                {
-                    Process.Start("explorer.exe", @$"{Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds")}");
-                }
-                ImGuiComponents.HelpMarker("Drop any MP3 files into the sound folder to add your own custom sounds.");
-            }
-            ImGui.Columns(1);
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Open sound folder — drop MP3s here to add your own.");
         }
     }
 

@@ -1,19 +1,15 @@
 ﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Game;
-using Dalamud.Game.Chat;
 using Dalamud.Game.ClientState.Conditions;
-using Dalamud.Game.ClientState.Objects.Enums;
-using Dalamud.Game.Text;
-using Dalamud.Interface.Colors;
-using Dalamud.Memory;
+using Dalamud.Interface.Components;
 using ECommons.Automation.UIInput;
 using ECommons.EzEventManager;
 using ECommons.GameHelpers;
 using ECommons.ImGuiMethods;
-using ECommons.Reflection;
 using ECommons.Throttlers;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
+using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel.Sheets;
@@ -23,36 +19,39 @@ using System.Linq;
 using System.Numerics;
 using System.Text.RegularExpressions;
 using static ECommons.GenericHelpers;
+using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 
 namespace Saucy.OutOnALimb;
 
-public unsafe class LimbManager : IDisposable
+public unsafe class LimbManager
 {
-    private uint OldState = 0;
+    private const uint WeakHit = 100;
+    private const uint StrongHit = 400;
     private static readonly int[] StartingPoints = [20, 50, 80];
-    private int RequestInput = 0;
-    private int? Request = null;
-    private bool OnlyRequest = false;
-    private readonly List<HitResult> Results = [];
-    private int? Next = null;
-    private int MinIndex = 0;
-    private bool RecordMinIndex = false;
-    public int GamesToPlay = 0;
-    public LimbConfig Cfg;
-    private bool Exit = false;
 
-    private static bool TidyChat => DalamudReflector.TryGetDalamudPlugin("TidyChat", out var _, false, true);
+    private static readonly Dictionary<LimbDifficulty, int> Heights = new() { [LimbDifficulty.Titan] = 20, [LimbDifficulty.Morbol] = 40, [LimbDifficulty.Cactuar] = 340 };
+
+    private static readonly Dictionary<LimbDifficulty, uint> NodeIDs = new() { [LimbDifficulty.Titan] = 41, [LimbDifficulty.Morbol] = 44, [LimbDifficulty.Cactuar] = 47 };
+
+    private readonly List<HitResult> Results = [];
+    public LimbConfig Cfg;
+    private bool Exit;
+    public int GamesToPlay;
+    private int MinIndex;
+    private int? Next;
+    private bool OldHitPending;
+    private uint OldState;
+    private bool OnlyRequest;
+    private int? PendingCursor;
+    private uint? PreviousHealth;
+    private bool RecordMinIndex;
+    private int? Request;
+    private int RequestInput;
 
     public LimbManager(LimbConfig conf)
     {
         Cfg = conf;
         new EzFrameworkUpdate(Tick);
-        Svc.Chat.ChatMessage += Chat_ChatMessage;
-    }
-
-    public void Dispose()
-    {
-        Svc.Chat.ChatMessage -= Chat_ChatMessage;
     }
 
     private void InteractWithClosestLimb()
@@ -61,32 +60,47 @@ public unsafe class LimbManager : IDisposable
         {
             Exit = true;
         }
+
         if (Exit)
         {
             GamesToPlay = 0;
         }
+
         if (IsOccupied())
         {
             EzThrottler.Throttle("InteractPause", 1000, true);
         }
-        if (!EzThrottler.Check("InteractPause")) return;
+
+        if (!EzThrottler.Check("InteractPause"))
+        {
+            return;
+        }
 
         //2005423	Out on a Limb	0	Out on a Limb machines	0	1	1	0	0
-        var machineNameGS = Svc.Data.GetExcelSheet<EObjName>().GetRow(2005423).Singular.GetText().RemoveSpaces();
+        var machineNameGS = Svc.Data.GetExcelSheet<EObjName>()
+                               .GetRow(2005423)
+                               .Singular.GetText()
+                               .RemoveSpaces();
         //30425	Out on a Limb machine	0	Out on a Limb machines	0	1	1	0	0	Experience the heart-exploding excitement of the Gold Saucer in your own home with this authentic Out on a Limb machine.	Out on a Limb Machine	ui/icon/052000/052680.tex	1	1	14	Out on a Limb Machine	Furnishing		EquipSlotCategory#0	125	18740	1	False	True	False	False	2	0	False	False	False	ItemAction#0	2	0	adventurer	ItemRepairResource#0		0	False	False	0	1	0	0		None		0	0, 0, 0, 0	0, 0, 0, 0	adventurer	0	0	0	0	0	0	0	0	0		0		0		0		0		0		0		0		0		0		0		0		0		0	0	0	False	False	0	False
-        var machineNameHousing = Svc.Data.GetExcelSheet<Item>().GetRow(30425).Singular.GetText().RemoveSpaces();
+        var machineNameHousing = Svc.Data.GetExcelSheet<Item>()
+                                    .GetRow(30425)
+                                    .Singular.GetText()
+                                    .RemoveSpaces();
 
         var found = false;
         foreach (var x in Svc.Objects)
         {
-            if (x.ObjectKind.EqualsAny(ObjectKind.EventObj, ObjectKind.HousingEventObject) && x.Name.GetText()!.RemoveSpaces().EqualsIgnoreCaseAny(machineNameGS, machineNameHousing) && Vector3.Distance(Player.Object!.Position, x.Position) < 4)
+            if (x.ObjectKind.EqualsAny(ObjectKind.EventObj, ObjectKind.HousingEventObject) &&
+                x.Name.GetText()!.RemoveSpaces()
+                 .EqualsIgnoreCaseAny(machineNameGS, machineNameHousing) &&
+                Vector3.Distance(Player.Object!.Position, x.Position) < 4)
             {
                 found = true;
                 if (EzThrottler.Throttle("TargetAndInteract"))
                 {
                     if (Svc.Targets.Target?.Address == x.Address)
                     {
-                        TargetSystem.Instance()->InteractWithObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)x.Address, false);
+                        TargetSystem.Instance()->InteractWithObject((GameObject*)x.Address, false);
                         EzThrottler.Throttle("TargetAndInteract", 10000, true);
                         GamesToPlay--;
                     }
@@ -97,32 +111,12 @@ public unsafe class LimbManager : IDisposable
                 }
             }
         }
+
         if (!found)
         {
+            DuoLog.Warning("No Out on a Limb machine nearby (maybe get closer if in front of one).");
+            Cfg.EnableLimb = false;
             GamesToPlay = 0;
-        }
-    }
-
-    private readonly Dictionary<string, HitPower> HitPowerText = new()
-    {
-        [Svc.Data.GetExcelSheet<Addon>().GetRow(9710).Text.GetText().RemoveSpaces()] = HitPower.Nothing,
-        [Svc.Data.GetExcelSheet<Addon>().GetRow(9711).Text.GetText().RemoveSpaces()] = HitPower.Weak,
-        [Svc.Data.GetExcelSheet<Addon>().GetRow(9712).Text.GetText().RemoveSpaces()] = HitPower.Strong,
-        [Svc.Data.GetExcelSheet<Addon>().GetRow(9713).Text.GetText().RemoveSpaces()] = HitPower.Maximum,
-    };
-
-    private void Chat_ChatMessage(IHandleableChatMessage message)
-    {
-        if (!Cfg.EnableLimb) return;
-        if (!Svc.Condition[ConditionFlag.OccupiedInQuestEvent]) return;
-        var text = message.Message.TextValue.RemoveSpaces();
-        PluginLog.Information($"{message.LogKind}/{text}");
-        if (message.LogKind is XivChatType.SystemMessage && message.SourceKind is XivChatRelationKind.LocalPlayer) // old value was 2105
-        {
-            if (HitPowerText.TryGetValue(text, out var hitPower))
-            {
-                Record(hitPower);
-            }
         }
     }
 
@@ -131,11 +125,15 @@ public unsafe class LimbManager : IDisposable
         Results.Clear();
         for (var i = 0; i <= 100; i += Cfg.Step)
         {
-            Results.Add(new(i, HitPower.Unobserved));
+            Results.Add(new HitResult(i, HitPower.Unobserved));
         }
+
         Next = null;
         MinIndex = 0;
+        OldHitPending = false;
         RecordMinIndex = false;
+        PendingCursor = null;
+        PreviousHealth = null;
     }
 
     private int GetCursor()
@@ -150,6 +148,7 @@ public unsafe class LimbManager : IDisposable
             cursorFloat *= 100;
             return (int)Math.Round(cursorFloat);
         }
+
         return 0;
     }
 
@@ -169,10 +168,11 @@ public unsafe class LimbManager : IDisposable
                 }
             }
         }
+
         return ret;
     }
 
-    private bool SafeClickButtonBotanist()
+    private bool SafeClickButtonBotanist(int cursor)
     {
         var ret = false;
         if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
@@ -183,23 +183,39 @@ public unsafe class LimbManager : IDisposable
             {
                 if (EzThrottler.Throttle("ClickBtnGameButton", 2000))
                 {
+                    PendingCursor = cursor;
+                    PreviousHealth = GetHealth(addon);
                     ret = true;
                     button->ClickAddonButton(addon);
                 }
             }
         }
+
         return ret;
     }
 
     private void Tick()
     {
-        if (!Cfg.EnableLimb) return;
-        if (!Player.Available) return;
-        if (!IsScreenReady()) return;
+        if (!Cfg.EnableLimb)
+        {
+            return;
+        }
+
+        if (!Player.Available)
+        {
+            return;
+        }
+
+        if (!IsScreenReady())
+        {
+            return;
+        }
+
         if (GamesToPlay > 0)
         {
             InteractWithClosestLimb();
         }
+
         if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent])
         {
             {
@@ -207,12 +223,17 @@ public unsafe class LimbManager : IDisposable
                 {
                     if (TryGetAddonByName<AddonSelectString>("SelectString", out var ss) && IsAddonReady(&ss->AtkUnitBase))
                     {
-                        var text = ss->AtkUnitBase.GetTextNodeById(2)->NodeText.GetText().RemoveSpaces();
-                        if (text.Contains(Svc.Data.GetExcelSheet<Addon>().GetRow(9994).Text.GetText().RemoveSpaces(), StringComparison.OrdinalIgnoreCase))
+                        var text = ss->AtkUnitBase.GetTextNodeById(2)->NodeText.GetText()
+                                                                               .RemoveSpaces();
+                        if (text.Contains(Svc.Data.GetExcelSheet<Addon>()
+                                             .GetRow(9994)
+                                             .Text.GetText()
+                                             .RemoveSpaces(), StringComparison.OrdinalIgnoreCase))
                         {
                             if (EzThrottler.Throttle("ConfirmPlay"))
                             {
-                                new AddonMaster.SelectString(ss).Entries[0].Select();
+                                new AddonMaster.SelectString(ss).Entries[0]
+                                                                .Select();
                             }
                         }
                     }
@@ -231,27 +252,40 @@ public unsafe class LimbManager : IDisposable
                 if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
                 {
                     var reader = new ReaderMiniGameBotanist(addon);
-                    var button = addon->GetComponentButtonById(24);
-                    var cursor = GetCursor();
+                    var hitPending = GetHitPending(addon);
+
+                    if (PendingCursor != null && OldHitPending && !hitPending)
+                    {
+                        PluginLog.Debug("Out on a limb - hit result event");
+                        Record(addon);
+                        Next = GetNextTargetCursorPos();
+                    }
 
                     if (reader.State == 3)
                     {
                         if (OldState != 3)
                         {
+                            PreviousHealth = GetHealth(addon);
                             if (reader.SwingsLeft == 10)
                             {
-                                PluginLog.Debug($"Out on a limb - GAME RESET");
+                                PluginLog.Debug("Out on a limb - GAME RESET");
                                 Reset();
+                                PreviousHealth = GetHealth(addon);
                             }
-                            PluginLog.Debug($"Out on a limb - turn start event");
+
+                            PluginLog.Debug("Out on a limb - turn start event");
                             Next = GetNextTargetCursorPos();
                         }
+
                         if (OnlyRequest)
                         {
                             if (Request != null)
                             {
                                 AtkStage.Instance()->GetNumberArrayData(NumberArrayType.GoldSaucerArcadeMachine)->IntArray[0] = Math.Clamp(Request.Value * 100 + Random.Shared.Next(200) - 100, 1, 9999);
-                                if (SafeClickButtonBotanist()) Request = null;
+                                if (SafeClickButtonBotanist(Request.Value))
+                                {
+                                    Request = null;
+                                }
                             }
                         }
                         else
@@ -259,7 +293,10 @@ public unsafe class LimbManager : IDisposable
                             if (Next != null)
                             {
                                 AtkStage.Instance()->GetNumberArrayData(NumberArrayType.GoldSaucerArcadeMachine)->IntArray[0] = Math.Clamp(Next.Value * 100 + Random.Shared.Next(200) - 100, 1, 9999);
-                                if (SafeClickButtonBotanist()) Next = null;
+                                if (SafeClickButtonBotanist(Next.Value))
+                                {
+                                    Next = null;
+                                }
                             }
                         }
                     }
@@ -267,10 +304,12 @@ public unsafe class LimbManager : IDisposable
                     {
                         if (OldState == 3)
                         {
-                            PluginLog.Debug($"Out on a limb - turn finish event");
+                            PluginLog.Debug("Out on a limb - turn finish event");
                         }
                     }
+
                     OldState = reader.State;
+                    OldHitPending = hitPending;
                 }
                 else
                 {
@@ -301,7 +340,10 @@ public unsafe class LimbManager : IDisposable
                     var mgp = int.Parse(matches.Groups[1].Value);
                     if (Exit)
                     {
-                        if (EzThrottler.Throttle("Yesno", 2000)) new AddonMaster.SelectYesno(ss).No();
+                        if (EzThrottler.Throttle("Yesno", 2000))
+                        {
+                            new AddonMaster.SelectYesno(ss).No();
+                        }
                     }
                     else
                     {
@@ -309,22 +351,34 @@ public unsafe class LimbManager : IDisposable
                         {
                             if (reader.SecondsRemaining > Cfg.StopAt)
                             {
-                                if (EzThrottler.Throttle("Yesno", 2000)) new AddonMaster.SelectYesno(ss).Yes();
+                                if (EzThrottler.Throttle("Yesno", 2000))
+                                {
+                                    new AddonMaster.SelectYesno(ss).Yes();
+                                }
                             }
                             else
                             {
-                                if (EzThrottler.Throttle("Yesno", 2000)) new AddonMaster.SelectYesno(ss).No();
+                                if (EzThrottler.Throttle("Yesno", 2000))
+                                {
+                                    new AddonMaster.SelectYesno(ss).No();
+                                }
                             }
                         }
                         else
                         {
                             if (reader.SecondsRemaining > Cfg.HardStopAt)
                             {
-                                if (EzThrottler.Throttle("Yesno", 2000)) new AddonMaster.SelectYesno(ss).Yes();
+                                if (EzThrottler.Throttle("Yesno", 2000))
+                                {
+                                    new AddonMaster.SelectYesno(ss).Yes();
+                                }
                             }
                             else
                             {
-                                if (EzThrottler.Throttle("Yesno", 2000)) new AddonMaster.SelectYesno(ss).No();
+                                if (EzThrottler.Throttle("Yesno", 2000))
+                                {
+                                    new AddonMaster.SelectYesno(ss).No();
+                                }
                             }
                         }
                     }
@@ -333,26 +387,29 @@ public unsafe class LimbManager : IDisposable
         }
     }
 
-    private List<HitResult> GetNext(int index, uint num)
-    {
-        var ret = new List<HitResult>();
-        for (var i = 0; i < num; i++)
-        {
-            var r = Results.SafeSelect(index + i);
-            if (r != null) ret.Add(r);
-        }
-        return ret;
-    }
+    private uint GetHealth(AtkUnitBase* addon) => *(uint*)((byte*)addon + 0x328);
 
-    private List<HitResult> GetPrev(int index, uint num)
+    private bool GetHitPending(AtkUnitBase* addon) => *((byte*)addon + 0x2D1) != 0;
+
+    private HitPower GetHitPower(uint previousHealth, uint health)
     {
-        var ret = new List<HitResult>();
-        for (var i = 0; i < num; i++)
+        if (health == 0)
         {
-            var r = Results.SafeSelect(index - i);
-            if (r != null) ret.Add(r);
+            return HitPower.Maximum;
         }
-        return ret;
+
+        if (previousHealth < health)
+        {
+            return HitPower.Unobserved;
+        }
+
+        return (previousHealth - health) switch
+        {
+            0 => HitPower.Nothing,
+            WeakHit => HitPower.Weak,
+            StrongHit => HitPower.Strong,
+            _ => HitPower.Unobserved
+        };
     }
 
     private int GetNextTargetCursorPos()
@@ -360,8 +417,6 @@ public unsafe class LimbManager : IDisposable
         for (var i = MinIndex; i < Results.Count; i++)
         {
             var current = Results[i];
-            var prev = Results.SafeSelect(i - 1);
-            var next = Results.SafeSelect(i + 1);
             if (current.Power == HitPower.Strong)
             {
                 return current.Position;
@@ -375,36 +430,55 @@ public unsafe class LimbManager : IDisposable
             var next = Results.SafeSelect(i + 1);
             if (current.Power == HitPower.Weak)
             {
-                if (prev?.Power == HitPower.Unobserved && i - 1 >= MinIndex) return prev.Position;
-                if (next?.Power == HitPower.Unobserved) return next.Position;
+                if (prev?.Power == HitPower.Unobserved && i - 1 >= MinIndex)
+                {
+                    return prev.Position;
+                }
+
+                if (next?.Power == HitPower.Unobserved)
+                {
+                    return next.Position;
+                }
             }
         }
+
         foreach (var x in StartingPoints)
         {
             int[] adjustedPoints = [.. StartingPoints.Where(z => !IsStartingPointChecked(z))];
-            if (adjustedPoints.Length == 0) break;
-            var transformedPoints = adjustedPoints.Select(z => GetClosestResultPoint(z).Position).ToArray();
-            var index = 0;// Random.Shared.Next(transformedPoints.Length);
+            if (adjustedPoints.Length == 0)
+            {
+                break;
+            }
+
+            var transformedPoints = adjustedPoints.Select(z => GetClosestResultPoint(z)
+                                                                 .Position)
+                                                  .ToArray();
+            var index = 0; // Random.Shared.Next(transformedPoints.Length);
             PluginLog.Debug($"Returning starting point {adjustedPoints[index]}->{transformedPoints[index]}");
-            if (StartingPoints.Length != transformedPoints.Length) RecordMinIndex = true;
+            if (StartingPoints.Length != transformedPoints.Length)
+            {
+                RecordMinIndex = true;
+            }
+
             return transformedPoints[index];
         }
+
         MinIndex = 0;
-        var unobserveds = Results.Where(x => x.Power == HitPower.Unobserved).ToArray();
+        var unobserveds = Results.Where(x => x.Power == HitPower.Unobserved)
+                                 .ToArray();
         if (unobserveds.Length == 0)
         {
             PluginLog.Error("No more results");
             return -100;
         }
+
         var res = unobserveds[Random.Shared.Next(unobserveds.Length)].Position;
         PluginLog.Debug($"Returning random unobserved point {res}");
         return res;
     }
 
-    private HitResult GetClosestResultPoint(int point)
-    {
-        return Results.OrderBy(x => Math.Abs(point - x.Position)).First();
-    }
+    private HitResult GetClosestResultPoint(int point) => Results.OrderBy(x => Math.Abs(point - x.Position))
+                                                                 .First();
 
     private bool IsStartingPointChecked(int position)
     {
@@ -412,76 +486,100 @@ public unsafe class LimbManager : IDisposable
         return item.Power != HitPower.Unobserved;
     }
 
-    private void Record(HitPower result)
+    private void Record(AtkUnitBase* addon)
+    {
+        if (PendingCursor == null || PreviousHealth == null)
+        {
+            return;
+        }
+
+        var health = GetHealth(addon);
+        var result = GetHitPower(PreviousHealth.Value, health);
+        if (result != HitPower.Unobserved)
+        {
+            Record(result, PendingCursor.Value);
+        }
+
+        PendingCursor = null;
+        PreviousHealth = null;
+    }
+
+    private void Record(HitPower result, int cursor)
     {
         if (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) && IsAddonReady(addon))
         {
             var reader = new ReaderMiniGameBotanist(addon);
-            var cursor = GetCursor();
-            var item = Results.OrderBy(x => Math.Abs(x.Position - cursor)).First();
+            var item = Results.OrderBy(x => Math.Abs(x.Position - cursor))
+                              .First();
             if (RecordMinIndex)
             {
                 RecordMinIndex = false;
                 MinIndex = Results.IndexOf(item);
             }
+
             if (result < item.Power)
             {
                 MinIndex = 0;
                 RecordMinIndex = false;
             }
+
             item.Power = result;
             PluginLog.Debug($"{result}");
         }
     }
 
-    private readonly Dictionary<LimbDifficulty, int[]> FPSRequirements = new()
-    {
-        [LimbDifficulty.Titan] = [480, 240, 120, 90, 60],
-        [LimbDifficulty.Morbol] = [240, 120, 90, 60, 30],
-        [LimbDifficulty.Cactuar] = [120, 90, 60, 30, 15],
-    };
-
     public void DrawSettings()
     {
         var save = false;
-        ImGuiEx.TextWrapped($"How to use: enable module, walk up to the Out on a Limb machine in Gold Saucer, input number of games you want to play to play automatically or access the machine manually to play one game.");
-        if (TidyChat)
-            ImGuiEx.TextWrapped(ImGuiColors.DalamudRed, $@"Tidychat Warning: Please ensure you do not have ""You sense something..."" messages (Advanced -> System messages) hidden or this will not work");
-        ImGui.Separator();
-        save |= ImGui.Checkbox($"Enable", ref Cfg.EnableLimb);
-        ImGui.SetNextItemWidth(100f);
-        ImGui.InputInt("Games to play", ref GamesToPlay.ValidateRange(0, 9999));
-        ImGui.SameLine();
-        if (ImGui.Button("Max")) GamesToPlay = 9999;
-        ImGui.Checkbox($"Stop at next double down", ref Exit);
 
-        ImGui.Separator();
-        ImGui.SetNextItemWidth(100f);
-        save |= ImGuiEx.EnumCombo("Difficulty", ref Cfg.LimbDifficulty);
-        ImGui.SetNextItemWidth(100f);
-        save |= ImGui.DragInt($"Step", ref Cfg.Step, 0.05f);
-        ImGui.SameLine();
-        if (ImGui.Button("Default##2")) Cfg.Step = new LimbConfig().Step;
-        ImGui.SetNextItemWidth(100f);
-        save |= ImGui.DragInt($"Stop at remaining time with big win", ref Cfg.StopAt, 0.5f);
-        ImGui.SetNextItemWidth(100f);
-        save |= ImGui.DragInt($"Stop at remaining time with little win", ref Cfg.HardStopAt, 0.5f);
+        save |= ImGui.Checkbox("Enable", ref Cfg.EnableLimb);
 
-        if (save) C.Save();
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker(
+                                   "Walk up to the Out on a Limb machine in Gold Saucer, set the number of games, and the module plays them. " + "Set 0 to start games manually from the machine.");
+
+        ImGui.Dummy(new Vector2(0, 4));
+
+        SaucyTheme.DrawCard("Run", null, () =>
+                                         {
+                                             ImGui.SetNextItemWidth(100f);
+                                             ImGui.InputInt("Games to play", ref GamesToPlay.ValidateRange(0, 9999));
+                                             ImGui.SameLine();
+                                             if (ImGui.Button("Max"))
+                                             {
+                                                 GamesToPlay = 9999;
+                                             }
+
+                                             ImGui.Checkbox("Stop at next double down", ref Exit);
+                                         });
+
+        SaucyTheme.DrawCard("Tuning", null, () =>
+                                            {
+                                                ImGui.SetNextItemWidth(120f);
+                                                save |= ImGuiEx.EnumCombo("Difficulty", ref Cfg.LimbDifficulty);
+
+                                                ImGui.SetNextItemWidth(120f);
+                                                save |= ImGui.DragInt("Step", ref Cfg.Step, 0.05f);
+                                                ImGui.SameLine();
+                                                if (ImGui.Button("Default##step"))
+                                                {
+                                                    Cfg.Step = new LimbConfig().Step;
+                                                    save = true;
+                                                }
+
+                                                ImGui.SetNextItemWidth(120f);
+                                                save |= ImGui.DragInt("Stop with big win (remaining time)", ref Cfg.StopAt, 0.5f);
+
+                                                ImGui.SetNextItemWidth(120f);
+                                                save |= ImGui.DragInt("Stop with little win (remaining time)", ref Cfg.HardStopAt, 0.5f);
+                                            });
+
+        if (save)
+        {
+            C.Save();
+        }
     }
 
-    private static readonly Dictionary<LimbDifficulty, int> Heights = new()
-    {
-        [LimbDifficulty.Titan] = 20,
-        [LimbDifficulty.Morbol] = 40,
-        [LimbDifficulty.Cactuar] = 340,
-    };
-    private static readonly Dictionary<LimbDifficulty, uint> NodeIDs = new()
-    {
-        [LimbDifficulty.Titan] = 41,
-        [LimbDifficulty.Morbol] = 44,
-        [LimbDifficulty.Cactuar] = 47,
-    };
     public void DrawDebug()
     {
         {
@@ -491,7 +589,11 @@ public unsafe class LimbManager : IDisposable
                 var reference = addon->GetNodeById(NodeIDs[Cfg.LimbDifficulty]);
                 var cursor = addon->GetNodeById(39);
                 var iCursor = 400 - cursor->Height;
-                if (iCursor > reference->Y && iCursor < reference->Y + Heights[Cfg.LimbDifficulty]) ImGuiEx.Text($"Yes");
+                if (iCursor > reference->Y && iCursor < reference->Y + Heights[Cfg.LimbDifficulty])
+                {
+                    ImGuiEx.Text("Yes");
+                }
+
                 ImGuiEx.Text($"Reference: {reference->Y}");
                 ImGuiEx.Text($"Cursor: {cursor->Height}");
             }
@@ -507,20 +609,34 @@ public unsafe class LimbManager : IDisposable
                 ImGui.SetNextItemWidth(100f);
                 ImGui.InputInt("Request input", ref RequestInput);
                 ImGui.SameLine();
-                if (ImGui.Button("Request")) Request = RequestInput;
+                if (ImGui.Button("Request"))
+                {
+                    Request = RequestInput;
+                }
+
                 ImGui.SameLine();
-                if (ImGui.Button("Reset")) Request = null;
+                if (ImGui.Button("Reset"))
+                {
+                    Request = null;
+                }
+
                 ImGuiEx.Text($"Button enabled: {button->IsEnabled}");
                 ImGuiEx.Text($"Seconds remaining: {reader.SecondsRemaining}");
+                ImGuiEx.Text($"Health: {GetHealth(addon)}");
+                ImGuiEx.Text($"Hit pending: {GetHitPending(addon)}");
+                ImGuiEx.Text($"Pending: {PendingCursor}, previous health: {PreviousHealth}");
                 if (ImGui.Button("Click"))
                 {
                     if (button->IsEnabled)
                     {
+                        PendingCursor = cursor;
+                        PreviousHealth = GetHealth(addon);
                         button->ClickAddonButton(addon);
                     }
                 }
+
                 ImGuiEx.Text($"Next: {Next}, MinIndex: {MinIndex}, rec={RecordMinIndex}");
-                ImGuiEx.Text($"Starting points:\n{StartingPoints.Print(", ")}");
+                ImGuiEx.Text($"Starting points:\n{StartingPoints.Print()}");
                 ImGuiEx.Text($"Results:\n{Results.Select(x => $"{x.Position}={x.Power}").Print("\n")}");
             }
         }
