@@ -1,7 +1,10 @@
 ﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Game;
 using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Interface.Components;
+using ECommons.Logging;
+using Saucy.CuffACur;
 using ECommons.Automation.UIInput;
 using ECommons.EzEventManager;
 using ECommons.GameHelpers;
@@ -25,6 +28,11 @@ namespace Saucy.OutOnALimb;
 
 public unsafe class LimbManager
 {
+    private const string MachineSanityThrottleKey = "Saucy.OutOnALimb.MachineSanityCheck";
+    private const uint GoldSaucerTerritoryId = 144;
+    private const uint GoldSaucerLimbBaseId = 2005423;
+    private const uint HousingLimbBaseId = 197372;
+
     private const uint WeakHit = 100;
     private const uint StrongHit = 400;
     private static readonly int[] StartingPoints = [20, 50, 80];
@@ -54,7 +62,143 @@ public unsafe class LimbManager
         new EzFrameworkUpdate(Tick);
     }
 
-    private void InteractWithClosestLimb()
+    private static string? housingLimbName;
+
+    private static string HousingLimbName =>
+        housingLimbName ??= Svc.Data.GetExcelSheet<Item>()
+            .GetRow(30425)
+            .Singular.GetText()
+            .RemoveSpaces();
+
+    private static bool IsLimbMachine(IGameObject obj, out float maxDistance)
+    {
+        if (obj.BaseId == GoldSaucerLimbBaseId)
+        {
+            maxDistance = 2.5f;
+            return true;
+        }
+
+        if (obj.BaseId == HousingLimbBaseId)
+        {
+            maxDistance = 4f;
+            return true;
+        }
+
+        var name = obj.Name.GetText();
+        if (!string.IsNullOrEmpty(name))
+        {
+            if (name.Contains("Out on a Limb", StringComparison.OrdinalIgnoreCase))
+            {
+                maxDistance = 2.5f;
+                return true;
+            }
+
+            if (obj.ObjectKind == ObjectKind.HousingEventObject &&
+                name.RemoveSpaces().Equals(HousingLimbName, StringComparison.OrdinalIgnoreCase))
+            {
+                maxDistance = 4f;
+                return true;
+            }
+        }
+
+        maxDistance = 0f;
+        return false;
+    }
+
+    private static IGameObject? FindNearestLimbMachine()
+    {
+        IGameObject? nearest = null;
+        var nearestDistance = float.MaxValue;
+
+        foreach (var obj in Svc.Objects)
+        {
+            if (!IsLimbMachine(obj, out var maxDistance))
+            {
+                continue;
+            }
+
+            var distance = CufModule.GetTargetDistance(obj);
+            if (distance > maxDistance || distance >= nearestDistance)
+            {
+                continue;
+            }
+
+            nearestDistance = distance;
+            nearest = obj;
+        }
+
+        return nearest;
+    }
+
+    private static bool ShouldSkipMachineSanityCheck()
+    {
+        if (!Svc.ClientState.IsLoggedIn || !Player.Available)
+        {
+            return true;
+        }
+
+        if (Svc.Condition[ConditionFlag.BetweenAreas])
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsActiveLimbSession()
+    {
+        if (uiReaderGamesResults.HasResultsUI)
+        {
+            return true;
+        }
+
+        if (!Svc.Condition[ConditionFlag.OccupiedInQuestEvent])
+        {
+            return false;
+        }
+
+        return (TryGetAddonByName<AtkUnitBase>("MiniGameAimg", out var aimg) && IsAddonReady(aimg)) ||
+               (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var botanist) && IsAddonReady(botanist));
+    }
+
+    private static bool TryEnableLimb(out string? warning)
+    {
+        warning = null;
+        if (ShouldSkipMachineSanityCheck())
+        {
+            warning = "Cannot enable Out on a Limb right now.";
+            return false;
+        }
+
+        if (FindNearestLimbMachine() != null)
+        {
+            return true;
+        }
+
+        warning = "No Out on a Limb machine nearby (maybe get closer if in front of one).";
+        return false;
+    }
+
+    private void DisableModule()
+    {
+        Cfg.EnableLimb = false;
+        GamesToPlay = 0;
+        C.Save();
+    }
+
+    private void TryDisableForMissingMachine()
+    {
+        var throttleMs = Svc.ClientState.TerritoryType == GoldSaucerTerritoryId ? 5000 : 1000;
+        if (!EzThrottler.Throttle(MachineSanityThrottleKey, throttleMs))
+        {
+            return;
+        }
+
+        DuoLog.Warning("No Out on a Limb machine nearby (maybe get closer if in front of one).");
+        DisableModule();
+    }
+
+    private void InteractWithLimbMachine(IGameObject limb)
     {
         if (Svc.Condition[ConditionFlag.WaitingForDutyFinder])
         {
@@ -76,47 +220,18 @@ public unsafe class LimbManager
             return;
         }
 
-        //2005423	Out on a Limb	0	Out on a Limb machines	0	1	1	0	0
-        var machineNameGS = Svc.Data.GetExcelSheet<EObjName>()
-                               .GetRow(2005423)
-                               .Singular.GetText()
-                               .RemoveSpaces();
-        //30425	Out on a Limb machine	0	Out on a Limb machines	0	1	1	0	0	Experience the heart-exploding excitement of the Gold Saucer in your own home with this authentic Out on a Limb machine.	Out on a Limb Machine	ui/icon/052000/052680.tex	1	1	14	Out on a Limb Machine	Furnishing		EquipSlotCategory#0	125	18740	1	False	True	False	False	2	0	False	False	False	ItemAction#0	2	0	adventurer	ItemRepairResource#0		0	False	False	0	1	0	0		None		0	0, 0, 0, 0	0, 0, 0, 0	adventurer	0	0	0	0	0	0	0	0	0		0		0		0		0		0		0		0		0		0		0		0		0		0	0	0	False	False	0	False
-        var machineNameHousing = Svc.Data.GetExcelSheet<Item>()
-                                    .GetRow(30425)
-                                    .Singular.GetText()
-                                    .RemoveSpaces();
-
-        var found = false;
-        foreach (var x in Svc.Objects)
+        if (EzThrottler.Throttle("TargetAndInteract"))
         {
-            if (x.ObjectKind.EqualsAny(ObjectKind.EventObj, ObjectKind.HousingEventObject) &&
-                x.Name.GetText()!.RemoveSpaces()
-                 .EqualsIgnoreCaseAny(machineNameGS, machineNameHousing) &&
-                Vector3.Distance(Player.Object!.Position, x.Position) < 4)
+            if (Svc.Targets.Target?.Address == limb.Address)
             {
-                found = true;
-                if (EzThrottler.Throttle("TargetAndInteract"))
-                {
-                    if (Svc.Targets.Target?.Address == x.Address)
-                    {
-                        TargetSystem.Instance()->InteractWithObject((GameObject*)x.Address, false);
-                        EzThrottler.Throttle("TargetAndInteract", 10000, true);
-                        GamesToPlay--;
-                    }
-                    else
-                    {
-                        Svc.Targets.Target = x;
-                    }
-                }
+                TargetSystem.Instance()->InteractWithObject((GameObject*)limb.Address, false);
+                EzThrottler.Throttle("TargetAndInteract", 10000, true);
+                GamesToPlay--;
             }
-        }
-
-        if (!found)
-        {
-            DuoLog.Warning("No Out on a Limb machine nearby (maybe get closer if in front of one).");
-            Cfg.EnableLimb = false;
-            GamesToPlay = 0;
+            else
+            {
+                Svc.Targets.Target = limb;
+            }
         }
     }
 
@@ -206,14 +321,24 @@ public unsafe class LimbManager
             return;
         }
 
+        if (!ShouldSkipMachineSanityCheck() && !IsActiveLimbSession())
+        {
+            var limb = FindNearestLimbMachine();
+            if (limb == null)
+            {
+                TryDisableForMissingMachine();
+                return;
+            }
+
+            if (GamesToPlay > 0 && !uiReaderGamesResults.HasResultsUI)
+            {
+                InteractWithLimbMachine(limb);
+            }
+        }
+
         if (!IsScreenReady())
         {
             return;
-        }
-
-        if (GamesToPlay > 0)
-        {
-            InteractWithClosestLimb();
         }
 
         if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent])
@@ -532,7 +657,21 @@ public unsafe class LimbManager
     {
         var save = false;
 
-        save |= ImGui.Checkbox("Enable", ref Cfg.EnableLimb);
+        var enable = Cfg.EnableLimb;
+        if (ImGui.Checkbox("Enable", ref enable))
+        {
+            if (enable)
+            {
+                if (!TryEnableLimb(out var warning))
+                {
+                    DuoLog.Warning(warning ?? "Cannot enable Out on a Limb.");
+                    enable = false;
+                }
+            }
+
+            Cfg.EnableLimb = enable;
+            save = true;
+        }
 
         ImGui.SameLine();
         ImGuiComponents.HelpMarker(

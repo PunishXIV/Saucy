@@ -1,4 +1,7 @@
-﻿using Dalamud.Hooking;
+﻿using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Hooking;
+using ECommons.Logging;
+using ECommons.Throttlers;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.UI;
@@ -12,6 +15,10 @@ namespace Saucy.CuffACur;
 
 public unsafe class CufModule
 {
+    private const string SanityCheckThrottleKey = "Saucy.CuffACur.SanityCheck";
+    private const uint GoldSaucerCuffBaseId = 2005029;
+    private const uint HousingCuffBaseId = 197370;
+
     public static bool ModuleEnabled = false;
 
     public delegate nint UnknownFunction(nint a1, ushort a2, int a3, void* a4);
@@ -110,12 +117,20 @@ public unsafe class CufModule
 
             if (!Svc.Condition[Dalamud.Game.ClientState.Conditions.ConditionFlag.OccupiedInQuestEvent] && !uiReaderGamesResults.HasResultsUI)
             {
-                var cuf = (GameObject*)(Svc.Objects.Where(x => (x.BaseId == 2005029 && GetTargetDistance(x) <= 1f) || (x.BaseId == 197370 && GetTargetDistance(x) <= 4f)).OrderByDescending(GetTargetDistance).FirstOrDefault()?.Address ?? nint.Zero);
-                if ((IntPtr)cuf == IntPtr.Zero)
+                var cuf = FindNearestCuffMachine();
+                if (cuf == null)
+                {
+                    if (EzThrottler.Throttle(SanityCheckThrottleKey, 1000))
+                    {
+                        DuoLog.Warning("No Cuff-a-Cur machine nearby (maybe get closer if in front of one).");
+                        DisableModule();
+                    }
+
                     return;
+                }
 
                 var tg = TargetSystem.Instance();
-                tg->InteractWithObject(cuf);
+                tg->InteractWithObject((GameObject*)cuf.Address);
             }
         }
         catch (Exception)
@@ -124,7 +139,45 @@ public unsafe class CufModule
         }
     }
 
-    public static float GetTargetDistance(Dalamud.Game.ClientState.Objects.Types.IGameObject target)
+    private static void DisableModule()
+    {
+        ModuleEnabled = false;
+        C.EnableCuffModule = false;
+        C.Save();
+    }
+
+    private static IGameObject? FindNearestCuffMachine()
+    {
+        IGameObject? nearest = null;
+        var nearestDistance = float.MaxValue;
+
+        foreach (var obj in Svc.Objects)
+        {
+            var maxDistance = obj.BaseId switch
+            {
+                GoldSaucerCuffBaseId => 1f,
+                HousingCuffBaseId => 4f,
+                _ => 0f
+            };
+            if (maxDistance <= 0f)
+            {
+                continue;
+            }
+
+            var distance = GetTargetDistance(obj);
+            if (distance > maxDistance || distance >= nearestDistance)
+            {
+                continue;
+            }
+
+            nearestDistance = distance;
+            nearest = obj;
+        }
+
+        return nearest;
+    }
+
+    public static float GetTargetDistance(IGameObject target)
     {
         var LocalPlayer = Svc.Objects.LocalPlayer;
 

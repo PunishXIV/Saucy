@@ -1,13 +1,20 @@
-﻿using Dalamud.Hooking;
+﻿using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Hooking;
 using Dalamud.Memory;
 using Dalamud.Utility;
 using ECommons.Automation;
 using ECommons.Automation.UIInput;
+using ECommons.GameHelpers;
+using ECommons.Logging;
+using ECommons.Throttlers;
 using ECommons.UIHelpers.AddonMasterImplementations;
+using FFTriadBuddy;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using static ECommons.GenericHelpers;
 using static TriadBuddyPlugin.UIReaderTriadGame;
 
@@ -26,6 +33,9 @@ internal static unsafe class TriadAutomater
     public static bool LogOutAfterCompletion = false;
     public static bool PlayUntilAllCardsDropOnce = false;
 
+    private const float NearbyNpcDistance = 6f;
+    private const string SanityCheckThrottleKey = "Saucy.TriadAutomater.SanityCheck";
+
     public static void PlaceCard(int which, int slot)
     {
         try
@@ -42,6 +52,12 @@ internal static unsafe class TriadAutomater
 
     public static void RunModule()
     {
+        TickNpcSanityCheck();
+        if (!ModuleEnabled)
+        {
+            return;
+        }
+
         if (TTSolver.preGameDecks.Count > 0)
         {
             var selectedDeck = C.SelectedDeckIndex;
@@ -165,5 +181,108 @@ internal static unsafe class TriadAutomater
             }
         }
         return null;
+    }
+
+    public static void DisableModule(string warning)
+    {
+        DuoLog.Warning(warning);
+        ModuleEnabled = false;
+    }
+
+    private static TriadNpc? ResolveRunTargetTriadNpc()
+    {
+        if (TTSolver.preGameNpc != null)
+        {
+            return TTSolver.preGameNpc;
+        }
+
+        if (TTSolver.lastGameNpc != null)
+        {
+            return TTSolver.lastGameNpc;
+        }
+
+        return TTSolver.currentNpc;
+    }
+
+    private static bool ShouldSkipNpcSanityCheck()
+    {
+        if (!ModuleEnabled)
+        {
+            return true;
+        }
+
+        if (TTSolver.hasMove)
+        {
+            return true;
+        }
+
+        if (uiReaderPrep.HasMatchRequestUI || uiReaderPrep.HasDeckSelectionUI)
+        {
+            return true;
+        }
+
+        if (TryGetAddonByName<AtkUnitBase>("TripleTriad", out var triadAddon) && IsAddonReady(triadAddon))
+        {
+            return true;
+        }
+
+        if (!Player.Available || Svc.Condition[ConditionFlag.BetweenAreas])
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsRunTargetNpcNearby(float maxDistance = NearbyNpcDistance)
+    {
+        var triadNpc = ResolveRunTargetTriadNpc();
+        if (triadNpc == null)
+        {
+            return false;
+        }
+
+        foreach (var obj in Svc.Objects)
+        {
+            if (obj.ObjectKind != ObjectKind.EventNpc)
+            {
+                continue;
+            }
+
+            if (!triadNpc.IsMatchingName(obj.Name.ToString()))
+            {
+                continue;
+            }
+
+            if (Vector3.Distance(Player.Position, obj.Position) <= maxDistance)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void TickNpcSanityCheck()
+    {
+        if (ShouldSkipNpcSanityCheck())
+        {
+            return;
+        }
+
+        if (!EzThrottler.Throttle(SanityCheckThrottleKey, 1000))
+        {
+            return;
+        }
+
+        if (IsRunTargetNpcNearby())
+        {
+            return;
+        }
+
+        var npcName = ResolveRunTargetTriadNpc()?.Name;
+        DisableModule(string.IsNullOrEmpty(npcName?.GetLocalized())
+            ? "No Triple Triad NPC nearby (maybe get closer if in front of one)."
+            : $"No Triple Triad NPC nearby ({npcName.GetLocalized()}). Maybe get closer if you're in front of one.");
     }
 }
