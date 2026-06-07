@@ -6,6 +6,7 @@ internal static class SaucyParallelism
 {
     private static readonly object EvalSync = new();
     private static int cachedEvalLimit = -1;
+    private static SemaphoreSlim? evalConcurrency;
 
     public static int LogicalProcessorCount => Environment.ProcessorCount;
 
@@ -37,7 +38,7 @@ internal static class SaucyParallelism
         get
         {
             var limit = EvalConcurrencyLimit;
-            var cached = field;
+            var cached = evalConcurrency;
             if (cached != null && cachedEvalLimit == limit)
             {
                 return cached;
@@ -45,15 +46,25 @@ internal static class SaucyParallelism
 
             lock (EvalSync)
             {
-                if (field != null && cachedEvalLimit == limit)
+                if (evalConcurrency != null && cachedEvalLimit == limit)
                 {
-                    return field;
+                    return evalConcurrency;
                 }
 
-                field = new(limit, limit);
+                evalConcurrency = new(limit, limit);
                 cachedEvalLimit = limit;
-                return field;
+                return evalConcurrency;
             }
+        }
+    }
+
+    public static void ResetEvalConcurrency()
+    {
+        lock (EvalSync)
+        {
+            evalConcurrency?.Dispose();
+            evalConcurrency = null;
+            cachedEvalLimit = -1;
         }
     }
 }

@@ -49,6 +49,7 @@ public sealed partial class Saucy : IDalamudPlugin
         C.SetModuleEnabled(ModuleNames.OutOnALimb, false);
         C.SetModuleEnabled(ModuleNames.CuffACur, false);
         C.Save();
+        PrepareTriadSessionForPluginLoad();
         P = this;
         ArcadeMachineSession.WireCompleteShutdown(
             GoldSaucerArcadeMachine.Cuff,
@@ -116,6 +117,7 @@ public sealed partial class Saucy : IDalamudPlugin
         Svc.Commands.RemoveHandler(commandName);
         Svc.PluginInterface.UiBuilder.OpenMainUi -= EzConfigGui.Open;
         Svc.Framework.Update -= RunBot;
+        PrepareTriadSessionForPluginUnload();
         _triadCollectionHost?.Dispose();
         YesAlready.ResumeIfPausedBySaucy();
         SubscriptionManager.DisposeAll();

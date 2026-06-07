@@ -170,6 +170,17 @@ public partial class TriadSession
         moveReadyUtc = null;
     }
 
+    internal void InvalidatePendingMoveCalc()
+    {
+        moveCalcGeneration++;
+        moveCalcInFlight = false;
+        pauseOptimizerForSolver = false;
+        hasMove = false;
+        moveCardIdx = -1;
+        moveBoardIdx = -1;
+        moveReadyUtc = null;
+    }
+
     private TriadNpc ResolveNpcForGame(UIStateTriadGame stateOb)
     {
         if (currentNpc != null)
