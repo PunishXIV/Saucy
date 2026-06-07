@@ -33,6 +33,6 @@ internal static unsafe class GoldSaucerCardListUi
 
         var addon = (AddonGSInfoCardList*)addonPtr;
         var cardButton = addon->CardButtons[cellIndex];
-        return AddonButton.TryClick(&addon->AtkUnitBase, cardButton, requireEnabled: false);
+        return AddonButton.TryClick(&addon->AtkUnitBase, cardButton, false);
     }
 }

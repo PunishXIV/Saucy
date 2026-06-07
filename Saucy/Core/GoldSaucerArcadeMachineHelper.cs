@@ -1,4 +1,3 @@
-using ECommons.Logging;
 using Saucy.Framework;
 using System;
 using System.Collections.Generic;
@@ -86,7 +85,7 @@ internal static class GoldSaucerArcadeMachineHelper
         {
             GoldSaucerArcadeMachine.Cuff => "Cuff-a-Cur",
             GoldSaucerArcadeMachine.Limb => "Out on a Limb",
-            _ => "Triple Triad"
+            var _ => "Triple Triad"
         };
 
         DuoLog.Warning($"Disabled {string.Join(" and ", disabled)} to enable {enabledLabel}.");

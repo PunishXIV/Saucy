@@ -92,7 +92,7 @@ internal static unsafe class GoldSaucerRewardHelper
         foreach (var nodeId in CloseButtonNodeIds)
         {
             var button = addon->GetComponentButtonById(nodeId);
-            if (AddonButton.TryClick(addon, button, requireEnabled: false) && !addon->IsVisible)
+            if (AddonButton.TryClick(addon, button, false) && !addon->IsVisible)
             {
                 return true;
             }

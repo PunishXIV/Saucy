@@ -84,6 +84,6 @@ public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
             }
         }
 
-        return new SolverResult(numWinningWorkers, numDrawingWorkers, MaxWorkers);
+        return new(numWinningWorkers, numDrawingWorkers, MaxWorkers);
     }
 }

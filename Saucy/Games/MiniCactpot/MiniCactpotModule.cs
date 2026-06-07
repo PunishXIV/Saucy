@@ -341,7 +341,7 @@ public unsafe class MiniCactpot : Module
             return false;
         }
 
-        return AddonButton.TryClick(&addon->AtkUnitBase, (AtkComponentButton*)tile, requireEnabled: false);
+        return AddonButton.TryClick(&addon->AtkUnitBase, (AtkComponentButton*)tile, false);
     }
 
     private static bool TryClickLane(AddonLotteryDaily* addon, int csLane)

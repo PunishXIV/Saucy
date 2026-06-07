@@ -1,6 +1,5 @@
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
-using Saucy.IPC;
 using System;
 namespace Saucy.TripleTriad;
 

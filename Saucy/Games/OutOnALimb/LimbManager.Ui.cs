@@ -2,7 +2,6 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Components;
 using ECommons.Automation.UIInput;
 using ECommons.ImGuiMethods;
-using ECommons.Logging;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.Framework;
 using System.Linq;

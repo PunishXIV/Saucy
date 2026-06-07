@@ -198,7 +198,7 @@ public unsafe partial class CuffACurAutomation
     {
         foreach (var obj in Svc.Objects)
         {
-            if (System.Array.IndexOf(ArcadeMachineBaseIds.Cuff, obj.BaseId) < 0)
+            if (Array.IndexOf(ArcadeMachineBaseIds.Cuff, obj.BaseId) < 0)
             {
                 continue;
             }

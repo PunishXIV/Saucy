@@ -1,6 +1,5 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Components;
-using ECommons.Logging;
 namespace Saucy.CuffACur;
 
 public partial class CuffACurAutomation
