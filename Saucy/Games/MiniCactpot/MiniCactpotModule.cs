@@ -28,7 +28,7 @@ public unsafe class MiniCactpot : Module
 
     public override void Enable()
     {
-        NpcHelper.SetTrackedNpcs(CactpotNpcs.MiniScope, [CactpotNpcs.MiniBrokerBaseId], CactpotNpcs.MiniScope);
+        ObjectHelper.SetTrackedObjects(CactpotNpcs.MiniScope, [CactpotNpcs.MiniBrokerBaseId], logLabel: CactpotNpcs.MiniScope);
 
         Svc.AddonLifecycle.UnregisterListener(OnLotterySetup);
         Svc.AddonLifecycle.UnregisterListener(OnPreFinalize);
@@ -48,7 +48,7 @@ public unsafe class MiniCactpot : Module
         Svc.AddonLifecycle.UnregisterListener(OnPreFinalize);
         Svc.AddonLifecycle.UnregisterListener(OnTalkUpdate);
         Svc.Framework.Update -= OnFrameworkUpdate;
-        NpcHelper.ClearTrackedNpcs(CactpotNpcs.MiniScope);
+        ObjectHelper.ClearTrackedObjects(CactpotNpcs.MiniScope);
         ticketFlow.Clear();
     }
 
@@ -66,7 +66,7 @@ public unsafe class MiniCactpot : Module
 
     private void OnTalkUpdate(AddonEvent type, AddonArgs args)
     {
-        if (InSaucer && NpcHelper.HasInitiatedDialogue(CactpotNpcs.MiniScope))
+        if (InSaucer && ObjectHelper.HasInitiatedDialogue(CactpotNpcs.MiniScope))
         {
             ticketFlow.Mark();
         }
@@ -84,7 +84,7 @@ public unsafe class MiniCactpot : Module
         TryAdvanceDialogue();
         HandleYesno();
 
-        if (InSaucer && IsInTicketFlow() && NpcHelper.IsTargeting(CactpotNpcs.MiniScope) && TryGetLotteryAddon(out var addon))
+        if (InSaucer && IsInTicketFlow() && ObjectHelper.IsTargeting(CactpotNpcs.MiniScope) && TryGetLotteryAddon(out var addon))
         {
             ProcessAddon(addon);
         }
@@ -92,7 +92,7 @@ public unsafe class MiniCactpot : Module
 
     private void TryAdvanceDialogue()
     {
-        if (!InSaucer || !NpcHelper.HasInitiatedDialogue(CactpotNpcs.MiniScope))
+        if (!InSaucer || !ObjectHelper.HasInitiatedDialogue(CactpotNpcs.MiniScope))
         {
             return;
         }
@@ -113,7 +113,7 @@ public unsafe class MiniCactpot : Module
             return;
         }
 
-        if (QuestDialogueGuard.ShouldBlockYesno(NpcHelper.IsTargeting(CactpotNpcs.MiniScope)))
+        if (QuestDialogueGuard.ShouldBlockYesno(ObjectHelper.IsTargeting(CactpotNpcs.MiniScope)))
         {
             return;
         }
@@ -158,7 +158,7 @@ public unsafe class MiniCactpot : Module
     {
         if (TalkHelper.IsVisible())
         {
-            if (NpcHelper.HasInitiatedDialogue(CactpotNpcs.MiniScope))
+            if (ObjectHelper.HasInitiatedDialogue(CactpotNpcs.MiniScope))
             {
                 TalkHelper.TryAdvance(TalkThrottleKey);
             }
@@ -341,23 +341,7 @@ public unsafe class MiniCactpot : Module
             return false;
         }
 
-        var button = (AtkComponentButton*)tile;
-        if (!button->AtkResNode->IsVisible())
-        {
-            return false;
-        }
-
-        try
-        {
-            button->ClickAddonButton(&addon->AtkUnitBase);
-            addon->AtkUnitBase.Update(0);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Svc.Log.Verbose(ex, $"[MiniCactpot] Tile {tileIndex} click failed");
-            return false;
-        }
+        return AddonButton.TryClick(&addon->AtkUnitBase, (AtkComponentButton*)tile, requireEnabled: false);
     }
 
     private static bool TryClickLane(AddonLotteryDaily* addon, int csLane)
@@ -401,29 +385,7 @@ public unsafe class MiniCactpot : Module
             return true;
         }
 
-        var unit = &addon->AtkUnitBase;
-        var confirmBtn = addon->GetComponentButtonById(ConfirmButtonNodeId);
-        if (confirmBtn == null || confirmBtn->AtkResNode == null || !confirmBtn->AtkResNode->IsVisible())
-        {
-            return false;
-        }
-
-        if (!confirmBtn->IsEnabled)
-        {
-            return false;
-        }
-
-        try
-        {
-            confirmBtn->ClickAddonButton(unit);
-            unit->Update(0);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Svc.Log.Verbose(ex, "[MiniCactpot] Confirm button click failed");
-            return false;
-        }
+        return AddonButton.TryClick(&addon->AtkUnitBase, ConfirmButtonNodeId);
     }
 
     private static int SolverLaneToCsLane(int lane) =>

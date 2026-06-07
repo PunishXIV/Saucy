@@ -4,8 +4,8 @@ namespace Saucy.Framework;
 public static class NpcDialogueGate
 {
     public static bool CanAutomateYesno(string scope, bool inTimedFlow) =>
-        NpcHelper.HasInitiatedDialogue(scope) ||
-        (inTimedFlow && NpcHelper.IsTargeting(scope));
+        ObjectHelper.HasInitiatedDialogue(scope) ||
+        (inTimedFlow && ObjectHelper.IsTargeting(scope));
 
     public static void RefreshTimedFlow(
         string scope,
@@ -13,12 +13,12 @@ public static class NpcDialogueGate
         Action markFlow,
         Func<bool> hasModuleUi)
     {
-        if (!NpcHelper.IsTargeting(scope))
+        if (!ObjectHelper.IsTargeting(scope))
         {
             return;
         }
 
-        if (!inTimedFlow && !NpcHelper.HasInitiatedDialogue(scope))
+        if (!inTimedFlow && !ObjectHelper.HasInitiatedDialogue(scope))
         {
             return;
         }

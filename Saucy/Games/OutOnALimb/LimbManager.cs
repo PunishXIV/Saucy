@@ -289,6 +289,7 @@ public unsafe partial class LimbManager
 
             if (GoldSaucerArcadeFakeBreak.IsActive(Machine))
             {
+                ArcadeMachineSession.ClearInteractPending(Machine);
                 return;
             }
 

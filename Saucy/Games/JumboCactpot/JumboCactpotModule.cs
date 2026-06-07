@@ -1,6 +1,5 @@
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
-using ECommons.Automation.UIInput;
 using ECommons.Throttlers;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.UI;
@@ -47,10 +46,10 @@ public unsafe class JumboCactpot : Module
 
     public override void Enable()
     {
-        NpcHelper.SetTrackedNpcs(
+        ObjectHelper.SetTrackedObjects(
             CactpotNpcs.JumboBrokerScope,
             [CactpotNpcs.JumboBrokerBaseId],
-            CactpotNpcs.JumboBrokerScope);
+            logLabel: CactpotNpcs.JumboBrokerScope);
 
         Svc.AddonLifecycle.UnregisterListener(OnInputSetup);
         Svc.AddonLifecycle.UnregisterListener(OnInputFinalize);
@@ -79,7 +78,7 @@ public unsafe class JumboCactpot : Module
         Svc.AddonLifecycle.UnregisterListener(OnRewardFinalize);
         Svc.AddonLifecycle.UnregisterListener(OnTalkUpdate);
         Svc.Framework.Update -= OnFrameworkUpdate;
-        NpcHelper.ClearTrackedNpcs(CactpotNpcs.JumboBrokerScope);
+        ObjectHelper.ClearTrackedObjects(CactpotNpcs.JumboBrokerScope);
         JumboCactpotBrokerPath.Reset();
         rewardAddonSeenUtc = null;
         inputAddonSeenUtc = null;
@@ -92,7 +91,7 @@ public unsafe class JumboCactpot : Module
 
     private void OnTalkUpdate(AddonEvent type, AddonArgs args)
     {
-        if (InSaucer && NpcHelper.HasInitiatedDialogue(CactpotNpcs.JumboBrokerScope))
+        if (InSaucer && ObjectHelper.HasInitiatedDialogue(CactpotNpcs.JumboBrokerScope))
         {
             ticketFlow.Mark();
         }
@@ -231,7 +230,7 @@ public unsafe class JumboCactpot : Module
 
     private void HandleInputAddon()
     {
-        if (!InSaucer || !IsInTicketFlow() || !NpcHelper.IsTargeting(CactpotNpcs.JumboBrokerScope))
+        if (!InSaucer || !IsInTicketFlow() || !ObjectHelper.IsTargeting(CactpotNpcs.JumboBrokerScope))
         {
             return;
         }
@@ -274,7 +273,7 @@ public unsafe class JumboCactpot : Module
 
         if (!inputRandomized)
         {
-            if (TryClickButton(addon, InputRandomizeNodeId))
+            if (AddonButton.TryClick(addon, InputRandomizeNodeId))
             {
                 inputRandomized = true;
                 inputRandomizedUtc = DateTime.UtcNow;
@@ -290,37 +289,16 @@ public unsafe class JumboCactpot : Module
             return;
         }
 
-        if (TryClickButton(addon, InputConfirmNodeId))
+        if (AddonButton.TryClick(addon, InputConfirmNodeId))
         {
             inputConfirmed = true;
             Log($"Purchase clicked (node {InputConfirmNodeId}).");
         }
     }
 
-    private static bool TryClickButton(AtkUnitBase* addon, uint nodeId)
-    {
-        var btn = addon->GetComponentButtonById(nodeId);
-        if (btn == null || btn->AtkResNode == null || !btn->AtkResNode->IsVisible() || !btn->IsEnabled)
-        {
-            return false;
-        }
-
-        try
-        {
-            btn->ClickAddonButton(addon);
-            addon->Update(0);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Svc.Log.Verbose(ex, $"[JumboCactpot] Button node {nodeId} click failed");
-            return false;
-        }
-    }
-
     private void HandleBrokerMenu()
     {
-        if (!InSaucer || !NpcHelper.HasInitiatedDialogue(CactpotNpcs.JumboBrokerScope))
+        if (!InSaucer || !ObjectHelper.HasInitiatedDialogue(CactpotNpcs.JumboBrokerScope))
         {
             return;
         }
@@ -411,7 +389,7 @@ public unsafe class JumboCactpot : Module
         }
 
         ticketFlow.Mark();
-        if (!TryClickButton(addon, RewardConfirmNodeId))
+        if (!AddonButton.TryClick(addon, RewardConfirmNodeId))
         {
             LogVerbose($"Reward confirm (node {RewardConfirmNodeId}) click skipped.");
         }
@@ -419,7 +397,7 @@ public unsafe class JumboCactpot : Module
 
     private void TryAdvanceTalk()
     {
-        if (!InSaucer || !NpcHelper.HasInitiatedDialogue(CactpotNpcs.JumboBrokerScope))
+        if (!InSaucer || !ObjectHelper.HasInitiatedDialogue(CactpotNpcs.JumboBrokerScope))
         {
             return;
         }
@@ -440,7 +418,7 @@ public unsafe class JumboCactpot : Module
             return;
         }
 
-        if (QuestDialogueGuard.ShouldBlockYesno(NpcHelper.IsTargeting(CactpotNpcs.JumboBrokerScope)))
+        if (QuestDialogueGuard.ShouldBlockYesno(ObjectHelper.IsTargeting(CactpotNpcs.JumboBrokerScope)))
         {
             return;
         }

@@ -140,6 +140,7 @@ public unsafe partial class CuffACurAutomation
 
             if (GoldSaucerArcadeFakeBreak.IsActive(Machine))
             {
+                ArcadeMachineSession.ClearInteractPending(Machine);
                 return;
             }
 

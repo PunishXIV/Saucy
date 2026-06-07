@@ -102,10 +102,6 @@ public static unsafe class ArcadeMachineGate
         return true;
     }
 
-    /// <summary>
-    ///     Re-arms flow after disable/re-enable while still at the machine (flow was cleared but OccupiedInQuestEvent may
-    ///     linger).
-    /// </summary>
     public static void TryReclaimSession(string scope, Func<bool> hasMinigameUi, Func<bool> isNearMachine)
     {
         if (IsInFlow(scope))

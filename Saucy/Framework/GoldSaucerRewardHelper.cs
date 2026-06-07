@@ -1,5 +1,4 @@
 using ECommons.Automation;
-using ECommons.Automation.UIInput;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
@@ -92,24 +91,10 @@ internal static unsafe class GoldSaucerRewardHelper
     {
         foreach (var nodeId in CloseButtonNodeIds)
         {
-            try
+            var button = addon->GetComponentButtonById(nodeId);
+            if (AddonButton.TryClick(addon, button, requireEnabled: false) && !addon->IsVisible)
             {
-                var button = addon->GetComponentButtonById(nodeId);
-                if (button == null || button->AtkResNode == null || !button->AtkResNode->IsVisible())
-                {
-                    continue;
-                }
-
-                button->ClickAddonButton(addon);
-                addon->Update(0);
-                if (!addon->IsVisible)
-                {
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Svc.Log.Verbose(ex, $"[GoldSaucerReward] Close button {nodeId} click failed");
+                return true;
             }
         }
 

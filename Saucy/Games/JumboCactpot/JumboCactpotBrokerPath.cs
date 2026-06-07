@@ -60,13 +60,13 @@ internal static class JumboCactpotBrokerPath
             return;
         }
 
-        var npc = NpcHelper.FindNearestNpc(CactpotNpcs.JumboBrokerBaseId);
+        var npc = ObjectHelper.FindNearestByBaseId(CactpotNpcs.JumboBrokerBaseId);
         if (npc == null)
         {
             return;
         }
 
-        if (NpcHelper.HasArrivedAtNpc(npc))
+        if (ObjectHelper.HasArrivedAt(npc))
         {
             activePathTargetBaseId = null;
             if (Vnavmesh.IsMoving())
@@ -74,7 +74,7 @@ internal static class JumboCactpotBrokerPath
                 Vnavmesh.StopPath();
             }
 
-            NpcHelper.TryInteractWithNpc(CactpotNpcs.JumboBrokerBaseId, throttleKey: BrokerInteractKey);
+            ObjectHelper.TryInteractWithBaseId(CactpotNpcs.JumboBrokerBaseId, throttleKey: BrokerInteractKey);
             return;
         }
 
@@ -88,7 +88,7 @@ internal static class JumboCactpotBrokerPath
             Vnavmesh.StopPath();
         }
 
-        if (NpcHelper.TryMoveToNpc(CactpotNpcs.JumboBrokerBaseId))
+        if (ObjectHelper.TryMoveToBaseId(CactpotNpcs.JumboBrokerBaseId))
         {
             activePathTargetBaseId = CactpotNpcs.JumboBrokerBaseId;
         }
@@ -106,7 +106,7 @@ internal static class JumboCactpotBrokerPath
     }
 
     private static bool IsBrokerFlowActive() =>
-        NpcHelper.HasInitiatedDialogue(CactpotNpcs.JumboBrokerScope) ||
+        ObjectHelper.HasInitiatedDialogue(CactpotNpcs.JumboBrokerScope) ||
         AgentHelper.IsActive(AgentId.LotteryWeekly);
 
     private static bool IsMovementPaused() =>

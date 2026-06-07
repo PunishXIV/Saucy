@@ -24,41 +24,4 @@ public static unsafe class AgentHelper
         var agent = AgentModule.Instance()->GetAgentByInternalId(agentId);
         return agent == callbackEntry.AgentInterface;
     }
-
-    /// <summary>
-    ///     True when the agent's managed addon id matches the visible yes/no (AgentInterface.AddonId).
-    /// </summary>
-    public static bool IsYesnoOwnedByAgent(AgentId agentId, AddonSelectYesno* yesno)
-    {
-        if (yesno == null)
-        {
-            return false;
-        }
-
-        var agent = AgentModule.Instance()->GetAgentByInternalId(agentId);
-        if (agent == null)
-        {
-            return false;
-        }
-
-        var managedAddonId = agent->AddonId;
-        return managedAddonId != 0 && managedAddonId == yesno->AtkUnitBase.Id;
-    }
-
-    public static bool SharesCallbackAgentWith(AtkUnitBase* addon, AtkUnitBase* other)
-    {
-        if (addon == null || other == null)
-        {
-            return false;
-        }
-
-        var rap = RaptureAtkModule.Instance();
-        if (!rap->AddonCallbackMapping.TryGetValue(addon->Id, out var left, false) ||
-            !rap->AddonCallbackMapping.TryGetValue(other->Id, out var right, false))
-        {
-            return false;
-        }
-
-        return left.AgentInterface == right.AgentInterface;
-    }
 }

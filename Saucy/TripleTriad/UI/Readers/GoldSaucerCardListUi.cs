@@ -1,7 +1,5 @@
-using ECommons.Automation.UIInput;
 using FFXIVClientStructs.FFXIV.Client.UI;
-using FFXIVClientStructs.FFXIV.Component.GUI;
-using System;
+using Saucy.Framework;
 namespace Saucy.TripleTriad.UI;
 
 internal static unsafe class GoldSaucerCardListUi
@@ -35,31 +33,6 @@ internal static unsafe class GoldSaucerCardListUi
 
         var addon = (AddonGSInfoCardList*)addonPtr;
         var cardButton = addon->CardButtons[cellIndex];
-        return TryClickAddonButton(&addon->AtkUnitBase, cardButton, false);
-    }
-
-    private static bool TryClickAddonButton(AtkUnitBase* addon, AtkComponentButton* button, bool requireEnabled = true)
-    {
-        if (button == null || button->AtkResNode == null || !button->AtkResNode->IsVisible())
-        {
-            return false;
-        }
-
-        if (requireEnabled && !button->IsEnabled)
-        {
-            return false;
-        }
-
-        try
-        {
-            button->ClickAddonButton(addon);
-            addon->Update(0);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Svc.Log.Verbose(ex, "[GoldSaucerCardListUi] Addon button click failed");
-            return false;
-        }
+        return AddonButton.TryClick(&addon->AtkUnitBase, cardButton, requireEnabled: false);
     }
 }

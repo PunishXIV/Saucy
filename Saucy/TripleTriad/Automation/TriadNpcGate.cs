@@ -36,11 +36,11 @@ internal static unsafe class TriadNpcGate
             GameNpcDB.Get().mapNpcs.TryGetValue(npc.Id, out var npcInfo) &&
             npcInfo.ENpcBaseId != 0)
         {
-            NpcHelper.SetTrackedNpcs(Scope, [npcInfo.ENpcBaseId]);
+            ObjectHelper.SetTrackedObjects(Scope, [npcInfo.ENpcBaseId]);
             return;
         }
 
-        NpcHelper.ClearTrackedNpcs(Scope);
+        ObjectHelper.ClearTrackedObjects(Scope);
     }
 
     public static bool IsTargeting()
@@ -50,7 +50,7 @@ internal static unsafe class TriadNpcGate
             return false;
         }
 
-        if (NpcHelper.IsTargeting(Scope))
+        if (ObjectHelper.IsTargeting(Scope))
         {
             return true;
         }

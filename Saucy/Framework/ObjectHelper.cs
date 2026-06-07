@@ -3,6 +3,7 @@ using ECommons.GameHelpers;
 using ECommons.Throttlers;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
+using Saucy.IPC;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -47,10 +48,10 @@ public static unsafe class ObjectHelper
     public static void RememberObject(string scope, IGameObject obj) =>
         LastKnownObjectIds[scope] = obj.GameObjectId;
 
-    public static bool IsRememberedObject(string scope, IGameObject obj) =>
+    private static bool IsRememberedObject(string scope, IGameObject obj) =>
         LastKnownObjectIds.TryGetValue(scope, out var id) && obj.GameObjectId == id;
 
-    public static bool TryGetRememberedObject(string scope, out IGameObject? obj)
+    private static bool TryGetRememberedObject(string scope, out IGameObject? obj)
     {
         obj = null;
         if (!LastKnownObjectIds.TryGetValue(scope, out var id))
@@ -100,13 +101,70 @@ public static unsafe class ObjectHelper
         return MatchesObject(scope, obj, baseIds, CustomMatchers.GetValueOrDefault(scope));
     }
 
-    /// <summary>
-    ///     Machine is targeted and the Gold Saucer arcade start menu (SelectString) is open.
-    /// </summary>
     public static bool HasInitiatedArcadeMenu(string scope) =>
         IsTargeting(scope) &&
         SelectStringHelper.TryGetArcadeMenu(out var menu) &&
         SelectStringHelper.IsArcadeYesnoMenu(menu);
+
+    public static bool HasInitiatedDialogue(string scope) =>
+        IsTargeting(scope) &&
+        (TalkHelper.IsVisible() || SelectStringHelper.IsNpcListMenuVisible());
+
+    public static IGameObject? FindNearestByBaseId(uint baseId, float maxDistance = float.MaxValue)
+    {
+        IGameObject? closest = null;
+        var closestDist = float.MaxValue;
+
+        foreach (var obj in Svc.Objects)
+        {
+            if (obj.BaseId != baseId)
+            {
+                continue;
+            }
+
+            var dist = Player.DistanceTo(obj);
+            if (dist <= maxDistance && dist < closestDist)
+            {
+                closestDist = dist;
+                closest = obj;
+            }
+        }
+
+        return closest;
+    }
+
+    public static bool TryMoveToBaseId(uint baseId, float closeRange = Vnavmesh.NpcCloseRange)
+    {
+        var obj = FindNearestByBaseId(baseId);
+        if (obj == null || !Vnavmesh.IsInstalled)
+        {
+            return false;
+        }
+
+        return Vnavmesh.TryMoveTo(obj.Position, false, closeRange);
+    }
+
+    public static bool HasArrivedAt(IGameObject obj, float closeRange = Vnavmesh.NpcCloseRange) =>
+        Vnavmesh.TickArrival(obj.Position, closeRange);
+
+    public static bool TryInteractWithBaseId(
+        uint baseId,
+        float interactRange = Vnavmesh.NpcCloseRange,
+        string throttleKey = "Saucy.Object.Interact")
+    {
+        if (!Player.Interactable)
+        {
+            return false;
+        }
+
+        var obj = FindNearestByBaseId(baseId, interactRange + 1f);
+        if (obj == null || Player.DistanceTo(obj) > interactRange)
+        {
+            return false;
+        }
+
+        return TryInteractWithObject(obj, throttleKey);
+    }
 
     public static IGameObject? FindNearest(
         string scope,

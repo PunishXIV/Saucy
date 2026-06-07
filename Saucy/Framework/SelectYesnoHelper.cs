@@ -210,10 +210,7 @@ public static unsafe class SelectYesnoHelper
     public static bool IsTriadAddon(AtkUnitBase* addon) =>
         AgentHelper.IsAddonOwnedBy(addon, AgentId.TripleTriad);
 
-    /// <summary>
-    ///     Yes/no owned by a Saucy minigame agent (triad, arcade, lottery).
-    /// </summary>
-    public static bool IsModuleManagedYesno(AddonSelectYesno* yesno)
+    private static bool IsModuleManagedYesno(AddonSelectYesno* yesno)
     {
         if (yesno == null || !HasYesnoButtons(yesno))
         {
@@ -227,9 +224,6 @@ public static unsafe class SelectYesnoHelper
                IsLotteryWeeklyAddon(addon);
     }
 
-    /// <summary>
-    ///     Safe for route/zone transition handlers — not blocked and not minigame-owned.
-    /// </summary>
     public static bool IsRouteSafeYesno(AddonSelectYesno* yesno) =>
         yesno != null &&
         HasYesnoButtons(yesno) &&
