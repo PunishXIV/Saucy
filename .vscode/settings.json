@@ -1,0 +1,9 @@
+{
+    "dotnet.formatting.organizeImportsOnFormat": false,
+    "[csharp]": {
+        "editor.defaultFormatter": "ms-dotnettools.csharp",
+        "editor.formatOnSave": true
+    },
+    "csharp.format.enable": true,
+    "omnisharp.enableEditorConfigSupport": true
+}

@@ -3,14 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-
 namespace Saucy.Framework;
 
 public class ModuleManager : IDisposable
 {
     private readonly List<Module> _modules = [];
-
-    public IReadOnlyList<Module> Modules => _modules.AsReadOnly();
 
     public ModuleManager()
     {
@@ -20,7 +17,9 @@ public class ModuleManager : IDisposable
             try
             {
                 if (Activator.CreateInstance(moduleType) is Module module)
+                {
                     _modules.Add(module);
+                }
             }
             catch (Exception ex)
             {
@@ -30,16 +29,21 @@ public class ModuleManager : IDisposable
 
         foreach (var m in _modules)
         {
-            if (!C.EnabledModules.Contains(m.InternalName)) continue;
+            if (!C.EnabledModules.Contains(m.InternalName))
+            {
+                continue;
+            }
             GenericHelpers.TryExecute(m.EnableInternal);
         }
     }
 
-    public T? GetModule<T>() where T : class, IModule => _modules.OfType<T>().FirstOrDefault();
+    public IReadOnlyList<Module> Modules => _modules.AsReadOnly();
 
     public void Dispose()
     {
-        _modules.ForEach(m => m.Disable());
+        _modules.ForEach(m => m.DisableInternal());
         _modules.Clear();
     }
+
+    public T? GetModule<T>() where T : class, IModule => _modules.OfType<T>().FirstOrDefault();
 }

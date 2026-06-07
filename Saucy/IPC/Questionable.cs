@@ -1,0 +1,99 @@
+using ECommons.EzIpcManager;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+namespace Saucy.IPC;
+
+[IPC(IPCNames.Questionable)]
+internal static class Questionable
+{
+    [EzIPC]
+    public static Func<string, bool> StartSingleQuest = null!;
+
+    [EzIPC]
+    public static Func<string, bool> IsQuestLocked = null!;
+
+    [EzIPC]
+    public static Func<string, bool> IsReadyToAcceptQuest = null!;
+
+    [EzIPC]
+    public static Func<string, bool> IsQuestComplete = null!;
+
+    [EzIPC]
+    public static Func<string, bool> IsQuestAccepted = null!;
+
+    [EzIPC]
+    public static Func<string, bool> IsQuestUnobtainable = null!;
+
+    public static bool IsInstalled => SubscriptionManager.IsInitialized(IPCNames.Questionable);
+}
+
+internal static class QuestionableTriad
+{
+    private static readonly HashSet<uint> QuestsWithoutPath = [];
+
+    public static void ClearUnsupportedCache() => QuestsWithoutPath.Clear();
+
+    public static bool HasAutomationPath(uint luminaQuestRowId)
+    {
+        if (!Questionable.IsInstalled || luminaQuestRowId == 0)
+        {
+            return true;
+        }
+
+        if (QuestsWithoutPath.Contains(luminaQuestRowId))
+        {
+            return false;
+        }
+
+        return !(IsQuestLocked(luminaQuestRowId) && IsReadyToAccept(luminaQuestRowId));
+    }
+
+    public static bool IsQuestComplete(uint luminaQuestRowId) =>
+        InvokeBool(Questionable.IsQuestComplete, luminaQuestRowId);
+
+    public static bool IsQuestAccepted(uint luminaQuestRowId) =>
+        InvokeBool(Questionable.IsQuestAccepted, luminaQuestRowId);
+
+    public static bool IsReadyToAccept(uint luminaQuestRowId) =>
+        InvokeBool(Questionable.IsReadyToAcceptQuest, luminaQuestRowId);
+
+    public static bool IsQuestLocked(uint luminaQuestRowId) =>
+        InvokeBool(Questionable.IsQuestLocked, luminaQuestRowId);
+
+    public static bool IsQuestUnobtainable(uint luminaQuestRowId) =>
+        InvokeBool(Questionable.IsQuestUnobtainable, luminaQuestRowId);
+
+    public static bool TryStartSingleQuest(uint luminaQuestRowId)
+    {
+        if (!Questionable.IsInstalled || luminaQuestRowId == 0)
+        {
+            return false;
+        }
+
+        if (!Questionable.StartSingleQuest.TryInvoke(FormatQuestId(luminaQuestRowId), out var started))
+        {
+            return false;
+        }
+
+        if (!started)
+        {
+            QuestsWithoutPath.Add(luminaQuestRowId);
+        }
+
+        return started;
+    }
+
+    private static string FormatQuestId(uint luminaQuestRowId) =>
+        ((ushort)(luminaQuestRowId & 0xFFFF)).ToString(CultureInfo.InvariantCulture);
+
+    private static bool InvokeBool(Func<string, bool> ipc, uint luminaQuestRowId)
+    {
+        if (!Questionable.IsInstalled || luminaQuestRowId == 0)
+        {
+            return false;
+        }
+
+        return ipc.TryInvoke(FormatQuestId(luminaQuestRowId), out var ret) && ret;
+    }
+}

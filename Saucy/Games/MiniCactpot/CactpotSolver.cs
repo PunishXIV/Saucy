@@ -1,0 +1,460 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+namespace Saucy.MiniCactpot;
+
+public sealed class CactpotSolver
+{
+    public const int TotalNumbers = 9;
+    public const int TotalLanes = 8;
+
+    private const double EPS = 0.00001;
+
+    private static readonly int[] Payouts = [0, 0, 0, 0, 0, 0, 10000, 36, 720, 360, 80, 252, 108, 72, 54, 180, 72, 180, 119, 36, 306, 1080, 144, 1800, 3600];
+
+    private readonly Dictionary<string, (double Value, bool[] Tiles)> precalculatedOpenings = new()
+    {
+        {
+            "100000000", (1677.7854166666664, [false, false, true, false, false, false, true, false, false])
+        },
+        {
+            "200000000", (1665.8127976190476, [false, false, true, false, false, false, true, false, false])
+        },
+        {
+            "300000000", (1662.5047619047620, [false, false, true, false, false, false, true, false, false])
+        },
+        {
+            "400000000", (1365.0047619047618, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "500000000", (1359.5589285714286, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "600000000", (1364.3044642857142, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "700000000", (1454.5455357142855, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "800000000", (1527.0875000000000, [false, false, true, false, true, false, true, false, false])
+        },
+        {
+            "900000000", (1517.7214285714285, [false, false, true, false, true, false, true, false, false])
+        },
+        {
+            "010000000", (1411.3541666666665, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "020000000", (1414.9401785714288, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "030000000", (1406.4190476190477, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "040000000", (1443.3062499999999, [false, false, false, false, false, false, true, false, true])
+        },
+        {
+            "050000000", (1444.3172619047618, [false, false, false, false, true, false, true, false, true])
+        },
+        {
+            "060000000", (1441.3663690476192, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "070000000", (1485.6839285714286, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "080000000", (1512.9279761904760, [true, false, true, false, false, false, false, false, false])
+        },
+        {
+            "090000000", (1518.4663690476190, [true, false, true, false, false, false, false, false, false])
+        },
+        {
+            "001000000", (1677.7854166666664, [true, false, false, false, false, false, false, false, true])
+        },
+        {
+            "002000000", (1665.8127976190476, [true, false, false, false, false, false, false, false, true])
+        },
+        {
+            "003000000", (1662.5047619047620, [true, false, false, false, false, false, false, false, true])
+        },
+        {
+            "004000000", (1365.0047619047618, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "005000000", (1359.5589285714286, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "006000000", (1364.3044642857142, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "007000000", (1454.5455357142855, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "008000000", (1527.0875000000000, [true, false, false, false, true, false, false, false, true])
+        },
+        {
+            "009000000", (1517.7214285714285, [true, false, false, false, true, false, false, false, true])
+        },
+        {
+            "000100000", (1411.3541666666665, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000200000", (1414.9401785714288, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000300000", (1406.4190476190477, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000400000", (1443.3062499999999, [false, false, true, false, false, false, false, false, true])
+        },
+        {
+            "000500000", (1444.3172619047618, [false, false, true, false, true, false, false, false, true])
+        },
+        {
+            "000600000", (1441.3663690476192, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000700000", (1485.6839285714286, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000800000", (1512.9279761904760, [true, false, false, false, false, false, true, false, false])
+        },
+        {
+            "000900000", (1518.4663690476190, [true, false, false, false, false, false, true, false, false])
+        },
+        {
+            "000010000", (1860.4401785714285, [true, false, true, false, false, false, true, false, true])
+        },
+        {
+            "000020000", (1832.5413690476191, [true, false, true, false, false, false, true, false, true])
+        },
+        {
+            "000030000", (1834.1797619047620, [true, false, true, false, false, false, true, false, true])
+        },
+        {
+            "000040000", (1171.9669642857143, [true, false, true, false, false, false, true, false, true])
+        },
+        {
+            "000050000", (1176.2047619047619, [true, false, true, false, false, false, true, false, true])
+        },
+        {
+            "000060000", (1234.6142857142856, [true, false, true, false, false, false, true, false, true])
+        },
+        {
+            "000070000", (1427.3583333333331, [true, false, true, false, false, false, true, false, true])
+        },
+        {
+            "000080000", (1544.7607142857144, [true, false, true, false, false, false, true, false, true])
+        },
+        {
+            "000090000", (1509.1976190476190, [true, false, true, false, false, false, true, false, true])
+        },
+        {
+            "000001000", (1411.3541666666665, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000002000", (1414.9401785714288, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000003000", (1406.4190476190477, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000004000", (1443.3062499999999, [true, false, false, false, false, false, true, false, false])
+        },
+        {
+            "000005000", (1444.3172619047618, [true, false, true, false, false, false, true, false, false])
+        },
+        {
+            "000006000", (1441.3663690476192, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000007000", (1485.6839285714286, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000008000", (1512.9279761904760, [false, false, true, false, false, false, false, false, true])
+        },
+        {
+            "000009000", (1518.4663690476190, [false, false, true, false, false, false, false, false, true])
+        },
+        {
+            "000000100", (1677.7854166666664, [true, false, false, false, false, false, false, false, true])
+        },
+        {
+            "000000200", (1665.8127976190476, [true, false, false, false, false, false, false, false, true])
+        },
+        {
+            "000000300", (1662.5047619047620, [true, false, false, false, false, false, false, false, true])
+        },
+        {
+            "000000400", (1365.0047619047618, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000000500", (1359.5589285714286, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000000600", (1364.3044642857142, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000000700", (1454.5455357142855, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000000800", (1527.0875000000000, [true, false, false, false, true, false, false, false, true])
+        },
+        {
+            "000000900", (1517.7214285714285, [true, false, false, false, true, false, false, false, true])
+        },
+        {
+            "000000010", (1411.3541666666665, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000000020", (1414.9401785714288, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000000030", (1406.4190476190477, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000000040", (1443.3062499999999, [true, false, true, false, false, false, false, false, false])
+        },
+        {
+            "000000050", (1444.3172619047618, [true, false, true, false, true, false, false, false, false])
+        },
+        {
+            "000000060", (1441.3663690476192, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000000070", (1485.6839285714286, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000000080", (1512.9279761904760, [false, false, false, false, false, false, true, false, true])
+        },
+        {
+            "000000090", (1518.4663690476190, [false, false, false, false, false, false, true, false, true])
+        },
+        {
+            "000000001", (1677.7854166666664, [false, false, true, false, false, false, true, false, false])
+        },
+        {
+            "000000002", (1665.8127976190476, [false, false, true, false, false, false, true, false, false])
+        },
+        {
+            "000000003", (1662.5047619047620, [false, false, true, false, false, false, true, false, false])
+        },
+        {
+            "000000004", (1365.0047619047618, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000000005", (1359.5589285714286, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000000006", (1364.3044642857142, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000000007", (1454.5455357142855, [false, false, false, false, true, false, false, false, false])
+        },
+        {
+            "000000008", (1527.0875000000000, [false, false, true, false, true, false, true, false, false])
+        },
+        {
+            "000000009", (1517.7214285714285, [false, false, true, false, true, false, true, false, false])
+        }
+    };
+
+    internal bool[] Solve(int[] state)
+    {
+        var numRevealed = state.Count(x => x > 0);
+        var stateKey = string.Join("", state);
+
+        var numOptions = 9;
+        if (numRevealed == 4)
+        {
+            numOptions = 8;
+        }
+
+        double value;
+        var whichToFlip = new bool[numOptions];
+
+        switch (numRevealed)
+        {
+            case 0:
+                return [true, false, true, false, false, false, true, false, true];
+
+            case 1:
+                {
+                    if (!precalculatedOpenings.TryGetValue(stateKey, out var opening))
+                    {
+                        throw new KeyNotFoundException($"No precalculated opening for state {stateKey}");
+                    }
+
+                    (value, whichToFlip) = opening;
+                    break;
+                }
+
+            default:
+                value = SolveAny(ref state, ref whichToFlip);
+                break;
+        }
+
+        return whichToFlip;
+    }
+
+    private static double SolveAny(ref int[] state, ref bool[] options)
+    {
+        var dummyArray = new bool[options.Length];
+        var hiddenNumbers = new List<int>();
+        var ids = new List<int>();
+        var has = new int[10];
+        var totWin = new List<double>();
+        for (var i = 0; i < 9; i++)
+        {
+            if (state[i] == 0)
+            {
+                ids.Add(i);
+                totWin.Add(0);
+            }
+            else
+            {
+                has[state[i]] = 1;
+            }
+        }
+
+        var numHidden = totWin.Count;
+        var numRevealed = 9 - numHidden;
+
+        for (var i = 1; i <= 9; i++)
+        {
+            if (has[i] == 0)
+            {
+                hiddenNumbers.Add(i);
+            }
+        }
+
+        if (numRevealed >= 4)
+        {
+            var permutations = 0;
+            totWin = [0, 0, 0, 0, 0, 0, 0, 0];
+            do
+            {
+                permutations++;
+                for (var i = 0; i < ids.Count; i++)
+                {
+                    state[ids[i]] = hiddenNumbers[i];
+                }
+
+                totWin[0] += Payouts[state[0] + state[1] + state[2]];
+                totWin[1] += Payouts[state[3] + state[4] + state[5]];
+                totWin[2] += Payouts[state[6] + state[7] + state[8]];
+                totWin[3] += Payouts[state[0] + state[3] + state[6]];
+                totWin[4] += Payouts[state[1] + state[4] + state[7]];
+                totWin[5] += Payouts[state[2] + state[5] + state[8]];
+                totWin[6] += Payouts[state[0] + state[4] + state[8]];
+                totWin[7] += Payouts[state[2] + state[4] + state[6]];
+            }
+            while (NextPermutation(hiddenNumbers));
+
+            var currentMax = totWin[0];
+            options[0] = true;
+            for (var i = 1; i < 8; i++)
+            {
+                if (totWin[i] > currentMax)
+                {
+                    currentMax = totWin[i];
+                    for (var j = 0; j < i; j++)
+                    {
+                        options[j] = false;
+                    }
+                    options[i] = true;
+                }
+                else if (Math.Abs(totWin[i] - currentMax) < EPS)
+                {
+                    options[i] = true;
+                }
+            }
+            return currentMax / permutations;
+        }
+        else
+        {
+            for (var i = 0; i < numHidden; i++)
+            {
+                for (var j = 0; j < numHidden; j++)
+                {
+                    state[ids[i]] = hiddenNumbers[j];
+                    totWin[i] += SolveAny(ref state, ref dummyArray);
+                    for (var k = 0; k < numHidden; k++)
+                    {
+                        state[ids[k]] = 0;
+                    }
+                }
+            }
+            var currentMax = totWin[0];
+            options[ids[0]] = true;
+            for (var i = 1; i < totWin.Count; i++)
+            {
+                if (totWin[i] > currentMax + EPS)
+                {
+                    currentMax = totWin[i];
+                    for (var j = 0; j < i; j++)
+                    {
+                        options[ids[j]] = false;
+                    }
+                    options[ids[i]] = true;
+                }
+                else if (totWin[i] > currentMax - EPS)
+                {
+                    options[ids[i]] = true;
+                }
+            }
+
+            return currentMax / numHidden;
+        }
+    }
+
+    private static bool NextPermutation(List<int> list)
+    {
+        var begin = 0;
+        var end = list.Count;
+
+        if (list.Count <= 1)
+        {
+            return false;
+        }
+
+        var i = list.Count - 1;
+
+        while (true)
+        {
+            var j = i;
+            i--;
+
+            if (list[i] < list[j])
+            {
+                var k = end;
+
+                while (list[i] >= list[--k]) { }
+
+                Swap(list, i, k);
+                Reverse(list, j, end);
+                return true;
+            }
+
+            if (i == begin)
+            {
+                Reverse(list, begin, end);
+                return false;
+            }
+        }
+    }
+
+    private static void Reverse<T>(List<T> list, int begin, int end)
+    {
+        var i = begin;
+        var j = end - 1;
+        while (i < j)
+        {
+            Swap(list, i, j);
+            i++;
+            j--;
+        }
+    }
+
+    private static void Swap<T>(IList<T> list, int i1, int i2) => (list[i1], list[i2]) = (list[i2], list[i1]);
+}
