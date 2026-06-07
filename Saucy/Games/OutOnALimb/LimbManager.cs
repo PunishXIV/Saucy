@@ -107,6 +107,25 @@ public unsafe partial class LimbManager
             ObjectHelper.GetHorizontalEdgeDistance,
             static obj => obj.BaseId == ArcadeMachineBaseIds.Limb[0] ? 2.5f : 4f);
 
+    public static bool IsAnyLimbMachineInRange()
+    {
+        foreach (var obj in Svc.Objects)
+        {
+            if (System.Array.IndexOf(ArcadeMachineBaseIds.Limb, obj.BaseId) < 0)
+            {
+                continue;
+            }
+
+            var maxDistance = obj.BaseId == ArcadeMachineBaseIds.Limb[0] ? 2.5f : 4f;
+            if (ObjectHelper.GetHorizontalEdgeDistance(obj) <= maxDistance)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static bool ShouldSkipMachineSanityCheck()
     {
         if (!Svc.ClientState.IsLoggedIn || !Player.Available)
@@ -262,6 +281,7 @@ public unsafe partial class LimbManager
                     HasLimbSessionUi,
                     () => FindNearestLimbMachine() != null))
                 {
+                    TryDisableForMissingMachine();
                     return;
                 }
             }

@@ -3,6 +3,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
+using ECommons.Logging;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -21,18 +22,28 @@ internal static class TriadSettingsUi
         var enabled = TriadRunSession.ModuleEnabled;
         if (ImGui.Checkbox("Enable automation", ref enabled))
         {
-            TriadRunSession.ModuleEnabled = enabled;
-            if (enabled)
+            if (enabled && !TriadNpcProximity.IsRelevantTriadNpcNearby())
             {
-                CommitDraftMatchCount();
-                GoldSaucerArcadeMachineHelper.DisableConflictingModules();
-                TriadRunSession.BeginAutomationSession();
-                TriadCardFarmSession.SyncDisplay(runTargetNpc);
-                TriadAutomator.RunModule();
+                var npcName = TriadNpcProximity.ResolveTriadNpcForProximityCheck()?.Name;
+                DuoLog.Warning(string.IsNullOrEmpty(npcName)
+                    ? "No Triple Triad NPC nearby (maybe get closer if in front of one)."
+                    : $"No Triple Triad NPC nearby ({npcName}). Maybe get closer if you're in front of one.");
             }
             else
             {
-                TriadCardFarmSession.DeactivateSession(clearProgress: true);
+                TriadRunSession.ModuleEnabled = enabled;
+                if (enabled)
+                {
+                    CommitDraftMatchCount();
+                    GoldSaucerArcadeMachineHelper.DisableConflictingModules();
+                    TriadRunSession.BeginAutomationSession();
+                    TriadCardFarmSession.SyncDisplay(runTargetNpc);
+                    TriadAutomator.RunModule();
+                }
+                else
+                {
+                    TriadCardFarmSession.DeactivateSession(clearProgress: true);
+                }
             }
         }
 

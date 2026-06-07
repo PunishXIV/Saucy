@@ -118,6 +118,7 @@ public unsafe partial class CuffACurAutomation
                     () => HasCuffMinigameUi(addon),
                     () => FindNearestCuffMachine() != null))
                 {
+                    TryDisableForMissingMachine();
                     return;
                 }
             }
@@ -147,8 +148,7 @@ public unsafe partial class CuffACurAutomation
             var cuff = FindNearestCuffMachine();
             if (cuff == null)
             {
-                DuoLog.Warning("No Cuff-a-Cur machine nearby (maybe get closer if in front of one).");
-                DisableModule();
+                TryDisableForMissingMachine();
                 return;
             }
 
@@ -174,6 +174,12 @@ public unsafe partial class CuffACurAutomation
     private static bool TryConfirmCuffStart(AddonSelectString* cuffMenu = null) =>
         ArcadeMachineGate.TryConfirmStartMenu(Machine, StartMenuThrottleKey, menu: cuffMenu);
 
+    private static void TryDisableForMissingMachine()
+    {
+        DuoLog.Warning("No Cuff-a-Cur machine nearby (maybe get closer if in front of one).");
+        DisableModule();
+    }
+
     private static void DisableModule()
     {
         GoldSaucerArcadeRunSession.ClearStopForDutyFinder(Machine);
@@ -187,6 +193,25 @@ public unsafe partial class CuffACurAutomation
             ArcadeMachineScopes.Cuff,
             ObjectHelper.GetHorizontalEdgeDistance,
             static obj => obj.BaseId == ArcadeMachineBaseIds.Cuff[0] ? 1f : 4f);
+
+    public static bool IsAnyCuffMachineInRange()
+    {
+        foreach (var obj in Svc.Objects)
+        {
+            if (System.Array.IndexOf(ArcadeMachineBaseIds.Cuff, obj.BaseId) < 0)
+            {
+                continue;
+            }
+
+            var maxDistance = obj.BaseId == ArcadeMachineBaseIds.Cuff[0] ? 1f : 4f;
+            if (ObjectHelper.GetHorizontalEdgeDistance(obj) <= maxDistance)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static bool HasCuffMinigameUi(nint punchingMachineAddon)
     {

@@ -2,6 +2,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Components;
 using ECommons.Automation.UIInput;
 using ECommons.ImGuiMethods;
+using ECommons.Logging;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.Framework;
 using System.Linq;
@@ -17,13 +18,20 @@ public unsafe partial class LimbManager
         var enabled = C.IsModuleEnabled(ModuleNames.OutOnALimb);
         if (ImGui.Checkbox("Enable", ref enabled))
         {
-            if (enabled)
+            if (enabled && !IsAnyLimbMachineInRange())
             {
-                GoldSaucerRunSettingsUi.CommitDraftMatchCount(Machine);
+                DuoLog.Warning("No Out on a Limb machine nearby (maybe get closer if in front of one).");
             }
+            else
+            {
+                if (enabled)
+                {
+                    GoldSaucerRunSettingsUi.CommitDraftMatchCount(Machine);
+                }
 
-            ToggleModule(enabled);
-            save |= true;
+                ToggleModule(enabled);
+                save |= true;
+            }
         }
 
         ImGui.SameLine();

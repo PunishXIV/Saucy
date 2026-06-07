@@ -46,6 +46,9 @@ public sealed partial class Saucy : IDalamudPlugin
         TriadRunSession.ModuleEnabled = false;
         TriadCardFarmSession.DeactivateSession(clearProgress: true);
         TriadRunSession.ResetRunModeForPluginLoad();
+        C.SetModuleEnabled(ModuleNames.OutOnALimb, false);
+        C.SetModuleEnabled(ModuleNames.CuffACur, false);
+        C.Save();
         P = this;
         ArcadeMachineSession.WireCompleteShutdown(
             GoldSaucerArcadeMachine.Cuff,

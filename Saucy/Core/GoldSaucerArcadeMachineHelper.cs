@@ -1,5 +1,7 @@
+using ECommons.Logging;
 using Saucy.Framework;
 using System;
+using System.Collections.Generic;
 namespace Saucy;
 
 internal static class GoldSaucerArcadeMachineHelper
@@ -53,21 +55,40 @@ internal static class GoldSaucerArcadeMachineHelper
 
     public static void DisableConflictingModules(GoldSaucerArcadeMachine? keeping = null)
     {
+        var disabled = new List<string>();
+
         if (keeping != GoldSaucerArcadeMachine.Cuff &&
             IsEnabled(GoldSaucerArcadeMachine.Cuff))
         {
             C.SetModuleEnabled(ModuleNames.CuffACur, false);
+            disabled.Add("Cuff-a-Cur");
         }
 
         if (keeping != GoldSaucerArcadeMachine.Limb &&
             IsEnabled(GoldSaucerArcadeMachine.Limb))
         {
             C.SetModuleEnabled(ModuleNames.OutOnALimb, false);
+            disabled.Add("Out on a Limb");
         }
 
         if (keeping != null && TriadRunSession.ModuleEnabled)
         {
             TriadRunSession.ModuleEnabled = false;
+            disabled.Add("Triple Triad");
         }
+
+        if (disabled.Count == 0)
+        {
+            return;
+        }
+
+        var enabledLabel = keeping switch
+        {
+            GoldSaucerArcadeMachine.Cuff => "Cuff-a-Cur",
+            GoldSaucerArcadeMachine.Limb => "Out on a Limb",
+            _ => "Triple Triad"
+        };
+
+        DuoLog.Warning($"Disabled {string.Join(" and ", disabled)} to enable {enabledLabel}.");
     }
 }

@@ -1,5 +1,6 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Components;
+using ECommons.Logging;
 namespace Saucy.CuffACur;
 
 public partial class CuffACurAutomation
@@ -9,14 +10,21 @@ public partial class CuffACurAutomation
         var enabled = IsEnabled;
         if (ImGui.Checkbox("Enable", ref enabled))
         {
-            if (enabled)
+            if (enabled && !IsAnyCuffMachineInRange())
             {
-                GoldSaucerRunSettingsUi.CommitDraftMatchCount(GoldSaucerArcadeMachine.Cuff);
-                GoldSaucerArcadeMachineHelper.DisableConflictingModules(GoldSaucerArcadeMachine.Cuff);
+                DuoLog.Warning("No Cuff-a-Cur machine nearby (maybe get closer if in front of one).");
             }
+            else
+            {
+                if (enabled)
+                {
+                    GoldSaucerRunSettingsUi.CommitDraftMatchCount(GoldSaucerArcadeMachine.Cuff);
+                    GoldSaucerArcadeMachineHelper.DisableConflictingModules(GoldSaucerArcadeMachine.Cuff);
+                }
 
-            C.SetModuleEnabled(ModuleNames.CuffACur, enabled);
-            C.Save();
+                C.SetModuleEnabled(ModuleNames.CuffACur, enabled);
+                C.Save();
+            }
         }
 
         ImGui.SameLine();
