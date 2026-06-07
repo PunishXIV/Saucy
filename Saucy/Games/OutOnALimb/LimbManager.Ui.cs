@@ -110,6 +110,18 @@ public unsafe partial class LimbManager
 
                 ImGuiEx.Text($"Button enabled: {button->IsEnabled}");
                 ImGuiEx.Text($"Seconds remaining: {LimbArcadeTimer.TryGetSecondsRemaining()?.ToString() ?? "n/a"}");
+                {
+                    var na = AtkStage.Instance()->GetNumberArrayData(NumberArrayType.GoldSaucerArcadeMachine);
+                    if (na != null)
+                    {
+                        var parts = new string[8];
+                        for (var i = 0; i < 8; i++)
+                        {
+                            parts[i] = $"[{i}]={na->IntArray[i]}";
+                        }
+                        ImGuiEx.Text($"NumberArray.GoldSaucerArcadeMachine: {string.Join(", ", parts)}");
+                    }
+                }
                 ImGuiEx.Text($"Health: {GetHealth(addon)}");
                 ImGuiEx.Text($"Hit pending: {GetHitPending(addon)}");
                 ImGuiEx.Text($"Pending: {PendingCursor}, previous health: {PreviousHealth}");

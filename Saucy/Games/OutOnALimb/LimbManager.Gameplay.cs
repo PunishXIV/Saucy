@@ -145,8 +145,11 @@ public unsafe partial class LimbManager
 
         if (!SelectYesnoHelper.IsArcadeDoubleDownYesno(ss))
         {
+            PluginLog.Information("[OutOnALimb] Arcade yesno visible but rejected (not detected as double-down).");
             return;
         }
+
+        PluginLog.Information("[OutOnALimb] Double-down yesno detected; evaluating timer.");
 
         if (ArcadeMachineSession.IsPendingShutdown(Machine))
         {
@@ -168,9 +171,16 @@ public unsafe partial class LimbManager
             return;
         }
 
-        var secondsRemaining = LimbArcadeTimer.TryGetSecondsRemaining() ?? 0;
+        var rawTimer = LimbArcadeTimer.TryGetSecondsRemaining();
+        var secondsRemaining = rawTimer ?? 0;
+        var continueRound = secondsRemaining > Cfg.MinSecondsForAnotherRound;
 
-        if (secondsRemaining > Cfg.MinSecondsForAnotherRound)
+        PluginLog.Information(
+            $"[OutOnALimb] DoubleDown decision: raw={rawTimer?.ToString() ?? "null"}, " +
+            $"secondsRemaining={secondsRemaining}, threshold={Cfg.MinSecondsForAnotherRound} -> " +
+            $"{(continueRound ? "PressYes" : "PressNo")}");
+
+        if (continueRound)
         {
             SelectYesnoHelper.PressYes(ss);
         }
