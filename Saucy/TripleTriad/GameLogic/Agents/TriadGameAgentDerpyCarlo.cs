@@ -57,12 +57,6 @@ public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
 
     protected virtual SolverResult FindWinningProbability(TriadGameSolver solver, TriadGameSimulationState gameState)
     {
-        var stateKey = ComputeStateHash(gameState);
-        if (stateCache.TryGetValue(stateKey, out var cached))
-        {
-            return cached.result;
-        }
-
         var numWinningWorkers = 0;
         var numDrawingWorkers = 0;
         var completedWorkers = 0;
@@ -90,12 +84,6 @@ public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
             }
         }
 
-        // Pass raw counts so winChance = numWins/numGames resolves to the correct fraction.
-        var result = new SolverResult(
-            numWinningWorkers,
-            numDrawingWorkers,
-            MaxWorkers);
-        CacheResult(stateKey, result);
-        return result;
+        return new SolverResult(numWinningWorkers, numDrawingWorkers, MaxWorkers);
     }
 }

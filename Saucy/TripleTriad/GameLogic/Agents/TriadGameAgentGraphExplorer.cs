@@ -1,76 +1,13 @@
 #nullable disable
 using System;
-using System.Collections.Generic;
 namespace Saucy.TripleTriad.GameLogic;
 
 public abstract class TriadGameAgentGraphExplorer : TriadGameAgent
 {
-    protected const int MaxStateCacheSize = 200_000;
-    protected const int CacheEvictCount = 20_000;
-    protected readonly LinkedList<long> cacheOrder = new();
-
-    protected readonly Dictionary<long, (SolverResult result, LinkedListNode<long> orderNode)> stateCache = [];
-
     private Random failsafeRandStream;
     protected int sessionSeed;
 
     public override void Initialize(TriadGameSolver solver, int sessionSeed) => this.sessionSeed = sessionSeed;
-
-    public override void OnSimulationStart() => ClearStateCache();
-
-    public void ClearStateCache()
-    {
-        stateCache.Clear();
-        cacheOrder.Clear();
-    }
-
-    internal static long ComputeStateHash(TriadGameSimulationState state)
-    {
-        var hash = unchecked((long)14695981039346656037UL);
-        const long prime = 1099511628211L;
-
-        for (var i = 0; i < state.board.Length; i++)
-        {
-            var cell = state.board[i];
-            var cellBits = cell == null ? 0 : ((cell.card.Id << 1) | ((int)cell.owner & 1)) + 1;
-            hash = (hash ^ cellBits) * prime;
-        }
-
-        hash = (hash ^ state.deckBlue.availableCardMask) * prime;
-        hash = (hash ^ state.deckRed.availableCardMask) * prime;
-        hash = (hash ^ (int)state.state) * prime;
-        hash = (hash ^ (state.forcedCardIdx + 1)) * prime;
-        hash = (hash ^ (int)state.resolvedSpecial) * prime;
-        return hash;
-    }
-
-    protected void CacheResult(long key, SolverResult result)
-    {
-        if (stateCache.TryGetValue(key, out var existing))
-        {
-            cacheOrder.Remove(existing.orderNode);
-            stateCache[key] = (result, cacheOrder.AddFirst(key));
-            return;
-        }
-
-        if (stateCache.Count >= MaxStateCacheSize)
-        {
-            EvictOldestCacheEntries();
-        }
-
-        stateCache[key] = (result, cacheOrder.AddFirst(key));
-    }
-
-    private void EvictOldestCacheEntries()
-    {
-        var evict = Math.Min(CacheEvictCount, stateCache.Count);
-        for (var i = 0; i < evict && cacheOrder.Last != null; i++)
-        {
-            var oldest = cacheOrder.Last.Value;
-            cacheOrder.RemoveLast();
-            stateCache.Remove(oldest);
-        }
-    }
 
     public override bool FindNextMove(TriadGameSolver solver, TriadGameSimulationState gameState, out int cardIdx, out int boardPos, out SolverResult solverResult)
     {
@@ -112,19 +49,6 @@ public abstract class TriadGameAgentGraphExplorer : TriadGameAgent
         bestCardIdx = -1;
         bestBoardPos = -1;
         bestActionResult = SolverResult.Zero;
-
-        var isRootLevel = searchLevel == 0;
-
-        long stateKey = 0;
-        if (!isRootLevel)
-        {
-            stateKey = ComputeStateHash(gameState);
-            if (stateCache.TryGetValue(stateKey, out var cached))
-            {
-                bestActionResult = cached.result;
-                return cached.result;
-            }
-        }
 
         float numWinsTotal = 0;
         float numDrawsTotal = 0;
@@ -213,13 +137,6 @@ public abstract class TriadGameAgentGraphExplorer : TriadGameAgent
         }
 
         var isOwnerTurn = (searchLevel % 2) == 0;
-        var finalResult = isOwnerTurn ? bestActionResult : new(numWinsTotal, numDrawsTotal, numGamesTotal);
-
-        if (!isRootLevel)
-        {
-            CacheResult(stateKey, finalResult);
-        }
-
-        return finalResult;
+        return isOwnerTurn ? bestActionResult : new(numWinsTotal, numDrawsTotal, numGamesTotal);
     }
 }
