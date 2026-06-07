@@ -57,26 +57,6 @@ public static class TriadMemoryReads
         }
     }
 
-    public static bool IsQuestCompleteOrUnneeded(uint questId)
-    {
-        if (questId == 0)
-        {
-            return true;
-        }
-
-        try
-        {
-            if (QuestManager.IsQuestComplete(questId))
-            {
-                return true;
-            }
-
-            return Questionable.IsInstalled && QuestionableTriad.IsQuestComplete(questId);
-        }
-        catch (Exception ex)
-        {
-            Svc.Log.Warning(ex, "IsQuestCompleteOrUnneeded failed for quest {QuestId}", questId);
-            return false;
-        }
-    }
+    public static bool IsQuestCompleteOrUnneeded(uint questId) =>
+        questId == 0 || QuestManager.IsQuestComplete(questId);
 }
