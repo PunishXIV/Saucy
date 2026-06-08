@@ -150,7 +150,9 @@ public unsafe partial class LimbManager
         {
             if (SelectStringHelper.TryGetArcadeMenu(out var startMenu))
             {
-                ImGuiEx.Text($"SelectString arcade yes/no={SelectStringHelper.IsArcadeYesnoMenu(startMenu)}");
+                var entryCount = SelectStringHelper.TryGetArcadeMenuEntryCount(startMenu, out var count) ? count : -1;
+                ImGuiEx.Text(
+                    $"SelectString arcade yes/no={SelectStringHelper.IsArcadeYesnoMenu(startMenu)} entries={entryCount}");
             }
 
             ImGuiEx.Text($"Play X: {GoldSaucerArcadeRunSession.PlayXTimes(Machine)}");

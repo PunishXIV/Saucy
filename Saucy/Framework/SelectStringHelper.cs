@@ -15,6 +15,8 @@ public static unsafe class SelectStringHelper
 
     public const int YesnoMenuEntryCount = 2;
 
+    public const int ArcadeStartMenuMaxEntryCount = 3;
+
     public const int YesEntryIndex = 0;
 
     public const int NoEntryIndex = 1;
@@ -31,7 +33,7 @@ public static unsafe class SelectStringHelper
         TryGetAgentMenu(out menu, SelectYesnoHelper.IsTriadAddon);
 
     public static bool IsArcadeYesnoMenu(AddonSelectString* menu) =>
-        IsAgentYesnoMenu(menu, SelectYesnoHelper.IsArcadeAddon);
+        IsAgentArcadeStartMenu(menu, SelectYesnoHelper.IsArcadeAddon);
 
     public static bool IsTriadYesnoMenu(AddonSelectString* menu) =>
         IsAgentYesnoMenu(menu, SelectYesnoHelper.IsTriadAddon);
@@ -170,6 +172,30 @@ public static unsafe class SelectStringHelper
 
         return TryGetEntryCount(menu, out var entryCount) && entryCount == YesnoMenuEntryCount;
     }
+
+    private static bool IsAgentArcadeStartMenu(AddonSelectString* menu, AgentAddonPredicate isAgentAddon)
+    {
+        if (menu == null || !isAgentAddon(&menu->AtkUnitBase))
+        {
+            return false;
+        }
+
+        var listNode = menu->AtkUnitBase.GetNodeById(ListNodeId);
+        if (listNode == null || !listNode->IsVisible())
+        {
+            return false;
+        }
+
+        if (!TryGetEntryCount(menu, out var entryCount))
+        {
+            return false;
+        }
+
+        return entryCount is >= YesnoMenuEntryCount and <= ArcadeStartMenuMaxEntryCount;
+    }
+
+    public static bool TryGetArcadeMenuEntryCount(AddonSelectString* menu, out int entryCount) =>
+        TryGetEntryCount(menu, out entryCount);
 
     private static bool TrySelectTriadIconStringEntry(
         AddonSelectIconString* menu,

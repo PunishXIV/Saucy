@@ -246,11 +246,14 @@ public unsafe partial class CuffACurAutomation
 
         if (SelectStringHelper.TryGetArcadeMenu(out var startMenu))
         {
-            ImGuiEx.Text($"SelectString arcade yes/no={SelectStringHelper.IsArcadeYesnoMenu(startMenu)}");
+            var entryCount = SelectStringHelper.TryGetArcadeMenuEntryCount(startMenu, out var count) ? count : -1;
+            ImGuiEx.Text(
+                $"SelectString arcade yes/no={SelectStringHelper.IsArcadeYesnoMenu(startMenu)} entries={entryCount}");
         }
         else if (SelectStringHelper.TryGetVisibleSelectString(out var otherMenu))
         {
-            ImGuiEx.Text("SelectString visible (not arcade agent)");
+            var entryCount = SelectStringHelper.TryGetArcadeMenuEntryCount(otherMenu, out var count) ? count : -1;
+            ImGuiEx.Text($"SelectString visible (not arcade agent) entries={entryCount}");
         }
 
         var machine = FindNearestCuffMachine();
