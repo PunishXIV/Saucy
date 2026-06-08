@@ -208,7 +208,7 @@ internal static unsafe partial class TriadMapNavigation
 
         if (pending.Npc != null && FindTriadNpcObject(pending.Npc) is { } liveNpc)
         {
-            npcPos = liveNpc.Position;
+            npcPos = ResolveNpcPathPoint(liveNpc.Position);
             pending.Destination = npcPos;
         }
 

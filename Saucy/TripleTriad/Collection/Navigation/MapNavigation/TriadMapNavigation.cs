@@ -77,7 +77,7 @@ internal static unsafe partial class TriadMapNavigation
         if (npc != null)
         {
             TriadRunSession.PrepareNavigationRunMode(npc, goal);
-            TriadRun.OnNpcSelected(npc, [], false, true);
+            TriadRun.OnNpcSelected(npc, [], startOptimizer: true, forNavigation: true);
         }
     }
 
@@ -127,6 +127,11 @@ internal static unsafe partial class TriadMapNavigation
         if (TryRejectLockedNpcDuringNavigation(pending.Npc))
         {
             return;
+        }
+
+        if (pending.Npc != null)
+        {
+            TriadRun.EnsureNavigationDeckOptimizerStarted(pending.Npc);
         }
 
         TriadRun.SetNavigationOptimizerPause(
@@ -183,6 +188,7 @@ internal static unsafe partial class TriadMapNavigation
                     return;
                 }
 
+                RefreshPendingDestination(pending);
                 if (TryBeginMovingToNpcIfAlreadyNearby(pending))
                 {
                     return;
@@ -222,6 +228,7 @@ internal static unsafe partial class TriadMapNavigation
 
                 pending.PendingAethernetShardId = 0;
                 pending.PendingAethernetShardName = null;
+                RefreshPendingDestination(pending);
                 if (TryBeginMovingToNpcIfAlreadyNearby(pending))
                 {
                     return;

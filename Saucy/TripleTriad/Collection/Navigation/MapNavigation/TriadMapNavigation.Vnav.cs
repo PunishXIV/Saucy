@@ -58,6 +58,7 @@ internal static partial class TriadMapNavigation
             return;
         }
 
+        RefreshPendingDestination(pending);
         if (TryBeginMovingToNpcIfAlreadyNearby(pending))
         {
             return;

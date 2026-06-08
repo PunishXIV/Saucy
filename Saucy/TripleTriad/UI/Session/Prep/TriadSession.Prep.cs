@@ -123,8 +123,11 @@ public partial class TriadSession
 
         if (shouldManageDeck && C.UseSimmedDeck && !TriadUiState.IsBoardVisible() && !deferHeavyWork)
         {
-            EnsurePreviewEvalForNpc(npc);
-            if (ShouldBuildOptimizedDeck())
+            if (!ShouldBuildOptimizedDeck())
+            {
+                EnsurePreviewEvalForNpc(npc);
+            }
+            else
             {
                 EnsureOptimizedDeckPreviewEval(npc);
             }

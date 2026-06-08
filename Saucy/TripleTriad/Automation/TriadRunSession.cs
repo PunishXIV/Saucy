@@ -140,6 +140,8 @@ internal static class TriadRunSession
                 TriadCardFarmSession.DeactivateSession(clearProgress: true);
                 TriadRewardDropTracker.ResetSessionFlag();
                 NavigationInfiniteRematch = true;
+                // Left-click starts as card farm; MGP fallback must drop PlayUntilAllCards so farm mode/UI don't stick.
+                ApplyRunMode(TriadRunMode.None, persist: false, fromMapNavigation: true);
                 break;
         }
     }

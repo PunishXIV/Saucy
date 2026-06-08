@@ -26,7 +26,7 @@ public partial class TriadSession
         return OptimizerInProgress;
     }
 
-    private void EnsureNavigationDeckOptimizerStarted(TriadNpc npc)
+    public void EnsureNavigationDeckOptimizerStarted(TriadNpc npc)
     {
         if (TriadNpcUnlockHelper.TryReject(npc, out var _))
         {

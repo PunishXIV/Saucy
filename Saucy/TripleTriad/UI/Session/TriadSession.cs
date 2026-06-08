@@ -151,6 +151,19 @@ public partial class TriadSession
             return $"Building deck… {job.ProgressPercent}% ({best})";
         }
 
+        if (ShouldBuildOptimizedDeck())
+        {
+            if (Vnavmesh.ShouldDeferDeckOptimizerWork())
+            {
+                return "Waiting for vnavmesh…";
+            }
+
+            if (!optimizerTimedOut && !OptimizerInProgress && !HasOptimizedDeckApplied)
+            {
+                return "Waiting for optimized deck…";
+            }
+        }
+
         if (IsPreviewEvalPendingForNpc(npc, previewRules))
         {
             return "Calculating…";
@@ -164,14 +177,6 @@ public partial class TriadSession
             if (ShouldBuildOptimizedDeck() && HasOptimizedDeckApplied && optimizerTargetDeckId >= 0)
             {
                 deckId = optimizerTargetDeckId;
-            }
-            else if (ShouldBuildOptimizedDeck() && Vnavmesh.ShouldDeferDeckOptimizerWork())
-            {
-                return "Waiting for vnavmesh…";
-            }
-            else if (ShouldBuildOptimizedDeck() && !optimizerTimedOut && !OptimizerInProgress)
-            {
-                return "Waiting for optimized deck…";
             }
             else
             {
