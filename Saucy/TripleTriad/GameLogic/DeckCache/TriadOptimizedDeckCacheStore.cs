@@ -54,6 +54,30 @@ internal static class TriadOptimizedDeckCacheStore
                activeFile.Entries.TryGetValue(sessionKey, out entry);
     }
 
+    public static bool HasAnyEntryForNpc(int npcId)
+    {
+        if (npcId < 0)
+        {
+            return false;
+        }
+
+        EnsureLoaded();
+        if (activeFile == null)
+        {
+            return false;
+        }
+
+        foreach (var entry in activeFile.Entries.Values)
+        {
+            if (entry.NpcId == npcId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static bool TryGetOwnedSnapshotForNpc(int npcId, string sessionKey, out int[] ownedAtBuild)
     {
         ownedAtBuild = [];

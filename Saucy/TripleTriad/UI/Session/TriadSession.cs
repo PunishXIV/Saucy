@@ -1,5 +1,6 @@
 #nullable disable
 using Saucy.IPC;
+using Saucy.TripleTriad.GameLogic;
 using System;
 using System.Collections.Generic;
 namespace Saucy.TripleTriad.UI;
@@ -140,27 +141,12 @@ public partial class TriadSession
             return DescribeMissingSimmableDecks();
         }
 
-        if (ShouldBuildOptimizedDeck() && OptimizerInProgress && TriadDeckOptimizerJobs.TryGetActive(out var job))
-        {
-            var best = job.FormatBestWinChance();
-            if (string.IsNullOrEmpty(best) || best == "…")
-            {
-                return $"Building deck… {job.ProgressPercent}%";
-            }
-
-            return $"Building deck… {job.ProgressPercent}% ({best})";
-        }
-
         if (ShouldBuildOptimizedDeck())
         {
-            if (Vnavmesh.ShouldDeferDeckOptimizerWork())
+            var buildStatus = DescribeOptimizedDeckBuildStatus(npc);
+            if (!string.IsNullOrEmpty(buildStatus))
             {
-                return "Waiting for vnavmesh…";
-            }
-
-            if (!optimizerTimedOut && !OptimizerInProgress && !HasOptimizedDeckApplied)
-            {
-                return "Waiting for optimized deck…";
+                return buildStatus;
             }
         }
 
@@ -204,6 +190,90 @@ public partial class TriadSession
         }
 
         return string.IsNullOrWhiteSpace(deckName) ? winLabel : $"{winLabel} · {deckName}";
+    }
+
+    private string DescribeOptimizedDeckBuildStatus(TriadNpc npc)
+    {
+        var regionMods = preGameNpc != null && preGameNpc.Id == npc.Id ? preGameMods : [];
+        var sessionKey = BuildOptimizerSessionKey(npc, regionMods);
+        var skipCache = TriadOptimizerSessionKey.ShouldSkipDeckCache(npc, regionMods);
+        var hasUsableCache = !skipCache &&
+                             TriadOptimizedDeckCacheValidator.TryGetUsableEntry(sessionKey, out _);
+        var hasAnyCache = TriadOptimizedDeckCacheStore.HasAnyEntryForNpc(npc.Id);
+        var rebuildingForNewCards = hasUsableCache &&
+                                    TriadOptimizedDeckCacheValidator.ShouldRebuildDeckForNewCards(sessionKey, npc.Id);
+
+        var hasProfileSaucyDeck = false;
+        lock (preGameLock)
+        {
+            hasProfileSaucyDeck = TryFindSaucyDeckProfileSlot(npc, out _);
+        }
+
+        var hasFallbackDeck = hasUsableCache || hasAnyCache || hasProfileSaucyDeck;
+        string WithFallbackNote(string message) =>
+            hasFallbackDeck ? $"{message} · cached deck exists" : message;
+
+        if (OptimizerInProgress && TriadDeckOptimizerJobs.TryGetActive(out var job))
+        {
+            var progress = $"Building deck… {job.ProgressPercent}%";
+            var best = job.FormatBestWinChance();
+            if (!string.IsNullOrEmpty(best) && best != "…")
+            {
+                progress += $" ({best})";
+            }
+
+            if (rebuildingForNewCards)
+            {
+                return $"{progress} · rebuilding after new cards";
+            }
+
+            if (hasFallbackDeck)
+            {
+                return $"{progress} · generating new (cached deck exists)";
+            }
+
+            return progress;
+        }
+
+        if (Vnavmesh.ShouldDeferDeckOptimizerWork())
+        {
+            return WithFallbackNote("Waiting for vnavmesh…");
+        }
+
+        if (!optimizerTimedOut && !OptimizerInProgress && !HasOptimizedDeckApplied)
+        {
+            lock (preGameLock)
+            {
+                if (IsOptimizerStartBlockedForSessionLocked(sessionKey))
+                {
+                    return WithFallbackNote("Optimizer cooling down · still generating new");
+                }
+            }
+
+            if (rebuildingForNewCards)
+            {
+                return "Cached deck outdated · generating new…";
+            }
+
+            if (hasUsableCache || hasAnyCache)
+            {
+                return "Cached deck exists · still generating new…";
+            }
+
+            if (hasProfileSaucyDeck)
+            {
+                return $"Profile deck in slot {SaucyProfileDeckSlotIndex + 1} · still generating new…";
+            }
+
+            return "Waiting for optimized deck…";
+        }
+
+        if (optimizerTimedOut && !HasOptimizedDeckApplied)
+        {
+            return WithFallbackNote("Last build timed out · still generating new…");
+        }
+
+        return null;
     }
 
     public bool IsMoveReadyForPlacement() =>

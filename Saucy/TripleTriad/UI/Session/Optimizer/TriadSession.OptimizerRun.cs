@@ -28,6 +28,16 @@ public partial class TriadSession
             return;
         }
 
+        if (!premadeRequest &&
+            !forceRebuild &&
+            HasOptimizedDeckApplied &&
+            optimizerTargetDeckId >= 0 &&
+            preGameNpc?.Id == npc.Id &&
+            (TriadUiState.IsPrepDeckSelectVisible() || TriadUiState.IsMatchRegistrationVisible()))
+        {
+            return;
+        }
+
         if (!premadeRequest && TriadMapNavigation.TryRejectLockedNpcDuringNavigation(npc))
         {
             return;

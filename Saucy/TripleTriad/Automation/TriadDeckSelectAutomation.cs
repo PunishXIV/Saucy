@@ -95,13 +95,21 @@ internal static unsafe partial class TriadDeckSelectAutomation
             }
 
             var addon = &selDeck->AtkUnitBase;
-            if (TriadUiState.IsResultVisible() || TriadUiState.IsMatchRegistrationVisible())
+            if (TriadUiState.IsResultVisible())
             {
                 TryCloseDeckSelectGracefully(addon);
                 if (IsDeckSelectAddonPresent())
                 {
                     TryForceHideLastResort(addon);
                 }
+
+                ReleaseDeckSelectForMatch();
+                ResetSession();
+                return;
+            }
+
+            if (TriadUiState.IsMatchRegistrationVisible() && !addon->IsVisible)
+            {
                 ReleaseDeckSelectForMatch();
                 ResetSession();
                 return;

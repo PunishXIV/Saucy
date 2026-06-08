@@ -23,6 +23,11 @@ internal static class TriadAutomator
             }
         }
 
+        if (TriadDeckSelectAutomation.TickIfOpen())
+        {
+            return;
+        }
+
         if (TriadUiState.IsMatchRegistrationVisible())
         {
             TriadRematchAutomation.ClearRematchPending();
@@ -42,11 +47,6 @@ internal static class TriadAutomator
             }
 
             TriadMatchRegistrationAutomation.Tick();
-            return;
-        }
-
-        if (TriadDeckSelectAutomation.TickIfOpen())
-        {
             return;
         }
 

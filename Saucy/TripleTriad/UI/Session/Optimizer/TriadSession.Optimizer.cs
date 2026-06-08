@@ -21,6 +21,11 @@ public partial class TriadSession
 
         lock (preGameLock)
         {
+            if (HasOptimizedDeckApplied && optimizerTargetDeckId >= 0)
+            {
+                return;
+            }
+
             if (ShouldBuildOptimizedDeck())
             {
                 TryEnsureOptimizedDeckForPrepLocked();
@@ -70,11 +75,17 @@ public partial class TriadSession
     private void TryEnsureOptimizedDeckForPrepLocked()
     {
         var sessionKey = BuildOptimizerSessionKey(preGameNpc, preGameMods);
-        if (HasOptimizedDeckApplied &&
-            optimizerTargetDeckId >= 0 &&
-            string.Equals(optimizerSessionKey, sessionKey, StringComparison.Ordinal))
+        if (HasOptimizedDeckApplied && optimizerTargetDeckId >= 0)
         {
-            return;
+            if (string.Equals(optimizerSessionKey, sessionKey, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (TriadUiState.IsPrepDeckSelectVisible() || TriadUiState.IsMatchRegistrationVisible())
+            {
+                return;
+            }
         }
 
         if (TrySkipOptimizedDeckRebuildLocked(preGameNpc, preGameMods))
