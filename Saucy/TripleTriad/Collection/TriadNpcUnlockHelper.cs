@@ -80,6 +80,9 @@ internal static class TriadNpcUnlockHelper
     public static string? TryGetTooltipLine(TriadNpc? npc) =>
         npc == null || IsUnlocked(npc, out var reason) ? null : reason;
 
+    public static bool IsUnlockRequirementSatisfied(GameNpcInfo? info) =>
+        info != null && AreUnlockQuestsComplete(info, out _);
+
     public static string FormatLockedMessage(string npcName, uint incompleteQuestId, string? incompleteQuestName) =>
         $"[Saucy] {npcName}'s Triple Triad isn't unlocked yet — complete {FormatQuestLabel(incompleteQuestId, incompleteQuestName)} first.";
 
@@ -116,6 +119,11 @@ internal static class TriadNpcUnlockHelper
         out List<(uint QuestId, string? QuestName)> incompleteQuests)
     {
         incompleteQuests = [];
+
+        if (TriadMemoryReads.IsNpcUnlockedByProgress(info))
+        {
+            return true;
+        }
 
         var sheet = Svc.Data.GetExcelSheet<TriadNpcSheet>();
         if (sheet != null && info.triadId > 0)

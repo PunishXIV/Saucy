@@ -23,7 +23,13 @@ internal static class TriadNpcQuestUi
             return;
         }
 
-        var snapshot = GetSnapshot(npcInfo.UnlockQuestId);
+        if (TriadMemoryReads.IsNpcUnlockedByProgress(npcInfo) ||
+            TriadNpcUnlockHelper.IsUnlockRequirementSatisfied(npcInfo))
+        {
+            return;
+        }
+
+        var snapshot = GetSnapshot(npcInfo);
         if (snapshot.IsComplete)
         {
             return;
@@ -74,7 +80,7 @@ internal static class TriadNpcQuestUi
         }
 
         InvalidateCache();
-        snapshot = GetSnapshot(npcInfo.UnlockQuestId);
+        snapshot = GetSnapshot(npcInfo);
 
         if (QuestionableTriad.TryStartSingleQuest(npcInfo.UnlockQuestId))
         {
@@ -113,20 +119,27 @@ internal static class TriadNpcQuestUi
         return snapshot.StatusMessage;
     }
 
-    private static QuestSnapshot GetSnapshot(uint questId)
+    private static QuestSnapshot GetSnapshot(GameNpcInfo npcInfo)
     {
+        var questId = npcInfo.UnlockQuestId;
         if (_snapshot != null && _cachedQuestId == questId)
         {
             return _snapshot;
         }
 
         _cachedQuestId = questId;
-        _snapshot = BuildSnapshot(questId);
+        _snapshot = BuildSnapshot(npcInfo);
         return _snapshot;
     }
 
-    private static QuestSnapshot BuildSnapshot(uint questId)
+    private static QuestSnapshot BuildSnapshot(GameNpcInfo npcInfo)
     {
+        var questId = npcInfo.UnlockQuestId;
+        if (TriadNpcUnlockHelper.IsUnlockRequirementSatisfied(npcInfo))
+        {
+            return CompleteSnapshot(QuestionableTriad.HasAutomationPath(questId));
+        }
+
         if (!Questionable.IsInstalled)
         {
             return new()
@@ -137,12 +150,10 @@ internal static class TriadNpcQuestUi
 
         var hasAutomationPath = QuestionableTriad.HasAutomationPath(questId);
 
-        if (QuestionableTriad.IsQuestComplete(questId))
+        if (TriadMemoryReads.IsQuestCompleteOrUnneeded(questId) ||
+            QuestionableTriad.IsQuestComplete(questId))
         {
-            return new()
-            {
-                IsComplete = true, HasAutomationPath = hasAutomationPath, CanStart = false, StatusMessage = null
-            };
+            return CompleteSnapshot(hasAutomationPath);
         }
 
         if (!hasAutomationPath)
@@ -171,6 +182,12 @@ internal static class TriadNpcQuestUi
 
         if (!QuestionableTriad.IsReadyToAccept(questId))
         {
+            // Finished quests are also not "ready to accept" in Questionable — don't blame prerequisites for that.
+            if (TriadMemoryReads.IsQuestCompleteOrUnneeded(questId))
+            {
+                return CompleteSnapshot(hasAutomationPath);
+            }
+
             return new()
             {
                 IsComplete = false, HasAutomationPath = true, CanStart = false, StatusMessage = "Prerequisites not met yet (check Questionable /qst)."
@@ -182,6 +199,12 @@ internal static class TriadNpcQuestUi
             IsComplete = false, HasAutomationPath = true, CanStart = true, StatusMessage = null
         };
     }
+
+    private static QuestSnapshot CompleteSnapshot(bool hasAutomationPath) =>
+        new()
+        {
+            IsComplete = true, HasAutomationPath = hasAutomationPath, CanStart = false, StatusMessage = null
+        };
 
     private sealed class QuestSnapshot
     {

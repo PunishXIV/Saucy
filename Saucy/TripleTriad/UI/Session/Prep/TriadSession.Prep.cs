@@ -108,7 +108,9 @@ public partial class TriadSession
             }
         }
 
-        var deferHeavyWork = TriadMapNavigation.IsNavigationActive || Vnavmesh.ShouldDeferHeavyWork();
+        var deferHeavyWork =
+            (TriadMapNavigation.IsNavigationActive && !TriadMapNavigation.IsInNavigationTargetTerritory()) ||
+            Vnavmesh.ShouldDeferDeckOptimizerWork();
 
         if (shouldManageDeck &&
             startOptimizer &&

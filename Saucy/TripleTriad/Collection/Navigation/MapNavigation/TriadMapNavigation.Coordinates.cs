@@ -1,3 +1,4 @@
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using ECommons.GameHelpers;
 using Lumina.Excel.Sheets;
@@ -80,25 +81,45 @@ internal static partial class TriadMapNavigation
     internal static Vector3 ResolveNpcPathPoint(Vector3 position)
     {
         var indoor = IsIndoorTerritory(Svc.ClientState.TerritoryType);
-        var playerFloor = Vnavmesh.TryGetPointOnFloor(Player.Position, indoor) ?? Player.Position;
 
-        var atPlayerHeight = new Vector3(position.X, playerFloor.Y, position.Z);
-        var snapped = Vnavmesh.TryGetPointOnFloor(atPlayerHeight, indoor, 4f);
-        if (snapped != null)
+        // Live/baked NPC coords already carry world height — snap there instead of flattening to player floor.
+        if (position.Y > 1f)
         {
-            return snapped.Value;
-        }
-
-        if (MathF.Abs(position.Y - playerFloor.Y) <= MaxTrustedNpcHeightDelta)
-        {
-            snapped = Vnavmesh.TryGetPointOnFloor(position, indoor, 4f);
-            if (snapped != null)
+            var snapped = Vnavmesh.TryGetPointOnFloor(position, indoor, 4f);
+            if (snapped != null && snapped.Value.Y >= position.Y - 1.5f)
             {
                 return snapped.Value;
             }
+
+            return position;
         }
 
-        return atPlayerHeight;
+        // Map links arrive at Y=0. Snap at destination XZ; while mounted, ignore player altitude.
+        var referenceY = Svc.Condition[ConditionFlag.Mounted]
+            ? 0f
+            : (Vnavmesh.TryGetPointOnFloor(Player.Position, indoor) ?? Player.Position).Y;
+        var candidate = new Vector3(position.X, referenceY, position.Z);
+        var floor = Vnavmesh.TryGetPointOnFloor(candidate, indoor, 4f);
+        if (floor != null)
+        {
+            if (!Svc.Condition[ConditionFlag.Mounted] && floor.Value.Y < referenceY - 1.5f)
+            {
+                return candidate;
+            }
+
+            return floor.Value;
+        }
+
+        if (MathF.Abs(position.Y - referenceY) <= MaxTrustedNpcHeightDelta)
+        {
+            floor = Vnavmesh.TryGetPointOnFloor(position, indoor, 4f);
+            if (floor != null)
+            {
+                return floor.Value;
+            }
+        }
+
+        return candidate;
     }
 
     internal static Vector3? GetWorldPositionFromMap(uint mapId, float mapX, float mapY)

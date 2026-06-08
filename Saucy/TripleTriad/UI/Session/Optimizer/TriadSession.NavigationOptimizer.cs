@@ -42,7 +42,7 @@ public partial class TriadSession
         if (TriadMapNavigation.IsExecutingMultiAreaRoute ||
             (TriadMapNavigation.IsNavigationActive &&
              !TriadMapNavigation.IsInNavigationTargetTerritory()) ||
-            Vnavmesh.ShouldDeferHeavyWork())
+            Vnavmesh.ShouldDeferDeckOptimizerWork())
         {
             return;
         }

@@ -111,7 +111,7 @@ public partial class TriadSession
             return;
         }
 
-        if (Vnavmesh.ShouldDeferHeavyWork())
+        if (Vnavmesh.ShouldDeferDeckOptimizerWork())
         {
             AnnounceOptimizerSkipOnce($"{optimizerKey}:vnav",
                 "[Saucy] Waiting for vnavmesh before building deck…");

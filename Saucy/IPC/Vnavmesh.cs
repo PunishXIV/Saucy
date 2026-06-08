@@ -73,6 +73,9 @@ internal static class Vnavmesh
     public static bool ShouldDeferHeavyWork() =>
         IsInstalled && (!IsNavReady() || IsBuildInProgress() || IsPathfindInProgress());
 
+    public static bool ShouldDeferDeckOptimizerWork() =>
+        IsInstalled && (!IsNavReady() || IsBuildInProgress());
+
     public static bool IsAutomationContended() =>
         IsInstalled && (ShouldDeferHeavyWork() || IsMoving());
 

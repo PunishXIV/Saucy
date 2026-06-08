@@ -165,7 +165,7 @@ public partial class TriadSession
             {
                 deckId = optimizerTargetDeckId;
             }
-            else if (ShouldBuildOptimizedDeck() && Vnavmesh.ShouldDeferHeavyWork())
+            else if (ShouldBuildOptimizedDeck() && Vnavmesh.ShouldDeferDeckOptimizerWork())
             {
                 return "Waiting for vnavmesh…";
             }

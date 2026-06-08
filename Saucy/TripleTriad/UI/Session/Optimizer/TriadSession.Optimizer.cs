@@ -269,7 +269,7 @@ public partial class TriadSession
     private bool IsDeckOptimizerBlockedByNavmesh() =>
         ShouldBuildOptimizedDeck() &&
         !HasOptimizedDeckApplied &&
-        Vnavmesh.ShouldDeferHeavyWork();
+        Vnavmesh.ShouldDeferDeckOptimizerWork();
 
     private static void PrintOptimizerChat(string message, bool force = false)
     {
