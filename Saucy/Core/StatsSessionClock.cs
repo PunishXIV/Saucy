@@ -1,5 +1,4 @@
 using System;
-
 namespace Saucy;
 
 internal static class StatsSessionClock

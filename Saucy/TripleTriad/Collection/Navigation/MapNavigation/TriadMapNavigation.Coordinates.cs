@@ -3,7 +3,6 @@ using Dalamud.Game.Text.SeStringHandling.Payloads;
 using ECommons.GameHelpers;
 using Lumina.Excel.Sheets;
 using Saucy.IPC;
-using Saucy.TripleTriad.Data;
 using System;
 using System.Numerics;
 using Map = Lumina.Excel.Sheets.Map;

@@ -22,6 +22,39 @@ public static unsafe class SelectYesnoHelper
 
     private static readonly Regex DigitGroupRegex = new(@"[0-9][0-9,]*", RegexOptions.Compiled);
 
+    private static readonly string[] BlockedSystemPromptMarkers =
+    [
+        "aetheryte",
+        "aethernet",
+        "ethérite",
+        "étheryte",
+        "ätheryt",
+        "teleport",
+        "téléport",
+        "teleportieren",
+        "テレポ",
+        "summoning bell",
+        "cloche d'invocation",
+        "beschwörungsglocke",
+        "discard",
+        "jeter",
+        "wegwerfen",
+        "home point",
+        "point de retour",
+        "heimpunkt",
+        "return home",
+        "retour au foyer",
+        "heimkehr",
+        "party invitation",
+        "party invite",
+        "invitation dans un groupe",
+        "gruppeneinladung",
+        "upon release",
+        "under release",
+        "libération",
+        "freigabe"
+    ];
+
     public static bool IsArmed => armedUntilUtc != null && DateTime.UtcNow < armedUntilUtc;
 
     public static void ArmForYes(TimeSpan window) => armedUntilUtc = DateTime.UtcNow + window;
@@ -76,22 +109,7 @@ public static unsafe class SelectYesnoHelper
     public static bool IsBlockedSystemPrompt(AddonSelectYesno* yesno)
     {
         var prompt = GetPromptText(yesno);
-        if (string.IsNullOrWhiteSpace(prompt))
-        {
-            return false;
-        }
-
-        return prompt.Contains("aetheryte", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("teleport", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("aethernet", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("summoning bell", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("discard", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("home point", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("return home", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("party invitation", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("party invite", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("upon release", StringComparison.OrdinalIgnoreCase) ||
-               prompt.Contains("under release", StringComparison.OrdinalIgnoreCase);
+        return !string.IsNullOrWhiteSpace(prompt) && PromptContainsAny(prompt, BlockedSystemPromptMarkers);
     }
 
     public static bool IsArcadeYesno(AddonSelectYesno* yesno) =>
@@ -157,9 +175,27 @@ public static unsafe class SelectYesnoHelper
             return false;
         }
 
-        return text.Contains("triad", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("トリプル", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("triade", StringComparison.OrdinalIgnoreCase);
+        return PromptContainsAny(text,
+        [
+            "triad",
+            "triade",
+            "triplo",
+            "トリプル",
+            "三重幻卡"
+        ]);
+    }
+
+    private static bool PromptContainsAny(string prompt, string[] markers)
+    {
+        foreach (var marker in markers)
+        {
+            if (prompt.Contains(marker, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static bool IsTriadYesno(AddonSelectYesno* yesno) =>

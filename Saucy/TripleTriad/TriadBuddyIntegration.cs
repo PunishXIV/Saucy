@@ -1,5 +1,4 @@
 using System.Linq;
-
 namespace Saucy.TripleTriad;
 
 internal static class TriadBuddyIntegration

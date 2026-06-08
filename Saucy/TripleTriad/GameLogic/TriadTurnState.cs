@@ -7,6 +7,24 @@ internal static class TriadTurnState
 {
     public const int PlayerTurnAtkValueIndex = 23;
 
+    private static readonly string[] TurnBannerMarkers =
+    [
+        " TURN",
+        " TURN'",
+        " TOUR ",
+        " TOUR DE ",
+        " ZUG",
+        " AM ZUG",
+        " TURNO",
+        " TURNO DE ",
+        " VEZ DE ",
+        "のターン",
+        "回合",
+        "턴",
+        " ход",
+        " хід"
+    ];
+
     public static unsafe bool ReadIsPlayerTurn(AtkUnitBase* unit)
     {
         if (unit == null || unit->AtkValuesCount <= PlayerTurnAtkValueIndex)
@@ -54,13 +72,19 @@ internal static class TriadTurnState
 
     private static bool IsTurnBannerText(string? text)
     {
-        if (string.IsNullOrWhiteSpace(text))
+        if (string.IsNullOrWhiteSpace(text) || text.Length > 96)
         {
             return false;
         }
 
-        return text.Contains(" TURN", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("のターン", StringComparison.Ordinal) ||
-               text.Contains(" TOUR ", StringComparison.OrdinalIgnoreCase);
+        foreach (var marker in TurnBannerMarkers)
+        {
+            if (text.Contains(marker, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -24,15 +24,10 @@ internal static class FortempsManservantRoute
         InteriorMapX = ManservantMapX,
         InteriorMapY = ManservantMapY,
         Matches = location =>
-        {
-            if (location.TerritoryType.RowId == FortempsManorTerritoryId)
-            {
-                return true;
-            }
-
-            var placeName = location.PlaceName.ToString();
-            return placeName.Contains("Fortemps Manor", StringComparison.OrdinalIgnoreCase);
-        },
+            MultiAreaRouteMatchers.MatchesDestination(
+                location,
+                FortempsManorTerritoryIds,
+                ManorInteriorMapId),
         Timeout = TimeSpan.FromSeconds(240),
         Steps =
         [

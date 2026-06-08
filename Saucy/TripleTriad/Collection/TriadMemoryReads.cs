@@ -1,12 +1,12 @@
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
-using Saucy.TripleTriad.Data;
 using System;
 using System.Collections.Generic;
 namespace Saucy.TripleTriad;
 
 public static class TriadMemoryReads
 {
+    private const uint QuestRowIdOffset = 65536;
     public static bool IsAvailable
         => Svc.ClientState.IsLoggedIn && Svc.Objects.LocalPlayer != null;
 
@@ -57,8 +57,6 @@ public static class TriadMemoryReads
             return false;
         }
     }
-
-    private const uint QuestRowIdOffset = 65536;
 
     public static IEnumerable<uint> EnumerateQuestCompletionIds(uint questRowId)
     {

@@ -100,13 +100,7 @@ internal static unsafe class TriadPrepRequestReader
             return false;
         }
 
-        if (text is "None" or "Challenge" or "Quit" or "Match Registration" or "Please confirm the rules and rewards." or
-            "Regional Rules" or "Match Rules" or "Possible Prize" or "Match Fee" or "Time Remaining")
-        {
-            return false;
-        }
-
-        if (int.TryParse(text, out var _))
+        if (int.TryParse(text, out var _) || parseCtx.ParseModifier(text, false) != null)
         {
             return false;
         }

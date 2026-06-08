@@ -7,6 +7,10 @@ namespace Saucy.TripleTriad.UI;
 
 internal static unsafe class TriadCardListSelectionReader
 {
+    private static readonly string[] CatalogNumberPrefixes =
+    [
+        "n°", "nº", "no.", "no ", "nr.", "nr ", "№", "°", "º", "#"
+    ];
     public static int ReadSelectedCardId(
         AddonGSInfoCardList* addon,
         byte filterMode = 0,
@@ -18,17 +22,120 @@ internal static unsafe class TriadCardListSelectionReader
             displayCardId = TryParseCardIdFromDisplayLabel(addon);
         }
 
+        var gridCardId = TryReadCardIdFromGrid(addon, filterMode, agent, displayCardId);
+        var detailCardId = TryReadCardIdFromDetailPane(addon, displayCardId);
+
+        if (gridCardId > 0)
+        {
+            if (detailCardId <= 0 || detailCardId == gridCardId)
+            {
+                return gridCardId;
+            }
+
+            if (ShouldPreferGridOverDetail(gridCardId, detailCardId, addon, displayCardId))
+            {
+                return gridCardId;
+            }
+        }
+
+        if (detailCardId > 0)
+        {
+            return detailCardId;
+        }
+
+        return gridCardId > 0 ? gridCardId : TryParseCardIdFromDescription(addon);
+    }
+
+    public static bool IconMatchesCard(int iconId, int cardId) =>
+        cardId > 0 && TriadCardDB.Get().TryGetCardIdFromIconId(iconId) == cardId;
+
+    public static int TryParseCardIdFromDisplayLabel(AddonGSInfoCardList* addon)
+    {
+        if (addon->SelectedCardNumber == null)
+        {
+            return -1;
+        }
+
+        return TryParseCardIdFromDisplayLabel(GUINodeUtils.GetNodeText(&addon->SelectedCardNumber->AtkResNode));
+    }
+
+    public static int TryParseCardIdFromDisplayLabel(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return -1;
+        }
+
+        var exIndex = text.IndexOf("Ex.", StringComparison.OrdinalIgnoreCase);
+        if (exIndex >= 0)
+        {
+            var exNumber = ParseDisplayNumber(text[(exIndex + 3)..]);
+            if (exNumber > 0)
+            {
+                return TriadCardDB.Get().FindBySortOrder(1000 + exNumber)?.Id ?? -1;
+            }
+        }
+
+        var noIndex = text.IndexOf("No.", StringComparison.OrdinalIgnoreCase);
+        if (noIndex >= 0)
+        {
+            var noNumber = ParseDisplayNumber(text[(noIndex + 3)..]);
+            if (noNumber > 0)
+            {
+                return TriadCardDB.Get().FindBySortOrder(noNumber)?.Id ?? -1;
+            }
+        }
+
+        return TryParseCatalogSortOrder(text);
+    }
+
+    public static bool IsMaskedUnownedSelection(AddonGSInfoCardList* addon, int displayCardId = -1)
+    {
+        if (displayCardId < 0)
+        {
+            displayCardId = TryParseCardIdFromDisplayLabel(addon);
+        }
+
+        var name = addon->SelectedCardName != null
+            ? GUINodeUtils.GetNodeText(&addon->SelectedCardName->AtkResNode)?.Trim()
+            : null;
+
+        if (IsMaskedCardName(name))
+        {
+            return true;
+        }
+
+        if (displayCardId > 0)
+        {
+            var fromIcon = TriadCardDB.Get().TryGetCardIdFromIconId(addon->CardIconId);
+            if (fromIcon >= 0 && fromIcon != displayCardId)
+            {
+                return true;
+            }
+
+            var fromStats = TryReadCardIdFromStats(addon);
+            if (fromStats >= 0 && fromStats != displayCardId)
+            {
+                return true;
+            }
+        }
+
+        if (TriadCardDB.Get().TryGetCardIdFromIconId(addon->CardIconId) < 0 &&
+            (string.IsNullOrWhiteSpace(name) || IsMaskedCardName(name)))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static int TryReadCardIdFromDetailPane(AddonGSInfoCardList* addon, int displayCardId)
+    {
         if (IsMaskedUnownedSelection(addon, displayCardId))
         {
             if (displayCardId > 0)
             {
                 return displayCardId;
-            }
-
-            var maskedGridId = TryReadCardIdFromGrid(addon, filterMode, agent, displayCardId);
-            if (maskedGridId > 0)
-            {
-                return maskedGridId;
             }
 
             return -1;
@@ -75,96 +182,124 @@ internal static unsafe class TriadCardListSelectionReader
             return fromNumber;
         }
 
-        var fromGrid = TryReadCardIdFromGrid(addon, filterMode, agent, displayCardId);
-        if (fromGrid > 0)
-        {
-            return fromGrid;
-        }
-
-        return TryParseCardIdFromDescription(addon);
-    }
-
-    public static bool IconMatchesCard(int iconId, int cardId) =>
-        cardId > 0 && TriadCardDB.Get().TryGetCardIdFromIconId(iconId) == cardId;
-
-    public static int TryParseCardIdFromDisplayLabel(AddonGSInfoCardList* addon)
-    {
-        if (addon->SelectedCardNumber == null)
-        {
-            return -1;
-        }
-
-        return TryParseCardIdFromDisplayLabel(GUINodeUtils.GetNodeText(&addon->SelectedCardNumber->AtkResNode));
-    }
-
-    public static int TryParseCardIdFromDisplayLabel(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return -1;
-        }
-
-        var exIndex = text.IndexOf("Ex.", StringComparison.OrdinalIgnoreCase);
-        if (exIndex >= 0)
-        {
-            var exNumber = ParseDisplayNumber(text[(exIndex + 3)..]);
-            if (exNumber > 0)
-            {
-                return TriadCardDB.Get().FindBySortOrder(1000 + exNumber)?.Id ?? -1;
-            }
-        }
-
-        var noIndex = text.IndexOf("No.", StringComparison.OrdinalIgnoreCase);
-        if (noIndex >= 0)
-        {
-            var noNumber = ParseDisplayNumber(text[(noIndex + 3)..]);
-            if (noNumber > 0)
-            {
-                return TriadCardDB.Get().FindBySortOrder(noNumber)?.Id ?? -1;
-            }
-        }
-
         return -1;
     }
 
-    public static bool IsMaskedUnownedSelection(AddonGSInfoCardList* addon, int displayCardId = -1)
+    private static bool ShouldPreferGridOverDetail(
+        int gridCardId,
+        int detailCardId,
+        AddonGSInfoCardList* addon,
+        int displayCardId)
     {
-        if (displayCardId < 0)
-        {
-            displayCardId = TryParseCardIdFromDisplayLabel(addon);
-        }
-
-        var name = addon->SelectedCardName != null
-            ? GUINodeUtils.GetNodeText(&addon->SelectedCardName->AtkResNode)?.Trim()
-            : null;
-
-        if (IsMaskedCardName(name))
+        if (displayCardId > 0 && displayCardId == gridCardId && displayCardId != detailCardId)
         {
             return true;
         }
 
-        if (displayCardId > 0)
+        if (IsMaskedUnownedSelection(addon, displayCardId))
         {
-            var fromIcon = TriadCardDB.Get().TryGetCardIdFromIconId(addon->CardIconId);
-            if (fromIcon >= 0 && fromIcon != displayCardId)
-            {
-                return true;
-            }
+            return true;
+        }
 
-            var fromStats = TryReadCardIdFromStats(addon);
-            if (fromStats >= 0 && fromStats != displayCardId)
+        return IsCardUnowned(gridCardId);
+    }
+
+    private static bool IsCardUnowned(int cardId)
+    {
+        if (cardId <= 0)
+        {
+            return false;
+        }
+
+        if (TriadMemoryReads.IsAvailable)
+        {
+            return !TriadMemoryReads.TryIsCardOwned(cardId);
+        }
+
+        return !GameCardDB.Get().ownedCardIds.Contains(cardId);
+    }
+
+    private static int TryParseCatalogSortOrder(string text)
+    {
+        var dashIdx = text.LastIndexOf(" - ", StringComparison.Ordinal);
+        if (dashIdx >= 0)
+        {
+            var afterDash = ParseDisplayNumber(text[(dashIdx + 3)..]);
+            if (TryMapCatalogNumber(afterDash, out var fromDash))
             {
-                return true;
+                return fromDash;
             }
         }
 
-        if (TriadCardDB.Get().TryGetCardIdFromIconId(addon->CardIconId) < 0 &&
-            (string.IsNullOrWhiteSpace(name) || IsMaskedCardName(name)))
+        foreach (var prefix in CatalogNumberPrefixes)
         {
+            var idx = text.IndexOf(prefix, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0)
+            {
+                continue;
+            }
+
+            var afterPrefix = ParseDisplayNumber(text[(idx + prefix.Length)..]);
+            if (TryMapCatalogNumber(afterPrefix, out var fromPrefix))
+            {
+                return fromPrefix;
+            }
+        }
+
+        var lastNumber = ExtractLastPositiveInteger(text);
+        return TryMapCatalogNumber(lastNumber, out var fromLast) ? fromLast : -1;
+    }
+
+    private static bool TryMapCatalogNumber(int catalogNo, out int cardId)
+    {
+        cardId = -1;
+        if (catalogNo <= 0)
+        {
+            return false;
+        }
+
+        var card = TriadCardDB.Get().FindBySortOrder(catalogNo);
+        if (card != null)
+        {
+            cardId = card.Id;
+            return true;
+        }
+
+        card = TriadCardDB.Get().FindBySortOrder(1000 + catalogNo);
+        if (card != null)
+        {
+            cardId = card.Id;
             return true;
         }
 
         return false;
+    }
+
+    private static int ExtractLastPositiveInteger(string text)
+    {
+        var last = -1;
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (!char.IsDigit(text[i]))
+            {
+                continue;
+            }
+
+            var end = i;
+            while (end < text.Length && char.IsDigit(text[end]))
+            {
+                end++;
+            }
+
+            if (int.TryParse(text[i..end], out var number) && number > 0)
+            {
+                last = number;
+            }
+
+            i = end;
+        }
+
+        return last;
     }
 
     private static bool IsMaskedCardName(string? name)
@@ -192,7 +327,7 @@ internal static unsafe class TriadCardListSelectionReader
 
     private static int ParseDisplayNumber(string text)
     {
-        text = text.TrimStart(' ', '.', ':');
+        text = text.TrimStart(' ', '.', ':', '°', 'º', '№', '#');
         var end = 0;
         while (end < text.Length && char.IsDigit(text[end]))
         {
@@ -290,13 +425,14 @@ internal static unsafe class TriadCardListSelectionReader
                 continue;
             }
 
-            var fromDisplay = TryParseCardIdFromDisplayLabel(GUINodeUtils.GetNodeText(node));
+            var nodeText = GUINodeUtils.GetNodeText(node);
+            var fromDisplay = TryParseCardIdFromDisplayLabel(nodeText);
             if (fromDisplay > 0)
             {
                 return fromDisplay;
             }
 
-            var fromNumber = TryParseCardIdFromText(GUINodeUtils.GetNodeText(node));
+            var fromNumber = TryParseCardIdFromText(nodeText);
             if (fromNumber > 0)
             {
                 return fromNumber;
@@ -320,6 +456,12 @@ internal static unsafe class TriadCardListSelectionReader
             text.Contains("No.", StringComparison.OrdinalIgnoreCase))
         {
             return -1;
+        }
+
+        var fromCatalog = TryParseCatalogSortOrder(text);
+        if (fromCatalog > 0)
+        {
+            return fromCatalog;
         }
 
         foreach (var part in text.Split([' ', '.', '#', ':'], StringSplitOptions.RemoveEmptyEntries))

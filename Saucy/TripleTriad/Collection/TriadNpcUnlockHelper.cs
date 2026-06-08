@@ -81,7 +81,7 @@ internal static class TriadNpcUnlockHelper
         npc == null || IsUnlocked(npc, out var reason) ? null : reason;
 
     public static bool IsUnlockRequirementSatisfied(GameNpcInfo? info) =>
-        info != null && AreUnlockQuestsComplete(info, out _);
+        info != null && AreUnlockQuestsComplete(info, out var _);
 
     public static string FormatLockedMessage(string npcName, uint incompleteQuestId, string? incompleteQuestName) =>
         $"[Saucy] {npcName}'s Triple Triad isn't unlocked yet — complete {FormatQuestLabel(incompleteQuestId, incompleteQuestName)} first.";

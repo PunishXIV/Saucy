@@ -25,19 +25,10 @@ internal static class DomanEnclaveRoute
         InteriorMapX = InteriorMapX,
         InteriorMapY = InteriorMapY,
         Matches = location =>
-        {
-            var territoryId = location.TerritoryType.RowId;
-            foreach (var arrivalId in DomanEnclaveTerritoryIds)
-            {
-                if (territoryId == arrivalId)
-                {
-                    return true;
-                }
-            }
-
-            var placeName = location.PlaceName.ToString();
-            return placeName.Contains("Doman Enclave", StringComparison.OrdinalIgnoreCase);
-        },
+            MultiAreaRouteMatchers.MatchesDestination(
+                location,
+                DomanEnclaveTerritoryIds,
+                EnclaveInteriorMapId),
         Timeout = TimeSpan.FromSeconds(240),
         Steps =
         [

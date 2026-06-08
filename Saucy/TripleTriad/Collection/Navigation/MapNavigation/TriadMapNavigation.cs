@@ -77,7 +77,7 @@ internal static unsafe partial class TriadMapNavigation
         if (npc != null)
         {
             TriadRunSession.PrepareNavigationRunMode(npc, goal);
-            TriadRun.OnNpcSelected(npc, [], startOptimizer: true, forNavigation: true);
+            TriadRun.OnNpcSelected(npc, [], true, true);
         }
     }
 

@@ -443,9 +443,9 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
         }
 
         RebuildCardList(uiReaderCardList.cachedState);
-        searchFilterCard.Draw("##cardSearchFilter", WindowContentWidth * ImGuiHelpers.GlobalScale);
+        searchFilterCard.Draw("##cardSearchFilter", GetContentWidth());
 
-        if (ImGui.BeginListBox("##cards", new(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 10)))
+        if (ImGui.BeginListBox("##cards", GetListBoxSize(10)))
         {
             for (var idx = 0; idx < listCards.Count; idx++)
             {
@@ -539,7 +539,7 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
             npcFilterDataStale = false;
         }
 
-        searchFilterNpc.Draw("##npcSearchFilter", WindowContentWidth * ImGuiHelpers.GlobalScale);
+        searchFilterNpc.Draw("##npcSearchFilter", GetContentWidth());
 
         if (!IsGameDataReady)
         {
@@ -555,7 +555,7 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
         }
 
         var visibleCount = 0;
-        if (ImGui.BeginListBox("##npcs", new(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 10)))
+        if (ImGui.BeginListBox("##npcs", GetListBoxSize(10)))
         {
             for (var idx = 0; idx < listNpcs.Count; idx++)
             {
@@ -669,7 +669,7 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
         ImGui.Spacing();
         ImGui.Text($"Unowned rewards: {numNotOwnedRewards}");
         if (listNpcReward.Count > 0 &&
-            ImGui.BeginListBox("##cardReward", new(WindowContentWidth * ImGuiHelpers.GlobalScale, ImGui.GetTextLineHeightWithSpacing() * 4.5f)))
+            ImGui.BeginListBox("##cardReward", GetListBoxSize(4.5f)))
         {
             for (var idx = 0; idx < listNpcReward.Count; idx++)
             {
@@ -728,6 +728,23 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
         drawText();
     }
 
+    private static float GetContentWidth() =>
+        MathF.Max(1f, ImGui.GetContentRegionAvail().X);
+
+    private static Vector2 GetListBoxSize(float visibleLines) =>
+        new(GetContentWidth(), ImGui.GetTextLineHeightWithSpacing() * visibleLines);
+
+    private GameCardCollectionFilter ResolveNavigationCollectionFilter()
+    {
+        var collectionFilter = uiReaderCardList.cachedState.GetActiveCollectionFilter();
+        if (showNotOwnedOnly && collectionFilter == GameCardCollectionFilter.All)
+        {
+            return GameCardCollectionFilter.OnlyMissing;
+        }
+
+        return collectionFilter;
+    }
+
     private void OnCardSelectionChanged()
     {
         if (selectedCardIdx < 0 || selectedCardIdx >= listCards.Count)
@@ -740,7 +757,7 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
         {
             pluginNavTargetCardId = cardOb.Id;
 
-            var collectionFilter = uiReaderCardList.cachedState.GetActiveCollectionFilter();
+            var collectionFilter = ResolveNavigationCollectionFilter();
             var collectionPos = cardInfo.Collection[(int)collectionFilter];
             uiReaderCardList.SetPageAndGridView(collectionPos.PageIndex, collectionPos.CellIndex, cardOb.Id);
         }

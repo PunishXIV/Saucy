@@ -15,13 +15,8 @@ internal static class JeunoFirstWalkRoute
         Name = "Jeuno: The First Walk",
         TooltipHint = "Lower Jeuno routes via Mamook and the Yak T'el portal.",
         ArrivalTerritoryIds = LowerJeunoTerritoryIds,
-        // Match on map label only — TerritoryType on map links can disagree with PlaceName for Xak Tural NPCs.
         Matches = location =>
-        {
-            var placeName = location.PlaceName.ToString();
-            return placeName.Contains("Lower Jeuno", StringComparison.OrdinalIgnoreCase) ||
-                   placeName.Contains("Jeuno: The First Walk", StringComparison.OrdinalIgnoreCase);
-        },
+            MultiAreaRouteMatchers.MatchesDestination(location, LowerJeunoTerritoryIds),
         Timeout = TimeSpan.FromSeconds(180),
         Steps =
         [

@@ -355,11 +355,20 @@ public static unsafe class SelectStringHelper
         return false;
     }
 
-    private static bool IsTriadListEntryText(string? text) =>
-        !string.IsNullOrEmpty(text) &&
-        (text.Contains("Triple Triad", StringComparison.OrdinalIgnoreCase) ||
-         text.Contains("トリプル", StringComparison.OrdinalIgnoreCase) ||
-         text.Contains("triade", StringComparison.OrdinalIgnoreCase));
+    private static bool IsTriadListEntryText(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return false;
+        }
+
+        return text.Contains("Triple Triad", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("Triple-Triad", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("triad", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("triade", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("triplo", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("トリプル", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static bool IsTriadListEntryIcon(uint iconId) =>
         Array.IndexOf(TriadListEntryIconIds, iconId) >= 0;

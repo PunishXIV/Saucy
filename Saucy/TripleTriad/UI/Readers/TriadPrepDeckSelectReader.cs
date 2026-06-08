@@ -202,17 +202,16 @@ internal static unsafe class TriadPrepDeckSelectReader
             }
         }
 
+        if (!RowLooksLikeDeckRow(rowNode))
+        {
+            return null;
+        }
+
         string? bestName = null;
         foreach (var child in GUINodeUtils.GetAllChildNodes(rowNode) ?? [])
         {
             var text = GUINodeUtils.GetNodeText(child);
-            if (string.IsNullOrWhiteSpace(text) || text.Length is < 2 or > 64)
-            {
-                continue;
-            }
-
-            if (text.Contains("Time Remaining", StringComparison.OrdinalIgnoreCase) ||
-                text.Contains("Recommended", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(text) || text.Length is < 2 or > 64 || LooksLikePrepChromeText(text))
             {
                 continue;
             }
@@ -225,5 +224,29 @@ internal static unsafe class TriadPrepDeckSelectReader
         }
 
         return bestName;
+    }
+
+    private static bool LooksLikePrepChromeText(string text)
+    {
+        if (int.TryParse(text, out var _))
+        {
+            return true;
+        }
+
+        var colonCount = 0;
+        var digitCount = 0;
+        foreach (var ch in text)
+        {
+            if (ch == ':')
+            {
+                colonCount++;
+            }
+            else if (char.IsDigit(ch))
+            {
+                digitCount++;
+            }
+        }
+
+        return colonCount >= 2 && digitCount >= 2;
     }
 }

@@ -302,17 +302,17 @@ public partial class GameDataLoader
                         var cardOb = cardsDB.FindById((int)itemRow.Value.AdditionalData.RowId);
                         if (cardOb == null)
                         {
-                            var cardName = itemRow.Value.Name.ToString().Replace("-Karte", "");
+                            var cardName = NormalizeCardItemName(itemRow.Value.Name.ToString());
                             cardOb = (cardName.Length < 2) ? null : cardsDB.cards.Find(x => (x != null) && x.Name.Equals(cardName, StringComparison.InvariantCultureIgnoreCase));
 
                             if (cardOb == null)
                             {
-                                cardName = itemRow.Value.Singular.ToString().Replace("-Karte", "");
+                                cardName = NormalizeCardItemName(itemRow.Value.Singular.ToString());
                                 cardOb = (cardName.Length < 2) ? null : cardsDB.cards.Find(x => (x != null) && x.Name.Equals(cardName, StringComparison.InvariantCultureIgnoreCase));
 
                                 if (cardOb == null)
                                 {
-                                    cardName = itemRow.Value.Plural.ToString().Replace("-Karten", "");
+                                    cardName = NormalizeCardItemName(itemRow.Value.Plural.ToString());
                                     cardOb = (cardName.Length < 2) ? null : cardsDB.cards.Find(x => (x != null) && x.Name.Equals(cardName, StringComparison.InvariantCultureIgnoreCase));
                                 }
                             }
@@ -442,6 +442,44 @@ public partial class GameDataLoader
         {
             npc?.Name = FixNameCasing(npc.Name, excludedList);
         }
+    }
+
+    private static string NormalizeCardItemName(string itemName)
+    {
+        if (string.IsNullOrWhiteSpace(itemName))
+        {
+            return string.Empty;
+        }
+
+        var normalized = itemName.Trim();
+        normalized = normalized.Replace("-Karten", "", StringComparison.OrdinalIgnoreCase);
+        normalized = normalized.Replace("-Karte", "", StringComparison.OrdinalIgnoreCase);
+
+        foreach (var suffix in new[]
+        {
+            " card", " cards", " carte", " cartes", " karte", " karten"
+        })
+        {
+            if (normalized.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = normalized[..^suffix.Length].TrimEnd();
+                break;
+            }
+        }
+
+        const string cartePrefix = "carte ";
+        if (normalized.StartsWith(cartePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized[cartePrefix.Length..].TrimStart();
+        }
+
+        const string kartePrefix = "karte ";
+        if (normalized.StartsWith(kartePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized[kartePrefix.Length..].TrimStart();
+        }
+
+        return normalized.Trim();
     }
 
     private static string FixNameCasing(string text, string[] excludedList)
