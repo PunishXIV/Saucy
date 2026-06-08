@@ -10,6 +10,7 @@ namespace Saucy.TripleTriad;
 
 internal static partial class TriadMapNavigation
 {
+    private const float MaxTrustedNpcHeightDelta = 10f;
     internal static Vector3? ResolveDestination(MapLinkPayload location, TriadNpc? npc = null)
     {
         if (npc != null &&
@@ -41,7 +42,7 @@ internal static partial class TriadMapNavigation
     {
         if (ResolveLiveTriadNpcPosition(pending.Npc) is { } livePos)
         {
-            return livePos;
+            return ResolveNpcPathPoint(livePos);
         }
 
         if (ResolveDestination(pending.Location, pending.Npc) is { } resolved)
@@ -79,27 +80,25 @@ internal static partial class TriadMapNavigation
     internal static Vector3 ResolveNpcPathPoint(Vector3 position)
     {
         var indoor = IsIndoorTerritory(Svc.ClientState.TerritoryType);
+        var playerFloor = Vnavmesh.TryGetPointOnFloor(Player.Position, indoor) ?? Player.Position;
 
-        if (position.Y > 1f)
+        var atPlayerHeight = new Vector3(position.X, playerFloor.Y, position.Z);
+        var snapped = Vnavmesh.TryGetPointOnFloor(atPlayerHeight, indoor, 4f);
+        if (snapped != null)
         {
-            var snapped = Vnavmesh.TryGetPointOnFloor(position, indoor, 2f);
-            if (snapped != null && snapped.Value.Y >= position.Y - 1.5f)
+            return snapped.Value;
+        }
+
+        if (MathF.Abs(position.Y - playerFloor.Y) <= MaxTrustedNpcHeightDelta)
+        {
+            snapped = Vnavmesh.TryGetPointOnFloor(position, indoor, 4f);
+            if (snapped != null)
             {
                 return snapped.Value;
             }
-
-            return position;
         }
 
-        var playerFloor = Vnavmesh.TryGetPointOnFloor(Player.Position, indoor) ?? Player.Position;
-        var candidate = new Vector3(position.X, playerFloor.Y, position.Z);
-        var floor = Vnavmesh.TryGetPointOnFloor(candidate, indoor, 4f);
-        if (floor != null && floor.Value.Y >= playerFloor.Y - 1.5f)
-        {
-            return floor.Value;
-        }
-
-        return candidate;
+        return atPlayerHeight;
     }
 
     internal static Vector3? GetWorldPositionFromMap(uint mapId, float mapX, float mapY)

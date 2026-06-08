@@ -6,7 +6,7 @@ namespace Saucy.TripleTriad.GameLogic;
 
 public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
 {
-    private const int MaxWorkers = 2000;
+    private const int BackgroundMaxWorkers = 2000;
     private const int RolloutBatchSize = 64;
 
     protected TriadGameAgentRandom[] workerAgents;
@@ -23,7 +23,7 @@ public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
 
     protected void EnsureWorkers(int sessionSeed)
     {
-        var workerCount = Math.Max(RolloutBatchSize, MaxWorkers);
+        var workerCount = Math.Max(RolloutBatchSize, BackgroundMaxWorkers);
         if (workerAgents != null && workerAgents.Length == workerCount)
         {
             return;
@@ -57,14 +57,16 @@ public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
 
     protected virtual SolverResult FindWinningProbability(TriadGameSolver solver, TriadGameSimulationState gameState)
     {
+        var maxWorkers = SaucyParallelism.RolloutWorkerCount;
         var numWinningWorkers = 0;
         var numDrawingWorkers = 0;
         var completedWorkers = 0;
+        var parallelOptions = SaucyParallelism.RolloutParallelOptions;
 
-        while (completedWorkers < MaxWorkers)
+        while (completedWorkers < maxWorkers)
         {
-            var batchEnd = Math.Min(completedWorkers + RolloutBatchSize, MaxWorkers);
-            Parallel.For(completedWorkers, batchEnd, RunWorkerRollout);
+            var batchEnd = Math.Min(completedWorkers + RolloutBatchSize, maxWorkers);
+            Parallel.For(completedWorkers, batchEnd, parallelOptions, RunWorkerRollout);
             completedWorkers = batchEnd;
 
             void RunWorkerRollout(int workerIdx)
@@ -84,6 +86,6 @@ public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
             }
         }
 
-        return new(numWinningWorkers, numDrawingWorkers, MaxWorkers);
+        return new(numWinningWorkers, numDrawingWorkers, maxWorkers);
     }
 }

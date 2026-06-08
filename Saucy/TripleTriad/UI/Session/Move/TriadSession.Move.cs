@@ -1,6 +1,5 @@
 #nullable disable
 using System;
-using System.Threading.Tasks;
 namespace Saucy.TripleTriad.UI;
 
 public partial class TriadSession
@@ -15,7 +14,6 @@ public partial class TriadSession
             var parseCtx = new GameUIParser();
             screenOb = stateOb.ToTriadScreenState(parseCtx);
             currentNpc = stateOb.ToTriadNpc(parseCtx);
-            EnsureScreenMods(screenOb);
 
             if (parseCtx.HasErrors)
             {
@@ -57,21 +55,19 @@ public partial class TriadSession
 
         UpdateDeckOptimizerPause();
 
-        var npcForGame = ResolveNpcForGame(stateOb);
-        if (npcForGame != null &&
+        if (currentNpc != null &&
             screenOb != null &&
-            screenOb.turnState == TriadBoardScanner.ETurnState.Active &&
             stateOb != null &&
-            !stateOb.isPvP)
+            IsBlueTurnReadyForSolver(stateOb))
         {
-            var updateFlags = DebugScreenMemory.OnNewScan(screenOb, npcForGame);
+            var updateFlags = DebugScreenMemory.OnNewScan(screenOb, currentNpc);
             if (updateFlags != TriadGameScreenMemory.EUpdateFlags.None)
             {
                 if (DebugScreenMemory.deckBlue != null &&
                     DebugScreenMemory.gameState != null &&
                     DebugScreenMemory.gameSolver != null)
                 {
-                    ApplySolverMove();
+                    RunSolverAndCommit();
                 }
                 else
                 {
@@ -79,7 +75,7 @@ public partial class TriadSession
                 }
             }
         }
-        else if (hasMove)
+        else if (hasMove && (stateOb == null || !TriadTurnState.CanBlueAct(stateOb.move, stateOb.isPlayerTurn)))
         {
             ClearMove();
         }
@@ -87,111 +83,73 @@ public partial class TriadSession
 
     public void ResetForNewMatch() => ClearMove();
 
-    private void ApplySolverMove()
+    private void RunSolverAndCommit()
     {
-        if (DebugScreenMemory.deckBlue == null ||
-            DebugScreenMemory.gameState == null ||
-            DebugScreenMemory.gameSolver == null)
-        {
-            ClearMove();
-            return;
-        }
-
-        if (moveCalcInFlight)
-        {
-            return;
-        }
-
-        var solver = DebugScreenMemory.gameSolver;
-        var state = DebugScreenMemory.gameState;
-        var forcedCardIdx = state.forcedCardIdx;
-        var calcGeneration = ++moveCalcGeneration;
-        moveCalcInFlight = true;
         pauseOptimizerForSolver = true;
         UpdateDeckOptimizerPause();
 
-        _ = Task.Run(() =>
+        try
         {
-            var bestCardIdx = -1;
-            var bestBoardPos = -1;
-            try
+            DebugScreenMemory.gameSolver.FindNextMove(
+                DebugScreenMemory.gameState,
+                out var bestCardIdx,
+                out var bestBoardPos,
+                out var _);
+
+            var hadMove = hasMove;
+            var newCardIdx = bestCardIdx;
+            var newBoardIdx = newCardIdx < 0 ? -1 : bestBoardPos;
+
+            // Forced-card override (mirrors upstream): under Swap+Chaos the solver can pick
+            // a non-forced card; the game won't accept that, so force the forced index.
+            var forcedCardIdx = DebugScreenMemory.gameState.forcedCardIdx;
+            if (forcedCardIdx >= 0 && newCardIdx != forcedCardIdx)
             {
-                solver.FindNextMove(state, out bestCardIdx, out bestBoardPos, out var _);
-            }
-            catch (Exception ex)
-            {
-                Svc.Log.Error(ex, "[Saucy] Live move solver failed");
+                newCardIdx = forcedCardIdx;
             }
 
-            Svc.Framework.Run(() => CommitSolverMove(calcGeneration, bestCardIdx, bestBoardPos, forcedCardIdx));
-        });
+            moveCardIdx = newCardIdx;
+            moveBoardIdx = newBoardIdx;
+            hasMove = moveCardIdx >= 0 && moveBoardIdx >= 0;
+            if (hasMove && !hadMove)
+            {
+                moveReadyUtc = DateTime.UtcNow;
+            }
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Error(ex, "[Saucy] Live move solver failed");
+            ClearMove();
+        }
+        finally
+        {
+            pauseOptimizerForSolver = false;
+            UpdateDeckOptimizerPause();
+        }
     }
 
-    private void CommitSolverMove(int calcGeneration, int bestCardIdx, int bestBoardPos, int forcedCardIdx)
-    {
-        moveCalcInFlight = false;
-        pauseOptimizerForSolver = false;
-        UpdateDeckOptimizerPause();
-
-        if (calcGeneration != moveCalcGeneration ||
-            DebugScreenMemory.gameState == null ||
-            DebugScreenMemory.gameSolver == null)
-        {
-            return;
-        }
-
-        var hadMove = hasMove;
-        moveCardIdx = bestCardIdx;
-        moveBoardIdx = moveCardIdx < 0 ? -1 : bestBoardPos;
-
-        if (forcedCardIdx >= 0 && moveCardIdx != forcedCardIdx)
-        {
-            moveCardIdx = forcedCardIdx;
-        }
-
-        hasMove = moveCardIdx >= 0 && moveBoardIdx >= 0;
-        if (!hasMove)
-        {
-            TryApplyFallbackMove();
-        }
-
-        if (hasMove && !hadMove)
-        {
-            moveReadyUtc = DateTime.UtcNow;
-        }
-    }
+    private static bool IsBlueTurnReadyForSolver(UIStateTriadGame stateOb) =>
+        stateOb != null &&
+        !stateOb.isPvP &&
+        TriadTurnState.CanBlueAct(stateOb.move, stateOb.isPlayerTurn) &&
+        !(TriadTurnState.IsBoardPickPhase(stateOb.move) && stateOb.turnBannerVisible);
 
     private void ClearMove()
     {
-        moveCalcGeneration++;
         hasMove = false;
         moveCardIdx = -1;
         moveBoardIdx = -1;
         moveReadyUtc = null;
     }
 
-    internal void InvalidatePendingMoveCalc()
-    {
-        moveCalcGeneration++;
-        moveCalcInFlight = false;
-        pauseOptimizerForSolver = false;
-        hasMove = false;
-        moveCardIdx = -1;
-        moveBoardIdx = -1;
-        moveReadyUtc = null;
-    }
+    internal void InvalidatePendingMoveCalc() => ClearMove();
 
-    private TriadNpc ResolveNpcForGame(UIStateTriadGame stateOb)
+    internal TriadNpc ResolveNpcForGame(UIStateTriadGame stateOb)
     {
         if (currentNpc != null)
         {
             lastGameNpc = currentNpc;
             return currentNpc;
-        }
-
-        if (lastGameNpc != null)
-        {
-            return lastGameNpc;
         }
 
         if (stateOb != null)
@@ -220,49 +178,5 @@ public partial class TriadSession
         }
 
         return null;
-    }
-
-    private void TryApplyFallbackMove()
-    {
-        if (DebugScreenMemory.gameState == null || DebugScreenMemory.gameSolver == null)
-        {
-            return;
-        }
-
-        DebugScreenMemory.gameSolver.FindAvailableActions(
-            DebugScreenMemory.gameState,
-            out var availBoardMask,
-            out var numAvailBoard,
-            out var availCardsMask,
-            out var numAvailCards);
-
-        if (numAvailCards <= 0 || numAvailBoard <= 0)
-        {
-            return;
-        }
-
-        moveCardIdx = TriadGameAgentRandom.PickRandomBitFromMask(availCardsMask, 0);
-        moveBoardIdx = TriadGameAgentRandom.PickRandomBitFromMask(availBoardMask, 0);
-        hasMove = moveCardIdx >= 0 && moveBoardIdx >= 0;
-    }
-
-    private void EnsureScreenMods(TriadBoardScanner.GameState screenOb)
-    {
-        if (screenOb == null || screenOb.mods.Count > 0)
-        {
-            return;
-        }
-
-        if (preGameMods.Count > 0)
-        {
-            screenOb.mods.AddRange(preGameMods);
-            return;
-        }
-
-        var npc = currentNpc ?? lastGameNpc;
-        if (npc?.Rules != null)
-        {
-            screenOb.mods.AddRange(npc.Rules);
-        }
     }
 }

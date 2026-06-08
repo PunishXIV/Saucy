@@ -80,7 +80,7 @@ internal static unsafe partial class TriadMapNavigation
         StopVnavIfRunning();
         if (ResolveLiveTriadNpcPosition(pending.Npc) is { } livePos)
         {
-            pending.Destination = livePos;
+            pending.Destination = ResolveNpcPathPoint(livePos);
         }
 
         pending.Phase = NavigationPhase.MovingToNpc;
@@ -202,15 +202,9 @@ internal static unsafe partial class TriadMapNavigation
         out Vector3 npcPos,
         out float horizDistToNpc)
     {
-        npcPos = ResolveNpcPathPoint(ResolveLiveTriadNpcPosition(pending.Npc) ?? pending.Destination);
+        var source = ResolveLiveTriadNpcPosition(pending.Npc) ?? pending.Destination;
+        npcPos = ResolveNpcPathPoint(source);
         pending.Destination = npcPos;
-
-        if (pending.Npc != null && FindTriadNpcObject(pending.Npc) is { } liveNpc)
-        {
-            npcPos = liveNpc.Position;
-            pending.Destination = npcPos;
-        }
-
         horizDistToNpc = HorizontalDistance(Player.Position, npcPos);
     }
 

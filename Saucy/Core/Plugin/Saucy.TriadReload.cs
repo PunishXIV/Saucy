@@ -1,7 +1,3 @@
-using Saucy.TripleTriad;
-using Saucy.TripleTriad.GameLogic;
-using Saucy.TripleTriad.UI;
-
 namespace Saucy;
 
 public sealed partial class Saucy
@@ -10,7 +6,7 @@ public sealed partial class Saucy
     {
         TriadDeckOptimizerJobs.CancelActive(userCancelled: true);
         SaucyParallelism.ResetEvalConcurrency();
-        TriadRun = new TriadSession();
+        TriadRun = new();
     }
 
     private static void PrepareTriadSessionForPluginUnload()
@@ -23,14 +19,8 @@ public sealed partial class Saucy
 
     private static void DetachTriadUiReaders()
     {
-        if (uiReaderGame != null)
-        {
-            uiReaderGame.OnUIStateChanged -= TriadRun.UpdateGame;
-        }
+        uiReaderGame.OnUIStateChanged -= TriadRun.UpdateGame;
 
-        if (uiReaderPrep != null)
-        {
-            uiReaderPrep.OnUIStateChanged -= TriadRun.UpdateDecks;
-        }
+        uiReaderPrep.OnUIStateChanged -= TriadRun.UpdateDecks;
     }
 }

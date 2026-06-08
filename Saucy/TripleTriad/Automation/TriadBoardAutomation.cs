@@ -61,6 +61,7 @@ internal static unsafe class TriadBoardAutomation
 
             Callback.Fire(&addon->AtkUnitBase, true, 14, (uint)slot + ((uint)which << 16));
             addon->AtkUnitBase.Update(0);
+            addon->TurnState = 0;
             return true;
         }
         catch (Exception ex)

@@ -1,14 +1,28 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 namespace Saucy.TripleTriad.GameLogic;
 
 internal static class SaucyParallelism
 {
+    private const int LiveRolloutWorkers = 2000;
+    private const int BackgroundRolloutWorkers = 2000;
+
     private static readonly object EvalSync = new();
     private static int cachedEvalLimit = -1;
     private static SemaphoreSlim? evalConcurrency;
 
     public static int LogicalProcessorCount => Environment.ProcessorCount;
+
+    public static int RolloutWorkerCount =>
+        TriadUiState.IsBoardVisible() ? LiveRolloutWorkers : BackgroundRolloutWorkers;
+
+    public static ParallelOptions RolloutParallelOptions => new()
+    {
+        MaxDegreeOfParallelism = TriadUiState.IsBoardVisible()
+            ? Math.Max(1, LogicalProcessorCount / 4)
+            : Math.Max(1, LogicalProcessorCount)
+    };
 
     public static int DeckOptimizerConfiguredThreads
         => Configuration.ClampDeckOptimizerMaxThreads(C.DeckOptimizerMaxThreads);

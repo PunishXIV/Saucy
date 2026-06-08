@@ -62,65 +62,63 @@ public unsafe partial class CuffACurAutomation
                 return;
             }
 
-            if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent])
+            ArcadeMachineGate.TryReclaimSession(
+                ArcadeMachineScopes.Cuff,
+                () => HasCuffMinigameUi(addon),
+                () => FindNearestCuffMachine() != null);
+
+            if (ObjectHelper.HasInitiatedArcadeMenu(ArcadeMachineScopes.Cuff) ||
+                HasCuffMinigameUi(addon) ||
+                (ArcadeMachineGate.IsInFlow(ArcadeMachineScopes.Cuff) &&
+                 ArcadeMachineGate.HasVisibleArcadeStartMenu()))
             {
-                ArcadeMachineGate.TryReclaimSession(
-                    ArcadeMachineScopes.Cuff,
-                    () => HasCuffMinigameUi(addon),
-                    () => FindNearestCuffMachine() != null);
-
-                if (ObjectHelper.HasInitiatedArcadeMenu(ArcadeMachineScopes.Cuff) ||
-                    HasCuffMinigameUi(addon) ||
-                    (ArcadeMachineGate.IsInFlow(ArcadeMachineScopes.Cuff) &&
-                     ArcadeMachineGate.HasVisibleArcadeStartMenu()))
+                if (SelectStringHelper.TryGetArcadeMenu(out var cuffMenu) &&
+                    SelectStringHelper.IsArcadeYesnoMenu(cuffMenu))
                 {
-                    if (SelectStringHelper.TryGetArcadeMenu(out var cuffMenu) &&
-                        SelectStringHelper.IsArcadeYesnoMenu(cuffMenu))
-                    {
-                        TryConfirmCuffStart(cuffMenu);
-                        return;
-                    }
-
-                    if (TryConfirmCuffStart())
-                    {
-                        return;
-                    }
-
-                    if (addon != nint.Zero)
-                    {
-                        var ui = (AtkUnitBase*)addon.Address;
-
-                        if (ui->IsVisible && ui->UldManager.NodeListCount > 18)
-                        {
-                            var slidingNode = ui->UldManager.NodeList[18];
-                            var btn = ui->UldManager.NodeList[10];
-                            if (slidingNode->Width is >= 210 and <= 240)
-                            {
-                                var evt = stackalloc AtkEvent[]
-                                {
-                                    new()
-                                    {
-                                        Node = btn, Target = (AtkEventTarget*)btn, Param = 0, NextEvent = null
-                                    }
-                                };
-
-                                FuncHook ??= Svc.Hook.HookFromAddress<UnknownFunction>(Svc.SigScanner.ScanText("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 30 0F B7 FA"), FuncDetour);
-                                FuncHook.Original(addon, 0x17, 0, evt);
-                            }
-                        }
-                    }
-
+                    TryConfirmCuffStart(cuffMenu);
                     return;
                 }
 
-                if (ArcadeMachineGate.IsUnrelatedQuestOccupancy(
+                if (TryConfirmCuffStart())
+                {
+                    return;
+                }
+
+                if (addon != nint.Zero)
+                {
+                    var ui = (AtkUnitBase*)addon.Address;
+
+                    if (ui->IsVisible && ui->UldManager.NodeListCount > 18)
+                    {
+                        var slidingNode = ui->UldManager.NodeList[18];
+                        var btn = ui->UldManager.NodeList[10];
+                        if (slidingNode->Width is >= 210 and <= 240)
+                        {
+                            var evt = stackalloc AtkEvent[]
+                            {
+                                new()
+                                {
+                                    Node = btn, Target = (AtkEventTarget*)btn, Param = 0, NextEvent = null
+                                }
+                            };
+
+                            FuncHook ??= Svc.Hook.HookFromAddress<UnknownFunction>(Svc.SigScanner.ScanText("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 30 0F B7 FA"), FuncDetour);
+                            FuncHook.Original(addon, 0x17, 0, evt);
+                        }
+                    }
+                }
+
+                return;
+            }
+
+            if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent] &&
+                ArcadeMachineGate.IsUnrelatedQuestOccupancy(
                     ArcadeMachineScopes.Cuff,
                     () => HasCuffMinigameUi(addon),
                     () => FindNearestCuffMachine() != null))
-                {
-                    TryDisableForMissingMachine();
-                    return;
-                }
+            {
+                TryDisableForMissingMachine();
+                return;
             }
 
             if (ArcadeMachineSession.BlocksRewardHandling(Machine) ||

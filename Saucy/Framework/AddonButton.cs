@@ -12,7 +12,7 @@ public static unsafe class AddonButton
             return false;
         }
 
-        return TryClick(addon, addon->GetComponentButtonById(nodeId), true);
+        return TryClick(addon, addon->GetComponentButtonById(nodeId));
     }
 
     public static bool TryClick(AtkUnitBase* addon, AtkComponentButton* button, bool requireEnabled = true)

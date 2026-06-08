@@ -9,6 +9,11 @@ internal static unsafe class TriadPrepRequestReader
     private const int RulesGroupBIndex = 7;
     private const int NpcNameIndex = 8;
 
+    public const int RegionalRuleSlot0 = 0;
+    public const int RegionalRuleSlot1 = 1;
+    public const int MatchRuleSlot0 = 2;
+    public const int MatchRuleSlot1 = 3;
+
     public static void Read(AddonRequest* addon, UIStateTriadPrep state)
     {
         state.decks.Clear();

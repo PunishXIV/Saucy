@@ -263,27 +263,26 @@ public unsafe partial class LimbManager
                 return;
             }
 
-            if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent])
+            ArcadeMachineGate.TryReclaimSession(
+                ArcadeMachineScopes.Limb,
+                HasLimbSessionUi,
+                () => FindNearestLimbMachine() != null);
+
+            // MiniGameBotanist/Aimg can stay open after OccupiedInQuestEvent drops mid-round.
+            if (HasLimbSessionUi())
             {
-                ArcadeMachineGate.TryReclaimSession(
-                    ArcadeMachineScopes.Limb,
-                    HasLimbSessionUi,
-                    () => FindNearestLimbMachine() != null);
+                RunLimbMinigame();
+                return;
+            }
 
-                if (HasLimbSessionUi())
-                {
-                    RunLimbMinigame();
-                    return;
-                }
-
-                if (ArcadeMachineGate.IsUnrelatedQuestOccupancy(
+            if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent] &&
+                ArcadeMachineGate.IsUnrelatedQuestOccupancy(
                     ArcadeMachineScopes.Limb,
                     HasLimbSessionUi,
                     () => FindNearestLimbMachine() != null))
-                {
-                    TryDisableForMissingMachine();
-                    return;
-                }
+            {
+                TryDisableForMissingMachine();
+                return;
             }
 
             if (ArcadeMachineSession.BlocksRewardHandling(Machine) ||

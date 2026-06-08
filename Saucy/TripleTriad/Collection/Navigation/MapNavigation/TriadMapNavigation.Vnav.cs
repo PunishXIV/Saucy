@@ -179,10 +179,12 @@ internal static partial class TriadMapNavigation
             var livePos = ResolveLiveTriadNpcPosition(pending.Npc);
             if (livePos != null)
             {
-                pending.Destination = livePos.Value;
+                pending.Destination = ResolveNpcPathPoint(livePos.Value);
+                return pending.Destination;
             }
 
-            return livePos ?? pending.Destination;
+            pending.Destination = ResolveNpcPathPoint(pending.Destination);
+            return pending.Destination;
         }
 
         return pending.Destination;

@@ -39,8 +39,6 @@ public partial class TriadSession
     public TriadNpc lastGameNpc;
     private string lastOptimizerSkipKey = string.Empty;
     public int moveBoardIdx;
-    private int moveCalcGeneration;
-    private volatile bool moveCalcInFlight;
     public int moveCardIdx;
     private DateTime? moveReadyUtc;
     private int navigationOptimizerRetryCount;
@@ -205,6 +203,7 @@ public partial class TriadSession
 
     public bool IsMoveReadyForPlacement() =>
         !hasMove ||
+        TriadRunSession.ModuleEnabled ||
         TriadCardFarmSession.IsModeActive() ||
         (moveReadyUtc.HasValue && DateTime.UtcNow - moveReadyUtc.Value >= MoveHighlightGracePeriod);
 

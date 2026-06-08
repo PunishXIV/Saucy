@@ -284,9 +284,19 @@ public partial class TriadSession
     private static List<TriadGameModifier> ParsePrepRegionMods(UIStateTriadPrep state, GameUIParser parseCtx)
     {
         var mods = new List<TriadGameModifier>();
-        foreach (var rule in state.rules)
+        if (state?.rules == null)
         {
-            var ruleOb = parseCtx.ParseModifier(rule, false);
+            return mods;
+        }
+
+        foreach (var ruleIdx in new[] { TriadPrepRequestReader.RegionalRuleSlot0, TriadPrepRequestReader.RegionalRuleSlot1 })
+        {
+            if (ruleIdx < 0 || ruleIdx >= state.rules.Length)
+            {
+                continue;
+            }
+
+            var ruleOb = parseCtx.ParseModifier(state.rules[ruleIdx], false);
             if (ruleOb is not null and not TriadGameModifierNone)
             {
                 mods.Add(ruleOb);
