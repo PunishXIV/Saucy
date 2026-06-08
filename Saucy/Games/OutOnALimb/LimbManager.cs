@@ -321,7 +321,10 @@ public unsafe partial class LimbManager
 
             if (ArcadeMachineSession.IsInteractPending(Machine))
             {
-                return;
+                if (!ArcadeMachineSession.TryClearStaleInteractPending(Machine, HasLimbSessionUi))
+                {
+                    return;
+                }
             }
 
             InteractWithLimbMachine(limb);

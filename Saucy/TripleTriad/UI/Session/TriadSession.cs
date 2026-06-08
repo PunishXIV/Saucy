@@ -203,7 +203,7 @@ public partial class TriadSession
 
     public bool IsMoveReadyForPlacement() =>
         !hasMove ||
-        TriadRunSession.ModuleEnabled ||
+        (TriadRunSession.ModuleEnabled && !TriadBuddyIntegration.IsLoaded()) ||
         TriadCardFarmSession.IsModeActive() ||
         (moveReadyUtc.HasValue && DateTime.UtcNow - moveReadyUtc.Value >= MoveHighlightGracePeriod);
 

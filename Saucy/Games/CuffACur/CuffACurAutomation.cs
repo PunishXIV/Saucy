@@ -152,7 +152,15 @@ public unsafe partial class CuffACurAutomation
 
             if (ArcadeMachineSession.IsInteractPending(Machine))
             {
-                return;
+                if (!ArcadeMachineSession.TryClearStaleInteractPending(
+                    Machine,
+                    () => ObjectHelper.HasInitiatedArcadeMenu(ArcadeMachineScopes.Cuff) ||
+                          HasCuffMinigameUi(addon) ||
+                          (ArcadeMachineGate.IsInFlow(ArcadeMachineScopes.Cuff) &&
+                           ArcadeMachineGate.HasVisibleArcadeStartMenu())))
+                {
+                    return;
+                }
             }
 
             if (!ObjectHelper.TryInteractWithObject(cuff, "Saucy.CuffACur.Interact"))

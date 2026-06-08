@@ -44,6 +44,7 @@ public partial class PluginUI
         {
             C.SessionStats = new();
             C.SessionStartTime = DateTime.UtcNow;
+            StatsSessionClock.ResetAll();
         }
         ImGui.EndDisabled();
         ImGui.Dummy(new(0, 2));
@@ -76,13 +77,14 @@ public partial class PluginUI
         }
         StatsHeader();
         StatsRow("Games", life.GamesPlayedWithSaucy, sess.GamesPlayedWithSaucy,
-            perHour: SessionCountPerHour(sess.GamesPlayedWithSaucy));
+            perHour: SessionCountPerHour(sess.GamesPlayedWithSaucy, StatsSessionClock.GetTriadElapsedHours()));
         StatsRow("Wins", life.GamesWonWithSaucy, sess.GamesWonWithSaucy);
         StatsRow("Losses", life.GamesLostWithSaucy, sess.GamesLostWithSaucy);
         StatsRow("Draws", life.GamesDrawnWithSaucy, sess.GamesDrawnWithSaucy);
         StatsRow("Cards won", life.CardsDroppedWithSaucy, sess.CardsDroppedWithSaucy);
         StatsRow("Card resale value", $"{GetDroppedCardValues(life):N0}", $"{GetDroppedCardValues(sess):N0}");
-        StatsRow("MGP won", $"{life.MGPWon:N0}", $"{sess.MGPWon:N0}", true, perHour: SessionMgpPerHour(sess.MGPWon));
+        StatsRow("MGP won", $"{life.MGPWon:N0}", $"{sess.MGPWon:N0}", true,
+            perHour: SessionMgpPerHour(sess.MGPWon, StatsSessionClock.GetTriadElapsedHours()));
 
         (var lifeNpcCount, var lifeNpcName) = TopNpcCell(life);
         (var sessNpcCount, var sessNpcName) = TopNpcCell(sess);
@@ -103,11 +105,12 @@ public partial class PluginUI
         }
         StatsHeader();
         StatsRow("Games", life.CuffGamesPlayed, sess.CuffGamesPlayed,
-            perHour: SessionCountPerHour(sess.CuffGamesPlayed));
+            perHour: SessionCountPerHour(sess.CuffGamesPlayed, StatsSessionClock.GetCuffElapsedHours()));
         StatsRow("Bruisings", life.CuffBruisings, sess.CuffBruisings);
         StatsRow("Punishings", life.CuffPunishings, sess.CuffPunishings);
         StatsRow("Brutals", life.CuffBrutals, sess.CuffBrutals);
-        StatsRow("MGP won", $"{life.CuffMGP:N0}", $"{sess.CuffMGP:N0}", true, perHour: SessionMgpPerHour(sess.CuffMGP));
+        StatsRow("MGP won", $"{life.CuffMGP:N0}", $"{sess.CuffMGP:N0}", true,
+            perHour: SessionMgpPerHour(sess.CuffMGP, StatsSessionClock.GetCuffElapsedHours()));
         ImGui.EndTable();
     }
 
@@ -119,8 +122,9 @@ public partial class PluginUI
         }
         StatsHeader();
         StatsRow("Games", life.LimbGamesPlayed, sess.LimbGamesPlayed,
-            perHour: SessionCountPerHour(sess.LimbGamesPlayed));
-        StatsRow("MGP won", $"{life.LimbMGP:N0}", $"{sess.LimbMGP:N0}", true, perHour: SessionMgpPerHour(sess.LimbMGP));
+            perHour: SessionCountPerHour(sess.LimbGamesPlayed, StatsSessionClock.GetLimbElapsedHours()));
+        StatsRow("MGP won", $"{life.LimbMGP:N0}", $"{sess.LimbMGP:N0}", true,
+            perHour: SessionMgpPerHour(sess.LimbMGP, StatsSessionClock.GetLimbElapsedHours()));
         ImGui.EndTable();
     }
 
@@ -132,8 +136,9 @@ public partial class PluginUI
         }
         StatsHeader();
         StatsRow("Games", life.AirForceGamesPlayed, sess.AirForceGamesPlayed,
-            perHour: SessionCountPerHour(sess.AirForceGamesPlayed));
-        StatsRow("MGP won", $"{life.AirForceMGP:N0}", $"{sess.AirForceMGP:N0}", true, perHour: SessionMgpPerHour(sess.AirForceMGP));
+            perHour: SessionCountPerHour(sess.AirForceGamesPlayed, StatsSessionClock.GetAirForceElapsedHours()));
+        StatsRow("MGP won", $"{life.AirForceMGP:N0}", $"{sess.AirForceMGP:N0}", true,
+            perHour: SessionMgpPerHour(sess.AirForceMGP, StatsSessionClock.GetAirForceElapsedHours()));
         ImGui.EndTable();
     }
 
@@ -175,6 +180,10 @@ public partial class PluginUI
         RightAlignCellText("Session", SaucyTheme.ColorOr(SaucyTheme.ColumnHeader, ImGuiCol.Text));
         ImGui.TableNextColumn();
         RightAlignCellText("Per Hour", SaucyTheme.ColorOr(SaucyTheme.ColumnHeader, ImGuiCol.Text));
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Session rate since the first counted game of this minigame.");
+        }
     }
 
     private static void StatsRow(string label, int life, int sess, bool accent = false, string? perHour = null) =>
@@ -234,38 +243,24 @@ public partial class PluginUI
     private static void DrawStatsCard(string name, string subtitle, Action body) =>
         SaucyTheme.DrawCard(name, subtitle, body);
 
-    private static void EnsureSessionStartTime()
-    {
-        if (C.SessionStartTime == default || C.SessionStartTime.Year < 2020 || C.SessionStartTime > DateTime.UtcNow)
-        {
-            C.SessionStartTime = DateTime.UtcNow;
-        }
-    }
-
-    private static double GetSessionElapsedHours()
-    {
-        EnsureSessionStartTime();
-        return Math.Max((DateTime.UtcNow - C.SessionStartTime).TotalHours, 1.0 / 60.0);
-    }
-
-    private static string SessionMgpPerHour(int sessionMgp)
+    private static string SessionMgpPerHour(int sessionMgp, double elapsedHours)
     {
         if (sessionMgp <= 0)
         {
             return "-";
         }
 
-        return $"{(int)Math.Round(sessionMgp / GetSessionElapsedHours()):N0}";
+        return $"{(int)Math.Round(sessionMgp / elapsedHours):N0}";
     }
 
-    private static string SessionCountPerHour(int sessionCount)
+    private static string SessionCountPerHour(int sessionCount, double elapsedHours)
     {
         if (sessionCount <= 0)
         {
             return "-";
         }
 
-        return $"{(int)Math.Round(sessionCount / GetSessionElapsedHours()):N0}";
+        return $"{(int)Math.Round(sessionCount / elapsedHours):N0}";
     }
 
     private static int GetDroppedCardValues(Stats stat)

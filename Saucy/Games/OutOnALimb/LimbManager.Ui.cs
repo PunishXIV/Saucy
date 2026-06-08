@@ -155,10 +155,15 @@ public unsafe partial class LimbManager
 
             ImGuiEx.Text($"Play X: {GoldSaucerArcadeRunSession.PlayXTimes(Machine)}");
             ImGuiEx.Text($"Interact pending: {ArcadeMachineSession.IsInteractPending(Machine)}");
+            if (ArcadeMachineSession.GetInteractPendingAge(Machine) is { } interactAge)
+            {
+                ImGuiEx.Text($"Interact pending age: {interactAge.TotalSeconds:F1}s");
+            }
             ImGuiEx.Text($"Pending shutdown: {ArcadeMachineSession.IsPendingShutdown(Machine)}");
             ImGuiEx.Text($"Playing final round: {ArcadeMachineSession.IsPlayingFinalRound(Machine)}");
             ImGuiEx.Text($"Remaining: {GoldSaucerArcadeRunSession.GetRemaining(Machine)}");
             ImGuiEx.Text($"Stop at double down (Exit): {Exit}");
+            ImGuiEx.Text($"Can automate yesno: {CanAutomateLimbYesno()}");
             ImGuiEx.Text($"Duty finder defer: {GoldSaucerArcadeRunSession.IsStopForDutyFinder(Machine)}");
             if (SelectYesnoHelper.TryGetVisible(out var yesno))
             {

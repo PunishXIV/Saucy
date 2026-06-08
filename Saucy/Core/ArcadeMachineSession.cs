@@ -6,6 +6,7 @@ namespace Saucy;
 
 internal static unsafe class ArcadeMachineSession
 {
+    private static readonly TimeSpan StaleInteractPendingTimeout = TimeSpan.FromSeconds(10);
     private static readonly RunState[] States = [new(), new()];
 
     public static void WireCompleteShutdown(GoldSaucerArcadeMachine machine, Action callback) =>
@@ -19,6 +20,7 @@ internal static unsafe class ArcadeMachineSession
         state.DeclinedStartMenu = false;
         state.PlayingFinalRound = false;
         state.InteractPending = false;
+        state.InteractPendingUtc = null;
         state.CountedCurrentReward = false;
     }
 
@@ -102,14 +104,44 @@ internal static unsafe class ArcadeMachineSession
         return true;
     }
 
-    public static void ClearInteractPending(GoldSaucerArcadeMachine machine) =>
-        GetState(machine).InteractPending = false;
+    public static void ClearInteractPending(GoldSaucerArcadeMachine machine)
+    {
+        var state = GetState(machine);
+        state.InteractPending = false;
+        state.InteractPendingUtc = null;
+    }
 
     public static bool IsInteractPending(GoldSaucerArcadeMachine machine) =>
         GetState(machine).InteractPending;
 
-    public static void SetInteractPending(GoldSaucerArcadeMachine machine, bool value) =>
-        GetState(machine).InteractPending = value;
+    public static TimeSpan? GetInteractPendingAge(GoldSaucerArcadeMachine machine)
+    {
+        var state = GetState(machine);
+        return state.InteractPendingUtc == null ? null : DateTime.UtcNow - state.InteractPendingUtc.Value;
+    }
+
+    public static void SetInteractPending(GoldSaucerArcadeMachine machine, bool value)
+    {
+        var state = GetState(machine);
+        state.InteractPending = value;
+        state.InteractPendingUtc = value ? DateTime.UtcNow : null;
+    }
+
+    public static bool TryClearStaleInteractPending(GoldSaucerArcadeMachine machine, Func<bool> hasSessionUi)
+    {
+        var state = GetState(machine);
+        if (!state.InteractPending ||
+            state.InteractPendingUtc == null ||
+            hasSessionUi() ||
+            BlocksRewardHandling(machine) ||
+            DateTime.UtcNow - state.InteractPendingUtc.Value < StaleInteractPendingTimeout)
+        {
+            return false;
+        }
+
+        ClearInteractPending(machine);
+        return true;
+    }
 
     public static void MarkPlayingFinalRound(GoldSaucerArcadeMachine machine) =>
         GetState(machine).PlayingFinalRound = true;
@@ -134,6 +166,7 @@ internal static unsafe class ArcadeMachineSession
         public bool CountedCurrentReward;
         public bool DeclinedStartMenu;
         public bool InteractPending;
+        public DateTime? InteractPendingUtc;
         public bool PendingShutdown;
         public bool PlayingFinalRound;
         public DateTime? ShutdownArmedUtc;

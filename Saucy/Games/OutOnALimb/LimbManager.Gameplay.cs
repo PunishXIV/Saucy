@@ -124,14 +124,13 @@ public unsafe partial class LimbManager
     private static bool TryConfirmLimbStart(AddonSelectString* startMenu = null) =>
         ArcadeMachineGate.TryConfirmStartMenu(Machine, StartMenuThrottleKey, menu: startMenu);
 
+    private static bool CanAutomateLimbYesno() =>
+        ArcadeMachineGate.CanAutomateArcadeYesno(ArcadeMachineScopes.Limb) ||
+        (HasLimbMinigameUi() && ArcadeMachineGate.IsInFlow(ArcadeMachineScopes.Limb));
+
     private void HandleYesno()
     {
-        if (!TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var addon) || !IsAddonReady(addon))
-        {
-            return;
-        }
-
-        if (!ArcadeMachineGate.CanAutomateArcadeYesno(ArcadeMachineScopes.Limb) ||
+        if (!CanAutomateLimbYesno() ||
             !SelectYesnoHelper.TryGetVisible(out var ss) ||
             !SelectYesnoHelper.IsArcadeYesno(ss))
         {
@@ -145,6 +144,14 @@ public unsafe partial class LimbManager
 
         if (!SelectYesnoHelper.IsArcadeDoubleDownYesno(ss))
         {
+            if (Exit)
+            {
+                SelectYesnoHelper.PressNo(ss);
+                Exit = false;
+                ArcadeMachineSession.RequestShutdown(Machine);
+                return;
+            }
+
             PluginLog.Information("[OutOnALimb] Arcade yesno visible but rejected (not detected as double-down).");
             return;
         }

@@ -9,6 +9,7 @@ public sealed partial class Saucy
     {
         if (GoldSaucerArcadeMachineHelper.IsEnabled(GoldSaucerArcadeMachine.Limb))
         {
+            StatsSessionClock.MarkLimbActive();
             C.UpdateStats(stats =>
             {
                 stats.LimbMGP += StatsBonusHelper.ApplyMgpBonus(results.numMGP);
@@ -28,6 +29,7 @@ public sealed partial class Saucy
             return;
         }
 
+        StatsSessionClock.MarkAirForceActive();
         C.UpdateStats(stats =>
         {
             stats.AirForceMGP += StatsBonusHelper.ApplyMgpBonus(results.numMGP);
@@ -45,6 +47,7 @@ public sealed partial class Saucy
         {
             if (GoldSaucerArcadeMachineHelper.IsEnabled(GoldSaucerArcadeMachine.Cuff))
             {
+                StatsSessionClock.MarkCuffActive();
                 C.UpdateStats(stats =>
                 {
                     stats.CuffMGP += StatsBonusHelper.ApplyMgpBonus(obj.numMGP);
@@ -109,6 +112,7 @@ public sealed partial class Saucy
     {
         if (TriadRunSession.ModuleEnabled)
         {
+            StatsSessionClock.MarkTriadActive();
             C.UpdateStats(stats =>
             {
                 stats.GamesPlayedWithSaucy++;
