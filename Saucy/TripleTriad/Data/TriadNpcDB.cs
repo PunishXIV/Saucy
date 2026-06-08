@@ -37,19 +37,29 @@ public class TriadNpc
         hasLocMarkup = Name.Contains('[');
         if (hasLocMarkup)
         {
-            var namePattern = Regex.Replace(Name.ToLower(), "\\[[a-z]\\]", ".*");
-            NameRegex = new(namePattern);
+            var namePattern = Regex.Replace(NormalizeNameForMatch(Name), "\\[[a-z]+\\]", ".*");
+            var regexOptions = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
+            NameRegex = new(namePattern, regexOptions);
 
             var maxMatchLen = 15;
             var partialPattern = (namePattern.Length < maxMatchLen) ? namePattern : namePattern[..maxMatchLen].TrimEnd('*').TrimEnd('.');
-            NamePartialRegex = new(partialPattern);
+            NamePartialRegex = new(partialPattern, regexOptions);
         }
     }
+
+    private static string NormalizeNameForMatch(string name) =>
+        string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim().ToLowerInvariant();
 
     public override string ToString() => Name;
 
     public bool IsMatchingName(string testName)
     {
+        if (string.IsNullOrWhiteSpace(testName))
+        {
+            return false;
+        }
+
+        testName = NormalizeNameForMatch(testName);
         if (NameRegex != null)
         {
             return NameRegex.IsMatch(testName);
@@ -65,7 +75,7 @@ public class TriadNpc
             return false;
         }
 
-        testName = testName.Trim();
+        testName = NormalizeNameForMatch(testName);
         if (NamePartialRegex != null)
         {
             return NamePartialRegex.IsMatch(testName);
@@ -87,10 +97,9 @@ public class TriadNpcDB
 
     public TriadNpc Find(string Name)
     {
-        var nameLower = Name.ToLower();
         foreach (var x in SnapshotNpcs())
         {
-            if (x != null && x.IsMatchingName(nameLower))
+            if (x != null && x.IsMatchingName(Name))
             {
                 return x;
             }
@@ -101,10 +110,9 @@ public class TriadNpcDB
 
     public TriadNpc FindByNameStart(string Name)
     {
-        var nameLower = Name.ToLower();
         foreach (var x in SnapshotNpcs())
         {
-            if (x != null && x.IsMatchingNameStart(nameLower))
+            if (x != null && x.IsMatchingNameStart(Name))
             {
                 return x;
             }

@@ -1,6 +1,5 @@
 #nullable disable
 using Saucy.IPC;
-using Saucy.TripleTriad.GameLogic;
 using System;
 using System.Collections.Generic;
 namespace Saucy.TripleTriad.UI;
@@ -198,7 +197,7 @@ public partial class TriadSession
         var sessionKey = BuildOptimizerSessionKey(npc, regionMods);
         var skipCache = TriadOptimizerSessionKey.ShouldSkipDeckCache(npc, regionMods);
         var hasUsableCache = !skipCache &&
-                             TriadOptimizedDeckCacheValidator.TryGetUsableEntry(sessionKey, out _);
+                             TriadOptimizedDeckCacheValidator.TryGetUsableEntry(sessionKey, out var _);
         var hasAnyCache = TriadOptimizedDeckCacheStore.HasAnyEntryForNpc(npc.Id);
         var rebuildingForNewCards = hasUsableCache &&
                                     TriadOptimizedDeckCacheValidator.ShouldRebuildDeckForNewCards(sessionKey, npc.Id);
@@ -206,7 +205,7 @@ public partial class TriadSession
         var hasProfileSaucyDeck = false;
         lock (preGameLock)
         {
-            hasProfileSaucyDeck = TryFindSaucyDeckProfileSlot(npc, out _);
+            hasProfileSaucyDeck = TryFindSaucyDeckProfileSlot(npc, out var _);
         }
 
         var hasFallbackDeck = hasUsableCache || hasAnyCache || hasProfileSaucyDeck;
