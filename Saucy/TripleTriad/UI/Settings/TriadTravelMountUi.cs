@@ -1,5 +1,6 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Components;
+using Dalamud.Interface.Utility.Raii;
 using Lumina.Excel.Sheets;
 using System;
 using System.Linq;
@@ -14,7 +15,8 @@ internal static class TriadTravelMountUi
 
         var selectedMountId = C.TriadCollection.TravelMountId;
         ImGui.SetNextItemWidth(280f * ImGuiHelpers.GlobalScale);
-        if (ImGui.BeginCombo("##TriadTravelMount", GetPreviewLabel(selectedMountId)))
+        using var mountCombo = ImRaii.Combo("##TriadTravelMount", GetPreviewLabel(selectedMountId));
+        if (mountCombo)
         {
             if (ImGui.Selectable("Mount roulette", selectedMountId == 0))
             {
@@ -30,8 +32,6 @@ internal static class TriadTravelMountUi
                     C.Save();
                 }
             }
-
-            ImGui.EndCombo();
         }
 
         ImGui.SameLine();

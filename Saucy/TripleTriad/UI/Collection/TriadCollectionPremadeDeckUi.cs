@@ -30,12 +30,10 @@ internal static class TriadCollectionPremadeDeckUi
         var hasReady = TriadRun.HasPremadeDeckReadyForNpc(npc);
         var isRunning = TriadRun.IsPremadeOptimizerForNpc(npc);
 
-        using (ImRaii.Disabled(!canRun || isRunning))
+        using var buildDisabled = ImRaii.Disabled(!canRun || isRunning);
+        if (ImGui.Button("Build deck", new(-1, 0)))
         {
-            if (ImGui.Button("Build deck", new(-1, 0)))
-            {
-                TriadRun.RequestPremadeDeckOptimizer(npc);
-            }
+            TriadRun.RequestPremadeDeckOptimizer(npc);
         }
 
         if (!canRun && !string.IsNullOrEmpty(blockReason) && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
@@ -45,12 +43,10 @@ internal static class TriadCollectionPremadeDeckUi
 
         if (hasReady)
         {
-            using (ImRaii.Disabled(isRunning))
+            using var rebuildDisabled = ImRaii.Disabled(isRunning);
+            if (ImGui.Button("Rebuild deck", new(-1, 0)))
             {
-                if (ImGui.Button("Rebuild deck", new(-1, 0)))
-                {
-                    TriadRun.RequestPremadeDeckOptimizer(npc, true);
-                }
+                TriadRun.RequestPremadeDeckOptimizer(npc, true);
             }
 
             if (ImGui.IsItemHovered())

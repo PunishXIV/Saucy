@@ -291,7 +291,8 @@ internal static class TriadSettingsUi
         ImGuiComponents.HelpMarker(
             "Game recommended uses FFXIV's built-in deck suggestion for the current match (not Saucy sims).");
         ImGui.SetNextItemWidth(300f * ImGuiHelpers.GlobalScale);
-        if (ImGui.BeginCombo("##SaucyDeckSelect", previewName))
+        using var deckCombo = ImRaii.Combo("##SaucyDeckSelect", previewName);
+        if (deckCombo)
         {
             if (ImGui.Selectable("(none)##ClearDeckSelection", selectedDeck == -1))
             {
@@ -319,8 +320,6 @@ internal static class TriadSettingsUi
                     C.Save();
                 }
             }
-
-            ImGui.EndCombo();
         }
     }
 
@@ -426,13 +425,11 @@ internal static class TriadSettingsUi
             if (onlyUnobtained && runTargetNpc != null &&
                 !TriadCardFarmSession.HasUnobtainedNpcRewards(runTargetNpc))
             {
-                using var _ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
-                ImGui.TextWrapped("You already have every card from this NPC. Uncheck \"Missing cards only\" or choose a different NPC.");
+                SaucyTheme.TextErrorWrapped("You already have every card from this NPC. Uncheck \"Missing cards only\" or choose a different NPC.");
             }
             else if (onlyUnobtained && TriadCardFarmSession.TempCardsWonList.Count == 0)
             {
-                using var _ = ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
-                ImGui.TextWrapped("Start a match with an NPC to see which cards are still missing.");
+                SaucyTheme.TextErrorWrapped("Start a match with an NPC to see which cards are still missing.");
             }
         }
     }
@@ -478,7 +475,8 @@ internal static class TriadSettingsUi
     private static void DrawSoundPicker()
     {
         ImGui.SetNextItemWidth(140f * ImGuiHelpers.GlobalScale);
-        if (ImGui.BeginCombo("###SelectSound", C.SelectedSound))
+        using var soundCombo = ImRaii.Combo("###SelectSound", C.SelectedSound);
+        if (soundCombo)
         {
             var path = Path.Combine(Svc.PluginInterface.AssemblyLocation.Directory!.FullName, "Sounds");
             Directory.CreateDirectory(path);
@@ -491,8 +489,6 @@ internal static class TriadSettingsUi
                     C.Save();
                 }
             }
-
-            ImGui.EndCombo();
         }
 
         ImGui.SameLine();

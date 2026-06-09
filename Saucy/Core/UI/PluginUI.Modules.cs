@@ -1,5 +1,4 @@
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility.Raii;
 using ECommons.ImGuiMethods;
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -50,8 +49,7 @@ public unsafe partial class PluginUI
 
             if (autoMove)
             {
-                ImGui.TextColored(ImGuiColors.DalamudGrey,
-                    "Activates the VBM AI preset so Boss Mod's Slice is Right module can path you out of hazards.");
+                SaucyTheme.TextMuted("Activates the VBM AI preset so Boss Mod's Slice is Right module can path you out of hazards.");
             }
         }
 
@@ -83,8 +81,7 @@ public unsafe partial class PluginUI
 
             if (autoMove)
             {
-                ImGui.TextColored(ImGuiColors.DalamudGrey,
-                    "Pathfinds you onto the safe spot while you are off it.");
+                SaucyTheme.TextMuted("Pathfinds you onto the safe spot while you are off it.");
             }
         }
 

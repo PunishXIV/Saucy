@@ -31,17 +31,9 @@ internal static class TriadNpcMapUi
         ImGui.SameLine();
         ImGui.AlignTextToFramePadding();
 
-        using (ImRaii.PushColor(ImGuiCol.Header, 0))
-        {
-            using (ImRaii.PushColor(ImGuiCol.HeaderHovered, ImGui.GetColorU32(ImGuiCol.ButtonHovered)))
-            {
-                using (ImRaii.PushColor(ImGuiCol.HeaderActive, ImGui.GetColorU32(ImGuiCol.ButtonActive)))
-                {
-                    ImGui.Selectable(label);
-                    CollectMapNavigationClick(ref leftClick, ref rightClick);
-                }
-            }
-        }
+        using var link = ImGuiLayout.PlainTextLink();
+        ImGui.Selectable(label);
+        CollectMapNavigationClick(ref leftClick, ref rightClick);
 
         if (ImGui.IsItemHovered())
         {

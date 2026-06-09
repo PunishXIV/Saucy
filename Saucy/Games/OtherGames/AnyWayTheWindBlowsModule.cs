@@ -4,6 +4,7 @@ using ECommons.GameHelpers;
 using ECommons.ImGuiMethods;
 using Saucy.Framework;
 using System.Numerics;
+using static Saucy.Framework.ImGuiScopes;
 namespace Saucy.OtherGames;
 
 public class AnyWayTheWindBlows : Module
@@ -57,14 +58,18 @@ public class AnyWayTheWindBlows : Module
         {
             ImGuiHelpers.SetNextWindowPosRelativeMainViewport(new(pos.X - 15, pos.Y - 15));
             ImGui.SetNextWindowSize(new Vector2(90, 50) * ImGuiHelpers.GlobalScale);
-            if (ImGui.Begin("Pointer", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoInputs))
+            using var pointerWindow = Window(
+                "Pointer",
+                ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar |
+                ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoInputs);
+            if (pointerWindow.Success)
             {
                 ImGui.GetWindowDrawList().AddCircleFilled(pos, 5f, Stage.SafeSpot.On ? EzColor.Green : EzColor.Red);
                 if (!Stage.SafeSpot.On && Stage.SafeSpot.Near)
                 {
                     ImGui.SetCursorPosY(24f);
                     using var child = ImRaii.Child("GuideText", new Vector2(80f, 20f) * ImGuiHelpers.GlobalScale);
-                    using var _ = ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0, 0, 0, 0.8f));
+                    using var guideBg = ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0, 0, 0, 0.8f));
                     ImGui.SetCursorPosX(4f * ImGuiHelpers.GlobalScale);
 
                     if (Player.Position.X - Stage.SafeSpot.Position.X > 0.015)
@@ -84,8 +89,6 @@ public class AnyWayTheWindBlows : Module
                         ImGui.Text("move up");
                     }
                 }
-
-                ImGui.End();
             }
         }
     }

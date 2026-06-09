@@ -1,6 +1,7 @@
 ﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using System;
 using System.Collections.Generic;
@@ -445,34 +446,36 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
         RebuildCardList(uiReaderCardList.cachedState);
         searchFilterCard.Draw("##cardSearchFilter", GetContentWidth());
 
-        if (ImGui.BeginListBox("##cards", GetListBoxSize(10)))
+        using (var cardsList = ImRaii.ListBox("##cards", GetListBoxSize(10)))
         {
-            for (var idx = 0; idx < listCards.Count; idx++)
+            if (cardsList)
             {
-                (var cardOb, var cardInfo) = listCards[idx];
-                if ((showNpcMatchesOnly && cardInfo.RewardNpcs.Count <= 0) ||
-                    (showNotOwnedCheckbox && showNotOwnedOnly && IsCardOwned(cardOb.Id)))
+                for (var idx = 0; idx < listCards.Count; idx++)
                 {
-                    continue;
-                }
-
-                var itemDesc = FormatCardListLabel(idx, cardOb);
-                if (searchFilterCard.PassFilterBool(itemDesc))
-                {
-                    var isSelected = selectedCardIdx == idx;
-                    if (ImGui.Selectable(itemDesc, isSelected))
+                    (var cardOb, var cardInfo) = listCards[idx];
+                    if ((showNpcMatchesOnly && cardInfo.RewardNpcs.Count <= 0) ||
+                        (showNotOwnedCheckbox && showNotOwnedOnly && IsCardOwned(cardOb.Id)))
                     {
-                        selectedCardIdx = idx;
-                        OnCardSelectionChanged();
+                        continue;
                     }
 
-                    if (isSelected)
+                    var itemDesc = FormatCardListLabel(idx, cardOb);
+                    if (searchFilterCard.PassFilterBool(itemDesc))
                     {
-                        ImGui.SetItemDefaultFocus();
+                        var isSelected = selectedCardIdx == idx;
+                        if (ImGui.Selectable(itemDesc, isSelected))
+                        {
+                            selectedCardIdx = idx;
+                            OnCardSelectionChanged();
+                        }
+
+                        if (isSelected)
+                        {
+                            ImGui.SetItemDefaultFocus();
+                        }
                     }
                 }
             }
-            ImGui.EndListBox();
         }
 
         if (!deckEditMode)
@@ -555,51 +558,53 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
         }
 
         var visibleCount = 0;
-        if (ImGui.BeginListBox("##npcs", GetListBoxSize(10)))
+        using (var npcsList = ImRaii.ListBox("##npcs", GetListBoxSize(10)))
         {
-            for (var idx = 0; idx < listNpcs.Count; idx++)
+            if (npcsList)
             {
-                (var npcOb, var npcInfo) = listNpcs[idx];
-                var bypassHideFilters = selectedNpcIdx == idx;
-                if (!bypassHideFilters &&
-                    ((hideNpcBeatenOnce && (npcInfo.IsBeatenOnce || npcInfo.IsExcludedFromAchievementTracker)) ||
-                     (hideNpcCompleted && npcInfo.IsCompleted)))
+                for (var idx = 0; idx < listNpcs.Count; idx++)
                 {
-                    continue;
-                }
-
-                var itemDesc = npcOb.Name;
-                if (string.IsNullOrWhiteSpace(itemDesc))
-                {
-                    itemDesc = $"NPC #{npcOb.Id}";
-                }
-
-                if (searchFilterNpc.PassFilterBool(itemDesc))
-                {
-                    visibleCount++;
-                    var isSelected = selectedNpcIdx == idx;
-                    if (ImGui.Selectable(itemDesc, isSelected))
+                    (var npcOb, var npcInfo) = listNpcs[idx];
+                    var bypassHideFilters = selectedNpcIdx == idx;
+                    if (!bypassHideFilters &&
+                        ((hideNpcBeatenOnce && (npcInfo.IsBeatenOnce || npcInfo.IsExcludedFromAchievementTracker)) ||
+                         (hideNpcCompleted && npcInfo.IsCompleted)))
                     {
-                        selectedNpcIdx = idx;
-                        GenerateNpcRewardList();
-                        TriadRun.OnNpcSelected(npcOb);
+                        continue;
                     }
 
-                    if (isSelected)
+                    var itemDesc = npcOb.Name;
+                    if (string.IsNullOrWhiteSpace(itemDesc))
                     {
-                        if (scrollNpcListToSelectionFrames > 0)
+                        itemDesc = $"NPC #{npcOb.Id}";
+                    }
+
+                    if (searchFilterNpc.PassFilterBool(itemDesc))
+                    {
+                        visibleCount++;
+                        var isSelected = selectedNpcIdx == idx;
+                        if (ImGui.Selectable(itemDesc, isSelected))
                         {
-                            ImGui.SetScrollHereY(0.35f);
-                            scrollNpcListToSelectionFrames--;
+                            selectedNpcIdx = idx;
+                            GenerateNpcRewardList();
+                            TriadRun.OnNpcSelected(npcOb);
                         }
-                        else
+
+                        if (isSelected)
                         {
-                            ImGui.SetItemDefaultFocus();
+                            if (scrollNpcListToSelectionFrames > 0)
+                            {
+                                ImGui.SetScrollHereY(0.35f);
+                                scrollNpcListToSelectionFrames--;
+                            }
+                            else
+                            {
+                                ImGui.SetItemDefaultFocus();
+                            }
                         }
                     }
                 }
             }
-            ImGui.EndListBox();
         }
 
         if (visibleCount == 0)
@@ -652,7 +657,7 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
         ImGui.Spacing();
         var hasAvgRewards = StatTracker.GetAverageRewardPerMatchDesc(C.TriadCollection, npcInfo, out var avgRewardPerMatch);
         var settingsDB = PlayerSettingsDB.Get();
-        DrawIconTextRow(FontAwesomeIcon.ChartLine, null, () => statsWindow.SetupAndOpen(npcData.Item1), () =>
+        ImGuiLayout.DrawIconTextRow(FontAwesomeIcon.ChartLine, null, () => statsWindow.SetupAndOpen(npcData.Item1), () =>
         {
             ImGui.Text("NPC stats" + (hasAvgRewards ? "," : ""));
             if (hasAvgRewards)
@@ -668,64 +673,47 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
 
         ImGui.Spacing();
         ImGui.Text($"Unowned rewards: {numNotOwnedRewards}");
-        if (listNpcReward.Count > 0 &&
-            ImGui.BeginListBox("##cardReward", GetListBoxSize(4.5f)))
+        if (listNpcReward.Count > 0)
         {
-            for (var idx = 0; idx < listNpcReward.Count; idx++)
+            using (var rewardList = ImRaii.ListBox("##cardReward", GetListBoxSize(4.5f)))
             {
-                (var cardOb, var cardListIdx) = listNpcReward[idx];
-                var isCardOwned = settingsDB.ownedCards.Contains(cardOb);
-
-                var itemDesc = $"{CardUtils.GetOrderDesc(cardOb)} {CardUtils.GetUIDesc(cardOb)}";
-                var isSelected = selectedCardIdx == cardListIdx;
-
-                if (isCardOwned)
+                if (rewardList)
                 {
-                    ImGui.PushStyleColor(ImGuiCol.Text, 0xffa8a8a8);
-                }
+                    for (var idx = 0; idx < listNpcReward.Count; idx++)
+                    {
+                        (var cardOb, var cardListIdx) = listNpcReward[idx];
+                        var isCardOwned = settingsDB.ownedCards.Contains(cardOb);
 
-                if (ImGui.Selectable($"{CardUtils.GetRarityDesc(cardOb)}  {itemDesc}", isSelected))
-                {
-                    selectedCardIdx = cardListIdx;
-                    OnCardSelectionChanged();
-                }
+                        var itemDesc = $"{CardUtils.GetOrderDesc(cardOb)} {CardUtils.GetUIDesc(cardOb)}";
+                        var isSelected = selectedCardIdx == cardListIdx;
 
-                if (isCardOwned)
-                {
-                    ImGui.PopStyleColor(1);
-                }
+                        if (isCardOwned)
+                        {
+                            using var ownedColor = ImRaii.PushColor(ImGuiCol.Text, 0xffa8a8a8);
+                            if (ImGui.Selectable($"{CardUtils.GetRarityDesc(cardOb)}  {itemDesc}", isSelected))
+                            {
+                                selectedCardIdx = cardListIdx;
+                                OnCardSelectionChanged();
+                            }
+                        }
+                        else if (ImGui.Selectable($"{CardUtils.GetRarityDesc(cardOb)}  {itemDesc}", isSelected))
+                        {
+                            selectedCardIdx = cardListIdx;
+                            OnCardSelectionChanged();
+                        }
 
-                if (isSelected)
-                {
-                    ImGui.SetItemDefaultFocus();
+                        if (isSelected)
+                        {
+                            ImGui.SetItemDefaultFocus();
+                        }
+                    }
                 }
             }
-
-            ImGui.EndListBox();
         }
         else
         {
             ImGui.TextColored(SaucyTheme.ColorOr(SaucyTheme.BodyText, ImGuiCol.TextDisabled), "Not available");
         }
-    }
-
-    private static void DrawIconTextRow(FontAwesomeIcon icon, string? tooltip, Action onIconClick, Action drawText)
-    {
-        ImGui.AlignTextToFramePadding();
-        var rowY = ImGui.GetCursorPosY();
-        ImGui.SetCursorPosY(rowY - ImGui.GetStyle().FramePadding.Y);
-        if (ImGuiComponents.IconButton(icon))
-        {
-            onIconClick();
-        }
-        if (!string.IsNullOrEmpty(tooltip) && ImGui.IsItemHovered())
-        {
-            ImGui.SetTooltip(tooltip);
-        }
-        ImGui.SetCursorPosY(rowY);
-        ImGui.SameLine();
-        ImGui.AlignTextToFramePadding();
-        drawText();
     }
 
     private static float GetContentWidth() =>

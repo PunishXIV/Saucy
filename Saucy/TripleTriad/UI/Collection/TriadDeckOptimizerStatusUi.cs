@@ -1,5 +1,4 @@
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Colors;
 using System;
 using System.Numerics;
 namespace Saucy.TripleTriad;
@@ -25,7 +24,7 @@ internal static class TriadDeckOptimizerStatusUi
             ? $"Building deck for {job.NpcName}…"
             : $"{contextLabel}: {job.NpcName}";
 
-        ImGui.TextColored(ImGuiColors.DalamudYellow, header);
+        SaucyTheme.TextWarning(header);
 
         var openingLabel = job.FormatBestWinChance();
         if (!string.IsNullOrEmpty(openingLabel))

@@ -1,6 +1,8 @@
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility.Raii;
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 namespace Saucy;
 
@@ -49,8 +51,8 @@ internal static class SaucyTheme
     private static readonly Vector4 TextDim = Rgb(0xB8, 0xA5, 0x80);
     private static readonly Vector4 None = new(0, 0, 0, 0);
 
-    private static int _colorPushes;
-    private static int _varPushes;
+    private static readonly List<IDisposable> _themeScope = new(64);
+    private static int _themeDepth;
 
     public static Vector4 CardBorder { get; } = Accent;
     public static Vector4 CardSeparator { get; } = AccentSoft;
@@ -58,6 +60,10 @@ internal static class SaucyTheme
     public static Vector4 ColumnHeader { get; } = Accent;
     public static Vector4 BodyText { get; } = TextPrimary;
     public static Vector4 BodyTextAccent { get; } = AccentBright;
+
+    public static Vector4 TextMutedColor => ColorOr(TextDim, ImGuiCol.TextDisabled);
+    public static Vector4 TextWarningColor => Enabled ? AccentBright : ImGuiColors.DalamudYellow;
+    public static Vector4 TextErrorColor => Enabled ? Signal : ImGuiColors.DalamudRed;
 
     public static bool Enabled => C.SaucyThemeEnabled;
     private static Vector4 Rgb(byte r, byte g, byte b, float a = 1f) =>
@@ -69,23 +75,27 @@ internal static class SaucyTheme
     public static uint ColorU32Or(Vector4 themeColor, ImGuiCol fallback) =>
         Enabled ? ImGui.GetColorU32(themeColor) : ImGui.GetColorU32(fallback);
 
-    private static void PushColor(ImGuiCol c, Vector4 v)
+    private static void PushColor(ImGuiCol c, Vector4 v) => _themeScope.Add(ImRaii.PushColor(c, v));
+
+    private static void PushVar(ImGuiStyleVar v, float x) => _themeScope.Add(ImRaii.PushStyle(v, x));
+
+    public static ThemeScope PushScope()
     {
-        ImGui.PushStyleColor(c, v);
-        _colorPushes++;
+        if (Enabled && _themeDepth == 0)
+        {
+            PushInternal();
+        }
+
+        if (Enabled)
+        {
+            _themeDepth++;
+        }
+
+        return new(Enabled);
     }
 
-    private static void PushVar(ImGuiStyleVar v, float x)
+    private static void PushInternal()
     {
-        ImGui.PushStyleVar(v, x);
-        _varPushes++;
-    }
-
-    public static void Push()
-    {
-        _colorPushes = 0;
-        _varPushes = 0;
-
         PushColor(ImGuiCol.Text, TextPrimary);
         PushColor(ImGuiCol.TextDisabled, TextDim);
         PushColor(ImGuiCol.TextSelectedBg, Signal);
@@ -146,18 +156,39 @@ internal static class SaucyTheme
         PushVar(ImGuiStyleVar.FrameBorderSize, BorderSize);
     }
 
-    public static void Pop()
+    private static void PopInternal()
     {
-        if (_varPushes > 0)
+        for (var i = _themeScope.Count - 1; i >= 0; i--)
         {
-            ImGui.PopStyleVar(_varPushes);
-            _varPushes = 0;
+            _themeScope[i].Dispose();
         }
-        if (_colorPushes > 0)
+
+        _themeScope.Clear();
+    }
+
+    public static void TextMuted(string text) => ImGui.TextColored(TextMutedColor, text);
+
+    public static void TextWarning(string text) => ImGui.TextColored(TextWarningColor, text);
+
+    public static void TextError(string text) => ImGui.TextColored(TextErrorColor, text);
+
+    public static void TextErrorWrapped(string text)
+    {
+        using var color = ImRaii.PushColor(ImGuiCol.Text, TextErrorColor);
+        ImGui.TextWrapped(text);
+    }
+
+    public static void DrawPanelHeader(string title, string? subtitle = null)
+    {
+        ImGui.TextColored(ColorOr(SectionTitle, ImGuiCol.Text), title);
+        if (!string.IsNullOrEmpty(subtitle))
         {
-            ImGui.PopStyleColor(_colorPushes);
-            _colorPushes = 0;
+            ImGui.SameLine();
+            ImGui.TextDisabled(" \u2014 " + subtitle);
         }
+
+        ImGui.Separator();
+        ImGui.Dummy(new(0, 2));
     }
 
     public static void DrawCard(string name, string? subtitle, Action body)
@@ -185,7 +216,6 @@ internal static class SaucyTheme
 
         body();
 
-        indent.Dispose();
         ImGui.Dummy(new(0, CardPad));
 
         var endY = ImGui.GetCursorScreenPos().Y;
@@ -195,5 +225,26 @@ internal static class SaucyTheme
             ColorU32Or(CardBorder, ImGuiCol.Border), CardBorderRound);
 
         ImGui.Dummy(new(0, CardGapBetween));
+    }
+
+    public readonly struct ThemeScope : IDisposable
+    {
+        private readonly bool _active;
+
+        internal ThemeScope(bool active) => _active = active;
+
+        public void Dispose()
+        {
+            if (!_active)
+            {
+                return;
+            }
+
+            _themeDepth--;
+            if (_themeDepth == 0)
+            {
+                PopInternal();
+            }
+        }
     }
 }

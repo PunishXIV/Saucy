@@ -43,6 +43,7 @@ public sealed partial class Saucy : IDalamudPlugin
         PunishLibMain.Init(pluginInterface, "Saucy", new AboutPlugin());
         EzConfig.Migrate<Configuration>();
         C = EzConfig.Init<Configuration>();
+        C.MigrateToBackgroundCpuCores();
         TriadRunSession.ModuleEnabled = false;
         TriadCardFarmSession.DeactivateSession(clearProgress: true);
         TriadRunSession.ResetRunModeForPluginLoad();
@@ -63,7 +64,7 @@ public sealed partial class Saucy : IDalamudPlugin
 
         Svc.Commands.AddHandler(commandName, new(OnCommand)
         {
-            HelpMessage = "Opens the Saucy menu. Use /saucy stop to halt navigation and automation."
+            HelpMessage = "Opens the Saucy menu. Use /saucy d for debug, /saucy stop to halt navigation and automation."
         });
 
         dataLoader = new();
@@ -158,6 +159,13 @@ public sealed partial class Saucy : IDalamudPlugin
         if (args.Length >= 1 && args[0].Equals("stop", StringComparison.OrdinalIgnoreCase))
         {
             TriadRunSession.StopAllAutomation();
+            return;
+        }
+
+        if (args.Length >= 1 && args[0].Equals("d", StringComparison.OrdinalIgnoreCase))
+        {
+            _pluginUi.OpenForDebug();
+            EzConfigGui.Open();
             return;
         }
 

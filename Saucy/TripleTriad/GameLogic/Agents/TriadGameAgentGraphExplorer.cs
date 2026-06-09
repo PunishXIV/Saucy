@@ -6,6 +6,7 @@ public abstract class TriadGameAgentGraphExplorer : TriadGameAgent
 {
     private Random failsafeRandStream;
     protected int sessionSeed;
+    protected virtual bool SkipDuplicateCardIds => true;
 
     public override void Initialize(TriadGameSolver solver, int sessionSeed) => this.sessionSeed = sessionSeed;
 
@@ -69,26 +70,29 @@ public abstract class TriadGameAgentGraphExplorer : TriadGameAgent
                     continue;
                 }
 
-                var cardDef = currentDeck.GetCard(cardIdx);
-                var alreadyEvaluated = false;
-                for (var priorIdx = 0; priorIdx < cardIdx; priorIdx++)
+                if (SkipDuplicateCardIds)
                 {
-                    if ((availCardsMask & (1 << priorIdx)) == 0)
+                    var cardDef = currentDeck.GetCard(cardIdx);
+                    var alreadyEvaluated = false;
+                    for (var priorIdx = 0; priorIdx < cardIdx; priorIdx++)
+                    {
+                        if ((availCardsMask & (1 << priorIdx)) == 0)
+                        {
+                            continue;
+                        }
+
+                        var priorCard = currentDeck.GetCard(priorIdx);
+                        if (priorCard != null && cardDef != null && priorCard.Id == cardDef.Id)
+                        {
+                            alreadyEvaluated = true;
+                            break;
+                        }
+                    }
+
+                    if (alreadyEvaluated)
                     {
                         continue;
                     }
-
-                    var priorCard = currentDeck.GetCard(priorIdx);
-                    if (priorCard != null && cardDef != null && priorCard.Id == cardDef.Id)
-                    {
-                        alreadyEvaluated = true;
-                        break;
-                    }
-                }
-
-                if (alreadyEvaluated)
-                {
-                    continue;
                 }
 
                 for (var boardIdx = 0; boardIdx < gameState.board.Length; boardIdx++)

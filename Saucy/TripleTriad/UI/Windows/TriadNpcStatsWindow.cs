@@ -51,9 +51,9 @@ public class TriadNpcStatsWindow : Window, IDisposable
 
     public override void Draw()
     {
-        var colorName = new Vector4(0.9f, 0.9f, 0.2f, 1);
-        var colorValue = new Vector4(0.2f, 0.9f, 0.9f, 1);
-        var colorGray = new Vector4(0.6f, 0.6f, 0.6f, 1);
+        var colorName = SaucyTheme.ColorOr(SaucyTheme.SectionTitle, ImGuiCol.Text);
+        var colorValue = SaucyTheme.ColorOr(SaucyTheme.BodyTextAccent, ImGuiCol.Text);
+        var colorGray = SaucyTheme.TextMutedColor;
 
         if (npcInfo != null)
         {

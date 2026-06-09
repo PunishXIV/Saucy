@@ -124,85 +124,71 @@ public class TriadCardInfoWindow : Window, IDisposable
             var colorName = SaucyTheme.ColorOr(SaucyTheme.SectionTitle, ImGuiCol.Text);
             var colorGray = SaucyTheme.ColorOr(SaucyTheme.BodyText, ImGuiCol.TextDisabled);
 
-            using (ImRaii.PushColor(ImGuiCol.WindowBg, ImGui.GetColorU32(ImGuiCol.PopupBg)))
+            using var windowBg = ImRaii.PushColor(ImGuiCol.WindowBg, ImGui.GetColorU32(ImGuiCol.PopupBg));
+            ImGui.TextColored(colorGray, CardUtils.GetOrderDesc(selectedCard));
+
+            ImGui.TextColored(colorName, selectedCard.Name);
+
+            ImGui.Text(CardUtils.GetRarityDesc(selectedCard));
+            ImGui.SameLine();
+            ImGui.Text($"{selectedCard.Sides[(int)ETriadGameSide.Up]:X}-{selectedCard.Sides[(int)ETriadGameSide.Left]:X}-{selectedCard.Sides[(int)ETriadGameSide.Down]:X}-{selectedCard.Sides[(int)ETriadGameSide.Right]:X}");
+            if (selectedCard.Type != ETriadCardType.None)
             {
-                ImGui.TextColored(colorGray, CardUtils.GetOrderDesc(selectedCard));
-
-                ImGui.TextColored(colorName, selectedCard.Name);
-
-                ImGui.Text(CardUtils.GetRarityDesc(selectedCard));
                 ImGui.SameLine();
-                ImGui.Text($"{selectedCard.Sides[(int)ETriadGameSide.Up]:X}-{selectedCard.Sides[(int)ETriadGameSide.Left]:X}-{selectedCard.Sides[(int)ETriadGameSide.Down]:X}-{selectedCard.Sides[(int)ETriadGameSide.Right]:X}");
-                if (selectedCard.Type != ETriadCardType.None)
+                ImGui.TextColored(colorGray, GameDataText.GetCardTypeName(selectedCard.Type));
+            }
+
+            ImGui.NewLine();
+
+            if (numRewardSources > 1)
+            {
+                if (ImGuiComponents.IconButton(FontAwesomeIcon.ArrowAltCircleRight))
                 {
-                    ImGui.SameLine();
-                    ImGui.TextColored(colorGray, GameDataText.GetCardTypeName(selectedCard.Type));
+                    rewardSourceIdx = (rewardSourceIdx + 1) % numRewardSources;
+                    UpdateRewardSource();
                 }
 
-                ImGui.NewLine();
+                ImGui.SameLine();
+                ImGui.AlignTextToFramePadding();
+            }
+
+            ImGui.Text("Reward from:");
+
+            if (selectedCardInfo != null && rewardNpc != null && rewardNpcInfo != null && rewardNpcInfo.Location != null)
+            {
+                ImGui.SameLine();
+                DrawNpcNameLink(rewardNpc.Name, colorName, rewardNpc.Id);
 
                 if (numRewardSources > 1)
                 {
-                    if (ImGuiComponents.IconButton(FontAwesomeIcon.ArrowAltCircleRight))
-                    {
-                        rewardSourceIdx = (rewardSourceIdx + 1) % numRewardSources;
-                        UpdateRewardSource();
-                    }
-
-                    ImGui.SameLine();
-                    ImGui.AlignTextToFramePadding();
+                    ImGui.Spacing();
                 }
 
-                ImGui.Text("Reward from:");
-
-                if (selectedCardInfo != null && rewardNpc != null && rewardNpcInfo != null && rewardNpcInfo.Location != null)
+                if (TriadBattleHall.ShouldBlockMapNavigation(rewardNpc, rewardNpcInfo.Location))
                 {
-                    ImGui.SameLine();
-                    DrawNpcNameLink(rewardNpc.Name, colorName, rewardNpc.Id);
-
-                    if (numRewardSources > 1)
-                    {
-                        ImGui.Spacing();
-                    }
-
-                    if (TriadBattleHall.ShouldBlockMapNavigation(rewardNpc, rewardNpcInfo.Location))
-                    {
-                        ImGui.PushStyleColor(ImGuiCol.Text, colorGray);
-                        ImGui.TextWrapped(TriadBattleHall.NavigationBlockedMessage);
-                        ImGui.PopStyleColor();
-                    }
-                    else
-                    {
-                        TriadNpcMapUi.DrawMapLocationRow(rewardNpcInfo.Location, "Show on map", rewardNpc);
-                    }
-
-                    ImGui.TextColored(colorGray, rewardNpcRules);
+                    using var blockedText = ImRaii.PushColor(ImGuiCol.Text, colorGray);
+                    ImGui.TextWrapped(TriadBattleHall.NavigationBlockedMessage);
                 }
                 else
                 {
-                    ImGui.TextColored(colorGray, "Not available");
+                    TriadNpcMapUi.DrawMapLocationRow(rewardNpcInfo.Location, "Show on map", rewardNpc);
                 }
+
+                ImGui.TextColored(colorGray, rewardNpcRules);
+            }
+            else
+            {
+                ImGui.TextColored(colorGray, "Not available");
             }
         }
     }
 
     private void DrawNpcNameLink(string npcName, Vector4 color, int npcId)
     {
-        using (ImRaii.PushColor(ImGuiCol.Header, 0))
+        using var link = ImGuiLayout.PlainTextLink(color);
+        if (ImGui.Selectable(npcName))
         {
-            using (ImRaii.PushColor(ImGuiCol.HeaderHovered, ImGui.GetColorU32(ImGuiCol.ButtonHovered)))
-            {
-                using (ImRaii.PushColor(ImGuiCol.HeaderActive, ImGui.GetColorU32(ImGuiCol.ButtonActive)))
-                {
-                    using (ImRaii.PushColor(ImGuiCol.Text, color))
-                    {
-                        if (ImGui.Selectable(npcName))
-                        {
-                            cardSearchWindow.FocusNpcById(npcId);
-                        }
-                    }
-                }
-            }
+            cardSearchWindow.FocusNpcById(npcId);
         }
 
         if (ImGui.IsItemHovered())

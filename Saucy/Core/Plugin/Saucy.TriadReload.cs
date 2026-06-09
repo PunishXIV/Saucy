@@ -7,6 +7,7 @@ public sealed partial class Saucy
         TriadDeckOptimizerJobs.CancelActive(userCancelled: true);
         SaucyParallelism.ResetEvalConcurrency();
         TriadRun = new();
+        TriadRun.DebugScreenMemory.ResetSolver();
     }
 
     private static void PrepareTriadSessionForPluginUnload()

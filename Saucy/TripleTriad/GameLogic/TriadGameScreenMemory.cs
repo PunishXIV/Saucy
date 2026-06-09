@@ -31,6 +31,7 @@ public partial class TriadGameScreenMemory
     private TriadNpc lastScanNpc;
     private TriadCard[] playerDeckPattern;
     public int swappedBlueCardIdx;
+
     public TriadGameScreenMemory()
     {
         gameSolver = TriadGameSolver.CreateLive();
@@ -41,6 +42,16 @@ public partial class TriadGameScreenMemory
         bHasSwapRule = false;
         swappedBlueCardIdx = -1;
         lastScanNpc = null;
+    }
+    public void ResetSolver()
+    {
+        var mods = gameSolver.simulation.modifiers.ToList();
+        var specialRules = gameSolver.simulation.specialRules;
+        var modFeatures = gameSolver.simulation.modFeatures;
+        gameSolver = TriadGameSolver.CreateLive();
+        gameSolver.simulation.modifiers.AddRange(mods);
+        gameSolver.simulation.specialRules = specialRules;
+        gameSolver.simulation.modFeatures = modFeatures;
     }
 
     public EUpdateFlags OnNewScan(TriadBoardScanner.GameState screenGame, TriadNpc selectedNpc)

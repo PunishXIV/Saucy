@@ -30,9 +30,7 @@ public unsafe partial class PluginUI : Window
         "Jumbo Cactpot",
         "Stats",
         "About",
-#if DEBUG
         "Debug",
-#endif
         "Saucy theme",
         "MACHINES",
         "GATES",
@@ -43,6 +41,7 @@ public unsafe partial class PluginUI : Window
     private static long _lastMgpIncreaseMs;
     private NavItem _selectedNav = NavItem.TripleTriad;
     private bool drewTitleBarVersion;
+    private SaucyTheme.ThemeScope? _themeScope;
 
     public PluginUI() : base("Saucy###Saucy")
     {
@@ -70,6 +69,12 @@ public unsafe partial class PluginUI : Window
         IsOpen = true;
     }
 
+    public void OpenForDebug()
+    {
+        _selectedNav = NavItem.Debug;
+        IsOpen = true;
+    }
+
     private static float CalcSidebarWidth()
     {
         var style = ImGui.GetStyle();
@@ -88,10 +93,8 @@ public unsafe partial class PluginUI : Window
 
     public override void PreDraw()
     {
-        if (C.SaucyThemeEnabled)
-        {
-            SaucyTheme.Push();
-        }
+        _themeScope?.Dispose();
+        _themeScope = SaucyTheme.PushScope();
 
         var info = BuildBannerInfo();
 
@@ -125,7 +128,8 @@ public unsafe partial class PluginUI : Window
         }
 
         drewTitleBarVersion = false;
-        SaucyTheme.Pop();
+        _themeScope?.Dispose();
+        _themeScope = null;
     }
 
     public override void Draw()
@@ -180,9 +184,7 @@ public unsafe partial class PluginUI : Window
         ImGui.Separator();
         NavSelectable("Stats", NavItem.Stats);
         NavSelectable("About", NavItem.About);
-#if DEBUG
         NavSelectable("Debug", NavItem.Debug);
-#endif
 
         var style = ImGui.GetStyle();
         var checkboxH = ImGui.GetFrameHeight();
@@ -228,9 +230,7 @@ public unsafe partial class PluginUI : Window
             case NavItem.JumboCactpot: DrawJumboCactpotPanel(); break;
             case NavItem.Stats: DrawStatsTab(); break;
             case NavItem.About: AboutTab.Draw("Saucy"); break;
-#if DEBUG
             case NavItem.Debug: DrawDebugTab(); break;
-#endif
         }
     }
 
@@ -242,39 +242,50 @@ public unsafe partial class PluginUI : Window
             ("Cache", TriadCacheSettingsUi.Draw, null, false));
     }
 
-    private static void DrawPanelHeader(string title, string? subtitle = null)
-    {
-        ImGui.TextColored(SaucyTheme.ColorOr(SaucyTheme.SectionTitle, ImGuiCol.Text), title);
-        if (!string.IsNullOrEmpty(subtitle))
-        {
-            ImGui.SameLine();
-            ImGui.TextDisabled(" \u2014 " + subtitle);
-        }
-        ImGui.Separator();
-        ImGui.Dummy(new(0, 2));
-    }
+    private static void DrawPanelHeader(string title, string? subtitle = null) =>
+        SaucyTheme.DrawPanelHeader(title, subtitle);
 
     private void DrawDebugTab()
     {
-        if (GoldSaucerManager.Instance() != null && GoldSaucerManager.Instance()->CurrentGFateDirector != null)
+        ImGuiLayout.DrawCollapsingSection("Gold Saucer gate", ImGuiTreeNodeFlags.DefaultOpen, () =>
         {
-            var dir = GoldSaucerManager.Instance()->CurrentGFateDirector;
-            ImGui.Text($"GateType: {dir->GateType}");
-            ImGui.Text($"GatePositionType: {dir->GatePositionType}");
-            ImGui.Text($"Flags: {dir->Flags}");
-        }
+            if (GoldSaucerManager.Instance() != null && GoldSaucerManager.Instance()->CurrentGFateDirector != null)
+            {
+                var dir = GoldSaucerManager.Instance()->CurrentGFateDirector;
+                ImGui.Text($"GateType: {dir->GateType}");
+                ImGui.Text($"GatePositionType: {dir->GatePositionType}");
+                ImGui.Text($"Flags: {dir->Flags}");
+            }
+            else
+            {
+                ImGui.TextDisabled("No active gate director.");
+            }
+        });
 
-        ImGui.Separator();
-        ImGui.Text("Triple Triad NPC menu");
-        ImGui.Text($"Navigation active: {TriadMapNavigation.IsNavigationActive}");
-        ImGui.Text($"Awaiting triad start: {TriadMapNavigation.IsAwaitingTriadStartDialog()}");
-
-        var menuLines = new List<string>();
-        SelectStringHelper.CollectTriadMenuDebugLines(menuLines);
-        foreach (var line in menuLines)
+        ImGuiLayout.DrawCollapsingSection("Triple Triad NPC menu", ImGuiTreeNodeFlags.DefaultOpen, () =>
         {
-            ImGui.TextUnformatted(line);
-        }
+            ImGui.Text($"Navigation active: {TriadMapNavigation.IsNavigationActive}");
+            ImGui.Text($"Awaiting triad start: {TriadMapNavigation.IsAwaitingTriadStartDialog()}");
+
+            var menuLines = new List<string>();
+            SelectStringHelper.CollectTriadMenuDebugLines(menuLines);
+            if (menuLines.Count == 0)
+            {
+                ImGui.TextDisabled("No select string menu open.");
+            }
+            else
+            {
+                var listHeight = Math.Clamp(menuLines.Count * ImGui.GetTextLineHeightWithSpacing() + 8f, 60f, 200f);
+                using var scroll = ImRaii.Child("##TriadMenuDebug", new(0, listHeight), true);
+                if (scroll)
+                {
+                    foreach (var line in menuLines)
+                    {
+                        ImGui.TextUnformatted(line);
+                    }
+                }
+            }
+        });
     }
 
     private enum NavItem
@@ -289,8 +300,6 @@ public unsafe partial class PluginUI : Window
         JumboCactpot,
         Stats,
         About,
-#if DEBUG
-        Debug,
-#endif
+        Debug
     }
 }

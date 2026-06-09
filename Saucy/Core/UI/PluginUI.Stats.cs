@@ -1,4 +1,5 @@
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility.Raii;
 using System;
 using System.Linq;
 using System.Numerics;
@@ -33,7 +34,7 @@ public partial class PluginUI
         {
             ImGui.SetCursorPosX(rightX);
         }
-        ImGui.BeginDisabled(!ImGui.GetIO().KeyCtrl);
+        using var disabled = ImRaii.Disabled(!ImGui.GetIO().KeyCtrl);
         if (ImGui.Button(lifeLbl))
         {
             C.Stats = new();
@@ -46,7 +47,6 @@ public partial class PluginUI
             C.SessionStartTime = DateTime.UtcNow;
             StatsSessionClock.ResetAll();
         }
-        ImGui.EndDisabled();
         ImGui.Dummy(new(0, 2));
     }
 
@@ -71,7 +71,8 @@ public partial class PluginUI
 
     private static void DrawTriadRows(Stats life, Stats sess)
     {
-        if (!BeginStatsTable("triad"))
+        using var table = ImRaii.Table("##stats_triad", 4, ImGuiTableFlags.NoBordersInBody | ImGuiTableFlags.SizingStretchProp);
+        if (!table)
         {
             return;
         }
@@ -93,13 +94,12 @@ public partial class PluginUI
         (var lifeCardCount, var lifeCardName) = TopCardCell(life);
         (var sessCardCount, var sessCardName) = TopCardCell(sess);
         StatsRow("Most won card", lifeCardCount, sessCardCount, tooltipLife: lifeCardName, tooltipSess: sessCardName);
-
-        ImGui.EndTable();
     }
 
     private static void DrawCuffRows(Stats life, Stats sess)
     {
-        if (!BeginStatsTable("cuff"))
+        using var table = ImRaii.Table("##stats_cuff", 4, ImGuiTableFlags.NoBordersInBody | ImGuiTableFlags.SizingStretchProp);
+        if (!table)
         {
             return;
         }
@@ -111,12 +111,12 @@ public partial class PluginUI
         StatsRow("Brutals", life.CuffBrutals, sess.CuffBrutals);
         StatsRow("MGP won", $"{life.CuffMGP:N0}", $"{sess.CuffMGP:N0}", true,
             perHour: SessionMgpPerHour(sess.CuffMGP, StatsSessionClock.GetCuffElapsedHours()));
-        ImGui.EndTable();
     }
 
     private static void DrawLimbRows(Stats life, Stats sess)
     {
-        if (!BeginStatsTable("limb"))
+        using var table = ImRaii.Table("##stats_limb", 4, ImGuiTableFlags.NoBordersInBody | ImGuiTableFlags.SizingStretchProp);
+        if (!table)
         {
             return;
         }
@@ -125,12 +125,12 @@ public partial class PluginUI
             perHour: SessionCountPerHour(sess.LimbGamesPlayed, StatsSessionClock.GetLimbElapsedHours()));
         StatsRow("MGP won", $"{life.LimbMGP:N0}", $"{sess.LimbMGP:N0}", true,
             perHour: SessionMgpPerHour(sess.LimbMGP, StatsSessionClock.GetLimbElapsedHours()));
-        ImGui.EndTable();
     }
 
     private static void DrawAirForceRows(Stats life, Stats sess)
     {
-        if (!BeginStatsTable("airforce"))
+        using var table = ImRaii.Table("##stats_airforce", 4, ImGuiTableFlags.NoBordersInBody | ImGuiTableFlags.SizingStretchProp);
+        if (!table)
         {
             return;
         }
@@ -139,11 +139,7 @@ public partial class PluginUI
             perHour: SessionCountPerHour(sess.AirForceGamesPlayed, StatsSessionClock.GetAirForceElapsedHours()));
         StatsRow("MGP won", $"{life.AirForceMGP:N0}", $"{sess.AirForceMGP:N0}", true,
             perHour: SessionMgpPerHour(sess.AirForceMGP, StatsSessionClock.GetAirForceElapsedHours()));
-        ImGui.EndTable();
     }
-
-    private static bool BeginStatsTable(string id) =>
-        ImGui.BeginTable($"##stats_{id}", 4, ImGuiTableFlags.NoBordersInBody | ImGuiTableFlags.SizingStretchProp);
 
     private static (string count, string? name) TopNpcCell(Stats s)
     {

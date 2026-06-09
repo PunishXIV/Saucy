@@ -193,14 +193,8 @@ internal static class PluginDependenciesUi
         }
     }
 
-    private static void DrawStatusLine(FontAwesomeIcon icon, Vector4 color, string text)
-    {
-        ImGui.PushFont(UiBuilder.IconFont);
-        ImGui.TextColored(color, icon.ToIconString());
-        ImGui.PopFont();
-        ImGui.SameLine();
-        ImGui.TextColored(color, text);
-    }
+    private static void DrawStatusLine(FontAwesomeIcon icon, Vector4 color, string text) =>
+        ImGuiLayout.DrawStatusIconText(icon, color, text);
 
     private static DependencyState GetState(string internalName, Func<bool> isReady)
     {

@@ -72,26 +72,26 @@ public class Configuration : IPluginConfiguration
 
     public void MigrateToBackgroundCpuCores()
     {
-        if (Version >= ConfigVersionBackgroundCpuCores)
+        if (Version < ConfigVersionBackgroundCpuCores)
         {
-            DeckOptimizerMaxThreads = ClampDeckOptimizerMaxThreads(DeckOptimizerMaxThreads);
-            return;
-        }
+            if (DeckOptimizerMaxThreads <= 0)
+            {
+                var pct = Math.Clamp(LegacyCpuUsagePercent, 10, 100);
+                DeckOptimizerMaxThreads = pct >= 100
+                    ? 0
+                    : Math.Max(1, Environment.ProcessorCount * pct / 100);
+            }
+            else
+            {
+                DeckOptimizerMaxThreads = ClampDeckOptimizerMaxThreads(DeckOptimizerMaxThreads);
+            }
 
-        if (DeckOptimizerMaxThreads <= 0)
-        {
-            var pct = Math.Clamp(LegacyCpuUsagePercent, 10, 100);
-            DeckOptimizerMaxThreads = pct >= 100
-                ? 0
-                : Math.Max(1, Environment.ProcessorCount * pct / 100);
+            Version = ConfigVersionBackgroundCpuCores;
         }
         else
         {
             DeckOptimizerMaxThreads = ClampDeckOptimizerMaxThreads(DeckOptimizerMaxThreads);
         }
-
-        Version = ConfigVersionBackgroundCpuCores;
-        Save();
     }
 
     public static int ClampDeckOptimizerMaxThreads(int threads) =>

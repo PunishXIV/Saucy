@@ -154,95 +154,85 @@ public class SliceIsRight : Module
         }
     }
 
-    private void DrawRectWorld(IGameObject gameObject, float rotation, float length, float width, uint colour)
-    {
-        BeginRender(gameObject.Address + gameObject.Rotation.ToString(CultureInfo.InvariantCulture));
-        var position = gameObject.Position;
-        var io = ImGui.GetIO();
-        var vector21 = io.DisplaySize;
-        var vector31 = new Vector3(position.X + width / 2f * (float)Math.Sin(HalfPi + rotation), position.Y, position.Z + width / 2f * (float)Math.Cos(HalfPi + rotation));
-        var vector32 = new Vector3(position.X + width / 2f * (float)Math.Sin(rotation - HalfPi), position.Y, position.Z + width / 2f * (float)Math.Cos(rotation - HalfPi));
-        var vector33 = new Vector3(position.X, position.Y, position.Z);
-        const int num1 = 20;
-        var num2 = length / num1;
-        var windowDrawList = ImGui.GetWindowDrawList();
-        for (var index = 1; index <= num1; ++index)
+    private void DrawRectWorld(IGameObject gameObject, float rotation, float length, float width, uint colour) =>
+        DrawInOverlay(gameObject.Address + gameObject.Rotation.ToString(CultureInfo.InvariantCulture), () =>
         {
-            var vector34 = new Vector3(vector31.X + num2 * (float)Math.Sin(rotation), vector31.Y, vector31.Z + num2 * (float)Math.Cos(rotation));
-            var vector35 = new Vector3(vector32.X + num2 * (float)Math.Sin(rotation), vector32.Y, vector32.Z + num2 * (float)Math.Cos(rotation));
-            var vector36 = new Vector3(vector33.X + num2 * (float)Math.Sin(rotation), vector33.Y, vector33.Z + num2 * (float)Math.Cos(rotation));
-            var flag = false;
-            var vector3Array = new[]
+            var position = gameObject.Position;
+            var io = ImGui.GetIO();
+            var vector21 = io.DisplaySize;
+            var vector31 = new Vector3(position.X + width / 2f * (float)Math.Sin(HalfPi + rotation), position.Y, position.Z + width / 2f * (float)Math.Cos(HalfPi + rotation));
+            var vector32 = new Vector3(position.X + width / 2f * (float)Math.Sin(rotation - HalfPi), position.Y, position.Z + width / 2f * (float)Math.Cos(rotation - HalfPi));
+            var vector33 = new Vector3(position.X, position.Y, position.Z);
+            const int num1 = 20;
+            var num2 = length / num1;
+            var windowDrawList = ImGui.GetWindowDrawList();
+            for (var index = 1; index <= num1; ++index)
             {
-                vector35, vector36, vector34, vector31, vector33, vector32
-            };
-            foreach (var vector37 in vector3Array)
-            {
-                flag |= Svc.GameGui.WorldToScreen(vector37, out var vector22);
-                if (vector22.X > 0.0 & (double)vector22.X < vector21.X || vector22.Y > 0.0 & (double)vector22.Y < vector21.Y)
+                var vector34 = new Vector3(vector31.X + num2 * (float)Math.Sin(rotation), vector31.Y, vector31.Z + num2 * (float)Math.Cos(rotation));
+                var vector35 = new Vector3(vector32.X + num2 * (float)Math.Sin(rotation), vector32.Y, vector32.Z + num2 * (float)Math.Cos(rotation));
+                var vector36 = new Vector3(vector33.X + num2 * (float)Math.Sin(rotation), vector33.Y, vector33.Z + num2 * (float)Math.Cos(rotation));
+                var flag = false;
+                var vector3Array = new[]
                 {
-                    windowDrawList.PathLineTo(vector22);
+                    vector35, vector36, vector34, vector31, vector33, vector32
+                };
+                foreach (var vector37 in vector3Array)
+                {
+                    flag |= Svc.GameGui.WorldToScreen(vector37, out var vector22);
+                    if (vector22.X > 0.0 & (double)vector22.X < vector21.X || vector22.Y > 0.0 & (double)vector22.Y < vector21.Y)
+                    {
+                        windowDrawList.PathLineTo(vector22);
+                    }
                 }
+
+                if (flag)
+                {
+                    windowDrawList.PathFillConvex(colour);
+                }
+                else
+                {
+                    windowDrawList.PathClear();
+                }
+
+                vector31 = vector34;
+                vector32 = vector35;
+                vector33 = vector36;
+            }
+        });
+
+    private void DrawFilledCircleWorld(IGameObject gameObject, float radius, uint colour) =>
+        DrawInOverlay(gameObject.Address.ToString(), () =>
+        {
+            var position = gameObject.Position;
+            const int num = 100;
+            var flag = false;
+            for (var index = 0; index <= 2 * num; ++index)
+            {
+                flag |= Svc.GameGui.WorldToScreen(new Vector3(position.X + radius * (float)Math.Sin(Math.PI / num * index), position.Y, position.Z + radius * (float)Math.Cos(Math.PI / num * index)), out var vector2);
+                var windowDrawList = ImGui.GetWindowDrawList();
+                windowDrawList.PathLineTo(vector2);
             }
 
             if (flag)
             {
+                var windowDrawList = ImGui.GetWindowDrawList();
                 windowDrawList.PathFillConvex(colour);
             }
             else
             {
+                var windowDrawList = ImGui.GetWindowDrawList();
                 windowDrawList.PathClear();
             }
+        });
 
-            vector31 = vector34;
-            vector32 = vector35;
-            vector33 = vector36;
-        }
-
-        EndRender();
-    }
-
-    private void DrawFilledCircleWorld(IGameObject gameObject, float radius, uint colour)
+    private static void DrawInOverlay(string name, Action draw)
     {
-        BeginRender(gameObject.Address.ToString());
-        var position = gameObject.Position;
-        const int num = 100;
-        var flag = false;
-        for (var index = 0; index <= 2 * num; ++index)
+        using var overlay = new ImGuiLayout.FullscreenOverlayScope("slice_" + name, (ImGuiWindowFlags)787337);
+        if (!overlay.Success)
         {
-            flag |= Svc.GameGui.WorldToScreen(new Vector3(position.X + radius * (float)Math.Sin(Math.PI / num * index), position.Y, position.Z + radius * (float)Math.Cos(Math.PI / num * index)), out var vector2);
-            var windowDrawList = ImGui.GetWindowDrawList();
-            windowDrawList.PathLineTo(vector2);
+            return;
         }
 
-        if (flag)
-        {
-            var windowDrawList = ImGui.GetWindowDrawList();
-            windowDrawList.PathFillConvex(colour);
-        }
-        else
-        {
-            var windowDrawList = ImGui.GetWindowDrawList();
-            windowDrawList.PathClear();
-        }
-
-        EndRender();
-    }
-
-    private void BeginRender(string name)
-    {
-        ImGui.PushID("sliceWindowI" + name);
-        ImGui.PushStyleVar((ImGuiStyleVar)1, Vector2.Zero);
-        ImGuiHelpers.SetNextWindowPosRelativeMainViewport(Vector2.Zero, ImGuiCond.None, Vector2.Zero);
-        ImGui.Begin("sliceWindow" + name, (ImGuiWindowFlags)787337);
-        var io = ImGui.GetIO();
-        ImGui.SetWindowSize(io.DisplaySize);
-    }
-
-    private void EndRender()
-    {
-        ImGui.End();
-        ImGui.PopStyleVar();
-        ImGui.PopID();
+        draw();
     }
 }

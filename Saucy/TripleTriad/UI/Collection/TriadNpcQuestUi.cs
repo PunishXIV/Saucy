@@ -1,6 +1,5 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using Saucy.IPC;
 namespace Saucy.TripleTriad;
@@ -43,27 +42,12 @@ internal static class TriadNpcQuestUi
 
         var tooltip = BuildTooltip(snapshot, questName);
 
-        ImGui.AlignTextToFramePadding();
-        var rowY = ImGui.GetCursorPosY();
-        ImGui.SetCursorPosY(rowY - ImGui.GetStyle().FramePadding.Y);
-
-        using (ImRaii.Disabled(!snapshot.HasAutomationPath))
-        {
-            if (ImGuiComponents.IconButton(FontAwesomeIcon.BookOpen))
-            {
-                HandleUnlockQuestClick(npcInfo, questName, snapshot);
-            }
-        }
-
-        if (!string.IsNullOrEmpty(tooltip) && ImGui.IsItemHovered())
-        {
-            ImGui.SetTooltip(tooltip);
-        }
-
-        ImGui.SetCursorPosY(rowY);
-        ImGui.SameLine();
-        ImGui.AlignTextToFramePadding();
-        ImGui.Text(questName);
+        using var questDisabled = ImRaii.Disabled(!snapshot.HasAutomationPath);
+        ImGuiLayout.DrawIconTextRow(
+            FontAwesomeIcon.BookOpen,
+            tooltip,
+            () => HandleUnlockQuestClick(npcInfo, questName, snapshot),
+            () => ImGui.Text(questName));
     }
 
     private static void HandleUnlockQuestClick(GameNpcInfo npcInfo, string questName, QuestSnapshot snapshot)

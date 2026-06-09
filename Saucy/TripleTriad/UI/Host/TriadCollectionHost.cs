@@ -84,19 +84,8 @@ internal sealed class TriadCollectionHost : IDisposable
 
             _cardInfoWindow.SyncVisibility();
 
-            if (C.SaucyThemeEnabled)
-
-            {
-                SaucyTheme.Push();
-            }
-
+            using var theme = SaucyTheme.PushScope();
             _windowSystem.Draw();
-
-            if (C.SaucyThemeEnabled)
-
-            {
-                SaucyTheme.Pop();
-            }
         }
 
         finally

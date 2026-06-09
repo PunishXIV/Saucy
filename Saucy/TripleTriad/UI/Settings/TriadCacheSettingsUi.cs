@@ -54,7 +54,8 @@ internal static class TriadCacheSettingsUi
 
         var header = $"{character.DisplayName} — {deckCountLabel}";
         var flags = character.IsCurrentCharacter ? ImGuiTreeNodeFlags.DefaultOpen : ImGuiTreeNodeFlags.None;
-        if (ImGui.CollapsingHeader(header, flags))
+        using var characterHeader = ImRaii.Header(header, flags);
+        if (characterHeader)
         {
             DrawCharacterEntries(character);
         }
@@ -108,12 +109,10 @@ internal static class TriadCacheSettingsUi
     private static void DrawClearButton()
     {
         var ctrlHeld = ImGui.GetIO().KeyCtrl;
-        using (ImRaii.Disabled(!ctrlHeld))
+        using var clearDisabled = ImRaii.Disabled(!ctrlHeld);
+        if (ImGui.Button("Clear deck cache for this character"))
         {
-            if (ImGui.Button("Clear deck cache for this character"))
-            {
-                TriadOptimizedDeckCacheStore.ClearActiveCharacter();
-            }
+            TriadOptimizedDeckCacheStore.ClearActiveCharacter();
         }
 
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
