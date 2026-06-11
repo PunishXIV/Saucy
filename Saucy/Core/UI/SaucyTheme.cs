@@ -51,7 +51,9 @@ internal static class SaucyTheme
     private static readonly Vector4 TextDim = Rgb(0xB8, 0xA5, 0x80);
     private static readonly Vector4 None = new(0, 0, 0, 0);
 
-    private static readonly List<IDisposable> _themeScope = [with(64)];
+#pragma warning disable IDE0028 // Capacity hint; collection-expression with() is C# 15 preview (Rider does not resolve it)
+    private static readonly List<IDisposable> _themeScope = new(64);
+#pragma warning restore IDE0028
     private static int _themeDepth;
 
     public static Vector4 CardBorder { get; } = Accent;

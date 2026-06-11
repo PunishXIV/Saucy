@@ -31,10 +31,14 @@ public sealed partial class Saucy
             UpdateTriadAutoOpen();
             GoldSaucerDutyFinderDefer.Tick();
 
-            if (C.UseSimmedDeck && TriadRun.ShouldBuildOptimizedDeck() && !Vnavmesh.ShouldDeferDeckOptimizerWork())
+            if (C.UseSimmedDeck && TriadRun.ShouldBuildOptimizedDeck())
             {
+                TriadRun.SyncDeckOptimizerPauseForVnavmesh();
                 TriadDeckOptimizerJobs.Tick();
-                TriadRun.TickWorldTargetDeckOptimizer();
+                if (!Vnavmesh.ShouldDeferDeckOptimizerWork())
+                {
+                    TriadRun.TickWorldTargetDeckOptimizer();
+                }
             }
 
             if (CuffACurAutomation.IsEnabled)

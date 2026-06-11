@@ -32,7 +32,9 @@ public sealed class TriadOptimizedDeckCacheFile : IPluginConfiguration
 
     public uint HomeWorldRowId { get; set; }
 
-    public Dictionary<string, TriadOptimizedDeckCacheEntry> Entries { get; set; } = [with(StringComparer.Ordinal)];
+#pragma warning disable IDE0028 // StringComparer cannot use collection expressions without losing comparer semantics
+    public Dictionary<string, TriadOptimizedDeckCacheEntry> Entries { get; set; } = new(StringComparer.Ordinal);
+#pragma warning restore IDE0028
 
     public int Version { get; set; } = TriadOptimizedDeckCacheStore.SchemaVersion;
 }

@@ -73,8 +73,9 @@ internal static class Vnavmesh
     public static bool ShouldDeferHeavyWork() =>
         IsInstalled && (!IsNavReady() || IsBuildInProgress() || IsPathfindInProgress());
 
+    /// Navmesh build/load, path calculation, and active movement all contend with deck optimizer CPU.
     public static bool ShouldDeferDeckOptimizerWork() =>
-        IsInstalled && (!IsNavReady() || IsBuildInProgress());
+        IsInstalled && (!IsNavReady() || IsBuildInProgress() || IsMoving());
 
     public static bool IsAutomationContended() =>
         IsInstalled && (ShouldDeferHeavyWork() || IsMoving());

@@ -134,10 +134,6 @@ internal static unsafe partial class TriadMapNavigation
             TriadRun.EnsureNavigationDeckOptimizerStarted(pending.Npc);
         }
 
-        TriadRun.SetNavigationOptimizerPause(
-            pending.Phase == NavigationPhase.WaitingForNavReady &&
-            !Vnavmesh.IsNavReady());
-
         var timeout = pending.RouteExecution?.Route.Timeout ?? DefaultNavigationTimeout;
         var shouldWaitForDeckOptimizer =
             pending.Phase is NavigationPhase.MovingToNpc or NavigationPhase.StartingTriadMatch;
@@ -361,7 +357,7 @@ internal static unsafe partial class TriadMapNavigation
 
     private static void ClearPending()
     {
-        TriadRun.SetNavigationOptimizerPause(false);
+        TriadRun.SyncDeckOptimizerPauseForVnavmesh();
         StopVnavIfRunning();
         _pending = null;
     }

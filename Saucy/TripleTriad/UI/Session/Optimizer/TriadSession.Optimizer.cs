@@ -260,16 +260,17 @@ public partial class TriadSession
             pauseOptimizerForActiveTriad ||
             pauseOptimizerForNavmesh);
 
-    public void SetNavigationOptimizerPause(bool paused)
+    public void SyncDeckOptimizerPauseForVnavmesh()
     {
+        var shouldPause = Vnavmesh.ShouldDeferDeckOptimizerWork();
         lock (preGameLock)
         {
-            if (pauseOptimizerForNavmesh == paused)
+            if (pauseOptimizerForNavmesh == shouldPause)
             {
                 return;
             }
 
-            pauseOptimizerForNavmesh = paused;
+            pauseOptimizerForNavmesh = shouldPause;
             UpdateDeckOptimizerPause();
         }
     }

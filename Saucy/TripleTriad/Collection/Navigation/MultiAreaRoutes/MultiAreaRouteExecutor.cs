@@ -18,7 +18,9 @@ namespace Saucy.TripleTriad;
 
 internal static class AethernetShardLookup
 {
-    private static readonly Dictionary<string, uint> Cache = [with(StringComparer.OrdinalIgnoreCase)];
+#pragma warning disable IDE0028 // StringComparer cannot use collection expressions without losing comparer semantics
+    private static readonly Dictionary<string, uint> Cache = new(StringComparer.OrdinalIgnoreCase);
+#pragma warning restore IDE0028
 
     public static uint Resolve(string shardName)
     {
