@@ -28,12 +28,12 @@ public partial class TriadDeckOptimizer
     private readonly int numGamesToPlay;
     private readonly int numPriorityToBuild;
     private readonly int[][] permutationList;
-    private bool bAbort;
+    private volatile bool bAbort;
     private CardPool currentPool;
     private TriadGameSolver currentSolver;
     private bool isOrderImportant;
 
-    private TriadNpc npc;
+    private TriadDeck npcRedDeck;
     private long numMsElapsed;
     private long numPossibleDecks;
     private long numTestedDecks;
@@ -89,12 +89,14 @@ public partial class TriadDeckOptimizer
         }
     }
 
-    public bool IsPaused { get; private set; }
+    public volatile bool IsPaused;
     public event FoundDeckDelegate OnFoundDeck;
 
     public void Initialize(TriadNpc npc, TriadGameModifier[] regionMods, List<TriadCard> lockedCards)
     {
-        this.npc = npc;
+        npcRedDeck = npc?.Deck != null
+            ? new TriadDeck(npc.Deck.knownCards, npc.Deck.unknownCardPool)
+            : null;
         numPossibleDecks = 1;
         numTestedDecks = 0;
         numMsElapsed = 0;
@@ -119,7 +121,6 @@ public partial class TriadDeckOptimizer
 
     public Task Process(TriadNpc npc, TriadGameModifier[] regionMods, List<TriadCard> lockedCards)
     {
-        this.npc = npc;
         numTestedDecks = 0;
         bAbort = false;
 
@@ -212,18 +213,33 @@ public partial class TriadDeckOptimizer
 
     private int GetDeckScore(TriadGameSolver solver, TriadDeck testDeck, int randomSeed, int numGamesDiv)
     {
+        if (npcRedDeck == null)
+        {
+            return 0;
+        }
+
         var agentRandom = new TriadGameAgentRandom(solver, randomSeed);
         var deckScore = 0;
         var maxGames = (numGamesToPlay / numGamesDiv) / 2;
 
         for (var idxGame = 0; idxGame < maxGames; idxGame++)
         {
-            var gameStateR = solver.StartSimulation(testDeck, npc.Deck, ETriadGameState.InProgressRed);
+            if (bAbort || IsPaused)
+            {
+                break;
+            }
+
+            var gameStateR = solver.StartSimulation(testDeck, npcRedDeck, ETriadGameState.InProgressRed);
             solver.RunSimulation(gameStateR, agentRandom, agentRandom);
             deckScore += gameStateR.state == ETriadGameState.BlueWins ? 2 :
                 gameStateR.state == ETriadGameState.BlueDraw ? 1 : 0;
 
-            var gameStateB = solver.StartSimulation(testDeck, npc.Deck, ETriadGameState.InProgressBlue);
+            if (bAbort || IsPaused)
+            {
+                break;
+            }
+
+            var gameStateB = solver.StartSimulation(testDeck, npcRedDeck, ETriadGameState.InProgressBlue);
             solver.RunSimulation(gameStateB, agentRandom, agentRandom);
             deckScore += gameStateB.state == ETriadGameState.BlueWins ? 2 :
                 gameStateB.state == ETriadGameState.BlueDraw ? 1 : 0;

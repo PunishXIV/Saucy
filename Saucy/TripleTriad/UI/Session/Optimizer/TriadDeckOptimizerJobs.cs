@@ -134,7 +134,6 @@ internal static class TriadDeckOptimizerJobs
                     {
                         activeJob.BestEstWinChance = estWinChance;
                         activeJob.LatestCandidateDeck = deck;
-                        QueueOpeningEvalLocked(activeJob);
                     }
                 }
             };
@@ -258,6 +257,7 @@ internal static class TriadDeckOptimizerJobs
             job = activeJob;
             job.CompletionSignaled = true;
             activeJob = null;
+            QueueOpeningEvalLocked(job);
             result = BuildResultLocked(job);
         }
 

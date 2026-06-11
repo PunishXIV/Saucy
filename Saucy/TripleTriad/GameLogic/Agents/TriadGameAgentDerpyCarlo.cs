@@ -62,6 +62,9 @@ public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
         var numDrawingWorkers = 0;
         var completedWorkers = 0;
         var parallelOptions = SaucyParallelism.RolloutParallelOptions;
+        using var threadSolvers = new ThreadLocal<TriadGameSolver>(() => solver.CreateWorkerCopy());
+        using var threadAgents = new ThreadLocal<TriadGameAgentRandom>(() =>
+            new TriadGameAgentRandom(null, sessionSeed + Environment.CurrentManagedThreadId));
 
         while (completedWorkers < maxWorkers)
         {
@@ -72,8 +75,9 @@ public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
             void RunWorkerRollout(int workerIdx)
             {
                 var gameStateCopy = new TriadGameSimulationState(gameState);
-                var agent = workerAgents[workerIdx % workerAgents.Length];
-                solver.RunSimulation(gameStateCopy, agent, agent);
+                var rolloutAgent = threadAgents.Value!;
+                rolloutAgent.Initialize(threadSolvers.Value, sessionSeed + workerIdx);
+                threadSolvers.Value.RunSimulation(gameStateCopy, rolloutAgent, rolloutAgent);
 
                 if (gameStateCopy.state == ETriadGameState.BlueWins)
                 {

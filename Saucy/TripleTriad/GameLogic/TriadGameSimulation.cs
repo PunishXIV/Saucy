@@ -115,17 +115,29 @@ public class TriadGameSimulation
     }
 
     /// <summary>
-    ///     Clones configured modifiers (preserves resolved Roulette rules and other per-match setup).
+    ///     Deep-clones modifiers so parallel simulations never share modifier instances
+    ///     (MemberwiseClone shares nested Roulette resolved rules).
     /// </summary>
-    public void CopyModifiersFrom(TriadGameSimulation source)
+    public void DeepCopyModifiersFrom(TriadGameSimulation source)
     {
         modifiers.Clear();
         foreach (var mod in source.modifiers)
         {
-            modifiers.Add(mod.Clone());
+            modifiers.Add(CloneModifierDeep(mod));
         }
 
         UpdateSpecialRules();
+    }
+
+    private static TriadGameModifier CloneModifierDeep(TriadGameModifier mod)
+    {
+        var clone = (TriadGameModifier)Activator.CreateInstance(mod.GetType())!;
+        if (mod is TriadGameModifierRoulette roulette && roulette.GetResolvedRule() is { } resolvedRule)
+        {
+            ((TriadGameModifierRoulette)clone).SetRuleInstance(CloneModifierDeep(resolvedRule));
+        }
+
+        return clone;
     }
 
     public void UpdateSpecialRules()
@@ -245,6 +257,11 @@ public class TriadGameSimulation
 
     private void CheckCaptures(TriadGameSimulationState gameState, int boardPos, List<int> comboList, int comboCounter)
     {
+        if (boardPos < 0 || boardPos >= cachedNeis.Length || cachedNeis[boardPos] == null)
+        {
+            return;
+        }
+
         var neis = cachedNeis[boardPos];
         var allowMods = comboCounter == 0;
         if (allowMods && (modFeatures & TriadGameModifier.EFeature.CaptureNei) != 0)

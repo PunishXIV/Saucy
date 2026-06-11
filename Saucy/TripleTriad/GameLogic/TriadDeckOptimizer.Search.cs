@@ -46,7 +46,8 @@ public partial class TriadDeckOptimizer
         using var threadSolvers = new ThreadLocal<TriadGameSolver>(() => currentSolver.CreateWorkerCopy());
         do
         {
-            var loopResult = Parallel.ForEach(slotIterator.GetDecks(lowestPauseIdx), options, (deckInfo, state) =>
+            var deckBatch = new List<SlotIterator.ItemInfo>(slotIterator.GetDecks(lowestPauseIdx));
+            var loopResult = Parallel.ForEach(deckBatch, options, (deckInfo, state) =>
             {
                 if (IsPaused)
                 {

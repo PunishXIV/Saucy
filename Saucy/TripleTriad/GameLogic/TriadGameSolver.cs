@@ -69,7 +69,7 @@ public class TriadGameSolver
     public TriadGameSolver CreateWorkerCopy()
     {
         var worker = new TriadGameSolver(new TriadGameAgentRandom(null, 0));
-        worker.simulation.CopyModifiersFrom(simulation);
+        worker.simulation.DeepCopyModifiersFrom(simulation);
         return worker;
     }
 
