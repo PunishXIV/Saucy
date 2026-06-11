@@ -353,7 +353,6 @@ internal static class TriadOptimizedDeckCacheStore
                     activeFile = new();
                 }
 
-                activeFile.Entries ??= new(StringComparer.Ordinal);
                 ImportLegacyBuildTimestampsLocked();
             }
             catch (Exception ex)
@@ -469,7 +468,6 @@ internal static class TriadOptimizedDeckCacheStore
                 return false;
             }
 
-            file.Entries ??= new(StringComparer.Ordinal);
             return true;
         }
         catch (Exception ex)

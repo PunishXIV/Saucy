@@ -26,13 +26,18 @@ public sealed class TriadOptimizedDeckCacheEntry
 [Serializable]
 public sealed class TriadOptimizedDeckCacheFile : IPluginConfiguration
 {
+    public TriadOptimizedDeckCacheFile()
+    {
+        Entries = new(StringComparer.Ordinal);
+    }
     public ulong ContentId { get; set; }
 
     public string CharacterName { get; set; } = string.Empty;
 
     public uint HomeWorldRowId { get; set; }
 
-    public Dictionary<string, TriadOptimizedDeckCacheEntry> Entries { get; set; } = new(StringComparer.Ordinal);
+    public Dictionary<string, TriadOptimizedDeckCacheEntry> Entries { get; set; }
+
     public int Version { get; set; } = TriadOptimizedDeckCacheStore.SchemaVersion;
 }
 

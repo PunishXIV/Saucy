@@ -18,7 +18,11 @@ namespace Saucy.TripleTriad;
 
 internal static class AethernetShardLookup
 {
-    private static readonly Dictionary<string, uint> Cache = new(StringComparer.OrdinalIgnoreCase);
+    static AethernetShardLookup()
+    {
+        Cache = new(StringComparer.OrdinalIgnoreCase);
+    }
+    private static readonly Dictionary<string, uint> Cache;
 
     public static uint Resolve(string shardName)
     {

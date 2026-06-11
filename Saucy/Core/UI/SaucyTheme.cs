@@ -15,6 +15,10 @@ public struct BannerInfo
 
 internal static class SaucyTheme
 {
+    static SaucyTheme()
+    {
+        _themeScope = new(64);
+    }
     private const float WindowRound = 4f;
     private const float ChildRound = 3f;
     private const float FrameRound = 2f;
@@ -51,7 +55,7 @@ internal static class SaucyTheme
     private static readonly Vector4 TextDim = Rgb(0xB8, 0xA5, 0x80);
     private static readonly Vector4 None = new(0, 0, 0, 0);
 
-    private static readonly List<IDisposable> _themeScope = new(64);
+    private static readonly List<IDisposable> _themeScope;
     private static int _themeDepth;
 
     public static Vector4 CardBorder { get; } = Accent;
