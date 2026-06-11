@@ -1,7 +1,7 @@
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
-namespace Saucy.TripleTriad.GameLogic;
+namespace Saucy.TripleTriad.UI;
 
 internal static class TriadTurnState
 {

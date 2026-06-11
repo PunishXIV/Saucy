@@ -2,6 +2,7 @@
 using Saucy.IPC;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 namespace Saucy.TripleTriad.UI;
 
 public partial class TriadSession
@@ -288,4 +289,12 @@ public partial class TriadSession
         public string name;
         public TriadDeck solverDeck;
     }
+}
+
+internal static class TriadBuddyIntegration
+{
+    private const string PluginInternalName = "TriadBuddy";
+
+    public static bool IsLoaded() =>
+        Svc.PluginInterface.InstalledPlugins.Any(p => p.InternalName == PluginInternalName && p.IsLoaded);
 }

@@ -1,6 +1,6 @@
 #nullable disable
 using System.Collections.Generic;
-namespace Saucy.TripleTriad.GameLogic;
+namespace Saucy.TripleTriad.Data;
 
 public class PlayerSettingsDB
 {
