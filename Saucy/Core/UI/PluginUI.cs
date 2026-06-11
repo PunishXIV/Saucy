@@ -40,8 +40,8 @@ public unsafe partial class PluginUI : Window
     private static int _lastMgp = -1;
     private static long _lastMgpIncreaseMs;
     private NavItem _selectedNav = NavItem.TripleTriad;
-    private bool drewTitleBarVersion;
     private SaucyTheme.ThemeScope? _themeScope;
+    private bool drewTitleBarVersion;
 
     public PluginUI() : base("Saucy###Saucy")
     {

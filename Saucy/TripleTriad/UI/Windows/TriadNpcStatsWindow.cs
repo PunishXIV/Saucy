@@ -2,7 +2,6 @@
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
 using System;
-using System.Numerics;
 namespace Saucy.TripleTriad;
 
 public class TriadNpcStatsWindow : Window, IDisposable

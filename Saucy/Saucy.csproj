@@ -22,7 +22,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="ECommons" Version="3.2.1.9" />
+        <PackageReference Include="ECommons" Version="3.2.1.9"/>
         <PackageReference Include="NAudio" Version="2.3.0"/>
         <PackageReference Include="NAudio.Lame" Version="2.1.0"/>
         <ProjectReference Include="..\PunishLib\PunishLib\PunishLib.csproj"/>
