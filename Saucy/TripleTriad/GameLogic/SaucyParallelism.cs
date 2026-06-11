@@ -1,3 +1,4 @@
+using Dalamud.Utility;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,8 +10,11 @@ internal static class SaucyParallelism
     private const int BackgroundRolloutWorkers = 2000;
 
     private static readonly object EvalSync = new();
+    private static readonly Lazy<bool> isWineHost = new(Util.IsWine);
     private static int cachedEvalLimit = -1;
     private static SemaphoreSlim? evalConcurrency;
+
+    public static bool IsWineHost => isWineHost.Value;
 
     public static int LogicalProcessorCount => Environment.ProcessorCount;
 
@@ -19,9 +23,9 @@ internal static class SaucyParallelism
 
     public static ParallelOptions RolloutParallelOptions => new()
     {
-        MaxDegreeOfParallelism = TriadUiState.IsBoardVisible()
+        MaxDegreeOfParallelism = CapAutoThreads(TriadUiState.IsBoardVisible()
             ? Math.Max(1, LogicalProcessorCount / 4)
-            : Math.Max(1, LogicalProcessorCount)
+            : Math.Max(1, LogicalProcessorCount))
     };
 
     public static int DeckOptimizerConfiguredThreads
@@ -32,7 +36,7 @@ internal static class SaucyParallelism
         get
         {
             var configured = DeckOptimizerConfiguredThreads;
-            var threads = configured <= 0 ? Math.Max(1, LogicalProcessorCount) : configured;
+            var threads = configured <= 0 ? CapAutoThreads(Math.Max(1, LogicalProcessorCount)) : configured;
             if (TriadUiState.IsBoardVisible())
             {
                 threads = Math.Min(threads, Math.Max(1, LogicalProcessorCount / 4));
@@ -45,7 +49,7 @@ internal static class SaucyParallelism
     public static int EvalConcurrencyLimit
         => TriadUiState.IsBoardVisible()
             ? 1
-            : Math.Max(1, LogicalProcessorCount / 4);
+            : CapAutoThreads(Math.Max(1, LogicalProcessorCount / 4));
 
     public static SemaphoreSlim EvalConcurrency
     {
@@ -71,6 +75,14 @@ internal static class SaucyParallelism
             }
         }
     }
+
+    // Wine routes thread suspension through the separate wineserver process; saturating
+    // every host core with solver threads starves it mid-GC-suspend and crashes the game
+    // (user-confirmed: "all cores" crashed where an explicit 24-thread run was stable).
+    // Auto-selected parallelism leaves a quarter of the cores free under Wine; explicit
+    // user thread settings are honored as-is.
+    private static int CapAutoThreads(int threads) =>
+        IsWineHost ? Math.Min(threads, Math.Max(1, (LogicalProcessorCount * 3) / 4)) : threads;
 
     public static void ResetEvalConcurrency()
     {

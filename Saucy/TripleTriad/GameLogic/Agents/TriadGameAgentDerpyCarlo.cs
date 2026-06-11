@@ -64,7 +64,7 @@ public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
         var parallelOptions = SaucyParallelism.RolloutParallelOptions;
         using var threadSolvers = new ThreadLocal<TriadGameSolver>(() => solver.CreateWorkerCopy());
         using var threadAgents = new ThreadLocal<TriadGameAgentRandom>(() =>
-            new TriadGameAgentRandom(null, sessionSeed + Environment.CurrentManagedThreadId));
+            new(null, sessionSeed + Environment.CurrentManagedThreadId));
 
         while (completedWorkers < maxWorkers)
         {

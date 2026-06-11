@@ -115,7 +115,11 @@ internal static class TriadSettingsUi
         }
 
         ImGui.SameLine();
-        ImGuiComponents.HelpMarker("Parallel threads while building an optimized deck (0 = all cores).");
+        ImGuiComponents.HelpMarker(
+            "Parallel threads while building an optimized deck (0 = all cores)." +
+            (SaucyParallelism.IsWineHost
+                ? "\n\nLinux / Steam Deck: \"All\" leaves a quarter of your cores free, because maxing out every core under Wine can crash the game. Pick an exact number to override."
+                : ""));
     }
 
     private static void DrawDeckOptimizerTimeoutSlider()

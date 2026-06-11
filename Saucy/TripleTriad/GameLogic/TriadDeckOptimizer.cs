@@ -33,6 +33,8 @@ public partial class TriadDeckOptimizer
     private TriadGameSolver currentSolver;
     private bool isOrderImportant;
 
+    public volatile bool IsPaused;
+
     private TriadDeck npcRedDeck;
     private long numMsElapsed;
     private long numPossibleDecks;
@@ -88,8 +90,6 @@ public partial class TriadDeckOptimizer
             }
         }
     }
-
-    public volatile bool IsPaused;
     public event FoundDeckDelegate OnFoundDeck;
 
     public void Initialize(TriadNpc npc, TriadGameModifier[] regionMods, List<TriadCard> lockedCards)
