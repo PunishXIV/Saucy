@@ -43,6 +43,7 @@ public partial class TriadDeckOptimizer
 
         long lowestPauseIdx = 0;
         bool canFinishLoop;
+        using var threadSolvers = new ThreadLocal<TriadGameSolver>(() => currentSolver.CreateWorkerCopy());
         do
         {
             var loopResult = Parallel.ForEach(slotIterator.GetDecks(lowestPauseIdx), options, (deckInfo, state) =>
@@ -66,7 +67,7 @@ public partial class TriadDeckOptimizer
 
                 var randomSeed = GetRandomSeed(deckInfo.Idx0, deckInfo.Idx1, deckInfo.Idx2, deckInfo.Idx3, deckInfo.Idx4);
                 var testDeck = new TriadDeck(deckInfo.Cards);
-                var testScore = GetDeckScore(currentSolver, testDeck, randomSeed, 1);
+                var testScore = GetDeckScore(threadSolvers.Value, testDeck, randomSeed, 1);
                 if (testScore > bestScore)
                 {
                     lock (lockOb)

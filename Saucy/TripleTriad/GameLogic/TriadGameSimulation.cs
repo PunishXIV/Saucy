@@ -114,6 +114,20 @@ public class TriadGameSimulation
         UpdateSpecialRules();
     }
 
+    /// <summary>
+    ///     Clones configured modifiers (preserves resolved Roulette rules and other per-match setup).
+    /// </summary>
+    public void CopyModifiersFrom(TriadGameSimulation source)
+    {
+        modifiers.Clear();
+        foreach (var mod in source.modifiers)
+        {
+            modifiers.Add(mod.Clone());
+        }
+
+        UpdateSpecialRules();
+    }
+
     public void UpdateSpecialRules()
     {
         specialRules = ETriadGameSpecialMod.None;
@@ -136,7 +150,8 @@ public class TriadGameSimulation
             ((owner == ETriadCardOwner.Red) && (gameState.state == ETriadGameState.InProgressRed));
 
         var card = cardDeck.GetCard(cardIdx);
-        if (bIsAllowedOwner && (boardPos >= 0) && (gameState.board[boardPos] == null) && (card != null))
+        if (bIsAllowedOwner && (boardPos >= 0) && (boardPos < TriadGameSimulationState.boardSizeSq) &&
+            (gameState.board[boardPos] == null) && (card != null))
         {
             gameState.board[boardPos] = new(card, owner);
             gameState.numCardsPlaced++;
