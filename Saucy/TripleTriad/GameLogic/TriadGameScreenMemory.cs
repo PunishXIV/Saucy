@@ -197,8 +197,6 @@ public partial class TriadGameScreenMemory
             }
         }
 
-        SyncBlueHandMaskWithBoard(deckBlue, screenGame);
-
         if (bHasSwapRule && !bSwapStartChecked && gameState.numCardsPlaced <= 1)
         {
             bSwapStartChecked = true;
@@ -221,65 +219,5 @@ public partial class TriadGameScreenMemory
         }
 
         return bIsMatching;
-    }
-
-    private static void SyncBlueHandMaskWithBoard(TriadDeckInstanceScreen deckBlue, TriadBoardScanner.GameState screenGame)
-    {
-        if (deckBlue?.cards == null || screenGame?.board == null)
-        {
-            return;
-        }
-
-        for (var handIdx = 0; handIdx < deckBlue.cards.Length; handIdx++)
-        {
-            if ((deckBlue.availableCardMask & (1 << handIdx)) == 0)
-            {
-                continue;
-            }
-
-            var handCard = deckBlue.GetCard(handIdx);
-            if (handCard == null)
-            {
-                continue;
-            }
-
-            for (var boardIdx = 0; boardIdx < screenGame.board.Length; boardIdx++)
-            {
-                if (screenGame.board[boardIdx] == null ||
-                    screenGame.boardOwner[boardIdx] != ETriadCardOwner.Blue)
-                {
-                    continue;
-                }
-
-                if (!HandCardMatchesBoardCard(handCard, screenGame.board[boardIdx]))
-                {
-                    continue;
-                }
-
-                deckBlue.availableCardMask &= ~(1 << handIdx);
-                if (deckBlue.cards[handIdx] != null)
-                {
-                    deckBlue.cards[handIdx] = null;
-                    deckBlue.numPlaced++;
-                }
-
-                break;
-            }
-        }
-    }
-
-    private static bool HandCardMatchesBoardCard(TriadCard hand, TriadCard board)
-    {
-        if (hand == null || board == null)
-        {
-            return false;
-        }
-
-        if (hand.Id != 0 && hand.Id == board.Id)
-        {
-            return true;
-        }
-
-        return !string.IsNullOrEmpty(hand.Name) && hand.Name == board.Name;
     }
 }

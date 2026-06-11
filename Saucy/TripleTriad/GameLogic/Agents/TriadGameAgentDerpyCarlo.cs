@@ -86,6 +86,7 @@ public class TriadGameAgentDerpyCarlo : TriadGameAgentGraphExplorer
             }
         }
 
-        return new(numWinningWorkers, numDrawingWorkers, maxWorkers);
+        // normalized so the result weighs the same as a single-game branch when summed at opponent levels (upstream parity)
+        return new(1.0f * numWinningWorkers / maxWorkers, 1.0f * numDrawingWorkers / maxWorkers, 1);
     }
 }

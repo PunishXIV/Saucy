@@ -34,10 +34,6 @@ public partial class TriadGameScreenMemory
                 {
                     redDeck.unknownPoolMask |= (1 << Idx);
                 }
-                else if (screenCardsRed[Idx].Id == hiddenCardId)
-                {
-                    redDeck.unknownPoolMask |= (1 << Idx);
-                }
             }
         }
 
@@ -85,7 +81,7 @@ public partial class TriadGameScreenMemory
                 if (screenCardsRed[Idx] == null)
                 {
                     var prevCard = deckRed.cards[Idx];
-                    if (prevCard != null)
+                    if (prevCard != null && prevCard.Id != hiddenCardId)
                     {
                         usedCardsIndices.Add(Idx);
                     }
@@ -116,10 +112,10 @@ public partial class TriadGameScreenMemory
                     }
                     else
                     {
+                        // face-down card: do NOT mark the slot playable (the placeholder card is 0/0/0/0)
+                        // and do NOT count it as unknown-on-hand; red's options stay modeled by the
+                        // real card pool (mask bits >= numVisibleCards), matching upstream FFTriadBuddy
                         numHidden++;
-                        numUnknownOnHand++;
-                        numOnHand++;
-                        deckRed.availableCardMask |= (1 << Idx);
                     }
                 }
             }
