@@ -3,7 +3,6 @@ using Dalamud.Memory;
 using ECommons;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
-using System.Collections.Generic;
 namespace Saucy.OutOnALimb.ECEmbedded;
 
 public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 0)
@@ -27,20 +26,7 @@ public abstract unsafe class AtkReader(AtkUnitBase* UnitBase, int BeginOffset = 
             return false;
         }
     }
-    public List<T> Loop<T>(int Offset, int Size, int MaxLength) where T : AtkReader
-    {
-        var ret = new List<T>();
-        for (var i = 0; i < MaxLength; i++)
-        {
-            var r = (AtkReader)Activator.CreateInstance(typeof(T), (nint)UnitBase, Offset + (i * Size))!;
-            if (r.IsNull)
-            {
-                break;
-            }
-            ret.Add((T)r);
-        }
-        return ret;
-    }
+
     protected uint? ReadUInt(int n)
     {
         var num = n + BeginOffset;

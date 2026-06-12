@@ -286,16 +286,6 @@ public class TriadDeck
     }
 }
 
-public class TriadDeckNamed : TriadDeck
-{
-    public string Name;
-
-    public TriadDeckNamed() { }
-    public TriadDeckNamed(TriadDeck copyFrom) : base(copyFrom.knownCards)
-    {
-    }
-}
-
 public abstract class TriadDeckInstance
 {
     public const int maxAvailableCards = 15;
@@ -620,20 +610,5 @@ public class TriadDeckInstanceScreen : TriadDeckInstance
         }
 
         return desc;
-    }
-
-    public void LogAvailableCards(string deckName)
-    {
-        Logger.WriteLine(deckName + " state> numPlaced:" + numPlaced + ", numUnknownPlaced:" + numUnknownPlaced);
-        for (var Idx = 0; Idx < maxAvailableCards; Idx++)
-        {
-            var bIsAvailable = (availableCardMask & (1 << Idx)) != 0;
-            var bIsUnknown = (unknownPoolMask & (1 << Idx)) != 0;
-            var card = GetCard(Idx);
-
-            Logger.WriteLine("   [" + Idx + "]:" + (card != null ? card.Name : "??") +
-                             (Idx == swappedCardIdx ? " (SWAP)" : bIsUnknown ? " (U)" : "") +
-                             " => " + (bIsAvailable ? "available" : "nope"));
-        }
     }
 }

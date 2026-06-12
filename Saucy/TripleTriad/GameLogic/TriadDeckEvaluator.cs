@@ -3,7 +3,7 @@ namespace Saucy.TripleTriad.GameLogic;
 
 public static class TriadDeckEvaluator
 {
-    public static SolverResult EvaluateOpeningMove(
+    private static SolverResult EvaluateOpeningMove(
         TriadDeck playerDeck,
         TriadNpc npc,
         IEnumerable<TriadGameModifier> rules)

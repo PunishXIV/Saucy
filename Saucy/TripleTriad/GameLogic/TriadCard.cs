@@ -93,15 +93,6 @@ public class TriadCard : IEquatable<TriadCard>
 
     public string ToShortCodeString() => "[" + Id + ":" + Name + "]";
 
-    public string ToShortLocalizedString() => "[" + Id + ":" + Name + "]";
-
-    public string ToLocalizedString() =>
-        string.Format("[{0}] {1} {2} [{3}, {4}, {5}, {6}]",
-            Id, Name,
-            new string('*', (int)Rarity + 1),
-            Sides[0], Sides[1], Sides[2], Sides[3],
-            (Type != ETriadCardType.None) ? " [" + GameDataText.GetCardTypeName(Type) + "]" : "");
-
     public override string ToString() =>
         string.Format("[{0}] {1} {2} [{3}, {4}, {5}, {6}]",
             Id, Name,

@@ -27,8 +27,6 @@ internal static unsafe class TriadLocalClientStructs
         return !requireVisible || addon->AtkUnitBase.IsVisible;
     }
 
-    public static AgentTripleTriad* TryGetAgent() => AgentTripleTriad.TryGet();
-
     private static bool TryGetVisible<T>(string addonName, out T* addon, bool requireVisible)
     where T : unmanaged
     {
