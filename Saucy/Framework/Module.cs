@@ -1,5 +1,4 @@
 ﻿using ECommons.Automation.NeoTaskManager;
-using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
 using System;
 namespace Saucy.Framework;
 
@@ -35,35 +34,13 @@ public abstract partial class Module : IModule
         TaskManagerConfiguration = CreateTaskManagerConfiguration();
         TaskManager = new(TaskManagerConfiguration);
     }
-    public bool InSaucer => Svc.ClientState.TerritoryType is 144;
+    public bool InSaucer => GateDirector.InSaucer;
 
-    public unsafe bool PlayerOnStage
-    {
-        get
-        {
-            var mgr = GoldSaucerManager.Instance();
-            if (mgr is null)
-            {
-                return false;
-            }
-            var dir = mgr->CurrentGFateDirector;
-            return dir is not null && dir->Flags.HasFlag(GFateDirectorFlag.IsJoined) && !dir->Flags.HasFlag(GFateDirectorFlag.IsFinished);
-        }
-    }
+    public bool PlayerOnStage => GateDirector.IsPlayerOnStage();
 
-    public unsafe GateType CurrentGate
-    {
-        get
-        {
-            var mgr = GoldSaucerManager.Instance();
-            if (mgr is null)
-            {
-                return GateType.None;
-            }
-            var dir = mgr->CurrentGFateDirector;
-            return dir is not null ? (GateType)dir->GateType : GateType.None;
-        }
-    }
+    public GateType CurrentGate => GateDirector.GetCurrentGate();
+
+    protected bool IsInGate(GateType gate) => GateDirector.IsInGate(gate);
 
     public string InternalName { get; init; }
     public abstract string Name { get; }

@@ -26,7 +26,7 @@ public class AnyWayTheWindBlows : Module
 
     private void OnUpdate(IFramework _)
     {
-        if (!InSaucer || !PlayerOnStage || CurrentGate is not GateType.AnyWayTheWindBlows)
+        if (!IsInGate(GateType.AnyWayTheWindBlows))
         {
             WindBlowsGateMovement.ReleaseIfOwned();
             return;
@@ -49,7 +49,7 @@ public class AnyWayTheWindBlows : Module
 
     public void Draw()
     {
-        if (!InSaucer || !PlayerOnStage || CurrentGate is not GateType.AnyWayTheWindBlows)
+        if (!IsInGate(GateType.AnyWayTheWindBlows))
         {
             return;
         }

@@ -1,5 +1,4 @@
 using Dalamud.Game.ClientState.Conditions;
-using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.AirForce;
 using Saucy.Framework;
@@ -56,20 +55,14 @@ internal static unsafe class GoldSaucerGameActivity
 
     private static bool IsGateAutoMovementActive()
     {
-        if (!IsPlayerOnGateStage())
-        {
-            return false;
-        }
-
-        var gate = GetCurrentGate();
-        if (gate == Module.GateType.SliceIsRight &&
+        if (GateDirector.IsInGate(Module.GateType.SliceIsRight) &&
             C.IsModuleEnabled(ModuleNames.SliceIsRight) &&
             C.GoldSaucerGates.SliceIsRightAutoMovement)
         {
             return true;
         }
 
-        if (gate == Module.GateType.AnyWayTheWindBlows &&
+        if (GateDirector.IsInGate(Module.GateType.AnyWayTheWindBlows) &&
             C.IsModuleEnabled(ModuleNames.AnyWayTheWindBlows) &&
             C.GoldSaucerGates.WindBlowsAutoMovement &&
             !AnyWayTheWindBlows.Stage.SafeSpot.On)
@@ -78,31 +71,5 @@ internal static unsafe class GoldSaucerGameActivity
         }
 
         return false;
-    }
-
-    private static bool IsPlayerOnGateStage()
-    {
-        var mgr = GoldSaucerManager.Instance();
-        if (mgr is null)
-        {
-            return false;
-        }
-
-        var dir = mgr->CurrentGFateDirector;
-        return dir is not null &&
-               dir->Flags.HasFlag(GFateDirectorFlag.IsJoined) &&
-               !dir->Flags.HasFlag(GFateDirectorFlag.IsFinished);
-    }
-
-    private static Module.GateType GetCurrentGate()
-    {
-        var mgr = GoldSaucerManager.Instance();
-        if (mgr is null)
-        {
-            return Module.GateType.None;
-        }
-
-        var dir = mgr->CurrentGFateDirector;
-        return dir is not null ? (Module.GateType)dir->GateType : Module.GateType.None;
     }
 }
