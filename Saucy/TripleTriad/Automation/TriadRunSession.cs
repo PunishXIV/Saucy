@@ -103,8 +103,8 @@ internal static class TriadRunSession
     public static void EnableFromNavigation()
     {
         GoldSaucerArcadeMachineHelper.DisableConflictingModules();
-        BeginAutomationSession();
         ModuleEnabled = true;
+        BeginAutomationSession();
     }
 
     public static void PrepareNavigationRunMode(TriadNpc npc, TriadNavigationGoal goal)
@@ -178,6 +178,11 @@ internal static class TriadRunSession
         TriadRewardDropTracker.ResetSnapshot();
         TriadDeckSelectAutomation.ResetSession();
         TriadMatchRegistrationAutomation.ResetSession();
+
+        if (ModuleEnabled)
+        {
+            TriadRun.KickAutomationDeckOptimizer();
+        }
     }
 
     public static void SyncPlayXTimesSession(int desiredPlayCount, bool persist = false)

@@ -68,6 +68,8 @@ public class Configuration : IPluginConfiguration
 
     public GoldSaucerGateSettings GoldSaucerGates { get; set; } = new();
 
+    public bool PauseForAutoRetainer { get; set; }
+
     public int Version { get; set; }
 
     public void MigrateToBackgroundCpuCores()

@@ -16,6 +16,8 @@ public unsafe partial class LimbManager
         (TryGetAddonByName<AtkUnitBase>("MiniGameAimg", out var aimg) && IsAddonReady(aimg)) ||
         (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var botanist) && IsAddonReady(botanist));
 
+    public bool IsInActiveMinigame => HasLimbMinigameUi();
+
     private static bool HasLimbSessionUi() =>
         HasLimbMinigameUi() ||
         ObjectHelper.HasInitiatedArcadeMenu(ArcadeMachineScopes.Limb) ||

@@ -19,6 +19,20 @@ public unsafe partial class CuffACurAutomation
 
     public static bool IsEnabled => C.IsModuleEnabled(ModuleNames.CuffACur);
 
+    public static bool IsInActiveMinigame
+    {
+        get
+        {
+            var addon = Svc.GameGui.GetAddonByName("PunchingMachine");
+            if (addon == nint.Zero)
+            {
+                return false;
+            }
+
+            return ((AtkUnitBase*)addon.Address)->IsVisible;
+        }
+    }
+
     public static nint FuncDetour(nint a1, ushort a2, int a3, void* a4) => FuncHook!.Original(a1, a2, a3, a4);
 
     private static void RegisterTrackedMachines() =>
@@ -137,7 +151,8 @@ public unsafe partial class CuffACurAutomation
                 return;
             }
 
-            if (GoldSaucerArcadeFakeBreak.IsActive(Machine))
+            if (GoldSaucerArcadeFakeBreak.IsActive(Machine) ||
+                AutoRetainerPause.BlocksArcadeSessions(Machine))
             {
                 ArcadeMachineSession.ClearInteractPending(Machine);
                 return;

@@ -306,7 +306,8 @@ public unsafe partial class LimbManager
                 return;
             }
 
-            if (GoldSaucerArcadeFakeBreak.IsActive(Machine))
+            if (GoldSaucerArcadeFakeBreak.IsActive(Machine) ||
+                AutoRetainerPause.BlocksArcadeSessions(Machine))
             {
                 ArcadeMachineSession.ClearInteractPending(Machine);
                 return;

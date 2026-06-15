@@ -178,8 +178,8 @@ public sealed partial class Saucy : IDalamudPlugin
 
         if (subCommand.Equals("go", StringComparison.OrdinalIgnoreCase))
         {
-            TriadRunSession.BeginAutomationSession();
             TriadRunSession.ModuleEnabled = true;
+            TriadRunSession.BeginAutomationSession();
             Svc.Chat.Print("[Saucy] Triad Module Enabled!");
             return;
         }

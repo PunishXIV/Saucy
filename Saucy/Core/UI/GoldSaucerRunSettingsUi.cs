@@ -64,6 +64,12 @@ internal static class GoldSaucerRunSettingsUi
 
         ImGui.Dummy(new(0, 4));
         DrawFakeBreakSettings(machine, settings);
+
+        if (machine == GoldSaucerArcadeMachine.Cuff)
+        {
+            ImGui.Dummy(new(0, 4));
+            SaucyTheme.DrawCard("AutoRetainer", "Bell must be in range", AutoRetainerIntegrationUi.Draw);
+        }
     }
 
     private static void ApplyMatchCount(

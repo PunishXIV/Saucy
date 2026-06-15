@@ -41,7 +41,6 @@ public unsafe partial class PluginUI : Window
     private static long _lastMgpIncreaseMs;
     private NavItem _selectedNav = NavItem.TripleTriad;
     private SaucyTheme.ThemeScope? _themeScope;
-    private bool drewTitleBarVersion;
 
     public PluginUI() : base("Saucy###Saucy")
     {
@@ -111,35 +110,14 @@ public unsafe partial class PluginUI : Window
         WindowName = $"Saucy  \u2022  {status}  \u2022  MGP {info.Mgp:N0}{delta}###Saucy";
     }
 
-    public override void OnClose()
-    {
-        TitleBarVersion.ClearCache();
-        base.OnClose();
-    }
-
     public override void PostDraw()
     {
-        if (!drewTitleBarVersion)
-        {
-            TitleBarVersion.DrawFromWindowLookup(
-                TitleBarButtons.Count,
-                AllowPinning || AllowClickthrough,
-                WindowName);
-        }
-
-        drewTitleBarVersion = false;
         _themeScope?.Dispose();
         _themeScope = null;
     }
 
     public override void Draw()
     {
-        TitleBarVersion.DrawFromContext(
-            TitleBarButtons.Count,
-            AllowPinning || AllowClickthrough,
-            WindowName);
-        drewTitleBarVersion = true;
-
         var sidebarW = CalcSidebarWidth();
         var availY = ImGui.GetContentRegionAvail().Y;
 
@@ -160,6 +138,10 @@ public unsafe partial class PluginUI : Window
                 DrawPanel();
             }
         }
+
+        TitleBarVersion.DrawFromContext(
+            TitleBarButtons.Count,
+            AllowPinning || AllowClickthrough);
     }
 
     private void DrawSidebar()

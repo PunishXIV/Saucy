@@ -64,7 +64,8 @@ public static unsafe class ArcadeMachineGate
         if (!GoldSaucerArcadeMachineHelper.IsEnabled(machine) ||
             ArcadeMachineSession.BlocksAnotherStart(machine) ||
             !GoldSaucerArcadeRunSession.ShouldContinue(machine) ||
-            GoldSaucerArcadeFakeBreak.IsActive(machine))
+            GoldSaucerArcadeFakeBreak.IsActive(machine) ||
+            AutoRetainerPause.BlocksArcadeSessions(machine))
         {
             return false;
         }

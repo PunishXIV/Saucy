@@ -7,6 +7,9 @@ namespace Saucy.TripleTriad.UI;
 public partial class TriadSession
 {
     private int lastWorldTargetOptimizerNpcId = -1;
+
+    public void ResetWorldTargetOptimizerTracking() => lastWorldTargetOptimizerNpcId = -1;
+
     private IEnumerable<TriadGameModifier> ResolvePreviewRulesForNpc(TriadNpc npc)
     {
         if (npc == null)

@@ -30,6 +30,7 @@ public sealed partial class Saucy
 
             UpdateTriadAutoOpen();
             GoldSaucerDutyFinderDefer.Tick();
+            AutoRetainerPause.Tick();
 
             if (C.UseSimmedDeck && TriadRun.ShouldBuildOptimizedDeck())
             {

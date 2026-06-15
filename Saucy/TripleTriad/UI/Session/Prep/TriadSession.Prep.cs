@@ -33,6 +33,60 @@ public partial class TriadSession
 
     public void ResetRunTargetNpcSession() => lastAppliedRunTargetNpcId = -1;
 
+    public void KickAutomationDeckOptimizer()
+    {
+        if (!TriadRunSession.ModuleEnabled || !ShouldBuildOptimizedDeck())
+        {
+            return;
+        }
+
+        ResetWorldTargetOptimizerTracking();
+        EnsureRunTargetNpcSynced(deckSelectScreen: TriadUiState.IsPrepDeckSelectVisible());
+
+        if (preGameNpc == null || TriadUiState.IsBoardVisible())
+        {
+            return;
+        }
+
+        if (TriadUiState.IsPrepDeckSelectVisible() || TriadUiState.IsMatchRegistrationVisible())
+        {
+            EnsureExistingSaucyDeckForPrep();
+            return;
+        }
+
+        ApplyRunTargetNpc(preGameNpc, startOptimizer: true);
+    }
+
+    private bool TryApplyRunTargetFromFallbackSources()
+    {
+        var worldNpc = TriadTargetNpc.FromWorldTarget();
+        if (worldNpc != null && TriadNpcProximity.IsPlayerNear(worldNpc))
+        {
+            ApplyRunTargetNpc(worldNpc);
+            return true;
+        }
+
+        if (TriadMapNavigation.TryGetPendingNpc(out var navNpc) && navNpc != null)
+        {
+            ApplyRunTargetNpc(navNpc);
+            return true;
+        }
+
+        if (preGameNpc != null)
+        {
+            ApplyRunTargetNpc(preGameNpc);
+            return true;
+        }
+
+        if (lastGameNpc != null)
+        {
+            ApplyRunTargetNpc(lastGameNpc);
+            return true;
+        }
+
+        return false;
+    }
+
     public void EnsureRunTargetNpcSynced(bool deckSelectScreen = false)
     {
         var onMatchRegistration = uiReaderPrep.HasMatchRequestUI || TriadUiState.IsMatchRegistrationVisible();
@@ -45,14 +99,17 @@ public partial class TriadSession
                 ApplyRunTargetNpc(preGameNpc!);
                 return;
             }
+
+            if (TryApplyRunTargetFromFallbackSources())
+            {
+                return;
+            }
         }
 
         if (!onMatchRegistration && !onDeckSelect)
         {
-            var worldNpc = TriadTargetNpc.FromWorldTarget();
-            if (worldNpc != null && TriadNpcProximity.IsPlayerNear(worldNpc))
+            if (TryApplyRunTargetFromFallbackSources())
             {
-                ApplyRunTargetNpc(worldNpc);
                 return;
             }
         }

@@ -7,6 +7,7 @@ internal static class IPCNames
     public const string BossMod = "BossMod";
     public const string Vnavmesh = "vnavmesh";
     public const string Questionable = "Questionable";
+    public const string AutoRetainer = "AutoRetainer";
 }
 
 [AttributeUsage(AttributeTargets.Class)]
