@@ -1,5 +1,4 @@
 ﻿using Dalamud.Bindings.ImGui;
-using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using ECommons.GameHelpers;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
@@ -8,6 +7,7 @@ using Saucy.Framework;
 using Saucy.IPC;
 using System;
 using System.Collections.Generic;
+using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 namespace Saucy.OtherGames;
 
 public unsafe class SliceIsRight : Module
@@ -81,7 +81,15 @@ public unsafe class SliceIsRight : Module
         EnsureColours();
         PruneDespawnedObjects();
 
-        var drawList = ImGui.GetForegroundDrawList();
+        // Draw into a fullscreen overlay window's draw list, the same pattern the other gate
+        // overlays use. ImGui.GetForegroundDrawList() produced no visible output here under Dalamud.
+        using var overlay = new ImGuiLayout.FullscreenOverlayScope("slice", (ImGuiWindowFlags)787337);
+        if (!overlay.Success)
+        {
+            return;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
         foreach (var gameObject in Svc.Objects)
         {
             if (!(Player.DistanceTo(gameObject) <= MaxDistance))
@@ -104,8 +112,15 @@ public unsafe class SliceIsRight : Module
             return false;
         }
 
-        if (gameObject.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.EventObj)
+        // Telegraph shape is BaseId on EventObj (2010777–2010779). GimmickId is unused on current clients.
+        if (gameObject.ObjectKind == ObjectKind.EventObj)
         {
+            if (gameObject.BaseId is >= GimmickSingleRect and <= GimmickCircle)
+            {
+                helperType = gameObject.BaseId;
+                return true;
+            }
+
             var gimmickId = ((GameObject*)gameObject.Address)->GimmickId;
             if (gimmickId is >= GimmickSingleRect and <= GimmickCircle)
             {
@@ -116,9 +131,9 @@ public unsafe class SliceIsRight : Module
 
         helperType = gameObject.BaseId switch
         {
-            HelperSingleRectOid => GimmickSingleRect,
-            HelperDoubleRectOid => GimmickDoubleRect,
-            HelperCircleOid => GimmickCircle,
+            HelperSingleRectOid or GimmickSingleRect => GimmickSingleRect,
+            HelperDoubleRectOid or GimmickDoubleRect => GimmickDoubleRect,
+            HelperCircleOid or GimmickCircle => GimmickCircle,
             _ => 0,
         };
         return helperType != 0;
@@ -167,6 +182,9 @@ public unsafe class SliceIsRight : Module
         return now >= visibleFrom && now < visibleUntil;
     }
 
+    private static bool IsTelegraphExpired(DateTime firstSeen) =>
+        DateTime.Now >= firstSeen.AddSeconds(TelegraphDelaySeconds + TelegraphDurationSeconds);
+
     private static void ClearTrackedObjects() => ObjectsAndSpawnTime.Clear();
 
     private static void EnsureColours()
@@ -185,7 +203,7 @@ public unsafe class SliceIsRight : Module
     private static void PruneDespawnedObjects()
     {
         DespawnedIds.Clear();
-        foreach (var (id, firstSeen) in ObjectsAndSpawnTime)
+        foreach ((var id, var firstSeen) in ObjectsAndSpawnTime)
         {
             var found = false;
             foreach (var obj in Svc.Objects)
@@ -199,7 +217,7 @@ public unsafe class SliceIsRight : Module
                 break;
             }
 
-            if (!found || !IsTelegraphVisible(firstSeen))
+            if (!found || IsTelegraphExpired(firstSeen))
             {
                 DespawnedIds.Add(id);
             }

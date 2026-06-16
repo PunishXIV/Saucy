@@ -23,7 +23,7 @@ internal static class SaucyParallelism
 
     public static ParallelOptions RolloutParallelOptions => new()
     {
-        MaxDegreeOfParallelism = CapAutoThreads(TriadUiState.IsBoardVisible()
+        MaxDegreeOfParallelism = CapForWine(TriadUiState.IsBoardVisible()
             ? Math.Max(1, LogicalProcessorCount / 4)
             : Math.Max(1, LogicalProcessorCount))
     };
@@ -36,7 +36,7 @@ internal static class SaucyParallelism
         get
         {
             var configured = DeckOptimizerConfiguredThreads;
-            var threads = configured <= 0 ? CapAutoThreads(Math.Max(1, LogicalProcessorCount)) : configured;
+            var threads = CapForWine(configured <= 0 ? Math.Max(1, LogicalProcessorCount) : configured);
             if (TriadUiState.IsBoardVisible())
             {
                 threads = Math.Min(threads, Math.Max(1, LogicalProcessorCount / 4));
@@ -49,7 +49,7 @@ internal static class SaucyParallelism
     public static int EvalConcurrencyLimit
         => TriadUiState.IsBoardVisible()
             ? 1
-            : CapAutoThreads(Math.Max(1, LogicalProcessorCount / 4));
+            : CapForWine(Math.Max(1, LogicalProcessorCount / 4));
 
     public static SemaphoreSlim EvalConcurrency
     {
@@ -77,12 +77,11 @@ internal static class SaucyParallelism
     }
 
     // Wine routes thread suspension through the separate wineserver process; saturating
-    // every host core with solver threads starves it mid-GC-suspend and crashes the game
-    // (user-confirmed: "all cores" crashed where an explicit 24-thread run was stable).
-    // Auto-selected parallelism leaves a quarter of the cores free under Wine; explicit
-    // user thread settings are honored as-is.
-    private static int CapAutoThreads(int threads) =>
-        IsWineHost ? Math.Min(threads, Math.Max(1, (LogicalProcessorCount * 3) / 4)) : threads;
+    // every host core with solver threads starves it mid-GC-suspend and crashes the game.
+    // Under Wine every thread count is clamped to half the logical cores, including explicit
+    // user settings: an over-high slider value would otherwise bypass the cap and crash.
+    private static int CapForWine(int threads) =>
+        IsWineHost ? Math.Min(threads, Math.Max(1, LogicalProcessorCount / 2)) : threads;
 
     public static void ResetEvalConcurrency()
     {

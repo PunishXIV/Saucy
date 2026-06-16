@@ -3,6 +3,7 @@ using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using ECommons.GameHelpers;
 using Saucy.CuffACur;
+using Saucy.Framework;
 using Saucy.IPC;
 using System;
 namespace Saucy;
@@ -12,17 +13,16 @@ internal static class AutoRetainerPause
     private const float BellInteractRange = 6f;
     private const int HandlingTimeoutSeconds = 120;
 
-    private static bool handling;
     private static bool bellInteracted;
     private static bool autoRetainerBusySeen;
     private static DateTime handlingStartedUtc;
 
-    public static bool IsHandling => handling;
-
-    public static bool HasBellInRange() => FindNearbySummoningBell() != null;
+    public static bool IsHandling { get; private set; }
 
     public static bool IsBlocking =>
-        handling || (C.PauseForAutoRetainer && IsRetainerPauseArmed());
+        IsHandling || (C.PauseForAutoRetainer && IsRetainerPauseArmed());
+
+    public static bool HasBellInRange() => FindNearbySummoningBell() != null;
 
     public static bool BlocksArcadeSessions(GoldSaucerArcadeMachine machine) => IsBlocking;
 
@@ -34,7 +34,7 @@ internal static class AutoRetainerPause
             return;
         }
 
-        if (handling)
+        if (IsHandling)
         {
             TickHandling();
             return;
@@ -60,7 +60,7 @@ internal static class AutoRetainerPause
 
     private static void BeginHandling()
     {
-        handling = true;
+        IsHandling = true;
         bellInteracted = false;
         autoRetainerBusySeen = false;
         handlingStartedUtc = DateTime.UtcNow;
@@ -81,7 +81,7 @@ internal static class AutoRetainerPause
         if (!bellInteracted)
         {
             var bell = FindNearbySummoningBell();
-            if (bell != null && Framework.ObjectHelper.TryInteractWithObject(bell, "Saucy.AutoRetainer.Bell"))
+            if (bell != null && ObjectHelper.TryInteractWithObject(bell, "Saucy.AutoRetainer.Bell"))
             {
                 bellInteracted = true;
             }
@@ -110,7 +110,7 @@ internal static class AutoRetainerPause
 
     private static void Reset()
     {
-        handling = false;
+        IsHandling = false;
         bellInteracted = false;
         autoRetainerBusySeen = false;
     }

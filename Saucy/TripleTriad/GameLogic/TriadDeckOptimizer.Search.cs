@@ -33,13 +33,13 @@ public partial class TriadDeckOptimizer
             MaxDegreeOfParallelism = SaucyParallelism.DeckOptimizerThreads
         };
         Logger.WriteLine(
-            "Deck optimizer threads: {0} ({1} / {2} logical cores, configured {3})",
+            "Deck optimizer threads: {0} of {1} logical cores (configured {2}, Wine host: {3})",
             options.MaxDegreeOfParallelism,
-            SaucyParallelism.DeckOptimizerThreads,
             SaucyParallelism.LogicalProcessorCount,
             SaucyParallelism.DeckOptimizerConfiguredThreads <= 0
                 ? "all"
-                : SaucyParallelism.DeckOptimizerConfiguredThreads.ToString());
+                : SaucyParallelism.DeckOptimizerConfiguredThreads.ToString(),
+            SaucyParallelism.IsWineHost);
 
         long lowestPauseIdx = 0;
         bool canFinishLoop;

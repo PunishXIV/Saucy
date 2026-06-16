@@ -65,11 +65,10 @@ internal static class GoldSaucerRunSettingsUi
         ImGui.Dummy(new(0, 4));
         DrawFakeBreakSettings(machine, settings);
 
-        if (machine == GoldSaucerArcadeMachine.Cuff)
-        {
-            ImGui.Dummy(new(0, 4));
-            SaucyTheme.DrawCard("AutoRetainer", "Bell must be in range", AutoRetainerIntegrationUi.Draw);
-        }
+        // PauseForAutoRetainer is a global flag and the pause applies to both arcade machines
+        // (Cuff-a-Cur and Out on a Limb), so surface the toggle under both, not Cuff only.
+        ImGui.Dummy(new(0, 4));
+        SaucyTheme.DrawCard("AutoRetainer", "Bell must be in range", AutoRetainerIntegrationUi.Draw);
     }
 
     private static void ApplyMatchCount(

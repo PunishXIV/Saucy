@@ -118,7 +118,7 @@ internal static class TriadSettingsUi
         ImGuiComponents.HelpMarker(
             "Parallel threads while building an optimized deck (0 = all cores)." +
             (SaucyParallelism.IsWineHost
-                ? "\n\nLinux / Steam Deck: \"All\" leaves a quarter of your cores free, because maxing out every core under Wine can crash the game. Pick an exact number to override."
+                ? "\n\nLinux / Wine (XLCore, Steam Deck): deck builds are capped to half your logical cores no matter what you pick here. Using every core for parallel deck builds can hard-crash the game under Wine."
                 : ""));
     }
 

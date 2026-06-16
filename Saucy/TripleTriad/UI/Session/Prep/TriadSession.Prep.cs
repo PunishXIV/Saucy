@@ -54,7 +54,7 @@ public partial class TriadSession
             return;
         }
 
-        ApplyRunTargetNpc(preGameNpc, startOptimizer: true);
+        ApplyRunTargetNpc(preGameNpc, true);
     }
 
     private bool TryApplyRunTargetFromFallbackSources()

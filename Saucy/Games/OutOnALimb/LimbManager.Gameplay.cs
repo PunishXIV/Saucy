@@ -12,11 +12,11 @@ public unsafe partial class LimbManager
     private const int LimbYesnoThrottleMs = 800;
     private const string StartMenuThrottleKey = "Saucy.OutOnALimb.StartMenu";
 
+    public bool IsInActiveMinigame => HasLimbMinigameUi();
+
     private static bool HasLimbMinigameUi() =>
         (TryGetAddonByName<AtkUnitBase>("MiniGameAimg", out var aimg) && IsAddonReady(aimg)) ||
         (TryGetAddonByName<AtkUnitBase>("MiniGameBotanist", out var botanist) && IsAddonReady(botanist));
-
-    public bool IsInActiveMinigame => HasLimbMinigameUi();
 
     private static bool HasLimbSessionUi() =>
         HasLimbMinigameUi() ||

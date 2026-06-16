@@ -1,5 +1,4 @@
 using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
-
 namespace Saucy.Framework;
 
 internal static unsafe class GateDirector

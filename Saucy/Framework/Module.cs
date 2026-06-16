@@ -40,13 +40,13 @@ public abstract partial class Module : IModule
 
     public GateType CurrentGate => GateDirector.GetCurrentGate();
 
-    protected bool IsInGate(GateType gate) => GateDirector.IsInGate(gate);
-
     public string InternalName { get; init; }
     public abstract string Name { get; }
     public virtual bool IsEnabled { get; protected set; }
     public virtual void Enable() { }
     public virtual void Disable() { }
+
+    protected bool IsInGate(GateType gate) => GateDirector.IsInGate(gate);
 
     protected virtual TaskManagerConfiguration CreateTaskManagerConfiguration() => new()
     {
