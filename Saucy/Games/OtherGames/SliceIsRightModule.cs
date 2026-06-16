@@ -134,7 +134,7 @@ public unsafe class SliceIsRight : Module
             HelperSingleRectOid or GimmickSingleRect => GimmickSingleRect,
             HelperDoubleRectOid or GimmickDoubleRect => GimmickDoubleRect,
             HelperCircleOid or GimmickCircle => GimmickCircle,
-            _ => 0,
+            var _ => 0
         };
         return helperType != 0;
     }
