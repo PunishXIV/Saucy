@@ -11,6 +11,9 @@ internal static class AutoRetainerIpc
     [EzIPC("PluginState.AreAnyRetainersAvailableForCurrentChara")]
     private static Func<bool> AreAnyRetainersAvailableRpc = null!;
 
+    [EzIPC("PluginState.AbortAllTasks")]
+    private static Action AbortAllTasksRpc = null!;
+
     public static bool IsInstalled => SubscriptionManager.IsInitialized(IPCNames.AutoRetainer);
 
     public static bool IsBusyNow()
@@ -44,6 +47,23 @@ internal static class AutoRetainerIpc
         catch
         {
             return false;
+        }
+    }
+
+    public static void AbortAllTasks()
+    {
+        if (!IsInstalled)
+        {
+            return;
+        }
+
+        try
+        {
+            AbortAllTasksRpc();
+        }
+        catch
+        {
+            // ignored
         }
     }
 }

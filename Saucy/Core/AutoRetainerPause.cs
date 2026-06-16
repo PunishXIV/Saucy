@@ -1,6 +1,7 @@
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
+using ECommons.Automation;
 using ECommons.GameHelpers;
 using Saucy.CuffACur;
 using Saucy.Framework;
@@ -10,10 +11,13 @@ namespace Saucy;
 
 internal static class AutoRetainerPause
 {
+    // Placed summoning bell furnishing (HousingEventObject BaseId 196630).
+    private const uint SummoningBellBaseId = 196630;
     private const float BellInteractRange = 6f;
     private const int HandlingTimeoutSeconds = 120;
 
     private static bool bellInteracted;
+    private static bool autoRetainerEnableSent;
     private static bool autoRetainerBusySeen;
     private static DateTime handlingStartedUtc;
 
@@ -30,7 +34,7 @@ internal static class AutoRetainerPause
     {
         if (!C.PauseForAutoRetainer || !AutoRetainerIpc.IsInstalled)
         {
-            Reset();
+            Reset(forceStopAutoRetainer: IsHandling);
             return;
         }
 
@@ -62,6 +66,7 @@ internal static class AutoRetainerPause
     {
         IsHandling = true;
         bellInteracted = false;
+        autoRetainerEnableSent = false;
         autoRetainerBusySeen = false;
         handlingStartedUtc = DateTime.UtcNow;
 
@@ -74,7 +79,7 @@ internal static class AutoRetainerPause
         if (elapsed.TotalSeconds > HandlingTimeoutSeconds)
         {
             Svc.Chat.Print("[Saucy] AutoRetainer pause timed out; resuming automation.");
-            Reset();
+            Reset(forceStopAutoRetainer: true);
             return;
         }
 
@@ -85,9 +90,21 @@ internal static class AutoRetainerPause
             {
                 bellInteracted = true;
             }
+
+            return;
         }
 
-        if (AutoRetainerIpc.IsBusyNow())
+        // Same as AutoDuty: enable AutoRetainer at the bell so users don't need expert OpenBell settings.
+        if (!autoRetainerEnableSent &&
+            Svc.Condition[ConditionFlag.OccupiedSummoningBell] &&
+            AutoRetainerIpc.AreAnyRetainersReady())
+        {
+            Chat.ExecuteCommand("/autoretainer e");
+            autoRetainerEnableSent = true;
+            return;
+        }
+
+        if (autoRetainerEnableSent && AutoRetainerIpc.IsBusyNow())
         {
             autoRetainerBusySeen = true;
         }
@@ -95,23 +112,28 @@ internal static class AutoRetainerPause
         if (autoRetainerBusySeen &&
             !AutoRetainerIpc.IsBusyNow() &&
             Player.Interactable &&
-            !IsPlayerOccupiedInRetainerFlow())
+            !Svc.Condition[ConditionFlag.OccupiedSummoningBell])
         {
             Svc.Chat.Print("[Saucy] AutoRetainer finished; resuming automation.");
-            Reset();
-            return;
-        }
-
-        if (!autoRetainerBusySeen && !AutoRetainerIpc.AreAnyRetainersReady())
-        {
-            Reset();
+            Reset(forceStopAutoRetainer: true);
         }
     }
 
-    private static void Reset()
+    private static void Reset(bool forceStopAutoRetainer = false)
     {
+        if (forceStopAutoRetainer && autoRetainerEnableSent)
+        {
+            if (AutoRetainerIpc.IsBusyNow())
+            {
+                AutoRetainerIpc.AbortAllTasks();
+            }
+
+            Chat.ExecuteCommand("/autoretainer d");
+        }
+
         IsHandling = false;
         bellInteracted = false;
+        autoRetainerEnableSent = false;
         autoRetainerBusySeen = false;
     }
 
@@ -122,11 +144,6 @@ internal static class AutoRetainerPause
     private static bool IsBlockingActiveGameplay() =>
         CuffACurAutomation.IsInActiveMinigame || P.LimbManager.IsInActiveMinigame;
 
-    private static bool IsPlayerOccupiedInRetainerFlow() =>
-        Svc.Condition[ConditionFlag.OccupiedInEvent] ||
-        Svc.Condition[ConditionFlag.OccupiedInQuestEvent] ||
-        Svc.Condition[ConditionFlag.OccupiedSummoningBell];
-
     private static IGameObject? FindNearbySummoningBell()
     {
         IGameObject? nearest = null;
@@ -134,14 +151,7 @@ internal static class AutoRetainerPause
 
         foreach (var obj in Svc.Objects)
         {
-            if (obj.ObjectKind != ObjectKind.EventObj)
-            {
-                continue;
-            }
-
-            var name = obj.Name.TextValue;
-            if (string.IsNullOrWhiteSpace(name) ||
-                !name.Contains("Summoning Bell", StringComparison.OrdinalIgnoreCase))
+            if (!IsSummoningBell(obj))
             {
                 continue;
             }
@@ -158,4 +168,7 @@ internal static class AutoRetainerPause
 
         return nearest;
     }
+
+    private static bool IsSummoningBell(IGameObject obj) =>
+        obj.ObjectKind == ObjectKind.HousingEventObject && obj.BaseId == SummoningBellBaseId;
 }
