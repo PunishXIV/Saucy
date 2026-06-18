@@ -3,18 +3,24 @@ using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using ECommons.Automation;
 using ECommons.GameHelpers;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.CuffACur;
 using Saucy.Framework;
 using Saucy.IPC;
 using System;
+using static ECommons.GenericHelpers;
 namespace Saucy;
 
-internal static class AutoRetainerPause
+internal static unsafe class AutoRetainerPause
 {
     // Placed summoning bell furnishing (HousingEventObject BaseId 196630).
     private const uint SummoningBellBaseId = 196630;
     private const float BellInteractRange = 6f;
     private const int HandlingTimeoutSeconds = 120;
+
+    // AutoDuty closes these after AutoRetainer finishes so the bell UI does not linger.
+    private static readonly string[] RetainerAddonsToClose =
+        ["RetainerList", "SelectYesno", "SelectString", "RetainerTaskAsk"];
 
     private static bool bellInteracted;
     private static bool autoRetainerEnableSent;
@@ -109,26 +115,58 @@ internal static class AutoRetainerPause
             autoRetainerBusySeen = true;
         }
 
-        if (autoRetainerBusySeen &&
-            !AutoRetainerIpc.IsBusyNow() &&
-            Player.Interactable &&
-            !Svc.Condition[ConditionFlag.OccupiedSummoningBell])
+        if (autoRetainerBusySeen && !AutoRetainerIpc.IsBusyNow())
         {
-            Svc.Chat.Print("[Saucy] AutoRetainer finished; resuming automation.");
-            Reset(forceStopAutoRetainer: true);
+            if (CloseRetainerAddonsIfVisible())
+            {
+                return;
+            }
+
+            if (Player.Interactable && !Svc.Condition[ConditionFlag.OccupiedSummoningBell])
+            {
+                Svc.Chat.Print("[Saucy] AutoRetainer finished; resuming automation.");
+                Reset(forceStopAutoRetainer: true);
+            }
         }
+    }
+
+    private static bool CloseRetainerAddonsIfVisible()
+    {
+        Svc.Targets.Target = null;
+
+        foreach (var name in RetainerAddonsToClose)
+        {
+            if (!TryGetAddonByName<AtkUnitBase>(name, out var addon) || !addon->IsVisible)
+            {
+                continue;
+            }
+
+            if (IsAddonReady(addon))
+            {
+                addon->FireCallbackInt(-1);
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     private static void Reset(bool forceStopAutoRetainer = false)
     {
-        if (forceStopAutoRetainer && autoRetainerEnableSent)
+        if (forceStopAutoRetainer)
         {
-            if (AutoRetainerIpc.IsBusyNow())
-            {
-                AutoRetainerIpc.AbortAllTasks();
-            }
+            CloseRetainerAddonsIfVisible();
 
-            Chat.ExecuteCommand("/autoretainer d");
+            if (autoRetainerEnableSent)
+            {
+                if (AutoRetainerIpc.IsBusyNow())
+                {
+                    AutoRetainerIpc.AbortAllTasks();
+                }
+
+                Chat.ExecuteCommand("/autoretainer d");
+            }
         }
 
         IsHandling = false;

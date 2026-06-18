@@ -34,6 +34,60 @@ internal static class TriadOptimizerSessionKey
         return leftSignatures.SequenceEqual(rightSignatures, StringComparer.Ordinal);
     }
 
+    public static string[] GetModSignatures(IEnumerable<TriadGameModifier> regionMods) =>
+        CollectModSignatures(regionMods).OrderBy(sig => sig, StringComparer.Ordinal).ToArray();
+
+    public static List<TriadGameModifier> RegionModsFromSignatures(IEnumerable<string> signatures)
+    {
+        var result = new List<TriadGameModifier>();
+        if (signatures == null)
+        {
+            return result;
+        }
+
+        var modDb = TriadGameModifierDB.Get();
+        foreach (var signature in signatures)
+        {
+            if (string.IsNullOrEmpty(signature))
+            {
+                continue;
+            }
+
+            var dotIdx = signature.IndexOf('.');
+            if (dotIdx > 0 &&
+                int.TryParse(signature[..dotIdx], out var rouletteId) &&
+                int.TryParse(signature[(dotIdx + 1)..], out var resolvedId) &&
+                rouletteId >= 0 &&
+                rouletteId < modDb.mods.Count &&
+                modDb.mods[rouletteId] is TriadGameModifierRoulette rouletteTemplate)
+            {
+                var roulette = (TriadGameModifierRoulette)rouletteTemplate.Clone();
+                if (resolvedId >= 0 && resolvedId < modDb.mods.Count)
+                {
+                    roulette.SetRuleInstance(modDb.mods[resolvedId].Clone());
+                }
+
+                result.Add(roulette);
+                continue;
+            }
+
+            if (!int.TryParse(signature, out var modId) ||
+                modId < 0 ||
+                modId >= modDb.mods.Count)
+            {
+                continue;
+            }
+
+            var clone = modDb.mods[modId].Clone();
+            if (clone != null)
+            {
+                result.Add(clone);
+            }
+        }
+
+        return result;
+    }
+
     public static bool ShouldSkipDeckCache(TriadNpc npc, IReadOnlyList<TriadGameModifier> regionMods)
     {
         if (regionMods != null)

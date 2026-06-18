@@ -10,7 +10,7 @@ public partial class TriadSession
 
     public void ResetWorldTargetOptimizerTracking() => lastWorldTargetOptimizerNpcId = -1;
 
-    private IEnumerable<TriadGameModifier> ResolvePreviewRulesForNpc(TriadNpc npc)
+    private List<TriadGameModifier> ResolveRegionModsForNpc(TriadNpc npc)
     {
         if (npc == null)
         {
@@ -19,12 +19,63 @@ public partial class TriadSession
 
         SyncLivePrepNpcAndRulesIfVisible(npc);
 
-        if (preGameNpc != null && preGameNpc.Id == npc.Id)
+        if (preGameNpc != null && preGameNpc.Id == npc.Id && preGameMods.Count > 0)
         {
             return preGameMods;
         }
 
+        if (rememberedRegionalModsByNpcId.TryGetValue(npc.Id, out var remembered) && remembered.Count > 0)
+        {
+            return remembered;
+        }
+
+        if (TriadOptimizedDeckCacheStore.TryGetRegionalMods(npc.Id, out var persisted) && persisted.Count > 0)
+        {
+            rememberedRegionalModsByNpcId[npc.Id] = persisted;
+            return persisted;
+        }
+
         return [];
+    }
+
+    private IEnumerable<TriadGameModifier> ResolvePreviewRulesForNpc(TriadNpc npc) =>
+        ResolveRegionModsForNpc(npc);
+
+    private void RememberRegionalModsForNpc(TriadNpc npc, List<TriadGameModifier> regionMods)
+    {
+        if (npc == null || regionMods == null)
+        {
+            return;
+        }
+
+        var cloned = new List<TriadGameModifier>();
+        foreach (var mod in regionMods)
+        {
+            if (mod is not null and not TriadGameModifierNone)
+            {
+                var clone = mod.Clone();
+                if (clone != null)
+                {
+                    cloned.Add(clone);
+                }
+            }
+        }
+
+        if (cloned.Count == 0)
+        {
+            rememberedRegionalModsByNpcId.Remove(npc.Id);
+            TriadOptimizedDeckCacheStore.UpsertRegionalMods(npc.Id, cloned);
+            return;
+        }
+
+        if (rememberedRegionalModsByNpcId.TryGetValue(npc.Id, out var existing) &&
+            TriadOptimizerSessionKey.RegionModsEqual(existing, cloned))
+        {
+            return;
+        }
+
+        rememberedRegionalModsByNpcId[npc.Id] = cloned;
+        TriadOptimizedDeckCacheStore.UpsertRegionalMods(npc.Id, cloned);
     }
 
     private void SyncLivePrepNpcAndRulesIfVisible(TriadNpc npc)
@@ -111,7 +162,7 @@ public partial class TriadSession
         }
 
         lastWorldTargetOptimizerNpcId = npc.Id;
-        OnNpcSelected(npc, [], true);
+        OnNpcSelected(npc, ResolveRegionModsForNpc(npc), true);
     }
 
     public DeckData GetDeckPreviewData(TriadNpc npc, int deckId)

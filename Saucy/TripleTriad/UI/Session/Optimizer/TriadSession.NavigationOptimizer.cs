@@ -16,7 +16,7 @@ public partial class TriadSession
 
         lock (preGameLock)
         {
-            var sessionKey = BuildOptimizerSessionKey(npc, preGameMods);
+            var sessionKey = BuildOptimizerSessionKey(npc, ResolveRegionModsForNpc(npc));
             if (HasOptimizedDeckApplied && optimizerSessionKey == sessionKey)
             {
                 return false;
@@ -59,13 +59,13 @@ public partial class TriadSession
             {
                 return;
             }
-            var sessionKey = BuildOptimizerSessionKey(npc, preGameMods);
+            var sessionKey = BuildOptimizerSessionKey(npc, ResolveRegionModsForNpc(npc));
             if (HasOptimizedDeckApplied && optimizerSessionKey == sessionKey)
             {
                 return;
             }
 
-            StartDeckOptimizer(npc, preGameMods, navigationRequest: true);
+            StartDeckOptimizer(npc, ResolveRegionModsForNpc(npc), navigationRequest: true);
         }
     }
 
@@ -79,7 +79,7 @@ public partial class TriadSession
             return false;
         }
 
-        var sessionKey = BuildOptimizerSessionKey(result.Npc, preGameMods);
+        var sessionKey = BuildOptimizerSessionKey(result.Npc, ResolveRegionModsForNpc(result.Npc));
         if (!string.Equals(navigationOptimizerRetrySessionKey, sessionKey, StringComparison.Ordinal))
         {
             navigationOptimizerRetrySessionKey = sessionKey;
@@ -95,7 +95,7 @@ public partial class TriadSession
         PrintOptimizerChat(
             $"[Saucy] Deck optimization interrupted for {result.Npc.Name}; retry {navigationOptimizerRetryCount}/{MaxNavigationOptimizerRetries}…");
         optimizerTimedOut = false;
-        StartDeckOptimizer(result.Npc, preGameMods, navigationRequest: true);
+        StartDeckOptimizer(result.Npc, ResolveRegionModsForNpc(result.Npc), navigationRequest: true);
         return true;
     }
 }

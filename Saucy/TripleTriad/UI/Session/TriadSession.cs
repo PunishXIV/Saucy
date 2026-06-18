@@ -26,6 +26,8 @@ public partial class TriadSession
 
     private readonly object preGameLock = new();
     private readonly HashSet<string> previewEvalInFlight = [];
+
+    private readonly Dictionary<int, List<TriadGameModifier>> rememberedRegionalModsByNpcId = new();
     private string cachedDeckSlottedSessionKey = string.Empty;
 
     public TriadNpc currentNpc;
@@ -194,7 +196,7 @@ public partial class TriadSession
 
     private string DescribeOptimizedDeckBuildStatus(TriadNpc npc)
     {
-        var regionMods = preGameNpc != null && preGameNpc.Id == npc.Id ? preGameMods : [];
+        var regionMods = ResolveRegionModsForNpc(npc);
         var sessionKey = BuildOptimizerSessionKey(npc, regionMods);
         var skipCache = TriadOptimizerSessionKey.ShouldSkipDeckCache(npc, regionMods);
         var hasUsableCache = !skipCache &&

@@ -157,7 +157,7 @@ public partial class TriadSession
         {
             lastAppliedRunTargetNpcId = npc.Id;
             preGameBestId = -1;
-            var sessionKey = BuildOptimizerSessionKey(npc, preGameMods);
+            var sessionKey = BuildOptimizerSessionKey(npc, ResolveRegionModsForNpc(npc));
             if (!OptimizerInProgress ||
                 !string.Equals(optimizerSessionKey, sessionKey, StringComparison.Ordinal))
             {
@@ -175,7 +175,7 @@ public partial class TriadSession
             !TriadUiState.IsBoardVisible() &&
             !deferHeavyWork)
         {
-            StartDeckOptimizer(npc, preGameMods, navigationRequest: forNavigation);
+            StartDeckOptimizer(npc, ResolveRegionModsForNpc(npc), navigationRequest: forNavigation);
         }
 
         if (shouldManageDeck && C.UseSimmedDeck && !TriadUiState.IsBoardVisible() && !deferHeavyWork)
@@ -248,10 +248,12 @@ public partial class TriadSession
         preGameNpc = npc;
         preGameMods = newMods;
         lastGameNpc = npc;
+        RememberRegionalModsForNpc(npc, newMods);
 
         if (regionModsChanged)
         {
             InvalidateDeckPreviewCacheLocked(npc);
+            InvalidateOptimizedDeckForRulesChange(npc, newMods);
         }
 
         return true;
@@ -421,6 +423,10 @@ public partial class TriadSession
 
             preGameNpc = newPreGameNpc ?? preGameNpc;
             preGameMods = newPreGameMods;
+            if (preGameNpc != null)
+            {
+                RememberRegionalModsForNpc(preGameNpc, newPreGameMods);
+            }
             preGameDecks = newPreGameDecks;
 
             if (preGameNpc == null)

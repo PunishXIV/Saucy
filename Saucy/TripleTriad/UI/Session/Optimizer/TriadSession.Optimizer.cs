@@ -21,7 +21,8 @@ public partial class TriadSession
 
         lock (preGameLock)
         {
-            if (HasOptimizedDeckApplied && optimizerTargetDeckId >= 0)
+            var regionMods = ResolveRegionModsForNpc(preGameNpc);
+            if (IsOptimizedDeckAppliedForSession(preGameNpc, regionMods))
             {
                 return;
             }
@@ -39,10 +40,10 @@ public partial class TriadSession
 
             if (ShouldUseCachedOptimizedDeckIfAvailable())
             {
-                TrySlotCachedDeckIntoProfileLocked(preGameNpc, preGameMods, out var _);
+                TrySlotCachedDeckIntoProfileLocked(preGameNpc, regionMods, out var _);
             }
 
-            EnsurePreviewEvalForNpc(preGameNpc, preGameMods);
+            EnsurePreviewEvalForNpc(preGameNpc, regionMods);
         }
     }
 
@@ -72,23 +73,55 @@ public partial class TriadSession
         navigationOptimizerRetrySessionKey = string.Empty;
     }
 
-    private void TryEnsureOptimizedDeckForPrepLocked()
+    private bool IsOptimizedDeckAppliedForSession(TriadNpc npc, List<TriadGameModifier> regionMods)
     {
-        var sessionKey = BuildOptimizerSessionKey(preGameNpc, preGameMods);
-        if (HasOptimizedDeckApplied && optimizerTargetDeckId >= 0)
+        if (!HasOptimizedDeckApplied || optimizerTargetDeckId < 0 || npc == null)
         {
-            if (string.Equals(optimizerSessionKey, sessionKey, StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            if (TriadUiState.IsPrepDeckSelectVisible() || TriadUiState.IsMatchRegistrationVisible())
-            {
-                return;
-            }
+            return false;
         }
 
-        if (TrySkipOptimizedDeckRebuildLocked(preGameNpc, preGameMods))
+        return preGameNpc?.Id == npc.Id &&
+               string.Equals(optimizerSessionKey, BuildOptimizerSessionKey(npc, regionMods), StringComparison.Ordinal);
+    }
+
+    private void InvalidateOptimizedDeckForRulesChange(TriadNpc npc, List<TriadGameModifier> newRegionMods)
+    {
+        if (npc == null)
+        {
+            return;
+        }
+
+        var newKey = BuildOptimizerSessionKey(npc, newRegionMods);
+        if (!string.IsNullOrEmpty(optimizerSessionKey) &&
+            string.Equals(optimizerSessionKey, newKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (OptimizerInProgress &&
+            TriadDeckOptimizerJobs.TryGetActiveForNpc(npc.Id, out var activeJob) &&
+            !string.Equals(activeJob.SessionKey, newKey, StringComparison.Ordinal))
+        {
+            CancelDeckOptimizerJob(userCancelled: true);
+        }
+
+        HasOptimizedDeckApplied = false;
+        optimizerTargetDeckId = -1;
+        optimizerSessionKey = string.Empty;
+        cachedDeckSlottedSessionKey = string.Empty;
+        preGameBestId = -1;
+    }
+
+    private void TryEnsureOptimizedDeckForPrepLocked()
+    {
+        var regionMods = ResolveRegionModsForNpc(preGameNpc);
+        var sessionKey = BuildOptimizerSessionKey(preGameNpc, regionMods);
+        if (IsOptimizedDeckAppliedForSession(preGameNpc, regionMods))
+        {
+            return;
+        }
+
+        if (TrySkipOptimizedDeckRebuildLocked(preGameNpc, regionMods))
         {
             optimizerTimedOut = false;
             ClearOptimizerStartBlockLocked();
@@ -110,7 +143,7 @@ public partial class TriadSession
             return;
         }
 
-        StartDeckOptimizer(preGameNpc, preGameMods);
+        StartDeckOptimizer(preGameNpc, regionMods);
     }
 
     private bool IsOptimizerStartBlockedForSessionLocked(string sessionKey)

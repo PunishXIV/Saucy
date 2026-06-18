@@ -30,9 +30,7 @@ public partial class TriadSession
 
         if (!premadeRequest &&
             !forceRebuild &&
-            HasOptimizedDeckApplied &&
-            optimizerTargetDeckId >= 0 &&
-            preGameNpc?.Id == npc.Id &&
+            IsOptimizedDeckAppliedForSession(npc, regionMods) &&
             (TriadUiState.IsPrepDeckSelectVisible() || TriadUiState.IsMatchRegistrationVisible()))
         {
             return;
@@ -44,13 +42,6 @@ public partial class TriadSession
         }
 
         if (!premadeRequest && !ShouldBuildOptimizedDeck())
-        {
-            return;
-        }
-
-        if (!premadeRequest &&
-            !forceRebuild &&
-            ShouldDeferOptimizerStartUntilRules(npc, regionMods))
         {
             return;
         }
@@ -70,7 +61,15 @@ public partial class TriadSession
 
         if (!premadeRequest &&
             !forceRebuild &&
-            TriadDeckOptimizerJobs.TryGetActivePassIdForNpc(npc.Id, out var activePassId))
+            TriadDeckOptimizerJobs.TryGetActiveForNpc(npc.Id, out var activeJob) &&
+            !string.Equals(activeJob.SessionKey, optimizerKey, StringComparison.Ordinal))
+        {
+            CancelDeckOptimizerJob(userCancelled: true);
+        }
+        else if (!premadeRequest &&
+                 !forceRebuild &&
+                 TriadDeckOptimizerJobs.IsRunningForSessionKey(optimizerKey) &&
+                 TriadDeckOptimizerJobs.TryGetActivePassIdForNpc(npc.Id, out var activePassId))
         {
             optimizerPassId = activePassId;
             return;
@@ -227,16 +226,6 @@ public partial class TriadSession
 
     private static TriadGameModifier[] BuildRegionModsForOptimizer(TriadNpc npc, List<TriadGameModifier> regionMods) =>
         TriadNpcSimulationRules.BuildRegionMods(npc, regionMods);
-
-    private static bool ShouldDeferOptimizerStartUntilRules(TriadNpc npc, List<TriadGameModifier> regionMods)
-    {
-        if (regionMods.Count > 0 || npc?.Rules == null || npc.Rules.Count == 0)
-        {
-            return false;
-        }
-
-        return TriadUiState.IsMatchRegistrationVisible() || TriadUiState.IsPrepDeckSelectVisible();
-    }
 
     private bool TrySkipOptimizedDeckRebuildLocked(TriadNpc npc, List<TriadGameModifier> regionMods)
     {

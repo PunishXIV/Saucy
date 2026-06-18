@@ -8,7 +8,7 @@ namespace Saucy.TripleTriad.GameLogic;
 
 internal static class TriadOptimizedDeckCacheStore
 {
-    public const int SchemaVersion = 1;
+    public const int SchemaVersion = 2;
     public const int RebuildAfterNewCardCount = 5;
 
     private const string CacheFileName = "OptimizedDeckCache.json";
@@ -52,6 +52,64 @@ internal static class TriadOptimizedDeckCacheStore
         EnsureLoaded();
         return activeFile != null &&
                activeFile.Entries.TryGetValue(sessionKey, out entry);
+    }
+
+    public static bool TryGetRegionalMods(int npcId, out List<TriadGameModifier> regionMods)
+    {
+        regionMods = [];
+        if (npcId < 0)
+        {
+            return false;
+        }
+
+        EnsureLoaded();
+        if (activeFile?.RegionalRuleSignaturesByNpcId == null ||
+            !activeFile.RegionalRuleSignaturesByNpcId.TryGetValue(npcId, out var signatures) ||
+            signatures is not { Length: > 0 })
+        {
+            return false;
+        }
+
+        regionMods = TriadOptimizerSessionKey.RegionModsFromSignatures(signatures);
+        return regionMods.Count > 0;
+    }
+
+    public static void UpsertRegionalMods(int npcId, IReadOnlyList<TriadGameModifier> regionMods)
+    {
+        if (npcId < 0)
+        {
+            return;
+        }
+
+        EnsureLoaded();
+        activeFile ??= new();
+        activeFile.Version = SchemaVersion;
+        activeFile.RegionalRuleSignaturesByNpcId ??= new();
+
+        if (regionMods == null || regionMods.Count == 0)
+        {
+            if (activeFile.RegionalRuleSignaturesByNpcId.Remove(npcId))
+            {
+                SaveActive();
+            }
+
+            return;
+        }
+
+        var signatures = TriadOptimizerSessionKey.GetModSignatures(regionMods);
+        if (signatures.Length == 0)
+        {
+            return;
+        }
+
+        if (activeFile.RegionalRuleSignaturesByNpcId.TryGetValue(npcId, out var existing) &&
+            existing.SequenceEqual(signatures, StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        activeFile.RegionalRuleSignaturesByNpcId[npcId] = signatures;
+        SaveActive();
     }
 
     public static bool HasAnyEntryForNpc(int npcId)
@@ -339,6 +397,7 @@ internal static class TriadOptimizedDeckCacheStore
             if (!File.Exists(path))
             {
                 activeFile = new();
+                activeFile.RegionalRuleSignaturesByNpcId = new();
                 ImportLegacyBuildTimestampsLocked();
                 return;
             }
@@ -350,9 +409,18 @@ internal static class TriadOptimizedDeckCacheStore
                              new TriadOptimizedDeckCacheFile();
                 if (activeFile.Version != SchemaVersion)
                 {
-                    activeFile = new();
+                    if (activeFile.Version == 1)
+                    {
+                        activeFile.Version = SchemaVersion;
+                        activeFile.RegionalRuleSignaturesByNpcId ??= new();
+                    }
+                    else
+                    {
+                        activeFile = new();
+                    }
                 }
 
+                activeFile.RegionalRuleSignaturesByNpcId ??= new();
                 ImportLegacyBuildTimestampsLocked();
             }
             catch (Exception ex)
@@ -463,7 +531,7 @@ internal static class TriadOptimizedDeckCacheStore
         {
             var json = File.ReadAllText(path);
             file = JsonConvert.DeserializeObject<TriadOptimizedDeckCacheFile>(json);
-            if (file == null || file.Version != SchemaVersion)
+            if (file == null || file.Version is not (1 or 2))
             {
                 return false;
             }
