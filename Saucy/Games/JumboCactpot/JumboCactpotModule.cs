@@ -30,11 +30,13 @@ public unsafe class JumboCactpot : Module
     private const int InputBetweenClicksMs = 200;
     private const int InputNextTicketResetMs = 1500;
     private const int CashierHandoffDismissMs = 600;
+    private const int CashierNextRewardGraceMs = 3000;
 
     private readonly TimedFlowWindow ticketFlow = new(TimeSpan.FromSeconds(30));
     private bool brokerPathArmed;
     private bool cashierDialogueSeen;
     private DateTime? cashierHandoffDismissedUtc;
+    private DateTime? lastCashierRewardClosedUtc;
     private bool cashierRewardOpen;
     private DateTime? inputAddonSeenUtc;
     private bool inputConfirmed;
@@ -122,17 +124,14 @@ public unsafe class JumboCactpot : Module
         ticketFlow.Mark();
         rewardAddonSeenUtc = DateTime.UtcNow;
         cashierRewardOpen = true;
+        lastCashierRewardClosedUtc = null;
     }
 
     private void OnRewardFinalize(AddonEvent type, AddonArgs args)
     {
         ticketFlow.Mark();
         rewardAddonSeenUtc = null;
-        if (cashierRewardOpen)
-        {
-            ArmBrokerPath();
-        }
-
+        lastCashierRewardClosedUtc = DateTime.UtcNow;
         cashierRewardOpen = false;
     }
 
@@ -168,12 +167,29 @@ public unsafe class JumboCactpot : Module
         cashierDialogueSeen = false;
         brokerPathArmed = false;
         cashierHandoffDismissedUtc = null;
+        lastCashierRewardClosedUtc = null;
     }
 
     private void ResetCashierHandoffState()
     {
         cashierDialogueSeen = false;
         cashierHandoffDismissedUtc = null;
+        lastCashierRewardClosedUtc = null;
+    }
+
+    private static bool IsCashierUiVisible() =>
+        TalkHelper.IsVisible() ||
+        SelectStringHelper.IsNpcListMenuVisible() ||
+        SelectYesnoHelper.IsVisible();
+
+    private bool IsWaitingForNextCashierReward()
+    {
+        if (lastCashierRewardClosedUtc == null)
+        {
+            return false;
+        }
+
+        return (DateTime.UtcNow - lastCashierRewardClosedUtc.Value).TotalMilliseconds < CashierNextRewardGraceMs;
     }
 
     private void TickCashierHandoff()
@@ -188,7 +204,13 @@ public unsafe class JumboCactpot : Module
             return;
         }
 
-        if (IsTargetingCashier() && (TalkHelper.IsVisible() || SelectStringHelper.IsNpcListMenuVisible()))
+        if (IsWaitingForNextCashierReward())
+        {
+            cashierHandoffDismissedUtc = null;
+            return;
+        }
+
+        if (IsTargetingCashier() && IsCashierUiVisible())
         {
             cashierDialogueSeen = true;
             cashierHandoffDismissedUtc = null;
@@ -201,6 +223,12 @@ public unsafe class JumboCactpot : Module
         }
 
         if (IsBrokerUiBlocking())
+        {
+            cashierHandoffDismissedUtc = null;
+            return;
+        }
+
+        if (IsTargetingCashier())
         {
             cashierHandoffDismissedUtc = null;
             return;
