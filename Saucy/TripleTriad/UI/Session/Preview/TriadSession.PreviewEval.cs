@@ -21,9 +21,9 @@ public partial class TriadSession
 
         var flightKey = $"{cacheKey}:{deckData.id}";
         int evalGeneration;
-        lock (preGameLock)
+        lock (_preGameLock)
         {
-            if (previewEvalInFlight.Contains(flightKey))
+            if (_previewEvalInFlight.Contains(flightKey))
             {
                 return;
             }
@@ -37,8 +37,8 @@ public partial class TriadSession
                 return;
             }
 
-            previewEvalInFlight.Add(flightKey);
-            evalGeneration = previewEvalGeneration;
+            _previewEvalInFlight.Add(flightKey);
+            evalGeneration = _previewEvalGeneration;
             if (!npcEvalSnapshots.TryGetValue(cacheKey, out deckMap))
             {
                 deckMap = [];
@@ -65,9 +65,9 @@ public partial class TriadSession
                     npc,
                     rules);
 
-                lock (preGameLock)
+                lock (_preGameLock)
                 {
-                    if (evalGeneration != previewEvalGeneration)
+                    if (evalGeneration != _previewEvalGeneration)
                     {
                         return;
                     }
@@ -99,9 +99,9 @@ public partial class TriadSession
                     var capturedGeneration = evalGeneration;
                     Svc.Framework.Run(() =>
                     {
-                        lock (preGameLock)
+                        lock (_preGameLock)
                         {
-                            if (capturedGeneration != previewEvalGeneration)
+                            if (capturedGeneration != _previewEvalGeneration)
                             {
                                 return;
                             }
@@ -122,9 +122,9 @@ public partial class TriadSession
             }
             finally
             {
-                lock (preGameLock)
+                lock (_preGameLock)
                 {
-                    previewEvalInFlight.Remove(flightKey);
+                    _previewEvalInFlight.Remove(flightKey);
                 }
             }
         });

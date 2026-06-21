@@ -6,13 +6,13 @@ namespace Saucy.IPC;
 internal static class AutoRetainerIpc
 {
     [EzIPC("PluginState.IsBusy")]
-    private static Func<bool> IsBusyRpc = null!;
+    public static Func<bool> IsBusyRpc = null!;
 
     [EzIPC("PluginState.AreAnyRetainersAvailableForCurrentChara")]
-    private static Func<bool> AreAnyRetainersAvailableRpc = null!;
+    public static Func<bool> AreAnyRetainersAvailableRpc = null!;
 
     [EzIPC("PluginState.AbortAllTasks")]
-    private static Action AbortAllTasksRpc = null!;
+    public static Action AbortAllTasksRpc = null!;
 
     public static bool IsInstalled => SubscriptionManager.IsInitialized(IPCNames.AutoRetainer);
 

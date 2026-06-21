@@ -24,14 +24,14 @@ public partial class TriadSession
             return preGameMods;
         }
 
-        if (rememberedRegionalModsByNpcId.TryGetValue(npc.Id, out var remembered) && remembered.Count > 0)
+        if (_rememberedRegionalModsByNpcId.TryGetValue(npc.Id, out var remembered) && remembered.Count > 0)
         {
             return remembered;
         }
 
         if (TriadOptimizedDeckCacheStore.TryGetRegionalMods(npc.Id, out var persisted) && persisted.Count > 0)
         {
-            rememberedRegionalModsByNpcId[npc.Id] = persisted;
+            _rememberedRegionalModsByNpcId[npc.Id] = persisted;
             return persisted;
         }
 
@@ -63,18 +63,18 @@ public partial class TriadSession
 
         if (cloned.Count == 0)
         {
-            rememberedRegionalModsByNpcId.Remove(npc.Id);
+            _rememberedRegionalModsByNpcId.Remove(npc.Id);
             TriadOptimizedDeckCacheStore.UpsertRegionalMods(npc.Id, cloned);
             return;
         }
 
-        if (rememberedRegionalModsByNpcId.TryGetValue(npc.Id, out var existing) &&
+        if (_rememberedRegionalModsByNpcId.TryGetValue(npc.Id, out var existing) &&
             TriadOptimizerSessionKey.RegionModsEqual(existing, cloned))
         {
             return;
         }
 
-        rememberedRegionalModsByNpcId[npc.Id] = cloned;
+        _rememberedRegionalModsByNpcId[npc.Id] = cloned;
         TriadOptimizedDeckCacheStore.UpsertRegionalMods(npc.Id, cloned);
     }
 
@@ -172,7 +172,7 @@ public partial class TriadSession
             return null;
         }
 
-        lock (preGameLock)
+        lock (_preGameLock)
         {
             return TryGetDeckPreviewDataLocked(npc, deckId, ResolvePreviewRulesForNpc(npc));
         }
@@ -220,7 +220,7 @@ public partial class TriadSession
 
     private void RefreshPreGameBestFromPreviewEval(TriadNpc npc, IEnumerable<TriadGameModifier> regionMods)
     {
-        lock (preGameLock)
+        lock (_preGameLock)
         {
             if (ShouldBuildOptimizedDeck())
             {
@@ -242,14 +242,14 @@ public partial class TriadSession
             return;
         }
 
-        lock (preGameLock)
+        lock (_preGameLock)
         {
-            if (!HasOptimizedDeckApplied || optimizerTargetDeckId < 0)
+            if (!HasOptimizedDeckApplied || _optimizerTargetDeckId < 0)
             {
                 return;
             }
 
-            if (!preGameDecks.TryGetValue(optimizerTargetDeckId, out var deckData) ||
+            if (!preGameDecks.TryGetValue(_optimizerTargetDeckId, out var deckData) ||
                 deckData?.solverDeck == null)
             {
                 return;
@@ -259,7 +259,7 @@ public partial class TriadSession
                              IsStaleZeroPreview(deckData.chance);
 
             ScheduleOptimizedDeckPreviewEval(
-                optimizerTargetDeckId,
+                _optimizerTargetDeckId,
                 deckData.solverDeck,
                 npc,
                 preGameMods,
@@ -297,7 +297,7 @@ public partial class TriadSession
 
         var parseCtx = new GameUIParser();
         List<DeckData> decksToEval;
-        lock (preGameLock)
+        lock (_preGameLock)
         {
             decksToEval = [.. EnumerateSimmableProfileDecks(profileDecks, parseCtx)];
         }
@@ -327,9 +327,9 @@ public partial class TriadSession
             return false;
         }
 
-        lock (preGameLock)
+        lock (_preGameLock)
         {
-            foreach (var flightKey in previewEvalInFlight)
+            foreach (var flightKey in _previewEvalInFlight)
             {
                 if (flightKey.StartsWith($"{cacheKey}:", StringComparison.Ordinal))
                 {

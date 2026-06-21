@@ -3,6 +3,7 @@ using Saucy.IPC;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 namespace Saucy.TripleTriad.UI;
 
 public partial class TriadSession
@@ -24,46 +25,46 @@ public partial class TriadSession
     private static readonly TimeSpan MoveHighlightGracePeriod = TimeSpan.FromMilliseconds(800);
     private static readonly List<TriadCard> UnlockedDeckSlots = [null, null, null, null, null];
 
-    private readonly object preGameLock = new();
-    private readonly HashSet<string> previewEvalInFlight = [];
+    private readonly Lock _preGameLock = new();
+    private readonly HashSet<string> _previewEvalInFlight = [];
 
-    private readonly Dictionary<int, List<TriadGameModifier>> rememberedRegionalModsByNpcId = new();
-    private string cachedDeckSlottedSessionKey = string.Empty;
+    private readonly Dictionary<int, List<TriadGameModifier>> _rememberedRegionalModsByNpcId = new();
+    private string _cachedDeckSlottedSessionKey = string.Empty;
 
     public TriadNpc currentNpc;
 
-    private int deckSelectPostWriteCooldownFrames;
-    private float? deferredPostMatchEstWinChance;
-    private TriadDeck deferredPostMatchOptimizedDeck;
+    private int _deckSelectPostWriteCooldownFrames;
+    private float? _deferredPostMatchEstWinChance;
+    private TriadDeck _deferredPostMatchOptimizedDeck;
     public bool hasMove;
 
-    private int lastAppliedRunTargetNpcId = -1;
+    private int _lastAppliedRunTargetNpcId = -1;
 
     public TriadNpc lastGameNpc;
-    private string lastOptimizerSkipKey = string.Empty;
+    private string _lastOptimizerSkipKey = string.Empty;
     public int moveBoardIdx;
     public int moveCardIdx;
-    private DateTime? moveReadyUtc;
-    private int navigationOptimizerRetryCount;
-    private string navigationOptimizerRetrySessionKey = string.Empty;
+    private DateTime? _moveReadyUtc;
+    private int _navigationOptimizerRetryCount;
+    private string _navigationOptimizerRetrySessionKey = string.Empty;
 
     public Dictionary<string, Dictionary<int, DeckData>> npcEvalSnapshots = [];
-    private int optimizerPassId;
-    private string optimizerSessionKey = string.Empty;
-    private string optimizerStartBlockedSessionKey = string.Empty;
-    private DateTime optimizerStartBlockedUntilUtc = DateTime.MinValue;
-    private int optimizerTargetDeckId = -1;
-    private bool optimizerTimedOut;
-    private bool pauseOptimizerForActiveTriad;
-    private bool pauseOptimizerForNavmesh;
-    private bool pauseOptimizerForSolver;
+    private int _optimizerPassId;
+    private string _optimizerSessionKey = string.Empty;
+    private string _optimizerStartBlockedSessionKey = string.Empty;
+    private DateTime _optimizerStartBlockedUntilUtc = DateTime.MinValue;
+    private int _optimizerTargetDeckId = -1;
+    private bool _optimizerTimedOut;
+    private bool _pauseOptimizerForActiveTriad;
+    private bool _pauseOptimizerForNavmesh;
+    private bool _pauseOptimizerForSolver;
 
     public int preGameBestId = -1;
     public Dictionary<int, DeckData> preGameDecks = [];
     public List<TriadGameModifier> preGameMods = [];
 
     public TriadNpc preGameNpc;
-    private int previewEvalGeneration;
+    private int _previewEvalGeneration;
 
     public TriadProfileDeckReader profileGS;
 
@@ -76,7 +77,7 @@ public partial class TriadSession
     public TriadGameScreenMemory DebugScreenMemory { get; } = new();
     public bool HasOptimizedDeckApplied { get; private set; }
 
-    public int OptimizedDeckSlotId => HasOptimizedDeckApplied ? optimizerTargetDeckId : -1;
+    public int OptimizedDeckSlotId => HasOptimizedDeckApplied ? _optimizerTargetDeckId : -1;
     public bool HasErrors => status != Status.NoErrors;
 
     public string GetExpectedSaucyDeckName() =>
@@ -160,11 +161,11 @@ public partial class TriadSession
         int deckId;
         string deckName;
         DeckData deckData;
-        lock (preGameLock)
+        lock (_preGameLock)
         {
-            if (ShouldBuildOptimizedDeck() && HasOptimizedDeckApplied && optimizerTargetDeckId >= 0)
+            if (ShouldBuildOptimizedDeck() && HasOptimizedDeckApplied && _optimizerTargetDeckId >= 0)
             {
-                deckId = optimizerTargetDeckId;
+                deckId = _optimizerTargetDeckId;
             }
             else
             {
@@ -206,7 +207,7 @@ public partial class TriadSession
                                     TriadOptimizedDeckCacheValidator.ShouldRebuildDeckForNewCards(sessionKey, npc.Id);
 
         var hasProfileSaucyDeck = false;
-        lock (preGameLock)
+        lock (_preGameLock)
         {
             hasProfileSaucyDeck = TryFindSaucyDeckProfileSlot(npc, out var _);
         }
@@ -242,9 +243,9 @@ public partial class TriadSession
             return WithFallbackNote("Waiting for vnavmesh…");
         }
 
-        if (!optimizerTimedOut && !OptimizerInProgress && !HasOptimizedDeckApplied)
+        if (!_optimizerTimedOut && !OptimizerInProgress && !HasOptimizedDeckApplied)
         {
-            lock (preGameLock)
+            lock (_preGameLock)
             {
                 if (IsOptimizerStartBlockedForSessionLocked(sessionKey))
                 {
@@ -270,7 +271,7 @@ public partial class TriadSession
             return "Waiting for optimized deck…";
         }
 
-        if (optimizerTimedOut && !HasOptimizedDeckApplied)
+        if (_optimizerTimedOut && !HasOptimizedDeckApplied)
         {
             return WithFallbackNote("Last build timed out · still generating new…");
         }
@@ -282,7 +283,7 @@ public partial class TriadSession
         !hasMove ||
         (TriadRunSession.ModuleEnabled && !TriadBuddyIntegration.IsLoaded()) ||
         TriadCardFarmSession.IsModeActive() ||
-        (moveReadyUtc.HasValue && DateTime.UtcNow - moveReadyUtc.Value >= MoveHighlightGracePeriod);
+        (_moveReadyUtc.HasValue && DateTime.UtcNow - _moveReadyUtc.Value >= MoveHighlightGracePeriod);
 
     public class DeckData
     {

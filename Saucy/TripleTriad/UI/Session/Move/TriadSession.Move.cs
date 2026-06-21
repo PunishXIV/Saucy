@@ -35,8 +35,8 @@ public partial class TriadSession
             lastGameNpc = currentNpc;
         }
 
-        pauseOptimizerForActiveTriad = stateOb != null && TriadUiState.IsBoardVisible();
-        if (pauseOptimizerForActiveTriad)
+        _pauseOptimizerForActiveTriad = stateOb != null && TriadUiState.IsBoardVisible();
+        if (_pauseOptimizerForActiveTriad)
         {
             if (!activeTriadBoardWorkSuspended)
             {
@@ -85,7 +85,7 @@ public partial class TriadSession
 
     private void RunSolverAndCommit()
     {
-        pauseOptimizerForSolver = true;
+        _pauseOptimizerForSolver = true;
         UpdateDeckOptimizerPause();
 
         try
@@ -113,7 +113,7 @@ public partial class TriadSession
             hasMove = moveCardIdx >= 0 && moveBoardIdx >= 0;
             if (hasMove && !hadMove)
             {
-                moveReadyUtc = DateTime.UtcNow;
+                _moveReadyUtc = DateTime.UtcNow;
             }
         }
         catch (Exception ex)
@@ -123,7 +123,7 @@ public partial class TriadSession
         }
         finally
         {
-            pauseOptimizerForSolver = false;
+            _pauseOptimizerForSolver = false;
             UpdateDeckOptimizerPause();
         }
     }
@@ -139,7 +139,7 @@ public partial class TriadSession
         hasMove = false;
         moveCardIdx = -1;
         moveBoardIdx = -1;
-        moveReadyUtc = null;
+        _moveReadyUtc = null;
     }
 
     internal void InvalidatePendingMoveCalc() => ClearMove();

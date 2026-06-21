@@ -12,12 +12,12 @@ public partial class TriadSession
             return false;
         }
 
-        return optimizerTimedOut;
+        return _optimizerTimedOut;
     }
 
     public bool ShouldTryVisibleSaucyDeckRowSelect()
     {
-        lock (preGameLock)
+        lock (_preGameLock)
         {
             return ShouldBuildOptimizedDeck() &&
                    !ShouldUseOptimizerDeckSelectFallbackLocked() &&
@@ -43,9 +43,9 @@ public partial class TriadSession
     {
         if (ShouldBuildOptimizedDeck())
         {
-            if (HasOptimizedDeckApplied && optimizerTargetDeckId >= 0)
+            if (HasOptimizedDeckApplied && _optimizerTargetDeckId >= 0)
             {
-                return optimizerTargetDeckId;
+                return _optimizerTargetDeckId;
             }
 
             if (ShouldUseOptimizerDeckSelectFallbackLocked())
@@ -73,7 +73,7 @@ public partial class TriadSession
             return false;
         }
 
-        lock (preGameLock)
+        lock (_preGameLock)
         {
             if (preGameNpc == null)
             {
@@ -176,14 +176,14 @@ public partial class TriadSession
 
     public void TickDeckSelectPostWriteCooldown()
     {
-        if (deckSelectPostWriteCooldownFrames > 0)
+        if (_deckSelectPostWriteCooldownFrames > 0)
         {
-            deckSelectPostWriteCooldownFrames--;
+            _deckSelectPostWriteCooldownFrames--;
         }
     }
 
     public void BeginDeckSelectPostWriteCooldown() =>
-        deckSelectPostWriteCooldownFrames = DeckSelectPostProfileWriteFrames;
+        _deckSelectPostWriteCooldownFrames = DeckSelectPostProfileWriteFrames;
 
     public bool IsDeckSelectPrepBlocking(bool autoPickDeck)
     {
@@ -192,7 +192,7 @@ public partial class TriadSession
             return false;
         }
 
-        if (deckSelectPostWriteCooldownFrames > 0)
+        if (_deckSelectPostWriteCooldownFrames > 0)
         {
             return true;
         }
@@ -209,9 +209,9 @@ public partial class TriadSession
 
         var kickPreviewEval = false;
         TriadNpc previewNpc = null;
-        lock (preGameLock)
+        lock (_preGameLock)
         {
-            if (HasOptimizedDeckApplied && optimizerTargetDeckId >= 0)
+            if (HasOptimizedDeckApplied && _optimizerTargetDeckId >= 0)
             {
                 return false;
             }
@@ -252,7 +252,7 @@ public partial class TriadSession
             return false;
         }
 
-        lock (preGameLock)
+        lock (_preGameLock)
         {
             foreach (var candidate in GetOrderedDeckCandidatesLocked(autoPickDeck, manualDeckIndex))
             {
@@ -310,9 +310,9 @@ public partial class TriadSession
 
         if (ShouldBuildOptimizedDeck())
         {
-            if (HasOptimizedDeckApplied && optimizerTargetDeckId >= 0)
+            if (HasOptimizedDeckApplied && _optimizerTargetDeckId >= 0)
             {
-                yield return optimizerTargetDeckId;
+                yield return _optimizerTargetDeckId;
                 yield break;
             }
 
@@ -406,7 +406,7 @@ public partial class TriadSession
             return false;
         }
 
-        if (HasOptimizedDeckApplied && deckId == optimizerTargetDeckId)
+        if (HasOptimizedDeckApplied && deckId == _optimizerTargetDeckId)
         {
             return IsProfileDeckSelectable(deckId);
         }

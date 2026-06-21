@@ -14,10 +14,10 @@ public partial class TriadSession
 
         EnsureNavigationDeckOptimizerStarted(npc);
 
-        lock (preGameLock)
+        lock (_preGameLock)
         {
             var sessionKey = BuildOptimizerSessionKey(npc, ResolveRegionModsForNpc(npc));
-            if (HasOptimizedDeckApplied && optimizerSessionKey == sessionKey)
+            if (HasOptimizedDeckApplied && _optimizerSessionKey == sessionKey)
             {
                 return false;
             }
@@ -53,14 +53,14 @@ public partial class TriadSession
             return;
         }
 
-        lock (preGameLock)
+        lock (_preGameLock)
         {
             if (OptimizerInProgress)
             {
                 return;
             }
             var sessionKey = BuildOptimizerSessionKey(npc, ResolveRegionModsForNpc(npc));
-            if (HasOptimizedDeckApplied && optimizerSessionKey == sessionKey)
+            if (HasOptimizedDeckApplied && _optimizerSessionKey == sessionKey)
             {
                 return;
             }
@@ -80,21 +80,21 @@ public partial class TriadSession
         }
 
         var sessionKey = BuildOptimizerSessionKey(result.Npc, ResolveRegionModsForNpc(result.Npc));
-        if (!string.Equals(navigationOptimizerRetrySessionKey, sessionKey, StringComparison.Ordinal))
+        if (!string.Equals(_navigationOptimizerRetrySessionKey, sessionKey, StringComparison.Ordinal))
         {
-            navigationOptimizerRetrySessionKey = sessionKey;
-            navigationOptimizerRetryCount = 0;
+            _navigationOptimizerRetrySessionKey = sessionKey;
+            _navigationOptimizerRetryCount = 0;
         }
 
-        if (navigationOptimizerRetryCount >= MaxNavigationOptimizerRetries)
+        if (_navigationOptimizerRetryCount >= MaxNavigationOptimizerRetries)
         {
             return false;
         }
 
-        navigationOptimizerRetryCount++;
+        _navigationOptimizerRetryCount++;
         PrintOptimizerChat(
-            $"[Saucy] Deck optimization interrupted for {result.Npc.Name}; retry {navigationOptimizerRetryCount}/{MaxNavigationOptimizerRetries}…");
-        optimizerTimedOut = false;
+            $"[Saucy] Deck optimization interrupted for {result.Npc.Name}; retry {_navigationOptimizerRetryCount}/{MaxNavigationOptimizerRetries}…");
+        _optimizerTimedOut = false;
         StartDeckOptimizer(result.Npc, ResolveRegionModsForNpc(result.Npc), navigationRequest: true);
         return true;
     }

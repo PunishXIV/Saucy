@@ -71,19 +71,19 @@ public partial class TriadSession
                  TriadDeckOptimizerJobs.IsRunningForSessionKey(optimizerKey) &&
                  TriadDeckOptimizerJobs.TryGetActivePassIdForNpc(npc.Id, out var activePassId))
         {
-            optimizerPassId = activePassId;
+            _optimizerPassId = activePassId;
             return;
         }
 
         if (!premadeRequest &&
             HasOptimizedDeckApplied &&
-            optimizerKey == optimizerSessionKey &&
+            optimizerKey == _optimizerSessionKey &&
             !TriadOptimizedDeckCacheValidator.ShouldRebuildDeckForNewCards(optimizerKey, npc.Id))
         {
             return;
         }
 
-        lock (preGameLock)
+        lock (_preGameLock)
         {
             if (forceRebuild)
             {
@@ -134,7 +134,7 @@ public partial class TriadSession
             return;
         }
 
-        lastOptimizerSkipKey = string.Empty;
+        _lastOptimizerSkipKey = string.Empty;
 
         PrintOptimizerChat($"[Saucy] Optimizing deck for {npc.Name}...");
 
@@ -152,23 +152,23 @@ public partial class TriadSession
             return;
         }
 
-        optimizerTimedOut = false;
+        _optimizerTimedOut = false;
         HasOptimizedDeckApplied = false;
-        optimizerTargetDeckId = -1;
-        optimizerSessionKey = optimizerKey;
-        optimizerPassId = passId;
+        _optimizerTargetDeckId = -1;
+        _optimizerSessionKey = optimizerKey;
+        _optimizerPassId = passId;
     }
 
     internal void OnDeckOptimizerJobFinished(TriadDeckOptimizerResult result)
     {
-        if (result.PassId != optimizerPassId)
+        if (result.PassId != _optimizerPassId)
         {
             return;
         }
 
-        lock (preGameLock)
+        lock (_preGameLock)
         {
-            if (result.PassId != optimizerPassId)
+            if (result.PassId != _optimizerPassId)
             {
                 return;
             }
@@ -197,8 +197,8 @@ public partial class TriadSession
 
                 if (TriadUiState.IsBoardVisible() && !result.NavigationRequest)
                 {
-                    deferredPostMatchOptimizedDeck = result.Deck;
-                    deferredPostMatchEstWinChance = result.BestEstWinChance;
+                    _deferredPostMatchOptimizedDeck = result.Deck;
+                    _deferredPostMatchEstWinChance = result.BestEstWinChance;
                     return;
                 }
 
@@ -258,7 +258,7 @@ public partial class TriadSession
             CancelOptimizerIfRunningAfterSkip();
             var skipKey = $"{BuildOptimizerSessionKey(npc, regionMods)}:profile";
             var message =
-                $"[Saucy] Using existing optimized deck for {npc.Name} in profile slot {optimizerTargetDeckId + 1}.";
+                $"[Saucy] Using existing optimized deck for {npc.Name} in profile slot {_optimizerTargetDeckId + 1}.";
             AnnounceOptimizerSkipOnce(skipKey, message);
             return true;
         }
@@ -275,7 +275,7 @@ public partial class TriadSession
         }
 
         CancelDeckOptimizerJob(userCancelled: true);
-        optimizerTimedOut = false;
+        _optimizerTimedOut = false;
     }
 
     private bool TrySkipPremadeDeckLocked(TriadNpc npc, List<TriadGameModifier> regionMods)
@@ -299,7 +299,7 @@ public partial class TriadSession
         }
 
         TriadDeckLog.Print(
-            $"[Saucy] Using existing optimized deck for {npc.Name} in profile slot {optimizerTargetDeckId + 1}.");
+            $"[Saucy] Using existing optimized deck for {npc.Name} in profile slot {_optimizerTargetDeckId + 1}.");
         return true;
     }
 
@@ -315,7 +315,7 @@ public partial class TriadSession
         }
 
         var sessionKey = BuildOptimizerSessionKey(npc, regionMods);
-        if (string.Equals(cachedDeckSlottedSessionKey, sessionKey, StringComparison.Ordinal))
+        if (string.Equals(_cachedDeckSlottedSessionKey, sessionKey, StringComparison.Ordinal))
         {
             return true;
         }
@@ -348,7 +348,7 @@ public partial class TriadSession
             return false;
         }
 
-        cachedDeckSlottedSessionKey = sessionKey;
+        _cachedDeckSlottedSessionKey = sessionKey;
         preGameNpc = npc;
         lastGameNpc = npc;
 
@@ -383,11 +383,11 @@ public partial class TriadSession
             return false;
         }
 
-        optimizerTargetDeckId = targetDeckId;
+        _optimizerTargetDeckId = targetDeckId;
         HasOptimizedDeckApplied = true;
         preGameBestId = targetDeckId;
-        optimizerSessionKey = sessionKey;
-        optimizerTimedOut = false;
+        _optimizerSessionKey = sessionKey;
+        _optimizerTimedOut = false;
         ClearOptimizerStartBlockLocked();
         ScheduleOptimizedDeckPreviewEval(targetDeckId, deckData.solverDeck, npc, regionMods);
 
@@ -400,7 +400,7 @@ public partial class TriadSession
 
     private void MarkOptimizerPassFailedLocked(TriadDeckOptimizerResult result)
     {
-        optimizerTimedOut = true;
+        _optimizerTimedOut = true;
         var npc = result.Npc ?? preGameNpc;
         if (npc == null)
         {
@@ -481,10 +481,10 @@ public partial class TriadSession
             return false;
         }
 
-        optimizerTargetDeckId = deckIdx;
+        _optimizerTargetDeckId = deckIdx;
         HasOptimizedDeckApplied = true;
         preGameBestId = deckIdx;
-        optimizerSessionKey = BuildOptimizerSessionKey(npc, regionMods);
+        _optimizerSessionKey = BuildOptimizerSessionKey(npc, regionMods);
         preGameDecks[deckIdx] = deckData;
 
         DebugScreenMemory.UpdatePlayerDeck(deckData.solverDeck);
@@ -572,14 +572,14 @@ public partial class TriadSession
             return;
         }
 
-        optimizerTargetDeckId = targetDeckId;
+        _optimizerTargetDeckId = targetDeckId;
         HasOptimizedDeckApplied = true;
         preGameBestId = targetDeckId;
-        optimizerSessionKey = BuildOptimizerSessionKey(preGameNpc, preGameMods);
-        optimizerTimedOut = false;
+        _optimizerSessionKey = BuildOptimizerSessionKey(preGameNpc, preGameMods);
+        _optimizerTimedOut = false;
         ClearOptimizerStartBlockLocked();
-        navigationOptimizerRetryCount = 0;
-        navigationOptimizerRetrySessionKey = string.Empty;
+        _navigationOptimizerRetryCount = 0;
+        _navigationOptimizerRetrySessionKey = string.Empty;
         RecordOptimizedDeckBuiltUtc(preGameNpc);
 
         var deckName = $"{preGameNpc.Name} (Saucy)";
@@ -723,10 +723,10 @@ public partial class TriadSession
             return;
         }
 
-        lock (preGameLock)
+        lock (_preGameLock)
         {
             if (!HasOptimizedDeckApplied ||
-                optimizerTargetDeckId != deckId ||
+                _optimizerTargetDeckId != deckId ||
                 preGameNpc?.Id != npc.Id)
             {
                 return;
@@ -789,7 +789,7 @@ public partial class TriadSession
         }
 
         DeckData deckData;
-        lock (preGameLock)
+        lock (_preGameLock)
         {
             if (!preGameDecks.TryGetValue(deckId, out deckData) || deckData == null)
             {

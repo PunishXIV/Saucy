@@ -31,7 +31,7 @@ public partial class TriadSession
         ApplyRunTargetNpc(npc, startOptimizer, forNavigation);
     }
 
-    public void ResetRunTargetNpcSession() => lastAppliedRunTargetNpcId = -1;
+    public void ResetRunTargetNpcSession() => _lastAppliedRunTargetNpcId = -1;
 
     public void KickAutomationDeckOptimizer()
     {
@@ -142,7 +142,7 @@ public partial class TriadSession
             return;
         }
 
-        var npcChanged = lastAppliedRunTargetNpcId != npc.Id;
+        var npcChanged = _lastAppliedRunTargetNpcId != npc.Id;
         var shouldManageDeck = C.UseSimmedDeck || TriadCardFarmSession.IsModeActive();
 
         preGameNpc = npc;
@@ -155,11 +155,11 @@ public partial class TriadSession
 
         if (npcChanged)
         {
-            lastAppliedRunTargetNpcId = npc.Id;
+            _lastAppliedRunTargetNpcId = npc.Id;
             preGameBestId = -1;
             var sessionKey = BuildOptimizerSessionKey(npc, ResolveRegionModsForNpc(npc));
             if (!OptimizerInProgress ||
-                !string.Equals(optimizerSessionKey, sessionKey, StringComparison.Ordinal))
+                !string.Equals(_optimizerSessionKey, sessionKey, StringComparison.Ordinal))
             {
                 ResetDeckOptimizer();
             }
@@ -269,7 +269,7 @@ public partial class TriadSession
             return;
         }
 
-        lock (preGameLock)
+        lock (_preGameLock)
         {
             var prefix = npc.Name + "|";
             var keysToRemove = new List<string>();
@@ -287,9 +287,9 @@ public partial class TriadSession
                 npcEvalSnapshots.Remove(key);
             }
 
-            previewEvalGeneration++;
+            _previewEvalGeneration++;
             var staleFlights = new List<string>();
-            foreach (var flightKey in previewEvalInFlight)
+            foreach (var flightKey in _previewEvalInFlight)
             {
                 if (flightKey.StartsWith(prefix, StringComparison.Ordinal))
                 {
@@ -299,7 +299,7 @@ public partial class TriadSession
 
             foreach (var flightKey in staleFlights)
             {
-                previewEvalInFlight.Remove(flightKey);
+                _previewEvalInFlight.Remove(flightKey);
             }
 
             foreach (var deckData in preGameDecks.Values)
@@ -419,7 +419,7 @@ public partial class TriadSession
                 return;
             }
 
-            var preserveOptimizedDeck = HasOptimizedDeckApplied && optimizerTargetDeckId >= 0;
+            var preserveOptimizedDeck = HasOptimizedDeckApplied && _optimizerTargetDeckId >= 0;
 
             preGameNpc = newPreGameNpc ?? preGameNpc;
             preGameMods = newPreGameMods;
@@ -441,7 +441,7 @@ public partial class TriadSession
 
             if (preserveOptimizedDeck)
             {
-                preGameBestId = optimizerTargetDeckId;
+                preGameBestId = _optimizerTargetDeckId;
                 return;
             }
 
@@ -455,7 +455,7 @@ public partial class TriadSession
             {
                 if (ShouldBuildOptimizedDeck())
                 {
-                    lock (preGameLock)
+                    lock (_preGameLock)
                     {
                         TryEnsureOptimizedDeckForPrepLocked();
                     }

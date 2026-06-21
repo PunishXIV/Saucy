@@ -95,7 +95,7 @@ public partial class TriadSession
             return $"Ready in profile slot {SaucyProfileDeckSlotIndex + 1}";
         }
 
-        if (optimizerTimedOut && preGameNpc?.Id == npc.Id)
+        if (_optimizerTimedOut && preGameNpc?.Id == npc.Id)
         {
             return "Last build timed out; try again.";
         }
@@ -116,7 +116,7 @@ public partial class TriadSession
         }
 
         var sessionKey = BuildOptimizerSessionKey(npc, []);
-        if (optimizerSessionKey != sessionKey)
+        if (_optimizerSessionKey != sessionKey)
         {
             return false;
         }
