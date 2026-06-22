@@ -7,6 +7,7 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.Cactpot;
 using Saucy.Framework;
+using Saucy.IPC;
 using System;
 using System.Linq;
 using static ECommons.GenericHelpers;
@@ -18,6 +19,7 @@ public unsafe class MiniCactpot : Module
     private const uint ConfirmButtonNodeId = 67;
 
     private const string TalkThrottleKey = "Saucy.MiniCactpot.Talk";
+    private const string BrokerSelectThrottleKey = "Saucy.MiniCactpot.BrokerSelect";
 
     private readonly int[] scratchState = new int[9];
     private readonly CactpotSolver solver = new();
@@ -50,6 +52,7 @@ public unsafe class MiniCactpot : Module
         Svc.Framework.Update -= OnFrameworkUpdate;
         ObjectHelper.ClearTrackedObjects(CactpotNpcs.MiniScope);
         ticketFlow.Clear();
+        CactpotSessionActivity.ResetMini();
     }
 
     private void OnLotterySetup(AddonEvent type, AddonArgs args)
@@ -76,6 +79,8 @@ public unsafe class MiniCactpot : Module
 
     private void OnFrameworkUpdate(IFramework framework)
     {
+        SyncYesAlreadyPauseState();
+
         if (InSaucer)
         {
             RefreshTicketFlow();
@@ -83,56 +88,87 @@ public unsafe class MiniCactpot : Module
 
         TryAdvanceDialogue();
         HandleYesno();
+        HandleBrokerSelectString();
 
         if (InSaucer && IsInTicketFlow() && ObjectHelper.IsTargeting(CactpotNpcs.MiniScope) && TryGetLotteryAddon(out var addon))
         {
             ProcessAddon(addon);
         }
+
+        if (C.IsModuleEnabled(ModuleNames.MiniCactpot))
+        {
+            YesAlready.SyncForGameActivity(GoldSaucerGameActivity.IsAnyGamePlaying());
+        }
+
+        ClearTicketFlowIfIdle();
     }
+
+    private bool ShouldPauseYesAlready() =>
+        CactpotDialogueHelper.IsMiniBoardVisible() ||
+        (ObjectHelper.IsTargeting(CactpotNpcs.MiniScope) && HasTicketFlowUi());
+
+    private bool HasTicketFlowUi() =>
+        CactpotDialogueHelper.HasNpcDialogueUi() ||
+        TryGetLotteryAddon(out var _);
+
+    private void ClearTicketFlowIfIdle()
+    {
+        if (ShouldPauseYesAlready())
+        {
+            return;
+        }
+
+        ticketFlow.Clear();
+    }
+
+    private void SyncYesAlreadyPauseState() =>
+        CactpotSessionActivity.SyncMini(InSaucer, ShouldPauseYesAlready());
 
     private void TryAdvanceDialogue()
     {
-        if (!InSaucer || !ObjectHelper.HasInitiatedDialogue(CactpotNpcs.MiniScope))
+        if (!InSaucer)
         {
             return;
         }
 
-        if (SelectYesnoHelper.TryGetVisible(out var yesno) &&
-            !SelectYesnoHelper.ShouldPressLotteryYesno(yesno, AgentId.LotteryDaily))
+        CactpotDialogueHelper.TryAdvanceTalk(
+            CactpotNpcs.MiniScope,
+            TalkThrottleKey,
+            AgentId.LotteryDaily);
+    }
+
+    private void HandleBrokerSelectString()
+    {
+        if (!InSaucer)
         {
             return;
         }
 
-        TalkHelper.TryAdvance(TalkThrottleKey);
+        if (CactpotDialogueHelper.TryHandleBrokerSelectString(
+                CactpotNpcs.MiniScope,
+                AgentId.LotteryDaily,
+                BrokerSelectThrottleKey,
+                MinigameInputPacing.ClickIntervalMs))
+        {
+            ticketFlow.Mark();
+        }
     }
 
     private void HandleYesno()
     {
-        if (!InSaucer || !NpcDialogueGate.CanAutomateYesno(CactpotNpcs.MiniScope, IsInTicketFlow()))
+        if (!InSaucer)
         {
             return;
         }
 
-        if (QuestDialogueGuard.ShouldBlockYesno(ObjectHelper.IsTargeting(CactpotNpcs.MiniScope)))
+        if (CactpotDialogueHelper.TryHandleLotteryYesno(
+                CactpotNpcs.MiniScope,
+                IsInTicketFlow(),
+                AgentId.LotteryDaily,
+                "MiniCactpotTicketYes",
+                MinigameInputPacing.ClickIntervalMs))
         {
-            return;
-        }
-
-        if (!SelectYesnoHelper.TryGetVisible(out var yesno) ||
-            !SelectYesnoHelper.ShouldPressLotteryYesno(yesno, AgentId.LotteryDaily))
-        {
-            return;
-        }
-
-        if (!EzThrottler.Throttle("MiniCactpotTicketYes", MinigameInputPacing.ClickIntervalMs))
-        {
-            return;
-        }
-
-        ticketFlow.Mark();
-        if (!SelectYesnoHelper.PressYes(yesno))
-        {
-            LogVerbose("SelectYesno Yes press failed.");
+            ticketFlow.Mark();
         }
     }
 
@@ -143,16 +179,11 @@ public unsafe class MiniCactpot : Module
             ticketFlow.Mark,
             HasTicketFlowUi);
 
-    private bool HasTicketFlowUi() =>
-        TalkHelper.IsVisible() ||
-        SelectStringHelper.IsNpcListMenuVisible() ||
-        SelectYesnoHelper.IsVisible() ||
-        TryGetLotteryAddon(out var _);
-
     private bool IsInTicketFlow() =>
         TryGetLotteryAddon(out var _) ||
         AgentHelper.IsActive(AgentId.LotteryDaily) ||
-        ticketFlow.IsActive;
+        ticketFlow.IsActive ||
+        (SelectYesnoHelper.IsVisible() && ObjectHelper.IsTargeting(CactpotNpcs.MiniScope));
 
     private void ProcessAddon(AddonLotteryDaily* addon)
     {

@@ -1,3 +1,4 @@
+using ECommons.Automation;
 using ECommons.Automation.UIInput;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.UI;
@@ -13,8 +14,35 @@ namespace Saucy.Framework;
 public static unsafe class SelectYesnoHelper
 {
     public const uint PromptTextNodeId = 2;
+
+    /// <summary>Standard SelectYesno (Yes=8, No=11). Skip when ticket layout node 12 is visible.</summary>
     public const uint YesButtonNodeId = 8;
+
     public const uint NoButtonNodeId = 11;
+
+    /// <summary>Lottery "buy another ticket?" (Yes=11, No=12 HoldButton).</summary>
+    public const uint TicketPurchaseYesButtonNodeId = 11;
+
+    public const uint TicketPurchaseNoButtonNodeId = 12;
+
+    /// <summary>LotteryWeekly nested SelectString follow-up layout.</summary>
+    public const uint AlternateYesButtonNodeId = 13;
+
+    public const uint AlternateNoButtonNodeId = 10;
+
+    private static readonly uint[] YesButtonNodeCandidates =
+    [
+        TicketPurchaseYesButtonNodeId,
+        AlternateYesButtonNodeId,
+        YesButtonNodeId,
+    ];
+
+    private static readonly (uint Yes, uint No)[] YesNoButtonNodeLayouts =
+    [
+        (TicketPurchaseYesButtonNodeId, TicketPurchaseNoButtonNodeId),
+        (AlternateYesButtonNodeId, AlternateNoButtonNodeId),
+        (YesButtonNodeId, NoButtonNodeId),
+    ];
 
     private const uint MaxScannedPayoutTextNodeId = 32;
 
@@ -117,7 +145,9 @@ public static unsafe class SelectYesnoHelper
 
     public static bool ShouldPressLotteryYesno(AddonSelectYesno* yesno, AgentId lotteryAgent) =>
         IsSafeMinigameYesno(yesno) &&
-        (IsLotteryAgentAddon(&yesno->AtkUnitBase, lotteryAgent) || IsArcadeYesno(yesno));
+        (IsLotteryAgentAddon(&yesno->AtkUnitBase, lotteryAgent) ||
+         IsArcadeYesno(yesno) ||
+         AgentHelper.IsActive(lotteryAgent));
 
     public static bool ShouldPressTriadYesno(AddonSelectYesno* yesno) => IsTriadYesno(yesno);
 
@@ -217,8 +247,7 @@ public static unsafe class SelectYesnoHelper
     }
 
     public static bool HasYesnoButtons(AddonSelectYesno* yesno) =>
-        TryGetVisibleButtonByNodeId(yesno, YesButtonNodeId, out var _) &&
-        TryGetVisibleButtonByNodeId(yesno, NoButtonNodeId, out var _);
+        yesno != null && (TryResolveYesNoButtons(yesno, out _, out _) || TryResolveYesButton(yesno, out _));
 
     public static bool IsArcadeDoubleDownYesno(AddonSelectYesno* yesno) =>
         yesno != null &&
@@ -379,14 +408,21 @@ public static unsafe class SelectYesnoHelper
 
     private static bool PressCallback(AddonSelectYesno* yesno, int callbackId, Action<AddonMaster.SelectYesno> fallback)
     {
-        try
+        var wantsYes = callbackId == 0;
+        if (wantsYes && TryResolveYesButton(yesno, out var yesButton) &&
+            TryClickStructButton(yesno, yesButton, forceEnable: true))
         {
-            yesno->FireCallbackInt(callbackId);
             return true;
         }
-        catch (Exception ex)
+
+        if (TryResolveYesNoButtons(yesno, out yesButton, out var noButton))
         {
-            Svc.Log.Verbose(ex, $"[SelectYesno] FireCallbackInt({callbackId}) failed; falling back to AddonMaster");
+            var targetButton = wantsYes ? yesButton : noButton;
+            if (targetButton != null &&
+                TryClickStructButton(yesno, targetButton, forceEnable: wantsYes))
+            {
+                return true;
+            }
         }
 
         try
@@ -399,21 +435,181 @@ public static unsafe class SelectYesnoHelper
             Svc.Log.Verbose(ex, $"[SelectYesno] AddonMaster fallback failed for callback {callbackId}");
         }
 
-        var nodeId = callbackId == 0 ? YesButtonNodeId : NoButtonNodeId;
-        if (TryGetVisibleButtonByNodeId(yesno, nodeId, out var button))
+        if (wantsYes)
         {
-            try
+            foreach (var nodeId in YesButtonNodeCandidates)
             {
-                button->ClickAddonButton(&yesno->AtkUnitBase);
-                yesno->AtkUnitBase.Update(0);
-                return true;
+                if (TryGetVisibleButtonByNodeId(yesno, nodeId, out var button) &&
+                    TryClickButton(yesno, button, forceEnable: true))
+                {
+                    return true;
+                }
             }
-            catch (Exception ex)
+        }
+
+        try
+        {
+            Callback.Fire(&yesno->AtkUnitBase, true, callbackId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Verbose(ex, $"[SelectYesno] Callback.Fire({callbackId}) failed");
+        }
+
+        try
+        {
+            yesno->FireCallbackInt(callbackId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Verbose(ex, $"[SelectYesno] FireCallbackInt({callbackId}) failed");
+        }
+
+        return false;
+    }
+
+    private static bool TryResolveYesButton(AddonSelectYesno* yesno, out AtkComponentButton* yesButton)
+    {
+        yesButton = null;
+        if (yesno == null)
+        {
+            return false;
+        }
+
+        if (HasVisibleStructButton(yesno->YesButton, out yesButton))
+        {
+            return true;
+        }
+
+        foreach (var nodeId in YesButtonNodeCandidates)
+        {
+            if (nodeId == YesButtonNodeId && IsComponentNodeVisible(yesno, TicketPurchaseNoButtonNodeId))
             {
-                Svc.Log.Verbose(ex, $"[SelectYesno] Button node {nodeId} click failed for callback {callbackId}");
+                continue;
+            }
+
+            if (TryGetVisibleButtonByNodeId(yesno, nodeId, out yesButton))
+            {
+                return true;
             }
         }
 
         return false;
+    }
+
+    private static bool TryResolveYesNoButtons(
+        AddonSelectYesno* yesno,
+        out AtkComponentButton* yesButton,
+        out AtkComponentButton* noButton)
+    {
+        yesButton = null;
+        noButton = null;
+        if (yesno == null)
+        {
+            return false;
+        }
+
+        if (HasVisibleStructButton(yesno->YesButton, out yesButton) &&
+            HasVisibleStructButton(yesno->NoButton, out noButton))
+        {
+            return true;
+        }
+
+        if (TryGetVisibleButtonByNodeId(yesno, TicketPurchaseYesButtonNodeId, out yesButton) &&
+            IsComponentNodeVisible(yesno, TicketPurchaseNoButtonNodeId))
+        {
+            TryGetVisibleButtonByNodeId(yesno, TicketPurchaseNoButtonNodeId, out noButton);
+            return true;
+        }
+
+        foreach (var (yesNodeId, noNodeId) in YesNoButtonNodeLayouts)
+        {
+            if (yesNodeId == YesButtonNodeId &&
+                noNodeId == NoButtonNodeId &&
+                IsComponentNodeVisible(yesno, TicketPurchaseNoButtonNodeId))
+            {
+                continue;
+            }
+
+            if (!TryGetVisibleButtonByNodeId(yesno, yesNodeId, out yesButton))
+            {
+                continue;
+            }
+
+            if (noNodeId == TicketPurchaseNoButtonNodeId)
+            {
+                if (IsComponentNodeVisible(yesno, noNodeId))
+                {
+                    TryGetVisibleButtonByNodeId(yesno, noNodeId, out noButton);
+                    return true;
+                }
+
+                continue;
+            }
+
+            if (TryGetVisibleButtonByNodeId(yesno, noNodeId, out noButton))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsComponentNodeVisible(AddonSelectYesno* yesno, uint nodeId)
+    {
+        var componentNode = yesno->AtkUnitBase.GetComponentNodeById(nodeId);
+        if (componentNode == null)
+        {
+            return false;
+        }
+
+        return ((AtkResNode*)componentNode)->IsVisible();
+    }
+
+    private static bool HasVisibleStructButton(AtkComponentButton* button, out AtkComponentButton* resolved)
+    {
+        resolved = button;
+        if (button == null || button->AtkResNode == null)
+        {
+            resolved = null;
+            return false;
+        }
+
+        return button->AtkResNode->IsVisible();
+    }
+
+    private static bool TryClickStructButton(AddonSelectYesno* yesno, AtkComponentButton* button, bool forceEnable = false) =>
+        HasVisibleStructButton(button, out var resolved) &&
+        TryClickButton(yesno, resolved, forceEnable);
+
+    private static bool TryClickButton(AddonSelectYesno* yesno, AtkComponentButton* button, bool forceEnable = false)
+    {
+        if (button == null)
+        {
+            return false;
+        }
+
+        if (forceEnable && !button->IsEnabled)
+        {
+            TryForceEnableButton(button);
+        }
+
+        return AddonButton.TryClick(&yesno->AtkUnitBase, button, requireEnabled: !forceEnable);
+    }
+
+    private static void TryForceEnableButton(AtkComponentButton* button)
+    {
+        try
+        {
+            var flagsPtr = (ushort*)&button->AtkComponentBase.OwnerNode->AtkResNode.NodeFlags;
+            *flagsPtr ^= 1 << 5;
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Verbose(ex, "[SelectYesno] Force-enable button failed");
+        }
     }
 }

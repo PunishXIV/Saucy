@@ -1,13 +1,14 @@
 using Dalamud.Game.ClientState.Conditions;
-using FFXIVClientStructs.FFXIV.Component.GUI;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Saucy.AirForce;
+using Saucy.Cactpot;
 using Saucy.Framework;
+using Saucy.JumboCactpot;
 using Saucy.OtherGames;
-using static ECommons.GenericHelpers;
 
 namespace Saucy;
 
-internal static unsafe class GoldSaucerGameActivity
+internal static class GoldSaucerGameActivity
 {
     public static bool IsAnyGamePlaying()
     {
@@ -15,6 +16,7 @@ internal static unsafe class GoldSaucerGameActivity
             IsLimbSessionActive() ||
             IsTriadSessionActive() ||
             IsMiniCactpotSessionActive() ||
+            IsJumboCactpotSessionActive() ||
             IsAirForceSessionActive() ||
             IsGateAutoMovementActive())
         {
@@ -44,10 +46,10 @@ internal static unsafe class GoldSaucerGameActivity
          TriadCardFarmSession.SessionActive);
 
     private static bool IsMiniCactpotSessionActive() =>
-        C.IsModuleEnabled(ModuleNames.MiniCactpot) &&
-        TryGetAddonByName<AtkUnitBase>("LotteryDaily", out var addon) &&
-        addon->IsVisible &&
-        IsAddonReady(addon);
+        C.IsModuleEnabled(ModuleNames.MiniCactpot) && CactpotSessionActivity.IsMiniActive;
+
+    private static bool IsJumboCactpotSessionActive() =>
+        C.IsModuleEnabled(ModuleNames.JumboCactpot) && CactpotSessionActivity.IsJumboActive;
 
     private static bool IsAirForceSessionActive() =>
         C.IsModuleEnabled(ModuleNames.AirForceOne) &&

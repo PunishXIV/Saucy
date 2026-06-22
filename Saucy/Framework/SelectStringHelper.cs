@@ -38,6 +38,45 @@ public static unsafe class SelectStringHelper
     public static bool IsTriadYesnoMenu(AddonSelectString* menu) =>
         IsAgentYesnoMenu(menu, SelectYesnoHelper.IsTriadAddon);
 
+    public static bool TryGetLotteryDailyMenu(out AddonSelectString* menu) =>
+        TryGetAgentMenu(out menu, SelectYesnoHelper.IsLotteryDailyAddon);
+
+    public static bool TryGetLotteryWeeklyMenu(out AddonSelectString* menu) =>
+        TryGetAgentMenu(out menu, SelectYesnoHelper.IsLotteryWeeklyAddon);
+
+    public static bool IsLotteryDailyYesnoMenu(AddonSelectString* menu) =>
+        IsAgentYesnoMenu(menu, SelectYesnoHelper.IsLotteryDailyAddon);
+
+    public static bool IsLotteryWeeklyYesnoMenu(AddonSelectString* menu) =>
+        IsAgentYesnoMenu(menu, SelectYesnoHelper.IsLotteryWeeklyAddon);
+
+    public static bool TrySelectEntryContaining(AddonSelectString* menu, string textFragment)
+    {
+        if (menu == null || !IsAddonReady(&menu->AtkUnitBase) || !menu->AtkUnitBase.IsVisible)
+        {
+            return false;
+        }
+
+        try
+        {
+            var select = new AddonMaster.SelectString(menu);
+            for (var i = 0; i < select.Entries.Length; i++)
+            {
+                if (select.Entries[i].Text.Contains(textFragment, StringComparison.OrdinalIgnoreCase))
+                {
+                    select.Entries[i].Select();
+                    return true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Verbose(ex, $"[SelectString] Entry containing \"{textFragment}\" select failed");
+        }
+
+        return false;
+    }
+
     public static bool TrySelectYesEntry(AddonSelectString* menu) => TrySelectEntry(menu, YesEntryIndex);
 
     public static bool TrySelectNoEntry(AddonSelectString* menu) => TrySelectEntry(menu, NoEntryIndex);

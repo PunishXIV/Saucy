@@ -1,12 +1,12 @@
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using ECommons.Throttlers;
-using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.Cactpot;
 using Saucy.Framework;
+using Saucy.IPC;
 using System;
 using static ECommons.GenericHelpers;
 
@@ -17,12 +17,13 @@ public unsafe class JumboCactpot : Module
     private const string InputAddonName = "LotteryWeeklyInput";
     private const string RewardAddonName = "LotteryWeeklyRewardList";
     private const string TalkThrottleKey = "Saucy.JumboCactpot.Talk";
-    private const uint RewardConfirmNodeId = 49;
+    private const string CashierTalkThrottleKey = "Saucy.JumboCactpot.CashierTalk";
+    private const string CashierSelectThrottleKey = "Saucy.JumboCactpot.CashierSelect";
+    private const string CashierYesThrottleKey = "Saucy.JumboCactpot.CashierYes";
     private const int RewardWarmupMs = 700;
     private const int BrokerPickThrottleMs = 1500;
 
     private const int BrokerPurchaseEntryIndex = 0;
-    private const int JumboBrokerEntryCount = 6;
 
     private const uint InputRandomizeNodeId = 32;
     private const uint InputConfirmNodeId = 31;
@@ -52,6 +53,10 @@ public unsafe class JumboCactpot : Module
             CactpotNpcs.JumboBrokerScope,
             [CactpotNpcs.JumboBrokerBaseId],
             logLabel: CactpotNpcs.JumboBrokerScope);
+        ObjectHelper.SetTrackedObjects(
+            CactpotNpcs.CashierScope,
+            [CactpotNpcs.CashierBaseId],
+            logLabel: CactpotNpcs.CashierScope);
 
         Svc.AddonLifecycle.UnregisterListener(OnInputSetup);
         Svc.AddonLifecycle.UnregisterListener(OnInputFinalize);
@@ -81,6 +86,7 @@ public unsafe class JumboCactpot : Module
         Svc.AddonLifecycle.UnregisterListener(OnTalkUpdate);
         Svc.Framework.Update -= OnFrameworkUpdate;
         ObjectHelper.ClearTrackedObjects(CactpotNpcs.JumboBrokerScope);
+        ObjectHelper.ClearTrackedObjects(CactpotNpcs.CashierScope);
         JumboCactpotBrokerPath.Reset();
         rewardAddonSeenUtc = null;
         inputAddonSeenUtc = null;
@@ -89,6 +95,7 @@ public unsafe class JumboCactpot : Module
         inputConfirmed = false;
         ticketFlow.Clear();
         ResetCashierHandoff();
+        CactpotSessionActivity.ResetJumbo();
     }
 
     private void OnTalkUpdate(AddonEvent type, AddonArgs args)
@@ -98,7 +105,13 @@ public unsafe class JumboCactpot : Module
             ticketFlow.Mark();
         }
 
+        if (InSaucer && CactpotDialogueHelper.IsTargetingCashier())
+        {
+            cashierDialogueSeen = true;
+        }
+
         TryAdvanceTalk();
+        TryAdvanceCashierTalk();
     }
 
     private void OnInputSetup(AddonEvent type, AddonArgs args)
@@ -125,6 +138,8 @@ public unsafe class JumboCactpot : Module
         rewardAddonSeenUtc = DateTime.UtcNow;
         cashierRewardOpen = true;
         lastCashierRewardClosedUtc = null;
+        JumboCactpotBrokerPath.Reset();
+        brokerPathArmed = false;
     }
 
     private void OnRewardFinalize(AddonEvent type, AddonArgs args)
@@ -137,6 +152,8 @@ public unsafe class JumboCactpot : Module
 
     private void OnFrameworkUpdate(IFramework framework)
     {
+        SyncYesAlreadyPauseState();
+
         if (InSaucer)
         {
             TickCashierHandoff();
@@ -145,21 +162,115 @@ public unsafe class JumboCactpot : Module
         }
 
         TryAdvanceTalk();
+        TryAdvanceCashierTalk();
         HandleYesno();
+        HandleCashierYesno();
+        HandleCashierSelectString();
         HandleInputAddon();
         HandleRewardAddon();
         HandleBrokerMenu();
+
+        if (C.IsModuleEnabled(ModuleNames.JumboCactpot))
+        {
+            YesAlready.SyncForGameActivity(GoldSaucerGameActivity.IsAnyGamePlaying());
+        }
+
+        ClearSessionIfIdle();
     }
 
-    private bool IsBrokerUiBlocking() =>
-        IsJumboInputVisible() ||
-        TalkHelper.IsVisible() ||
-        SelectStringHelper.IsNpcListMenuVisible() ||
-        SelectYesnoHelper.IsVisible();
+    private bool ShouldPauseYesAlready() =>
+        CactpotDialogueHelper.IsJumboInputVisible() ||
+        CactpotDialogueHelper.IsJumboRewardListVisible() ||
+        IsWaitingForNextCashierReward() ||
+        JumboCactpotBrokerPath.IsActive ||
+        brokerPathArmed ||
+        IsCashierHandoffPending() ||
+        (IsInCashierFlow() && (CactpotDialogueHelper.IsCashierUiVisible() || AgentHelper.IsActive(AgentId.LotteryWeekly))) ||
+        (ObjectHelper.IsTargeting(CactpotNpcs.JumboBrokerScope) && HasTicketFlowUi());
 
-    private static bool IsTargetingCashier() =>
-        Svc.Targets.Target?.BaseId == CactpotNpcs.CashierBaseId ||
-        Svc.Targets.SoftTarget?.BaseId == CactpotNpcs.CashierBaseId;
+    private bool IsCashierHandoffPending() =>
+        cashierDialogueSeen &&
+        !brokerPathArmed &&
+        !JumboCactpotBrokerPath.IsActive;
+
+    private void ClearSessionIfIdle()
+    {
+        if (JumboCactpotBrokerPath.IsComplete && brokerPathArmed)
+        {
+            brokerPathArmed = false;
+        }
+
+        if (ShouldPauseYesAlready())
+        {
+            return;
+        }
+
+        ticketFlow.Clear();
+
+        if (JumboCactpotBrokerPath.IsComplete &&
+            !IsInCashierFlow() &&
+            !HasTicketFlowUi() &&
+            !IsTargetingCashier())
+        {
+            ResetCashierHandoff();
+        }
+    }
+
+    private void TryAdvanceCashierTalk()
+    {
+        if (!InSaucer || !IsInCashierFlow())
+        {
+            return;
+        }
+
+        if (CactpotDialogueHelper.TryAdvanceCashierTalk(CashierTalkThrottleKey, AgentId.LotteryWeekly))
+        {
+            ticketFlow.Mark();
+        }
+    }
+
+    private void HandleCashierSelectString()
+    {
+        if (!InSaucer || !IsInCashierFlow())
+        {
+            return;
+        }
+
+        if (CactpotDialogueHelper.TryHandleCashierSelectString(
+                CashierSelectThrottleKey,
+                MinigameInputPacing.ClickIntervalMs))
+        {
+            ticketFlow.Mark();
+        }
+    }
+
+    private void HandleCashierYesno()
+    {
+        if (!InSaucer || !IsInCashierFlow())
+        {
+            return;
+        }
+
+        if (CactpotDialogueHelper.TryHandleLotteryYesno(
+                CactpotNpcs.CashierScope,
+                inFlow: true,
+                AgentId.LotteryWeekly,
+                CashierYesThrottleKey,
+                MinigameInputPacing.ClickIntervalMs))
+        {
+            ticketFlow.Mark();
+        }
+    }
+
+    private bool IsInCashierFlow() =>
+        cashierDialogueSeen ||
+        cashierRewardOpen ||
+        IsJumboAddonReady(RewardAddonName) ||
+        (CactpotDialogueHelper.IsTargetingCashier() &&
+         (AgentHelper.IsActive(AgentId.LotteryWeekly) || ObjectHelper.HasInitiatedDialogue(CactpotNpcs.CashierScope)));
+
+    private void SyncYesAlreadyPauseState() =>
+        CactpotSessionActivity.SyncJumbo(InSaucer, ShouldPauseYesAlready());
 
     private void ResetCashierHandoff()
     {
@@ -177,10 +288,11 @@ public unsafe class JumboCactpot : Module
         lastCashierRewardClosedUtc = null;
     }
 
-    private static bool IsCashierUiVisible() =>
-        TalkHelper.IsVisible() ||
-        SelectStringHelper.IsNpcListMenuVisible() ||
-        SelectYesnoHelper.IsVisible();
+    private static bool IsTargetingCashier() => CactpotDialogueHelper.IsTargetingCashier();
+
+    private bool IsBrokerUiBlocking() =>
+        CactpotDialogueHelper.IsJumboInputVisible() ||
+        CactpotDialogueHelper.HasNpcDialogueUi();
 
     private bool IsWaitingForNextCashierReward()
     {
@@ -194,7 +306,7 @@ public unsafe class JumboCactpot : Module
 
     private void TickCashierHandoff()
     {
-        if (brokerPathArmed || JumboCactpotBrokerPath.IsComplete)
+        if (brokerPathArmed || JumboCactpotBrokerPath.IsActive)
         {
             return;
         }
@@ -210,7 +322,14 @@ public unsafe class JumboCactpot : Module
             return;
         }
 
-        if (IsTargetingCashier() && IsCashierUiVisible())
+        if (IsTargetingCashier() && CactpotDialogueHelper.IsCashierUiVisible())
+        {
+            cashierDialogueSeen = true;
+            cashierHandoffDismissedUtc = null;
+            return;
+        }
+
+        if (IsInCashierFlow() && CactpotDialogueHelper.HasNpcDialogueUi())
         {
             cashierDialogueSeen = true;
             cashierHandoffDismissedUtc = null;
@@ -246,9 +365,14 @@ public unsafe class JumboCactpot : Module
 
     private void ArmBrokerPath()
     {
-        if (brokerPathArmed || JumboCactpotBrokerPath.IsComplete)
+        if (brokerPathArmed || JumboCactpotBrokerPath.IsActive)
         {
             return;
+        }
+
+        if (JumboCactpotBrokerPath.IsComplete)
+        {
+            JumboCactpotBrokerPath.Reset();
         }
 
         brokerPathArmed = true;
@@ -332,7 +456,7 @@ public unsafe class JumboCactpot : Module
         }
 
         if (!SelectStringHelper.TryGetVisibleSelectString(out var menu) ||
-            !IsJumboBrokerSelectString(menu))
+            !CactpotDialogueHelper.IsJumboBrokerPurchaseMenu(menu))
         {
             return;
         }
@@ -353,119 +477,51 @@ public unsafe class JumboCactpot : Module
         }
     }
 
-    private static bool IsJumboBrokerSelectString(AddonSelectString* menu)
-    {
-        if (menu == null || !menu->AtkUnitBase.IsVisible)
-        {
-            return false;
-        }
-
-        var addonBase = &menu->AtkUnitBase;
-        if (SelectYesnoHelper.IsTriadAddon(addonBase) || SelectYesnoHelper.IsArcadeAddon(addonBase))
-        {
-            return false;
-        }
-
-        if (AgentHelper.IsAddonOwnedBy(addonBase, AgentId.LotteryWeekly))
-        {
-            return true;
-        }
-
-        return TryGetSelectStringEntryCount(menu, out var count) && count == JumboBrokerEntryCount;
-    }
-
-    private static bool TryGetSelectStringEntryCount(AddonSelectString* menu, out int count)
-    {
-        count = 0;
-        try
-        {
-            foreach (var _ in new AddonMaster.SelectString(menu).Entries)
-            {
-                count++;
-            }
-
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
     private void HandleRewardAddon()
     {
-        if (!TryGetAddonByName<AtkUnitBase>(RewardAddonName, out var addon) ||
-            !IsAddonReady(addon) ||
-            !addon->IsVisible)
+        if (!InSaucer || !IsInCashierFlow())
         {
             return;
         }
 
-        if (rewardAddonSeenUtc == null)
+        if (CactpotDialogueHelper.TryDismissWeeklyRewardList(
+                "JumboCactpotRewardClick",
+                MinigameInputPacing.ClickIntervalMs,
+                RewardWarmupMs,
+                ref rewardAddonSeenUtc))
         {
-            rewardAddonSeenUtc = DateTime.UtcNow;
-        }
-
-        if ((DateTime.UtcNow - rewardAddonSeenUtc.Value).TotalMilliseconds < RewardWarmupMs)
-        {
-            return;
-        }
-
-        if (!EzThrottler.Throttle("JumboCactpotRewardClick", MinigameInputPacing.ClickIntervalMs))
-        {
-            return;
-        }
-
-        ticketFlow.Mark();
-        if (!AddonButton.TryClick(addon, RewardConfirmNodeId))
-        {
-            LogVerbose($"Reward confirm (node {RewardConfirmNodeId}) click skipped.");
+            ticketFlow.Mark();
         }
     }
 
     private void TryAdvanceTalk()
     {
-        if (!InSaucer || !ObjectHelper.HasInitiatedDialogue(CactpotNpcs.JumboBrokerScope))
+        if (!InSaucer)
         {
             return;
         }
 
-        if (SelectYesnoHelper.TryGetVisible(out var yesno) &&
-            !SelectYesnoHelper.ShouldPressLotteryYesno(yesno, AgentId.LotteryWeekly))
-        {
-            return;
-        }
-
-        TalkHelper.TryAdvance(TalkThrottleKey);
+        CactpotDialogueHelper.TryAdvanceTalk(
+            CactpotNpcs.JumboBrokerScope,
+            TalkThrottleKey,
+            AgentId.LotteryWeekly);
     }
 
     private void HandleYesno()
     {
-        if (!InSaucer || !NpcDialogueGate.CanAutomateYesno(CactpotNpcs.JumboBrokerScope, IsInTicketFlow()))
+        if (!InSaucer)
         {
             return;
         }
 
-        if (QuestDialogueGuard.ShouldBlockYesno(ObjectHelper.IsTargeting(CactpotNpcs.JumboBrokerScope)))
+        if (CactpotDialogueHelper.TryHandleLotteryYesno(
+                CactpotNpcs.JumboBrokerScope,
+                IsInTicketFlow(),
+                AgentId.LotteryWeekly,
+                "JumboCactpotYes",
+                MinigameInputPacing.ClickIntervalMs))
         {
-            return;
-        }
-
-        if (!SelectYesnoHelper.TryGetVisible(out var yesno) ||
-            !SelectYesnoHelper.ShouldPressLotteryYesno(yesno, AgentId.LotteryWeekly))
-        {
-            return;
-        }
-
-        if (!EzThrottler.Throttle("JumboCactpotYes", MinigameInputPacing.ClickIntervalMs))
-        {
-            return;
-        }
-
-        ticketFlow.Mark();
-        if (!SelectYesnoHelper.PressYes(yesno))
-        {
-            LogVerbose("SelectYesno Yes press failed.");
+            ticketFlow.Mark();
         }
     }
 
@@ -477,17 +533,16 @@ public unsafe class JumboCactpot : Module
             HasTicketFlowUi);
 
     private bool HasTicketFlowUi() =>
-        TalkHelper.IsVisible() ||
-        SelectStringHelper.IsNpcListMenuVisible() ||
-        SelectYesnoHelper.IsVisible() ||
-        IsJumboInputVisible();
+        CactpotDialogueHelper.HasNpcDialogueUi() ||
+        CactpotDialogueHelper.IsJumboInputVisible();
 
     private bool IsInTicketFlow() =>
-        IsJumboInputVisible() ||
+        CactpotDialogueHelper.IsJumboInputVisible() ||
         AgentHelper.IsActive(AgentId.LotteryWeekly) ||
-        ticketFlow.IsActive;
+        ticketFlow.IsActive ||
+        (SelectYesnoHelper.IsVisible() && ObjectHelper.IsTargeting(CactpotNpcs.JumboBrokerScope));
 
-    private bool IsJumboInputVisible() => IsJumboAddonReady(InputAddonName);
+    private bool IsJumboInputVisible() => CactpotDialogueHelper.IsJumboInputVisible();
 
     private static bool IsJumboAddonReady(string addonName) =>
         TryGetAddonByName<AtkUnitBase>(addonName, out var addon) &&

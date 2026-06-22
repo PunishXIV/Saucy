@@ -16,6 +16,8 @@ internal static class JumboCactpotBrokerPath
 
     internal static bool IsComplete { get; private set; }
 
+    internal static bool IsActive => requested && !IsComplete;
+
     internal static void Reset()
     {
         requested = false;
