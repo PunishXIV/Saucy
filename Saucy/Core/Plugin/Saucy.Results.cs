@@ -142,9 +142,11 @@ public sealed partial class Saucy
             {
                 C.UpdateStats(stats => stats.GamesWonWithSaucy++);
 
+                var cardStatsRecorded = false;
                 if (TriadCardFarmSession.IsModeActive())
                 {
                     TriadCardFarmSession.DetectAndProcessDrops(obj.cardItemId);
+                    cardStatsRecorded = obj.cardItemId > 0;
                     if (!TriadCardFarmSession.IsComplete() &&
                         TriadCardFarmSession.ShouldScheduleDropVerification(obj.cardItemId))
                     {
@@ -157,6 +159,7 @@ public sealed partial class Saucy
                     if (droppedCard != null)
                     {
                         TriadRewardDropTracker.ProcessVerifiedCardDrop(droppedCard);
+                        cardStatsRecorded = true;
                     }
                     else
                     {
@@ -172,6 +175,12 @@ public sealed partial class Saucy
                          droppedCard != null)
                 {
                     TriadRewardDropTracker.ProcessVerifiedCardDrop(droppedCard);
+                    cardStatsRecorded = true;
+                }
+
+                if (!cardStatsRecorded)
+                {
+                    TryRecordTriadCardStatsFromResult(obj.cardItemId);
                 }
             }
 
@@ -179,5 +188,32 @@ public sealed partial class Saucy
 
             C.Save();
         }
+    }
+
+    private static void TryRecordTriadCardStatsFromResult(uint cardItemId)
+    {
+        if (cardItemId == 0)
+        {
+            return;
+        }
+
+        var droppedCard = GameCardDB.Get().FindByItemId(cardItemId);
+        if (droppedCard == null)
+        {
+            return;
+        }
+
+        C.UpdateStats(stats =>
+        {
+            stats.CardsDroppedWithSaucy++;
+            if (stats.CardsWon.TryGetValue((uint)droppedCard.CardId, out var count))
+            {
+                stats.CardsWon[(uint)droppedCard.CardId] = count + 1;
+            }
+            else
+            {
+                stats.CardsWon[(uint)droppedCard.CardId] = 1;
+            }
+        });
     }
 }

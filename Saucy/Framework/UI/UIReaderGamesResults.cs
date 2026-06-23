@@ -263,63 +263,12 @@ public class UIReaderGamesResults : IUIReader
         return textNode != null;
     }
 
-    private static unsafe bool TryParseRewardMgpFallback(AtkUnitBase* baseNode, out int mgp)
-    {
-        mgp = -1;
-        if (baseNode == null)
-        {
-            return false;
-        }
-
-        ref var uld = ref baseNode->UldManager;
-        for (var i = 0; i < uld.NodeListCount; i++)
-        {
-            var node = uld.NodeList[i];
-            if (node == null)
-            {
-                continue;
-            }
-
-            TryParseMgpFromNode(node, ref mgp);
-            var component = node->GetComponent();
-            if (component == null)
-            {
-                continue;
-            }
-
-            ref var innerUld = ref component->UldManager;
-            for (var j = 0; j < innerUld.NodeListCount; j++)
-            {
-                var innerNode = innerUld.NodeList[j];
-                if (innerNode == null)
-                {
-                    continue;
-                }
-
-                TryParseMgpFromNode(innerNode, ref mgp);
-                var innerComponent = innerNode->GetComponent();
-                if (innerComponent == null)
-                {
-                    continue;
-                }
-
-                ref var deepestUld = ref innerComponent->UldManager;
-                for (var k = 0; k < deepestUld.NodeListCount; k++)
-                {
-                    var deepestNode = deepestUld.NodeList[k];
-                    if (deepestNode != null)
-                    {
-                        TryParseMgpFromNode(deepestNode, ref mgp);
-                    }
-                }
-            }
-        }
-
-        return mgp >= 0;
-    }
+    private static unsafe bool TryParseRewardMgpFallback(AtkUnitBase* baseNode, out int mgp) =>
+        GoldSaucerRewardMgpParser.TryParseFromAddon(baseNode, out mgp);
 
     private static unsafe void TryParseMgpFromNode(AtkResNode* node, ref int bestMgp)
     {
+        // Kept for TryGetRewardMgpTextNode path; fallback scan lives in GoldSaucerRewardMgpParser.
         var textNode = node->GetAsAtkTextNode();
         if (textNode == null)
         {

@@ -1,4 +1,5 @@
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using System.Linq;
 namespace Saucy.TripleTriad.UI;
 
 internal static unsafe class TriadResultReader
@@ -24,6 +25,12 @@ internal static unsafe class TriadResultReader
         }
 
         TryReadMgpReward(nodeArrL0, state);
+
+        if (state.numMGP < 0 &&
+            GoldSaucerRewardMgpParser.TryParseFromAddon(&addon->AtkUnitBase, out var fallbackMgp))
+        {
+            state.numMGP = fallbackMgp;
+        }
 
         if (!TryReadResultFlags(nodeArrL0, ResultFlagsIndex, ExpandedRootChildCount, state))
         {
@@ -63,7 +70,8 @@ internal static unsafe class TriadResultReader
 
             var nodeCoinsC = GUINodeUtils.PickChildNode(nodeCoinsB, 1, 2);
             var descCoins = GUINodeUtils.GetNodeText(nodeCoinsC);
-            if (!string.IsNullOrEmpty(descCoins) && int.TryParse(descCoins, out state.numMGP))
+            if (!string.IsNullOrEmpty(descCoins) &&
+                int.TryParse(new string([.. descCoins.Where(char.IsDigit)]), out state.numMGP))
             {
                 return;
             }
