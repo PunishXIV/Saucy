@@ -4,7 +4,7 @@ namespace Saucy.TripleTriad;
 
 internal static unsafe class TriadRematchAutomation
 {
-    private const int ResultOutcomeFallbackFrames = 45;
+    private const int ResultOutcomeFallbackFrames = 120;
     private const int RematchRetryCooldownFrames = 15;
 
     private static int framesSinceRematchAttempt;
@@ -203,8 +203,12 @@ internal static unsafe class TriadRematchAutomation
             }
         }
 
+        // Wait for the results reader to publish stats (MGP/card rewards populate a
+        // moment after the addon reports ready) before recording and moving on;
+        // the reader's own frame fallback bounds how long this can stall.
         if (TriadRunSession.ModuleEnabled &&
             !IsResultMatchRecorded((nint)addon) &&
+            !uiReaderMatchResults.HasPendingNotify &&
             IsResultReady(addon))
         {
             RecordMatchResultIfNeeded((nint)addon, true);

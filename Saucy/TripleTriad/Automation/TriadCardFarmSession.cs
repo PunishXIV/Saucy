@@ -202,6 +202,9 @@ internal static unsafe class TriadCardFarmSession
         return ResolveFarmCardForRewardItem(resultRewardItemId) != null;
     }
 
+    public static bool IsFarmRewardItem(uint resultRewardItemId) =>
+        resultRewardItemId > 0 && ResolveFarmCardForRewardItem(resultRewardItemId) != null;
+
     public static void DetectAndProcessDrops(uint resultRewardItemId = 0)
     {
         if (TempCardsWonList.Count == 0)
