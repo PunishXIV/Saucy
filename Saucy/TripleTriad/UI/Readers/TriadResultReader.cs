@@ -70,9 +70,18 @@ internal static unsafe class TriadResultReader
 
             var nodeCoinsC = GUINodeUtils.PickChildNode(nodeCoinsB, 1, 2);
             var descCoins = GUINodeUtils.GetNodeText(nodeCoinsC);
-            if (!string.IsNullOrEmpty(descCoins) &&
-                int.TryParse(new string([.. descCoins.Where(char.IsDigit)]), out state.numMGP))
+            if (string.IsNullOrEmpty(descCoins))
             {
+                continue;
+            }
+
+            // Parse into a local: TryParse zeroes its out arg on failure, which would
+            // clobber the -1 "not read yet" sentinel and bypass the MGP readiness gate
+            // (and the fallback parser) whenever a digitless reward row is visited first.
+            var digits = new string([.. descCoins.Where(char.IsDigit)]);
+            if (digits.Length > 0 && int.TryParse(digits, out var mgpValue))
+            {
+                state.numMGP = mgpValue;
                 return;
             }
         }

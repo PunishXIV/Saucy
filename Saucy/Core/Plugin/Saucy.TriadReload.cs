@@ -23,5 +23,13 @@ public sealed partial class Saucy
         uiReaderGame.OnUIStateChanged -= TriadRun.UpdateGame;
 
         uiReaderPrep.OnUIStateChanged -= TriadRun.UpdateDecks;
+        uiReaderPrep.OnMatchRequestChanged = null;
+        uiReaderPrep.OnDeckSelectionChanged = null;
+
+        uiReaderMatchResults.OnUpdated = null;
+
+        uiReaderGamesResults.OnCuffUpdated = null;
+        uiReaderGamesResults.OnLimbUpdated = null;
+        uiReaderGamesResults.OnAirForceUpdated = null;
     }
 }

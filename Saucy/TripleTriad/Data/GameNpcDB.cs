@@ -37,16 +37,6 @@ public class GameNpcDB
 
     public static GameNpcDB Get() => instance;
 
-    public void Refresh() => RefreshCompleted();
-
-    public void Refresh(bool completion, bool beatenOnce)
-    {
-        if (completion)
-        {
-            RefreshCompleted();
-        }
-    }
-
     public void RefreshCompleted()
     {
         var cardInfoDB = GameCardDB.Get();

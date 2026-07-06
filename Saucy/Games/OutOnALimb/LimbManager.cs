@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Types;
 using ECommons.Automation.UIInput;
 using ECommons.GameHelpers;
@@ -15,7 +15,6 @@ public unsafe partial class LimbManager
 {
     private const GoldSaucerArcadeMachine Machine = GoldSaucerArcadeMachine.Limb;
     private const string MachineSanityThrottleKey = "Saucy.OutOnALimb.MachineSanityCheck";
-    private const int AimgHitThrottleMs = 500;
     private const uint WeakHit = 100;
     private const uint StrongHit = 400;
 
@@ -149,7 +148,7 @@ public unsafe partial class LimbManager
             return;
         }
 
-        DuoLog.Warning("No Out on a Limb machine nearby (maybe get closer if in front of one).");
+        DuoLog.Warning("No Out on a Limb machine nearby. Move closer to the machine.");
         DisableModule();
     }
 

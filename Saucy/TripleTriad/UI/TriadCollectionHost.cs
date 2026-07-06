@@ -50,6 +50,10 @@ internal sealed class TriadCollectionHost : IDisposable
         _windowSystem.RemoveAllWindows();
 
         _cardSearchWindow.Dispose();
+
+        _cardInfoWindow.Dispose();
+
+        _npcStatsWindow.Dispose();
     }
 
     private void OnDraw()

@@ -226,11 +226,6 @@ public class GameCardDB
 
         sortedTriadCards.Sort((a, b) => a.SortOrder.CompareTo(b.SortOrder));
 
-        var noCollectionData = new GameCardInfo.CollectionPos
-        {
-            PageIndex = -1, CellIndex = -1
-        };
-
         for (var filterIdx = 0; filterIdx < 3; filterIdx++)
         {
             var groupIdx = 0;
@@ -320,11 +315,6 @@ public class GameCardDB
 
             return a.Item1.SortOrder.CompareTo(b.Item1.SortOrder);
         });
-
-        var noCollectionData = new GameCardInfo.CollectionPos
-        {
-            PageIndex = -1, CellIndex = -1
-        };
 
         var filterIdx = (int)GameCardCollectionFilter.DeckEditDefault;
         var pageIdx = 0;

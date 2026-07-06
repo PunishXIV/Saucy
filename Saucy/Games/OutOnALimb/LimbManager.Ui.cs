@@ -19,7 +19,7 @@ public unsafe partial class LimbManager
         {
             if (enabled && !IsAnyLimbMachineInRange())
             {
-                DuoLog.Warning("No Out on a Limb machine nearby (maybe get closer if in front of one).");
+                DuoLog.Warning("No Out on a Limb machine nearby. Move closer to the machine.");
             }
             else
             {
@@ -64,6 +64,11 @@ public unsafe partial class LimbManager
                 save = true;
             }
 
+            ImGui.SameLine();
+            ImGuiComponents.HelpMarker(
+                "Spacing between probed cursor positions when searching for the sweet spot. " +
+                "Smaller = more precise but slower; the default works for most setups.");
+
             ImGui.SetNextItemWidth(120f);
             save |= ImGui.DragInt("Min seconds for another round", ref Cfg.MinSecondsForAnotherRound, 0.5f);
             ImGui.SameLine();
@@ -87,7 +92,7 @@ public unsafe partial class LimbManager
                 var iCursor = 400 - cursor->Height;
                 if (iCursor > reference->Y && iCursor < reference->Y + Heights[Cfg.LimbDifficulty])
                 {
-                    ImGuiEx.Text("Yes");
+                    ImGuiEx.Text("Cursor in target zone");
                 }
 
                 ImGuiEx.Text($"Reference: {reference->Y}");

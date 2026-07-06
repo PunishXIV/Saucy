@@ -27,8 +27,3 @@ public class HitResult(int cursor, HitPower power)
     public int Position = cursor;
     public HitPower Power = power;
 }
-
-public static class LimbStringExtensions
-{
-    public static string RemoveSpaces(this string s) => s.Replace(" ", "");
-}

@@ -197,7 +197,7 @@ public unsafe partial class CuffACurAutomation
 
     private static void TryDisableForMissingMachine()
     {
-        DuoLog.Warning("No Cuff-a-Cur machine nearby (maybe get closer if in front of one).");
+        DuoLog.Warning("No Cuff-a-Cur machine nearby. Move closer to the machine.");
         DisableModule();
     }
 

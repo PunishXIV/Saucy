@@ -28,8 +28,8 @@ internal static class TriadNpcSanityCheck
 
         var npcName = TriadNpcProximity.ResolveTriadNpcForProximityCheck()?.Name;
         TriadRunSession.DisableModule(string.IsNullOrEmpty(npcName)
-            ? "No Triple Triad NPC nearby (maybe get closer if in front of one)."
-            : $"No Triple Triad NPC nearby ({npcName}). Maybe get closer if you're in front of one.");
+            ? "No Triple Triad NPC nearby. Move closer to the NPC you want to play."
+            : $"No Triple Triad NPC nearby ({npcName}). Move closer to the NPC you want to play.");
     }
 
     private static bool ShouldSkip()

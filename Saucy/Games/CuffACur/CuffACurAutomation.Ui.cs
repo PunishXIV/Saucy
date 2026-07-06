@@ -11,7 +11,7 @@ public partial class CuffACurAutomation
         {
             if (enabled && !IsAnyCuffMachineInRange())
             {
-                DuoLog.Warning("No Cuff-a-Cur machine nearby (maybe get closer if in front of one).");
+                DuoLog.Warning("No Cuff-a-Cur machine nearby. Move closer to a punching machine.");
             }
             else
             {
@@ -28,7 +28,7 @@ public partial class CuffACurAutomation
 
         ImGui.SameLine();
         ImGuiComponents.HelpMarker(
-            "Runs automatically at the Gold Saucer punching machine. Use Play X below to stop after a set number of games.");
+            "Use \"Fixed match count\" below to stop after a set number of games.");
 
         ImGui.Dummy(new(0, 4));
 

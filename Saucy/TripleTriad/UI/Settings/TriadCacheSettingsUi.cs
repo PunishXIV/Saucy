@@ -8,10 +8,6 @@ internal static class TriadCacheSettingsUi
 {
     public static void Draw()
     {
-        ImGui.TextDisabled("Per character optimized decks");
-
-        ImGui.Dummy(new(0, 4));
-
         var views = TriadOptimizedDeckCacheStore.GetCharacterCacheViews();
         if (views.Count == 0)
         {

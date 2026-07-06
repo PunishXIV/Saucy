@@ -174,8 +174,6 @@ internal static class AetheryteHelper
         return bestObj?.Position;
     }
 
-    public static float GetDistanceToAetheryte(uint aetheryteId) => GetHorizontalDistanceToAetheryte(aetheryteId);
-
     public static float GetHorizontalDistanceToAetheryte(uint aetheryteId)
     {
         var pos = TryGetLiveAetherytePosition(aetheryteId) ?? ResolveAetherytePosition(aetheryteId);

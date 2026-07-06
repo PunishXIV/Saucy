@@ -26,7 +26,7 @@ internal static class GoldSaucerRunSettingsUi
 
         var settings = GoldSaucerArcadeRunSession.GetSettings(machine);
         var playFixedCount = settings.PlayXTimes;
-        if (ImGui.Checkbox("Play X amount of times", ref playFixedCount))
+        if (ImGui.Checkbox("Fixed match count", ref playFixedCount))
         {
             settings.PlayXTimes = playFixedCount;
             if (playFixedCount && settings.MatchCount <= 0)
@@ -119,7 +119,7 @@ internal static class GoldSaucerRunSettingsUi
 
         ImGui.SetNextItemWidth(120f);
         var playMinutes = settings.FakeBreakPlayMinutes;
-        if (ImGui.DragInt("How long before taking a break (in minutes)", ref playMinutes, 1f, 1, 24 * 60))
+        if (ImGui.DragInt("Play time before break (minutes)", ref playMinutes, 1f, 1, 24 * 60))
         {
             settings.FakeBreakPlayMinutes = playMinutes;
             C.Save();
@@ -127,7 +127,7 @@ internal static class GoldSaucerRunSettingsUi
 
         ImGui.SetNextItemWidth(120f);
         var breakMinutes = settings.FakeBreakMinutes;
-        if (ImGui.DragInt("How long is the break (in minutes)", ref breakMinutes, 1f, 1, 120))
+        if (ImGui.DragInt("Break length (minutes)", ref breakMinutes, 1f, 1, 120))
         {
             settings.FakeBreakMinutes = breakMinutes;
             C.Save();

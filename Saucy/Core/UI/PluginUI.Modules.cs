@@ -12,17 +12,31 @@ public unsafe partial class PluginUI
     private void DrawCuffPanel()
     {
         DrawPanelHeader("Cuff-a-Cur", "punch the cactuar");
-        ImGuiEx.EzTabBar("###Cuff",
-            ("Main", CuffACurAutomation.DrawSettings, null, false),
-            ("Debug", CuffACurAutomation.DrawDebug, null, false));
+        if (C.ShowDebugUi)
+        {
+            ImGuiEx.EzTabBar("###Cuff",
+                ("Main", CuffACurAutomation.DrawSettings, null, false),
+                ("Debug", CuffACurAutomation.DrawDebug, null, false));
+        }
+        else
+        {
+            CuffACurAutomation.DrawSettings();
+        }
     }
 
     private void DrawLimbPanel()
     {
         DrawPanelHeader("Out on a Limb", "swing the hatchet");
-        ImGuiEx.EzTabBar("###Limb",
-            ("Main", P.LimbManager.DrawSettings, null, false),
-            ("Debug", P.LimbManager.DrawDebug, null, false));
+        if (C.ShowDebugUi)
+        {
+            ImGuiEx.EzTabBar("###Limb",
+                ("Main", P.LimbManager.DrawSettings, null, false),
+                ("Debug", P.LimbManager.DrawDebug, null, false));
+        }
+        else
+        {
+            P.LimbManager.DrawSettings();
+        }
     }
 
     private static void DrawSliceIsRightPanel()
@@ -92,9 +106,16 @@ public unsafe partial class PluginUI
     private static void DrawAirForcePanel()
     {
         DrawPanelHeader("Air Force One", "ride shooting minigame");
-        ImGuiEx.EzTabBar("###AirForce",
-            ("Main", DrawAirForceMain, null, false),
-            ("Debug", AirForceAutomation.DrawDebug, null, false));
+        if (C.ShowDebugUi)
+        {
+            ImGuiEx.EzTabBar("###AirForce",
+                ("Main", DrawAirForceMain, null, false),
+                ("Debug", AirForceAutomation.DrawDebug, null, false));
+        }
+        else
+        {
+            DrawAirForceMain();
+        }
     }
 
     private static void DrawAirForceMain()

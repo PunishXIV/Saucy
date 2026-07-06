@@ -87,13 +87,13 @@ public partial class PluginUI
         StatsRow("MGP won", $"{life.MGPWon:N0}", $"{sess.MGPWon:N0}", true,
             perHour: SessionMgpPerHour(sess.MGPWon, StatsSessionClock.GetTriadElapsedHours()));
 
-        (var lifeNpcCount, var lifeNpcName) = TopNpcCell(life);
-        (var sessNpcCount, var sessNpcName) = TopNpcCell(sess);
-        StatsRow("Most played NPC", lifeNpcCount, sessNpcCount, tooltipLife: lifeNpcName, tooltipSess: sessNpcName);
+        (var lifeNpc, var lifeNpcTip) = TopNpcCell(life);
+        (var sessNpc, var sessNpcTip) = TopNpcCell(sess);
+        StatsRow("Most played NPC", lifeNpc, sessNpc, tooltipLife: lifeNpcTip, tooltipSess: sessNpcTip);
 
-        (var lifeCardCount, var lifeCardName) = TopCardCell(life);
-        (var sessCardCount, var sessCardName) = TopCardCell(sess);
-        StatsRow("Most won card", lifeCardCount, sessCardCount, tooltipLife: lifeCardName, tooltipSess: sessCardName);
+        (var lifeCard, var lifeCardTip) = TopCardCell(life);
+        (var sessCard, var sessCardTip) = TopCardCell(sess);
+        StatsRow("Most won card", lifeCard, sessCard, tooltipLife: lifeCardTip, tooltipSess: sessCardTip);
     }
 
     private static void DrawCuffRows(Stats life, Stats sess)
@@ -141,24 +141,25 @@ public partial class PluginUI
             perHour: SessionMgpPerHour(sess.AirForceMGP, StatsSessionClock.GetAirForceElapsedHours()));
     }
 
-    private static (string count, string? name) TopNpcCell(Stats s)
+    private static (string display, string? tooltip) TopNpcCell(Stats s)
     {
         if (s.NPCsPlayed.Count == 0)
         {
             return ("\u2014", null);
         }
         var top = s.NPCsPlayed.OrderByDescending(x => x.Value).First();
-        return ($"{top.Value:N0}", top.Key);
+        return ($"{top.Key} ({top.Value:N0})", $"{top.Value:N0} games vs {top.Key}");
     }
 
-    private static (string count, string? name) TopCardCell(Stats s)
+    private static (string display, string? tooltip) TopCardCell(Stats s)
     {
         if (s.CardsWon.Count == 0)
         {
             return ("\u2014", null);
         }
         var top = s.CardsWon.OrderByDescending(x => x.Value).First();
-        return ($"{top.Value:N0}", TriadCardDB.Get().FindById((int)top.Key)!.Name);
+        var name = TriadCardDB.Get().FindById((int)top.Key)?.Name ?? $"Card #{top.Key}";
+        return ($"{name} ({top.Value:N0})", $"{name} won {top.Value:N0}\u00d7");
     }
 
     private static void StatsHeader()

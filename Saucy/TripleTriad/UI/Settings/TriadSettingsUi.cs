@@ -18,14 +18,14 @@ internal static class TriadSettingsUi
         var runTargetNpc = TriadRunTarget.Resolve();
 
         var enabled = TriadRunSession.ModuleEnabled;
-        if (ImGui.Checkbox("Enable automation", ref enabled))
+        if (ImGui.Checkbox("Enable", ref enabled))
         {
             if (enabled && !TriadNpcProximity.IsRelevantTriadNpcNearby())
             {
                 var npcName = TriadNpcProximity.ResolveTriadNpcForProximityCheck()?.Name;
                 DuoLog.Warning(string.IsNullOrEmpty(npcName)
-                    ? "No Triple Triad NPC nearby (maybe get closer if in front of one)."
-                    : $"No Triple Triad NPC nearby ({npcName}). Maybe get closer if you're in front of one.");
+                    ? "No Triple Triad NPC nearby. Move closer to the NPC you want to play."
+                    : $"No Triple Triad NPC nearby ({npcName}). Move closer to the NPC you want to play.");
             }
             else
             {
@@ -70,6 +70,7 @@ internal static class TriadSettingsUi
         ImGui.Dummy(new(0, 4));
 
         SaucyTheme.DrawCard("Deck", null, DrawDeckBody);
+        SaucyTheme.DrawCard("Deck cache", "Per-character optimized decks", TriadCacheSettingsUi.Draw);
         SaucyTheme.DrawCard("Run mode", null, DrawRunModeBody);
         SaucyTheme.DrawCard("Travel", "Map navigation", TriadTravelMountUi.Draw);
         SaucyTheme.DrawCard("Notifications", null, DrawNotificationsBody);
@@ -80,7 +81,7 @@ internal static class TriadSettingsUi
     {
         using var indent = ImRaii.PushIndent();
         var showOptimizerChatSpam = C.ShowOptimizerChatSpam;
-        if (ImGui.Checkbox("Show deck automation chat spam", ref showOptimizerChatSpam))
+        if (ImGui.Checkbox("Show deck automation messages in chat", ref showOptimizerChatSpam))
         {
             C.ShowOptimizerChatSpam = showOptimizerChatSpam;
             C.Save();

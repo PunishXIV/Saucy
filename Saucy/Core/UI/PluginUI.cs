@@ -60,18 +60,24 @@ public unsafe partial class PluginUI : Window
         });
     }
 
-    public bool Enabled { get; set; } = false;
-
     public void OpenForTriad()
     {
         _selectedNav = NavItem.TripleTriad;
         IsOpen = true;
     }
 
-    public void OpenForDebug()
+    public void ToggleDebug()
     {
-        _selectedNav = NavItem.Debug;
-        IsOpen = true;
+        C.ShowDebugUi = !C.ShowDebugUi;
+        if (C.ShowDebugUi)
+        {
+            _selectedNav = NavItem.Debug;
+            IsOpen = true;
+        }
+        else if (_selectedNav == NavItem.Debug)
+        {
+            _selectedNav = NavItem.TripleTriad;
+        }
     }
 
     private static float CalcSidebarWidth()
@@ -166,7 +172,10 @@ public unsafe partial class PluginUI : Window
         ImGui.Separator();
         NavSelectable("Stats", NavItem.Stats);
         NavSelectable("About", NavItem.About);
-        NavSelectable("Debug", NavItem.Debug);
+        if (C.ShowDebugUi)
+        {
+            NavSelectable("Debug", NavItem.Debug);
+        }
 
         var style = ImGui.GetStyle();
         var checkboxH = ImGui.GetFrameHeight();
@@ -219,9 +228,7 @@ public unsafe partial class PluginUI : Window
     private static void DrawTriadPanel()
     {
         DrawPanelHeader("Triple Triad");
-        ImGuiEx.EzTabBar("###Triad",
-            ("Main", TriadSettingsUi.Draw, null, false),
-            ("Cache", TriadCacheSettingsUi.Draw, null, false));
+        TriadSettingsUi.Draw();
     }
 
     private static void DrawPanelHeader(string title, string? subtitle = null) =>

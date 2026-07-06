@@ -124,10 +124,6 @@ public class TriadCardDB
         return int.TryParse(idStr, out cardId);
     }
 
-    public static uint GetCardTextureId(int cardId) => (cardId is < 0 or >= 1000) ? 87000 : (uint)cardId + 87000;
-
-    public static uint GetCardIconTextureId(int cardId) => (cardId is < 0 or >= 1000) ? 88000 : (uint)cardId + 88000;
-
     public int TryGetCardIdFromIconId(int iconId)
     {
         if (iconId <= 0)

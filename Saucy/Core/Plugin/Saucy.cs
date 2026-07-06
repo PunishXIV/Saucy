@@ -64,7 +64,14 @@ public sealed partial class Saucy : IDalamudPlugin
 
         Svc.Commands.AddHandler(commandName, new(OnCommand)
         {
-            HelpMessage = "Opens the Saucy menu. Use /saucy d for debug, /saucy stop to halt navigation and automation."
+            HelpMessage = "Opens the Saucy menu.\n" +
+                          "/saucy stop → stop all navigation and automation\n" +
+                          "/saucy tt go → enable Triple Triad automation\n" +
+                          "/saucy tt stop → stop Triple Triad automation\n" +
+                          "/saucy tt play <n> → fixed match count\n" +
+                          "/saucy tt cards any → stop after first card drop\n" +
+                          "/saucy tt cards all → farm all NPC cards once\n" +
+                          "/saucy d → toggle debug panels"
         });
 
         dataLoader = new();
@@ -164,69 +171,68 @@ public sealed partial class Saucy : IDalamudPlugin
 
         if (args.Length >= 1 && args[0].Equals("d", StringComparison.OrdinalIgnoreCase))
         {
-            _pluginUi.OpenForDebug();
-            EzConfigGui.Open();
-            return;
-        }
-
-        if (args.Length < 2 || !args[0].Equals("tt", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        var subCommand = args[1];
-
-        if (subCommand.Equals("go", StringComparison.OrdinalIgnoreCase))
-        {
-            TriadRunSession.ModuleEnabled = true;
-            TriadRunSession.BeginAutomationSession();
-            Svc.Chat.Print("[Saucy] Triad Module Enabled!");
-            return;
-        }
-
-        if (subCommand.Equals("stop", StringComparison.OrdinalIgnoreCase))
-        {
-            TriadRunSession.StopAllAutomation();
-            return;
-        }
-
-        if (subCommand.Equals("play", StringComparison.OrdinalIgnoreCase) && args.Length >= 3)
-        {
-            if (int.TryParse(args[2], out var val))
+            _pluginUi.ToggleDebug();
+            if (C.ShowDebugUi)
             {
-                TriadRunSession.ApplyRunMode(TriadRunMode.PlayXTimes, matchCount: val);
-                Svc.Chat.Print("[Saucy] Play X Amount of Times Enabled!");
-            }
-            else
-            {
-                Svc.Chat.Print($"[Saucy] Incorrect value specified: {args[2]}");
-            }
-            return;
-        }
-
-        if (subCommand == "cards" && args.Length >= 3)
-        {
-            if (args[2].ToLower() == "any")
-            {
-                TriadRunSession.ApplyRunMode(TriadRunMode.PlayUntilAnyCard);
-                Svc.Chat.Print("[Saucy] Play Until Any Cards Drop Enabled!");
+                EzConfigGui.Open();
             }
 
-            if (args[2].ToLower() == "all")
+            return;
+        }
+
+        if (args[0].Equals("tt", StringComparison.OrdinalIgnoreCase) && args.Length >= 2)
+        {
+            var subCommand = args[1];
+
+            if (subCommand.Equals("go", StringComparison.OrdinalIgnoreCase))
             {
-                TriadRunSession.ApplyRunMode(TriadRunMode.PlayUntilAllCards);
-                Svc.Chat.Print("[Saucy] Play Until All Cards Drop from NPC at Least X Times Enabled!");
+                TriadRunSession.ModuleEnabled = true;
+                TriadRunSession.BeginAutomationSession();
+                Svc.Chat.Print("[Saucy] Triple Triad automation enabled.");
+                return;
             }
 
-            if (args.Length >= 4 && int.TryParse(args[3], out var val))
+            if (subCommand.Equals("stop", StringComparison.OrdinalIgnoreCase))
             {
-                TriadRunSession.NumberOfTimes = Math.Max(1, val);
-                if (TriadRunSession.PlayXTimes)
+                TriadRunSession.StopAllAutomation();
+                return;
+            }
+
+            if (subCommand.Equals("play", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.Length >= 3 && int.TryParse(args[2], out var val) && val > 0)
                 {
-                    C.TriadMatchCount = TriadRunSession.NumberOfTimes;
-                    C.Save();
+                    TriadRunSession.ApplyRunMode(TriadRunMode.PlayXTimes, matchCount: val);
+                    Svc.Chat.Print($"[Saucy] Fixed match count enabled: {val} matches.");
+                }
+                else
+                {
+                    Svc.Chat.Print("[Saucy] Usage: /saucy tt play <number of matches>");
+                }
+
+                return;
+            }
+
+            if (subCommand.Equals("cards", StringComparison.OrdinalIgnoreCase) && args.Length >= 3)
+            {
+                if (args[2].Equals("any", StringComparison.OrdinalIgnoreCase))
+                {
+                    TriadRunSession.ApplyRunMode(TriadRunMode.PlayUntilAnyCard);
+                    Svc.Chat.Print("[Saucy] Stopping after the first card drop.");
+                    return;
+                }
+
+                if (args[2].Equals("all", StringComparison.OrdinalIgnoreCase))
+                {
+                    TriadRunSession.ApplyRunMode(TriadRunMode.PlayUntilAllCards);
+                    Svc.Chat.Print("[Saucy] Farming all NPC cards once.");
+                    return;
                 }
             }
         }
+
+        Svc.Chat.Print(
+            "[Saucy] Unknown command. Available: /saucy, /saucy stop, /saucy d, " +
+            "/saucy tt go | stop | play <n> | cards any | cards all");
     }
 }
