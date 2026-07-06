@@ -1,14 +1,13 @@
-#nullable disable
 using System;
 namespace Saucy.TripleTriad.UI;
 
 public partial class TriadSession
 {
-    public void UpdateGame(UIStateTriadGame stateOb)
+    public void UpdateGame(UIStateTriadGame? stateOb)
     {
         status = Status.NoErrors;
 
-        TriadBoardScanner.GameState screenOb = null;
+        TriadBoardScanner.GameState? screenOb = null;
         if (stateOb != null)
         {
             var parseCtx = new GameUIParser();
@@ -128,7 +127,7 @@ public partial class TriadSession
         }
     }
 
-    private static bool IsBlueTurnReadyForSolver(UIStateTriadGame stateOb) =>
+    private static bool IsBlueTurnReadyForSolver(UIStateTriadGame? stateOb) =>
         stateOb != null &&
         !stateOb.isPvP &&
         TriadTurnState.CanBlueAct(stateOb.move, stateOb.isPlayerTurn) &&
@@ -144,7 +143,7 @@ public partial class TriadSession
 
     internal void InvalidatePendingMoveCalc() => ClearMove();
 
-    internal TriadNpc ResolveNpcForGame(UIStateTriadGame stateOb)
+    internal TriadNpc? ResolveNpcForGame(UIStateTriadGame? stateOb)
     {
         if (currentNpc != null)
         {

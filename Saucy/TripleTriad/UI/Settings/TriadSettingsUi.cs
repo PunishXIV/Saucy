@@ -141,7 +141,7 @@ internal static class TriadSettingsUi
 
     private static void DrawDeckBody()
     {
-        if (TriadRun.profileGS.GetPlayerDecks()!.Count() == 0)
+        if (TriadRun.profileGS?.GetPlayerDecks() is not { } profileDecks || profileDecks.Count() == 0)
         {
             ImGui.TextWrapped("Challenge an NPC once to load your profile decks here.");
             return;

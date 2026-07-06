@@ -1,4 +1,3 @@
-#nullable disable
 using Saucy.IPC;
 using System;
 using System.Collections.Generic;
@@ -73,9 +72,9 @@ public partial class TriadSession
         _navigationOptimizerRetrySessionKey = string.Empty;
     }
 
-    private bool IsOptimizedDeckAppliedForSession(TriadNpc npc, List<TriadGameModifier> regionMods)
+    private bool IsOptimizedDeckAppliedForSession(TriadNpc? npc, List<TriadGameModifier> regionMods)
     {
-        if (!HasOptimizedDeckApplied || _optimizerTargetDeckId < 0 || npc == null)
+        if (!HasOptimizedDeckApplied || _optimizerTargetDeckId < 0 || npc is null)
         {
             return false;
         }
@@ -86,11 +85,6 @@ public partial class TriadSession
 
     private void InvalidateOptimizedDeckForRulesChange(TriadNpc npc, List<TriadGameModifier> newRegionMods)
     {
-        if (npc == null)
-        {
-            return;
-        }
-
         var newKey = BuildOptimizerSessionKey(npc, newRegionMods);
         if (!string.IsNullOrEmpty(_optimizerSessionKey) &&
             string.Equals(_optimizerSessionKey, newKey, StringComparison.Ordinal))
@@ -114,14 +108,19 @@ public partial class TriadSession
 
     private void TryEnsureOptimizedDeckForPrepLocked()
     {
-        var regionMods = ResolveRegionModsForNpc(preGameNpc);
-        var sessionKey = BuildOptimizerSessionKey(preGameNpc, regionMods);
-        if (IsOptimizedDeckAppliedForSession(preGameNpc, regionMods))
+        if (preGameNpc is not { } npc)
         {
             return;
         }
 
-        if (TrySkipOptimizedDeckRebuildLocked(preGameNpc, regionMods))
+        var regionMods = ResolveRegionModsForNpc(npc);
+        var sessionKey = BuildOptimizerSessionKey(npc, regionMods);
+        if (IsOptimizedDeckAppliedForSession(npc, regionMods))
+        {
+            return;
+        }
+
+        if (TrySkipOptimizedDeckRebuildLocked(npc, regionMods))
         {
             _optimizerTimedOut = false;
             ClearOptimizerStartBlockLocked();
@@ -143,7 +142,7 @@ public partial class TriadSession
             return;
         }
 
-        StartDeckOptimizer(preGameNpc, regionMods);
+        StartDeckOptimizer(npc, regionMods);
     }
 
     private bool IsOptimizerStartBlockedForSessionLocked(string sessionKey)
@@ -175,9 +174,9 @@ public partial class TriadSession
         _optimizerStartBlockedUntilUtc = DateTime.MinValue;
     }
 
-    private void PrepareStaleDeckRebuildLocked(TriadNpc npc, string sessionKey)
+    private void PrepareStaleDeckRebuildLocked(TriadNpc? npc, string sessionKey)
     {
-        if (npc == null)
+        if (npc is null)
         {
             return;
         }
@@ -205,7 +204,7 @@ public partial class TriadSession
         }
     }
 
-    private bool IsDeckEvalDataChanged(TriadNpc testNpc, List<TriadGameModifier> testMods, Dictionary<int, DeckData> testDecks)
+    private bool IsDeckEvalDataChanged(TriadNpc? testNpc, List<TriadGameModifier> testMods, Dictionary<int, DeckData> testDecks)
     {
         if (testNpc != preGameNpc)
         {
@@ -237,7 +236,8 @@ public partial class TriadSession
                 return true;
             }
 
-            if (!deckData.solverDeck.Equals(kvp.Value.solverDeck))
+            if (deckData.solverDeck == null || kvp.Value.solverDeck == null ||
+                !deckData.solverDeck.Equals(kvp.Value.solverDeck))
             {
                 return true;
             }
@@ -266,7 +266,7 @@ public partial class TriadSession
 
     private void FlushDeferredOptimizerProfileWrite()
     {
-        TriadDeck deck;
+        TriadDeck? deck;
         float? estWinChance;
         lock (_preGameLock)
         {

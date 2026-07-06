@@ -72,7 +72,7 @@ internal static unsafe class GoldSaucerRewardHelper
         try
         {
             var uiModule = (UIModule*)Svc.GameGui.GetUIModule().Address;
-            if (uiModule == null)
+            if (uiModule is null)
             {
                 return false;
             }

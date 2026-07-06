@@ -18,14 +18,14 @@ public unsafe class TriadProfileDeckReader
 
         try
         {
-            var uiModule = (Svc.GameGui != null) ? (UIModule*)Svc.GameGui.GetUIModule().Address : null;
-            var gsModule = (uiModule != null) ? uiModule->GetGoldSaucerModule() : null;
+            var uiModule = Svc.GameGui is not null ? (UIModule*)Svc.GameGui.GetUIModule().Address : null;
+            var gsModule = uiModule is not null ? uiModule->GetGoldSaucerModule() : null;
 
             if (gsModule != null)
             {
                 static PlayerDeck? ConvertToPlayerDeck(TripleTriadDeck* deckPtr, int deckId)
                 {
-                    if (deckPtr == null)
+                    if (deckPtr is null)
                     {
                         return null;
                     }
@@ -85,15 +85,15 @@ public unsafe class TriadProfileDeckReader
 
         try
         {
-            var uiModule = (Svc.GameGui != null) ? (UIModule*)Svc.GameGui.GetUIModule().Address : null;
-            var gsModule = (uiModule != null) ? uiModule->GetGoldSaucerModule() : null;
-            if (gsModule == null)
+            var uiModule = Svc.GameGui is not null ? (UIModule*)Svc.GameGui.GetUIModule().Address : null;
+            var gsModule = uiModule is not null ? uiModule->GetGoldSaucerModule() : null;
+            if (gsModule is null)
             {
                 return false;
             }
 
             var deckPtr = gsModule->GetDeck(deckIdx);
-            if (deckPtr == null)
+            if (deckPtr is null)
             {
                 return false;
             }

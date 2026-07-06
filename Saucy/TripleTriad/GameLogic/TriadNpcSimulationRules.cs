@@ -5,10 +5,10 @@ internal static class TriadNpcSimulationRules
 {
     public static void InitializeSimulation(
         TriadGameSolver solver,
-        TriadNpc npc,
+        TriadNpc? npc,
         IEnumerable<TriadGameModifier> regionMods)
     {
-        if (solver == null || npc == null)
+        if (npc is null)
         {
             return;
         }
@@ -24,9 +24,9 @@ internal static class TriadNpcSimulationRules
         }
     }
 
-    public static TriadGameModifier[] BuildRegionMods(TriadNpc npc, IEnumerable<TriadGameModifier> regionMods)
+    public static TriadGameModifier[] BuildRegionMods(TriadNpc? npc, IEnumerable<TriadGameModifier> regionMods)
     {
-        if (npc == null || regionMods == null)
+        if (npc is null)
         {
             return [];
         }
@@ -36,7 +36,7 @@ internal static class TriadNpcSimulationRules
 
         foreach (var mod in regionMods)
         {
-            if (mod == null)
+            if (mod is null)
             {
                 continue;
             }
@@ -48,11 +48,7 @@ internal static class TriadNpcSimulationRules
                 continue;
             }
 
-            var modOb = mod.Clone();
-            if (modOb != null)
-            {
-                result.Add(modOb);
-            }
+            result.Add(mod.Clone());
         }
 
         return [.. result];

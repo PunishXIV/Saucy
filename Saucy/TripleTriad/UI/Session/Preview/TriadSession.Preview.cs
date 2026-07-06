@@ -1,4 +1,3 @@
-#nullable disable
 using Saucy.IPC;
 using System;
 using System.Collections.Generic;
@@ -10,9 +9,9 @@ public partial class TriadSession
 
     public void ResetWorldTargetOptimizerTracking() => lastWorldTargetOptimizerNpcId = -1;
 
-    private List<TriadGameModifier> ResolveRegionModsForNpc(TriadNpc npc)
+    private List<TriadGameModifier> ResolveRegionModsForNpc(TriadNpc? npc)
     {
-        if (npc == null)
+        if (npc is null)
         {
             return [];
         }
@@ -38,26 +37,17 @@ public partial class TriadSession
         return [];
     }
 
-    private IEnumerable<TriadGameModifier> ResolvePreviewRulesForNpc(TriadNpc npc) =>
+    private IEnumerable<TriadGameModifier> ResolvePreviewRulesForNpc(TriadNpc? npc) =>
         ResolveRegionModsForNpc(npc);
 
     private void RememberRegionalModsForNpc(TriadNpc npc, List<TriadGameModifier> regionMods)
     {
-        if (npc == null || regionMods == null)
-        {
-            return;
-        }
-
         var cloned = new List<TriadGameModifier>();
         foreach (var mod in regionMods)
         {
             if (mod is not null and not TriadGameModifierNone)
             {
-                var clone = mod.Clone();
-                if (clone != null)
-                {
-                    cloned.Add(clone);
-                }
+                cloned.Add(mod.Clone());
             }
         }
 
@@ -165,9 +155,9 @@ public partial class TriadSession
         OnNpcSelected(npc, ResolveRegionModsForNpc(npc), true);
     }
 
-    public DeckData GetDeckPreviewData(TriadNpc npc, int deckId)
+    public DeckData? GetDeckPreviewData(TriadNpc? npc, int deckId)
     {
-        if (npc == null)
+        if (npc is null)
         {
             return null;
         }
@@ -178,7 +168,7 @@ public partial class TriadSession
         }
     }
 
-    private DeckData TryGetDeckPreviewDataLocked(TriadNpc npc, int deckId, IEnumerable<TriadGameModifier> regionMods = null)
+    private DeckData? TryGetDeckPreviewDataLocked(TriadNpc npc, int deckId, IEnumerable<TriadGameModifier>? regionMods = null)
     {
         var cacheKey = TriadEvalCacheKey.Build(npc, regionMods ?? ResolvePreviewRulesForNpc(npc));
         if (npcEvalSnapshots.TryGetValue(cacheKey, out var deckMap) &&
@@ -235,9 +225,9 @@ public partial class TriadSession
             }
         }
     }
-    public void EnsureOptimizedDeckPreviewEval(TriadNpc npc)
+    public void EnsureOptimizedDeckPreviewEval(TriadNpc? npc)
     {
-        if (npc == null)
+        if (npc is null)
         {
             return;
         }
@@ -267,9 +257,9 @@ public partial class TriadSession
         }
     }
 
-    public void EnsurePreviewEvalForNpc(TriadNpc npc, IEnumerable<TriadGameModifier> regionMods = null)
+    public void EnsurePreviewEvalForNpc(TriadNpc? npc, IEnumerable<TriadGameModifier>? regionMods = null)
     {
-        if (npc == null || profileGS == null || profileGS.HasErrors || TriadUiState.IsBoardVisible())
+        if (npc is null || profileGS == null || profileGS.HasErrors || TriadUiState.IsBoardVisible())
         {
             return;
         }
@@ -308,9 +298,9 @@ public partial class TriadSession
         }
     }
 
-    public bool IsPreviewEvalPendingForNpc(TriadNpc npc, IEnumerable<TriadGameModifier> regionMods = null)
+    public bool IsPreviewEvalPendingForNpc(TriadNpc? npc, IEnumerable<TriadGameModifier>? regionMods = null)
     {
-        if (npc == null || profileGS == null || profileGS.HasErrors)
+        if (npc is null || profileGS == null || profileGS.HasErrors)
         {
             return false;
         }
@@ -360,7 +350,7 @@ public partial class TriadSession
     }
 
     private IEnumerable<DeckData> EnumerateSimmableProfileDecks(
-        TriadProfileDeckReader.PlayerDeck[] profileDecks,
+        TriadProfileDeckReader.PlayerDeck?[] profileDecks,
         GameUIParser parseCtx)
     {
         if (profileDecks == null)
@@ -377,7 +367,7 @@ public partial class TriadSession
 
             var deckData = ParseDeckDataFromProfile(profileDeck, parseCtx);
             parseCtx.Reset();
-            if (!IsDeckSimmableForPreview(deckData))
+            if (deckData is null || !IsDeckSimmableForPreview(deckData))
             {
                 continue;
             }
@@ -396,7 +386,7 @@ public partial class TriadSession
         GameCardDB.Get().Refresh();
     }
 
-    private static bool IsDeckSimmableForPreview(DeckData deckData)
+    private static bool IsDeckSimmableForPreview(DeckData? deckData)
     {
         var deck = deckData?.solverDeck;
         if (deck?.knownCards == null || deck.knownCards.Count != 5)
@@ -416,7 +406,7 @@ public partial class TriadSession
         return true;
     }
 
-    private string DescribeMissingSimmableDecks()
+    private string? DescribeMissingSimmableDecks()
     {
         if (profileGS == null || profileGS.HasErrors)
         {

@@ -9,11 +9,9 @@ internal static class ImGuiScopes
 {
     public static WindowScope Window(string name, ImGuiWindowFlags flags) => new(name, flags);
 
-    public readonly struct WindowScope : IDisposable
+    public readonly struct WindowScope(string name, ImGuiWindowFlags flags) : IDisposable
     {
-        public bool Success { get; }
-
-        public WindowScope(string name, ImGuiWindowFlags flags) => Success = ImGui.Begin(name, flags);
+        public bool Success { get; } = ImGui.Begin(name, flags);
 
         public void Dispose()
         {

@@ -1,4 +1,3 @@
-#nullable disable
 using Saucy.IPC;
 using System;
 using System.Collections.Generic;
@@ -23,24 +22,24 @@ public partial class TriadSession
     private static readonly TimeSpan OptimizedDeckRebuildCooldown = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan OptimizerStartFailureCooldown = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan MoveHighlightGracePeriod = TimeSpan.FromMilliseconds(800);
-    private static readonly List<TriadCard> UnlockedDeckSlots = [null, null, null, null, null];
+    private static readonly List<TriadCard?> UnlockedDeckSlots = [null, null, null, null, null];
 
     private readonly Lock _preGameLock = new();
     private readonly HashSet<string> _previewEvalInFlight = [];
 
-    private readonly Dictionary<int, List<TriadGameModifier>> _rememberedRegionalModsByNpcId = new();
+    private readonly Dictionary<int, List<TriadGameModifier>> _rememberedRegionalModsByNpcId = [];
     private string _cachedDeckSlottedSessionKey = string.Empty;
 
-    public TriadNpc currentNpc;
+    public TriadNpc? currentNpc;
 
     private int _deckSelectPostWriteCooldownFrames;
     private float? _deferredPostMatchEstWinChance;
-    private TriadDeck _deferredPostMatchOptimizedDeck;
+    private TriadDeck? _deferredPostMatchOptimizedDeck;
     public bool hasMove;
 
     private int _lastAppliedRunTargetNpcId = -1;
 
-    public TriadNpc lastGameNpc;
+    public TriadNpc? lastGameNpc;
     private string _lastOptimizerSkipKey = string.Empty;
     public int moveBoardIdx;
     public int moveCardIdx;
@@ -63,10 +62,10 @@ public partial class TriadSession
     public Dictionary<int, DeckData> preGameDecks = [];
     public List<TriadGameModifier> preGameMods = [];
 
-    public TriadNpc preGameNpc;
+    public TriadNpc? preGameNpc;
     private int _previewEvalGeneration;
 
-    public TriadProfileDeckReader profileGS;
+    public TriadProfileDeckReader? profileGS;
 
     public Status status;
 
@@ -83,7 +82,7 @@ public partial class TriadSession
     public string GetExpectedSaucyDeckName() =>
         preGameNpc != null ? $"{preGameNpc.Name} (Saucy)" : string.Empty;
 
-    public string GetProfileDeckName(int deckId)
+    public string? GetProfileDeckName(int deckId)
     {
         if (profileGS == null || profileGS.HasErrors)
         {
@@ -108,9 +107,9 @@ public partial class TriadSession
         C.UseCachedOptimizedDeckIfAvailable &&
         !ShouldBuildOptimizedDeck();
 
-    public string GetAutoPickDeckSummary(TriadNpc npc)
+    public string? GetAutoPickDeckSummary(TriadNpc? npc)
     {
-        if (!C.UseSimmedDeck || npc == null)
+        if (!C.UseSimmedDeck || npc is null)
         {
             return null;
         }
@@ -159,8 +158,8 @@ public partial class TriadSession
         }
 
         int deckId;
-        string deckName;
-        DeckData deckData;
+        string? deckName;
+        DeckData? deckData;
         lock (_preGameLock)
         {
             if (ShouldBuildOptimizedDeck() && HasOptimizedDeckApplied && _optimizerTargetDeckId >= 0)
@@ -195,7 +194,7 @@ public partial class TriadSession
         return string.IsNullOrWhiteSpace(deckName) ? winLabel : $"{winLabel} · {deckName}";
     }
 
-    private string DescribeOptimizedDeckBuildStatus(TriadNpc npc)
+    private string? DescribeOptimizedDeckBuildStatus(TriadNpc npc)
     {
         var regionMods = ResolveRegionModsForNpc(npc);
         var sessionKey = BuildOptimizerSessionKey(npc, regionMods);
@@ -206,7 +205,7 @@ public partial class TriadSession
         var rebuildingForNewCards = hasUsableCache &&
                                     TriadOptimizedDeckCacheValidator.ShouldRebuildDeckForNewCards(sessionKey, npc.Id);
 
-        var hasProfileSaucyDeck = false;
+        bool hasProfileSaucyDeck;
         lock (_preGameLock)
         {
             hasProfileSaucyDeck = TryFindSaucyDeckProfileSlot(npc, out var _);
@@ -289,8 +288,8 @@ public partial class TriadSession
     {
         public SolverResult chance;
         public int id;
-        public string name;
-        public TriadDeck solverDeck;
+        public string? name;
+        public TriadDeck? solverDeck;
     }
 }
 

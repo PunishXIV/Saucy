@@ -38,7 +38,7 @@ public class UIReaderTriadResults : IUIReader
     public unsafe void OnAddonUpdate(nint addonPtr)
     {
         var addon = (AddonTripleTriadResult*)addonPtr;
-        if (addon == null || !HasPendingNotify)
+        if (addon is null || !HasPendingNotify)
         {
             return;
         }

@@ -100,7 +100,7 @@ internal static unsafe class TriadMatchRegistrationAutomation
             }
 
             var challengeButton = addon->GetComponentButtonById(41);
-            if (challengeButton != null && challengeButton->AtkResNode != null &&
+            if (challengeButton is not null && challengeButton->AtkResNode is not null &&
                 challengeButton->AtkResNode->IsVisible())
             {
                 try

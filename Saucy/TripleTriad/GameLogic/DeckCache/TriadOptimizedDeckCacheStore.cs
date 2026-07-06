@@ -84,9 +84,9 @@ internal static class TriadOptimizedDeckCacheStore
         EnsureLoaded();
         activeFile ??= new();
         activeFile.Version = SchemaVersion;
-        activeFile.RegionalRuleSignaturesByNpcId ??= new();
+        activeFile.RegionalRuleSignaturesByNpcId ??= [];
 
-        if (regionMods == null || regionMods.Count == 0)
+        if (regionMods.Count == 0)
         {
             if (activeFile.RegionalRuleSignaturesByNpcId.Remove(npcId))
             {
@@ -396,8 +396,10 @@ internal static class TriadOptimizedDeckCacheStore
 
             if (!File.Exists(path))
             {
-                activeFile = new();
-                activeFile.RegionalRuleSignaturesByNpcId = new();
+                activeFile = new()
+                {
+                    RegionalRuleSignaturesByNpcId = []
+                };
                 ImportLegacyBuildTimestampsLocked();
                 return;
             }
@@ -412,7 +414,7 @@ internal static class TriadOptimizedDeckCacheStore
                     if (activeFile.Version == 1)
                     {
                         activeFile.Version = SchemaVersion;
-                        activeFile.RegionalRuleSignaturesByNpcId ??= new();
+                        activeFile.RegionalRuleSignaturesByNpcId ??= [];
                     }
                     else
                     {
@@ -420,7 +422,7 @@ internal static class TriadOptimizedDeckCacheStore
                     }
                 }
 
-                activeFile.RegionalRuleSignaturesByNpcId ??= new();
+                activeFile.RegionalRuleSignaturesByNpcId ??= [];
                 ImportLegacyBuildTimestampsLocked();
             }
             catch (Exception ex)

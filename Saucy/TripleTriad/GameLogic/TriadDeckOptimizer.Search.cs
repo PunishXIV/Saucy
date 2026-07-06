@@ -43,7 +43,7 @@ public partial class TriadDeckOptimizer
 
         long lowestPauseIdx = 0;
         bool canFinishLoop;
-        using var threadSolvers = new ThreadLocal<TriadGameSolver>(() => currentSolver.CreateWorkerCopy());
+        using var threadSolvers = new ThreadLocal<TriadGameSolver>(currentSolver.CreateWorkerCopy);
         do
         {
             var deckBatch = new List<SlotIterator.ItemInfo>(slotIterator.GetDecks(lowestPauseIdx));

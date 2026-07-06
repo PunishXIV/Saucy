@@ -58,20 +58,12 @@ internal static class ImGuiLayout
 
     public static PlainTextLinkScope PlainTextLink(Vector4? textColor = null) => new(textColor);
 
-    public readonly struct PlainTextLinkScope : IDisposable
+    public readonly struct PlainTextLinkScope(Vector4? textColor) : IDisposable
     {
-        private readonly IDisposable _header;
-        private readonly IDisposable _headerHovered;
-        private readonly IDisposable _headerActive;
-        private readonly IDisposable? _text;
-
-        public PlainTextLinkScope(Vector4? textColor)
-        {
-            _header = ImRaii.PushColor(ImGuiCol.Header, 0);
-            _headerHovered = ImRaii.PushColor(ImGuiCol.HeaderHovered, ImGui.GetColorU32(ImGuiCol.ButtonHovered));
-            _headerActive = ImRaii.PushColor(ImGuiCol.HeaderActive, ImGui.GetColorU32(ImGuiCol.ButtonActive));
-            _text = textColor.HasValue ? ImRaii.PushColor(ImGuiCol.Text, textColor.Value) : null;
-        }
+        private readonly IDisposable _header = ImRaii.PushColor(ImGuiCol.Header, 0);
+        private readonly IDisposable _headerHovered = ImRaii.PushColor(ImGuiCol.HeaderHovered, ImGui.GetColorU32(ImGuiCol.ButtonHovered));
+        private readonly IDisposable _headerActive = ImRaii.PushColor(ImGuiCol.HeaderActive, ImGui.GetColorU32(ImGuiCol.ButtonActive));
+        private readonly IDisposable? _text = textColor.HasValue ? ImRaii.PushColor(ImGuiCol.Text, textColor.Value) : null;
 
         public void Dispose()
         {

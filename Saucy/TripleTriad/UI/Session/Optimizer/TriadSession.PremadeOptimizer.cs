@@ -1,13 +1,12 @@
-#nullable disable
 namespace Saucy.TripleTriad.UI;
 
 public partial class TriadSession
 {
-    public bool CanRequestPremadeDeckOptimizer(TriadNpc npc, out string blockReason)
+    public bool CanRequestPremadeDeckOptimizer(TriadNpc? npc, out string? blockReason)
     {
         blockReason = null;
 
-        if (npc == null)
+        if (npc is null)
         {
             blockReason = "No NPC selected.";
             return false;
@@ -42,7 +41,7 @@ public partial class TriadSession
         return true;
     }
 
-    public void RequestPremadeDeckOptimizer(TriadNpc npc, bool forceRebuild = false)
+    public void RequestPremadeDeckOptimizer(TriadNpc? npc, bool forceRebuild = false)
     {
         if (!CanRequestPremadeDeckOptimizer(npc, out var blockReason))
         {
@@ -66,9 +65,9 @@ public partial class TriadSession
         StartDeckOptimizer(npc, preGameMods, true, forceRebuild);
     }
 
-    public string DescribePremadeDeckOptimizerStatus(TriadNpc npc)
+    public string DescribePremadeDeckOptimizerStatus(TriadNpc? npc)
     {
-        if (npc == null)
+        if (npc is null)
         {
             return string.Empty;
         }
@@ -103,14 +102,14 @@ public partial class TriadSession
         return string.Empty;
     }
 
-    public bool IsPremadeOptimizerForNpc(TriadNpc npc) =>
-        npc != null &&
+    public bool IsPremadeOptimizerForNpc(TriadNpc? npc) =>
+        npc is not null &&
         preGameNpc?.Id == npc.Id &&
         TriadDeckOptimizerJobs.IsRunningForSessionKey(BuildOptimizerSessionKey(npc, []));
 
-    public bool HasPremadeDeckReadyForNpc(TriadNpc npc)
+    public bool HasPremadeDeckReadyForNpc(TriadNpc? npc)
     {
-        if (npc == null || !HasOptimizedDeckApplied)
+        if (npc is null || !HasOptimizedDeckApplied)
         {
             return false;
         }

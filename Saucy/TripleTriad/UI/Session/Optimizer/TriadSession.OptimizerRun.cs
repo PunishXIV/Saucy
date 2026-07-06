@@ -1,4 +1,3 @@
-#nullable disable
 using Saucy.IPC;
 using System;
 using System.Collections.Generic;
@@ -17,13 +16,13 @@ public partial class TriadSession
         TriadDeckOptimizerJobs.CancelActive(userCancelled, markTimedOut || userCancelled);
 
     private void StartDeckOptimizer(
-        TriadNpc npc,
+        TriadNpc? npc,
         List<TriadGameModifier> regionMods,
         bool premadeRequest = false,
         bool forceRebuild = false,
         bool navigationRequest = false)
     {
-        if (npc == null)
+        if (npc is null)
         {
             return;
         }
@@ -221,15 +220,15 @@ public partial class TriadSession
         }
     }
 
-    private static string BuildOptimizerSessionKey(TriadNpc npc, List<TriadGameModifier> regionMods) =>
+    private static string BuildOptimizerSessionKey(TriadNpc? npc, List<TriadGameModifier> regionMods) =>
         TriadOptimizerSessionKey.Build(npc, regionMods);
 
-    private static TriadGameModifier[] BuildRegionModsForOptimizer(TriadNpc npc, List<TriadGameModifier> regionMods) =>
+    private static TriadGameModifier[] BuildRegionModsForOptimizer(TriadNpc? npc, List<TriadGameModifier> regionMods) =>
         TriadNpcSimulationRules.BuildRegionMods(npc, regionMods);
 
-    private bool TrySkipOptimizedDeckRebuildLocked(TriadNpc npc, List<TriadGameModifier> regionMods)
+    private bool TrySkipOptimizedDeckRebuildLocked(TriadNpc? npc, List<TriadGameModifier> regionMods)
     {
-        if (npc == null)
+        if (npc is null)
         {
             return false;
         }
@@ -245,7 +244,7 @@ public partial class TriadSession
             return false;
         }
 
-        if (TryAdoptCachedDeckLocked(npc, regionMods, out var cachedMessage))
+        if (TryAdoptCachedDeckLocked(npc, regionMods, out var cachedMessage) && cachedMessage is not null)
         {
             CancelOptimizerIfRunningAfterSkip();
             var cacheSkipKey = $"{BuildOptimizerSessionKey(npc, regionMods)}:cache";
@@ -287,7 +286,7 @@ public partial class TriadSession
             return false;
         }
 
-        if (TryAdoptCachedDeckLocked(npc, regionMods, out var cachedMessage))
+        if (TryAdoptCachedDeckLocked(npc, regionMods, out var cachedMessage) && cachedMessage is not null)
         {
             TriadDeckLog.Print(cachedMessage);
             return true;
@@ -306,10 +305,10 @@ public partial class TriadSession
     private bool TrySlotCachedDeckIntoProfileLocked(
         TriadNpc npc,
         List<TriadGameModifier> regionMods,
-        out string message)
+        out string? message)
     {
         message = null;
-        if (npc == null)
+        if (npc is null)
         {
             return false;
         }
@@ -331,7 +330,7 @@ public partial class TriadSession
             return false;
         }
 
-        if (!TriadOptimizedDeckCacheValidator.TryGetUsableEntry(sessionKey, out var entry))
+        if (!TriadOptimizedDeckCacheValidator.TryGetUsableEntry(sessionKey, out var entry) || entry is null)
         {
             return false;
         }
@@ -342,7 +341,8 @@ public partial class TriadSession
             entry.CardIds,
             out var solverDeck,
             out var targetDeckId,
-            false))
+            false) ||
+            solverDeck is null)
         {
             TriadOptimizedDeckCacheStore.Remove(sessionKey);
             return false;
@@ -368,17 +368,17 @@ public partial class TriadSession
     private bool TryAdoptCachedDeckLocked(
         TriadNpc npc,
         List<TriadGameModifier> regionMods,
-        out string message)
+        out string? message)
     {
         message = null;
-        if (npc == null || !TrySlotCachedDeckIntoProfileLocked(npc, regionMods, out message))
+        if (npc is null || !TrySlotCachedDeckIntoProfileLocked(npc, regionMods, out message))
         {
             return false;
         }
 
         var sessionKey = BuildOptimizerSessionKey(npc, regionMods);
         var targetDeckId = ResolveOptimizedDeckTargetSlotLocked();
-        if (!preGameDecks.TryGetValue(targetDeckId, out var deckData) || deckData.solverDeck == null)
+        if (!preGameDecks.TryGetValue(targetDeckId, out var deckData) || deckData?.solverDeck is null)
         {
             return false;
         }
@@ -402,7 +402,7 @@ public partial class TriadSession
     {
         _optimizerTimedOut = true;
         var npc = result.Npc ?? preGameNpc;
-        if (npc == null)
+        if (npc is null)
         {
             return;
         }
@@ -414,11 +414,6 @@ public partial class TriadSession
 
     private void RecordOptimizedDeckBuiltUtc(TriadNpc npc)
     {
-        if (npc == null)
-        {
-            return;
-        }
-
         C.TriadOptimizedDeckBuiltUtcTicksByNpcId[npc.Id] = DateTime.UtcNow.Ticks;
         PruneLegacyOptimizedDeckBuildTimestamps();
         C.Save();
@@ -452,7 +447,7 @@ public partial class TriadSession
 
     private bool TryAdoptExistingSaucyDeckLocked(TriadNpc npc, List<TriadGameModifier> regionMods)
     {
-        if (profileGS == null || profileGS.HasErrors || npc == null)
+        if (profileGS == null || profileGS.HasErrors)
         {
             return false;
         }
@@ -506,11 +501,6 @@ public partial class TriadSession
     {
         deckIdx = -1;
 
-        if (npc == null)
-        {
-            return false;
-        }
-
         var expectedName = $"{npc.Name} (Saucy)";
         var profileDecks = profileGS?.GetPlayerDecks();
         if (profileDecks == null)
@@ -543,14 +533,14 @@ public partial class TriadSession
         return false;
     }
 
-    private static bool MatchesSaucyDeckName(TriadProfileDeckReader.PlayerDeck deck, string expectedName) =>
+    private static bool MatchesSaucyDeckName(TriadProfileDeckReader.PlayerDeck? deck, string expectedName) =>
         deck != null &&
         !string.IsNullOrWhiteSpace(deck.name) &&
         deck.name.Equals(expectedName, StringComparison.OrdinalIgnoreCase);
 
     private void ApplyOptimizedDeckToProfileLocked(TriadDeck optimizedDeck, float? estWinChance = null)
     {
-        if (preGameNpc == null)
+        if (preGameNpc is not { } npc)
         {
             return;
         }
@@ -561,12 +551,13 @@ public partial class TriadSession
         }
 
         if (!TryApplyOptimizedDeckFromCardsLocked(
-            preGameNpc,
+            npc,
             preGameMods,
             cardIds,
             out var appliedDeck,
             out var targetDeckId,
-            estWinChance: estWinChance))
+            estWinChance: estWinChance) ||
+            appliedDeck is null)
         {
             PrintOptimizerChat("[Saucy] Failed to write optimized deck to profile.", true);
             return;
@@ -575,14 +566,14 @@ public partial class TriadSession
         _optimizerTargetDeckId = targetDeckId;
         HasOptimizedDeckApplied = true;
         preGameBestId = targetDeckId;
-        _optimizerSessionKey = BuildOptimizerSessionKey(preGameNpc, preGameMods);
+        _optimizerSessionKey = BuildOptimizerSessionKey(npc, preGameMods);
         _optimizerTimedOut = false;
         ClearOptimizerStartBlockLocked();
         _navigationOptimizerRetryCount = 0;
         _navigationOptimizerRetrySessionKey = string.Empty;
-        RecordOptimizedDeckBuiltUtc(preGameNpc);
+        RecordOptimizedDeckBuiltUtc(npc);
 
-        var deckName = $"{preGameNpc.Name} (Saucy)";
+        var deckName = $"{npc.Name} (Saucy)";
         var deckData = new DeckData
         {
             id = targetDeckId, name = deckName, solverDeck = appliedDeck
@@ -591,9 +582,9 @@ public partial class TriadSession
         DebugScreenMemory.UpdatePlayerDeck(appliedDeck);
 
         PrintOptimizerChat(
-            $"[Saucy] Optimized deck written to slot {targetDeckId + 1} for {preGameNpc.Name}.");
+            $"[Saucy] Optimized deck written to slot {targetDeckId + 1} for {npc.Name}.");
 
-        ScheduleOptimizedDeckPreviewEval(targetDeckId, appliedDeck, preGameNpc, preGameMods);
+        ScheduleOptimizedDeckPreviewEval(targetDeckId, appliedDeck, npc, preGameMods);
         BeginDeckSelectPostWriteCooldown();
         Svc.Framework.Run(() => TriadDeckSelectAutomation.PrepareRetryWithOptimizedDeck(targetDeckId));
     }
@@ -633,9 +624,8 @@ public partial class TriadSession
         return deckData.chance.winChance;
     }
 
-    private static bool HasValidGeneratedDeckCardIds(ushort[] cardIds) =>
-        cardIds != null &&
-        cardIds.Length == TriadOptimizedDeckCacheEntry.DeckSize &&
+    private static bool HasValidGeneratedDeckCardIds(ushort[]? cardIds) =>
+        cardIds is { Length: TriadOptimizedDeckCacheEntry.DeckSize } &&
         cardIds.All(id => id > 0);
 
     private bool TryExtractOptimizedCardIds(TriadDeck optimizedDeck, out ushort[] cardIds)
@@ -660,7 +650,7 @@ public partial class TriadSession
         TriadNpc npc,
         List<TriadGameModifier> regionMods,
         ushort[] cardIds,
-        out TriadDeck solverDeck,
+        out TriadDeck? solverDeck,
         out int targetDeckId,
         bool persistGeneratedDeckToCache = true,
         float? estWinChance = null)
@@ -668,7 +658,7 @@ public partial class TriadSession
         solverDeck = null;
         targetDeckId = -1;
 
-        if (npc == null || !TriadOptimizedDeckCacheValidator.TryBuildSolverDeck(cardIds, out solverDeck))
+        if (npc is null || !TriadOptimizedDeckCacheValidator.TryBuildSolverDeck(cardIds, out solverDeck))
         {
             return false;
         }
@@ -718,7 +708,7 @@ public partial class TriadSession
         TriadDeck deck,
         float winChance)
     {
-        if (npc == null || deck == null || winChance <= 0f)
+        if (npc is null || deck is null || winChance <= 0f)
         {
             return;
         }
@@ -753,7 +743,7 @@ public partial class TriadSession
         ushort[] cardIds,
         float? estWinChance = null)
     {
-        if (npc == null || !HasValidGeneratedDeckCardIds(cardIds))
+        if (npc is null || !HasValidGeneratedDeckCardIds(cardIds))
         {
             return;
         }
@@ -777,7 +767,7 @@ public partial class TriadSession
         List<TriadGameModifier> regionMods,
         bool forceResim = true)
     {
-        if (deck == null || npc == null || deckId < 0)
+        if (deck is null || npc is null || deckId < 0)
         {
             return;
         }
@@ -788,10 +778,10 @@ public partial class TriadSession
             return;
         }
 
-        DeckData deckData;
+        DeckData? deckData;
         lock (_preGameLock)
         {
-            if (!preGameDecks.TryGetValue(deckId, out deckData) || deckData == null)
+            if (!preGameDecks.TryGetValue(deckId, out deckData) || deckData is null)
             {
                 deckData = new()
                 {

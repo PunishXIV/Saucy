@@ -38,9 +38,9 @@ internal static class TriadOptimizedDeckCacheValidator
     public static bool ShouldRebuildDeckForNewCards(string sessionKey, int npcId) =>
         CountNewOwnedCardsSinceBuild(sessionKey, npcId) >= TriadOptimizedDeckCacheStore.RebuildAfterNewCardCount;
 
-    private static int CountNewOwnedCards(int[] ownedAtBuild, IReadOnlySet<int> currentOwnedIds)
+    private static int CountNewOwnedCards(int[]? ownedAtBuild, IReadOnlySet<int> currentOwnedIds)
     {
-        if (ownedAtBuild == null || ownedAtBuild.Length == 0)
+        if (ownedAtBuild is not { Length: > 0 })
         {
             return 0;
         }
@@ -62,12 +62,12 @@ internal static class TriadOptimizedDeckCacheValidator
     {
         entry = null;
 
-        if (!TriadOptimizedDeckCacheStore.TryGetEntry(sessionKey, out var cached))
+        if (!TriadOptimizedDeckCacheStore.TryGetEntry(sessionKey, out var cached) || cached is null)
         {
             return false;
         }
 
-        if (!HasValidCardIds(cached!.CardIds))
+        if (!HasValidCardIds(cached.CardIds))
         {
             TriadOptimizedDeckCacheStore.Remove(sessionKey);
             return false;
@@ -100,15 +100,9 @@ internal static class TriadOptimizedDeckCacheValidator
         return true;
     }
 
-    private static bool HasValidCardIds(ushort[] cardIds)
-    {
-        if (cardIds == null || cardIds.Length != TriadOptimizedDeckCacheEntry.DeckSize)
-        {
-            return false;
-        }
-
-        return cardIds.All(id => id > 0);
-    }
+    private static bool HasValidCardIds(ushort[]? cardIds) =>
+        cardIds is { Length: TriadOptimizedDeckCacheEntry.DeckSize } &&
+        cardIds.All(id => id > 0);
 
     public static bool TryBuildSolverDeck(ushort[] cardIds, out TriadDeck? deck)
     {

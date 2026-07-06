@@ -21,7 +21,7 @@ internal static unsafe class TriadPrepRequestReader
 
         var baseNode = &addon->AtkUnitBase;
         var nodeArrL0 = GUINodeUtils.GetImmediateChildNodes(baseNode->RootNode);
-        if (nodeArrL0 != null && nodeArrL0.Length >= MinRootChildCount)
+        if (nodeArrL0 is { Length: >= MinRootChildCount })
         {
             ReadLayout(nodeArrL0, state);
         }
@@ -36,7 +36,7 @@ internal static unsafe class TriadPrepRequestReader
     {
         var nodeRulesA = GUINodeUtils.PickNode(nodeArrL0, RulesGroupAIndex, nodeArrL0.Length);
         var nodeArrL1A = GUINodeUtils.GetImmediateChildNodes(nodeRulesA);
-        if (nodeArrL1A != null)
+        if (nodeArrL1A is not null)
         {
             var nodeL2A1 = GUINodeUtils.PickNode(nodeArrL1A, 0, nodeArrL1A.Length);
             state.rules[3] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2A1, 2, 3)) ?? "";
@@ -46,7 +46,7 @@ internal static unsafe class TriadPrepRequestReader
 
         var nodeRulesB = GUINodeUtils.PickNode(nodeArrL0, RulesGroupBIndex, nodeArrL0.Length);
         var nodeArrL1B = GUINodeUtils.GetImmediateChildNodes(nodeRulesB);
-        if (nodeArrL1B != null)
+        if (nodeArrL1B is not null)
         {
             var nodeL2B1 = GUINodeUtils.PickNode(nodeArrL1B, 0, nodeArrL1B.Length);
             state.rules[1] = GUINodeUtils.GetNodeText(GUINodeUtils.PickChildNode(nodeL2B1, 2, 3)) ?? "";
@@ -72,7 +72,7 @@ internal static unsafe class TriadPrepRequestReader
 
         foreach (var node in GUINodeUtils.GetAllChildNodes(baseNode->RootNode) ?? [])
         {
-            if (node == null)
+            if (node is null)
             {
                 continue;
             }

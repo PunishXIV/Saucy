@@ -1,5 +1,6 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Saucy.TripleTriad.Utils;
 using System;
 using System.Collections.Generic;
 namespace Saucy.TripleTriad.UI;
@@ -40,7 +41,7 @@ public class UIReaderTriadGame : IUIReader
     {
         this.addonPtr = addonPtr;
         var addon = (AddonTripleTriad*)addonPtr;
-        if (addon == null)
+        if (addon is null)
         {
             return;
         }
@@ -57,7 +58,7 @@ public class UIReaderTriadGame : IUIReader
     public unsafe void SyncCurrentFromAddon(nint addonPtr)
     {
         var addon = (AddonTripleTriad*)addonPtr;
-        if (addon == null)
+        if (addon is null)
         {
             return;
         }
@@ -154,19 +155,20 @@ public class UIReaderTriadGame : IUIReader
         var nodeNameL1 = GUINodeUtils.PickNode(nodeArrNameL1, 0, 5);
         var nodeArrNameL2 = GUINodeUtils.GetAllChildNodes(nodeNameL1);
         var numParsed = 0;
-        if (nodeArrNameL2 != null)
+        if (nodeArrNameL2 is not null)
         {
             foreach (var testNode in nodeArrNameL2)
             {
-                var isVisible = (testNode != null) && (testNode->NodeFlags & NodeFlags.Visible) == NodeFlags.Visible;
-                if (isVisible)
+                if (!GUINodeUtils.IsNodeVisible(testNode))
                 {
-                    numParsed++;
-                    var text = GUINodeUtils.GetNodeText(testNode);
-                    if (!string.IsNullOrEmpty(text))
-                    {
-                        listRedDesc.Add(text);
-                    }
+                    continue;
+                }
+
+                numParsed++;
+                var text = GUINodeUtils.GetNodeText(testNode);
+                if (!string.IsNullOrEmpty(text))
+                {
+                    listRedDesc.Add(text);
                 }
             }
         }
@@ -183,7 +185,7 @@ public class UIReaderTriadGame : IUIReader
 
     private static unsafe void CollectVisibleTextNodes(AtkResNode* node, List<string> output)
     {
-        if (node == null || !node->IsVisible())
+        if (node is null || !node->IsVisible())
         {
             return;
         }
@@ -209,7 +211,7 @@ public class UIReaderTriadGame : IUIReader
 
         var nodeRule0 = GUINodeUtils.PickNode(level0, 4, 12);
         var nodeArrRule = GUINodeUtils.GetImmediateChildNodes(nodeRule0);
-        if (nodeArrRule != null && nodeArrRule.Length == 5)
+        if (nodeArrRule is { Length: 5 })
         {
             for (var idx = 0; idx < 4; idx++)
             {
@@ -220,7 +222,7 @@ public class UIReaderTriadGame : IUIReader
                 }
             }
         }
-        else if (nodeArrRule != null)
+        else if (nodeArrRule is not null)
         {
             foreach (var node in nodeArrRule)
             {
@@ -238,7 +240,7 @@ public class UIReaderTriadGame : IUIReader
     private unsafe bool GetUIStatePvP(AtkResNode*[]? level0)
     {
         var nodePvPButton = GUINodeUtils.PickNode(level0, 11, 12);
-        return nodePvPButton != null && nodePvPButton->IsVisible();
+        return GUINodeUtils.IsNodeVisible(nodePvPButton);
     }
 
     private unsafe (string, bool) GetCardTextureData(AddonTripleTriad.TripleTriadCard addonCard)
@@ -248,7 +250,7 @@ public class UIReaderTriadGame : IUIReader
         var nodeC = GUINodeUtils.PickChildNode(nodeB, 3, 21);
         var texPath = GUINodeUtils.GetNodeTexturePath(nodeC);
 
-        var isLocked = (nodeB != null) && (nodeB->MultiplyRed < 100);
+        var isLocked = nodeB is not null && nodeB->MultiplyRed < 100;
         return (texPath ?? "", isLocked);
     }
 

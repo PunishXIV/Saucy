@@ -25,7 +25,7 @@ internal static unsafe class TriadPrepDeckSelectReader
         var nodeA = baseNode->UldManager.NodeListCount >= DeckListNodeIndex + 1
             ? baseNode->UldManager.NodeList[DeckListNodeIndex]
             : null;
-        if (nodeA == null || (int)nodeA->Type <= 1000)
+        if (nodeA is null || (int)nodeA->Type <= 1000)
         {
             return false;
         }
@@ -40,13 +40,13 @@ internal static unsafe class TriadPrepDeckSelectReader
         for (var rowIdx = 0; rowIdx < rowCount; rowIdx++)
         {
             var rowNode = compNodeA->Component->UldManager.NodeList[rowIdx];
-            if (rowNode == null)
+            if (rowNode is null)
             {
                 continue;
             }
 
             var cardRowNode = GUINodeUtils.PickChildNode(rowNode, 3, 12);
-            if (cardRowNode == null && !RowLooksLikeDeckRow(rowNode))
+            if (cardRowNode is null && !RowLooksLikeDeckRow(rowNode))
             {
                 continue;
             }
@@ -72,7 +72,7 @@ internal static unsafe class TriadPrepDeckSelectReader
         for (var listIdx = 0; listIdx < baseNode->UldManager.NodeListCount; listIdx++)
         {
             var nodeA = baseNode->UldManager.NodeList[listIdx];
-            if (nodeA == null || (int)nodeA->Type <= 1000)
+            if (nodeA is null || (int)nodeA->Type <= 1000)
             {
                 continue;
             }
@@ -88,7 +88,7 @@ internal static unsafe class TriadPrepDeckSelectReader
             for (var rowIdx = 0; rowIdx < rowCount; rowIdx++)
             {
                 var rowNode = compNodeA->Component->UldManager.NodeList[rowIdx];
-                if (rowNode == null)
+                if (rowNode is null)
                 {
                     continue;
                 }
@@ -174,7 +174,7 @@ internal static unsafe class TriadPrepDeckSelectReader
             }
 
             var comp = ((AtkComponentNode*)child)->Component;
-            if (comp != null && comp->UldManager.NodeListCount == childCount)
+            if (comp is not null && comp->UldManager.NodeListCount == childCount)
             {
                 return child;
             }

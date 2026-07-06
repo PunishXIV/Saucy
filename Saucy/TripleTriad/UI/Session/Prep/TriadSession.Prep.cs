@@ -1,4 +1,3 @@
-#nullable disable
 using Saucy.IPC;
 using System;
 using System.Collections.Generic;
@@ -6,15 +5,15 @@ namespace Saucy.TripleTriad.UI;
 
 public partial class TriadSession
 {
-    public void OnNpcSelected(TriadNpc npc) => OnNpcSelected(npc, []);
+    public void OnNpcSelected(TriadNpc? npc) => OnNpcSelected(npc, []);
 
     public void OnNpcSelected(
-        TriadNpc npc,
+        TriadNpc? npc,
         List<TriadGameModifier> regionMods,
         bool startOptimizer = false,
         bool forNavigation = false)
     {
-        if (npc == null)
+        if (npc is null)
         {
             return;
         }
@@ -94,9 +93,9 @@ public partial class TriadSession
 
         if (onMatchRegistration || onDeckSelect)
         {
-            if (TrySyncNpcFromPrepState(uiReaderPrep.cachedState))
+            if (TrySyncNpcFromPrepState(uiReaderPrep.cachedState) && preGameNpc is { } syncedNpc)
             {
-                ApplyRunTargetNpc(preGameNpc!);
+                ApplyRunTargetNpc(syncedNpc);
                 return;
             }
 
@@ -129,15 +128,15 @@ public partial class TriadSession
             }
         }
 
-        if (TrySyncNpcFromPrepState(uiReaderPrep.cachedState))
+        if (TrySyncNpcFromPrepState(uiReaderPrep.cachedState) && preGameNpc is { } prepSyncedNpc)
         {
-            ApplyRunTargetNpc(preGameNpc!);
+            ApplyRunTargetNpc(prepSyncedNpc);
         }
     }
 
-    private void ApplyRunTargetNpc(TriadNpc npc, bool startOptimizer = false, bool forNavigation = false)
+    private void ApplyRunTargetNpc(TriadNpc? npc, bool startOptimizer = false, bool forNavigation = false)
     {
-        if (npc == null)
+        if (npc is null)
         {
             return;
         }
@@ -235,7 +234,7 @@ public partial class TriadSession
 
         var parseCtx = new GameUIParser();
         var npc = parseCtx.ParseNpc(state.npc, false) ?? parseCtx.ParseNpcNameStart(state.npc, false);
-        if (npc == null)
+        if (npc is null)
         {
             return false;
         }
@@ -264,11 +263,6 @@ public partial class TriadSession
 
     private void InvalidateDeckPreviewCacheLocked(TriadNpc npc)
     {
-        if (npc == null)
-        {
-            return;
-        }
-
         lock (_preGameLock)
         {
             var prefix = npc.Name + "|";
@@ -309,9 +303,9 @@ public partial class TriadSession
         }
     }
 
-    public void OnPrepRulesUpdated(TriadNpc npc)
+    public void OnPrepRulesUpdated(TriadNpc? npc)
     {
-        if (npc == null || !C.UseSimmedDeck)
+        if (npc is null || !C.UseSimmedDeck)
         {
             return;
         }
@@ -335,14 +329,14 @@ public partial class TriadSession
             return;
         }
 
-        if (!TrySyncNpcFromPrepState(state))
+        if (!TrySyncNpcFromPrepState(state) || preGameNpc is not { } syncedNpc)
         {
             var parseCtx = new GameUIParser();
             parseCtx.OnFailedNpcSilent(state.npc);
             return;
         }
 
-        ApplyRunTargetNpc(preGameNpc!);
+        ApplyRunTargetNpc(syncedNpc);
     }
 
     private static List<TriadGameModifier> ParsePrepRegionMods(UIStateTriadPrep state, GameUIParser parseCtx)
@@ -392,11 +386,11 @@ public partial class TriadSession
 
         if (canProcessDecks)
         {
-            var profileDecks = canReadFromProfile ? profileGS.GetPlayerDecks() : null;
+            var profileDecks = canReadFromProfile && profileGS is not null ? profileGS.GetPlayerDecks() : null;
             var numDecks = (profileDecks != null) ? profileDecks.Length : state.decks.Count;
             var newPreGameDecks = new Dictionary<int, DeckData>();
 
-            TriadDeck anyDeckOb = null;
+            TriadDeck? anyDeckOb = null;
             for (var deckIdx = 0; deckIdx < numDecks; deckIdx++)
             {
                 parseCtx.Reset();

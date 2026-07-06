@@ -57,7 +57,7 @@ internal static unsafe class TriadRematchAutomation
     internal static bool IsResultMatchRecorded(nint resultAddonPtr) =>
         resultAddonPtr != nint.Zero && resultAddonPtr == lastRecordedResultAddonPtr;
 
-    internal static bool IsResultReady(AtkUnitBase* addon) => addon != null && addon->IsReady;
+    internal static bool IsResultReady(AtkUnitBase* addon) => addon is not null && addon->IsReady;
 
     public static void RecordMatchResultIfNeeded(nint resultAddonPtr = default, bool requireActionButtons = false)
     {

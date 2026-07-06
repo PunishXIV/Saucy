@@ -86,11 +86,6 @@ internal static class TriadRewardDropTracker
 
     public static void ProcessVerifiedCardDrop(GameCardInfo droppedCard)
     {
-        if (droppedCard == null)
-        {
-            return;
-        }
-
         if (TriadCardFarmSession.IsModeActive() &&
             TriadCardFarmSession.TempCardsWonList.ContainsKey((uint)droppedCard.CardId))
         {

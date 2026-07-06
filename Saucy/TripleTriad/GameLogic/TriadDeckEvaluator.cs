@@ -4,11 +4,11 @@ namespace Saucy.TripleTriad.GameLogic;
 public static class TriadDeckEvaluator
 {
     private static SolverResult EvaluateOpeningMove(
-        TriadDeck playerDeck,
-        TriadNpc npc,
+        TriadDeck? playerDeck,
+        TriadNpc? npc,
         IEnumerable<TriadGameModifier> rules)
     {
-        if (playerDeck == null || npc?.Deck == null)
+        if (playerDeck is null || npc?.Deck is null)
         {
             return SolverResult.Zero;
         }
@@ -21,8 +21,8 @@ public static class TriadDeckEvaluator
     }
 
     public static SolverResult EvaluateOpeningMoveThrottled(
-        TriadDeck playerDeck,
-        TriadNpc npc,
+        TriadDeck? playerDeck,
+        TriadNpc? npc,
         IEnumerable<TriadGameModifier> rules)
     {
         if (TriadUiState.IsBoardVisible())

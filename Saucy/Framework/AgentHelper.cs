@@ -10,12 +10,12 @@ public static unsafe class AgentHelper
     public static bool IsActive(AgentId agentId)
     {
         var agent = AgentModule.Instance()->GetAgentByInternalId(agentId);
-        return agent != null && agent->IsAgentActive();
+        return agent is not null && agent->IsAgentActive();
     }
 
     public static bool IsAddonOwnedBy(AtkUnitBase* addon, AgentId agentId)
     {
-        if (addon == null ||
+        if (addon is null ||
             !RaptureAtkModule.Instance()->AddonCallbackMapping.TryGetValue(addon->Id, out var callbackEntry, false))
         {
             return false;

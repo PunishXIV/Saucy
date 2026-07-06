@@ -6,9 +6,9 @@ namespace Saucy.TripleTriad.GameLogic;
 
 internal static class TriadOptimizerSessionKey
 {
-    public static string Build(TriadNpc npc, IEnumerable<TriadGameModifier> regionMods)
+    public static string Build(TriadNpc? npc, IEnumerable<TriadGameModifier> regionMods)
     {
-        if (npc == null)
+        if (npc is null)
         {
             return string.Empty;
         }
@@ -24,27 +24,17 @@ internal static class TriadOptimizerSessionKey
 
     public static bool RegionModsEqual(IReadOnlyList<TriadGameModifier> left, IReadOnlyList<TriadGameModifier> right)
     {
-        if (left == null || right == null)
-        {
-            return left == right;
-        }
-
-        var leftSignatures = CollectModSignatures(left).OrderBy(sig => sig, StringComparer.Ordinal).ToArray();
-        var rightSignatures = CollectModSignatures(right).OrderBy(sig => sig, StringComparer.Ordinal).ToArray();
+        string[] leftSignatures = [.. CollectModSignatures(left).OrderBy(sig => sig, StringComparer.Ordinal)];
+        string[] rightSignatures = [.. CollectModSignatures(right).OrderBy(sig => sig, StringComparer.Ordinal)];
         return leftSignatures.SequenceEqual(rightSignatures, StringComparer.Ordinal);
     }
 
     public static string[] GetModSignatures(IEnumerable<TriadGameModifier> regionMods) =>
-        CollectModSignatures(regionMods).OrderBy(sig => sig, StringComparer.Ordinal).ToArray();
+        [.. CollectModSignatures(regionMods).OrderBy(sig => sig, StringComparer.Ordinal)];
 
     public static List<TriadGameModifier> RegionModsFromSignatures(IEnumerable<string> signatures)
     {
         var result = new List<TriadGameModifier>();
-        if (signatures == null)
-        {
-            return result;
-        }
-
         var modDb = TriadGameModifierDB.Get();
         foreach (var signature in signatures)
         {
@@ -79,29 +69,23 @@ internal static class TriadOptimizerSessionKey
             }
 
             var clone = modDb.mods[modId].Clone();
-            if (clone != null)
-            {
-                result.Add(clone);
-            }
+            result.Add(clone);
         }
 
         return result;
     }
 
-    public static bool ShouldSkipDeckCache(TriadNpc npc, IReadOnlyList<TriadGameModifier> regionMods)
+    public static bool ShouldSkipDeckCache(TriadNpc? npc, IReadOnlyList<TriadGameModifier> regionMods)
     {
-        if (regionMods != null)
+        foreach (var mod in regionMods)
         {
-            foreach (var mod in regionMods)
+            if (mod is TriadGameModifierRoulette roulette && roulette.GetResolvedRule() is null)
             {
-                if (mod is TriadGameModifierRoulette roulette && roulette.GetResolvedRule() == null)
-                {
-                    return true;
-                }
+                return true;
             }
         }
 
-        if (regionMods == null || regionMods.Count != 0)
+        if (regionMods.Count != 0)
         {
             return false;
         }
@@ -111,14 +95,9 @@ internal static class TriadOptimizerSessionKey
 
     private static IEnumerable<string> CollectModSignatures(IEnumerable<TriadGameModifier> regionMods)
     {
-        if (regionMods == null)
-        {
-            yield break;
-        }
-
         foreach (var mod in regionMods)
         {
-            if (mod == null)
+            if (mod is null)
             {
                 continue;
             }

@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 namespace Saucy.TripleTriad.UI;
@@ -131,7 +130,7 @@ public partial class TriadSession
             return false;
         }
 
-        string targetName = null;
+        string? targetName = null;
         if (profileGS != null && !profileGS.HasErrors)
         {
             var profileDecks = profileGS.GetPlayerDecks();
@@ -207,8 +206,8 @@ public partial class TriadSession
             return false;
         }
 
-        var kickPreviewEval = false;
-        TriadNpc previewNpc = null;
+        bool kickPreviewEval;
+        TriadNpc? previewNpc;
         lock (_preGameLock)
         {
             if (HasOptimizedDeckApplied && _optimizerTargetDeckId >= 0)

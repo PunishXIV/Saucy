@@ -1,4 +1,5 @@
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Saucy.TripleTriad.Utils;
 using System.Linq;
 namespace Saucy.TripleTriad.UI;
 
@@ -19,7 +20,7 @@ internal static unsafe class TriadResultReader
 
         var baseNode = &addon->AtkUnitBase;
         var nodeArrL0 = GUINodeUtils.GetImmediateChildNodes(baseNode->RootNode);
-        if (nodeArrL0 == null)
+        if (nodeArrL0 is null)
         {
             return;
         }
@@ -49,13 +50,13 @@ internal static unsafe class TriadResultReader
         var rewardsNode = nodeArrL0.Length == CompactRootChildCount
             ? GUINodeUtils.PickNode(nodeArrL0, CompactMgpRewardIndex, CompactRootChildCount)
             : GUINodeUtils.PickNode(nodeArrL0, ExpandedMgpRewardIndex, ExpandedRootChildCount);
-        if (rewardsNode == null)
+        if (rewardsNode is null)
         {
             return;
         }
 
         var nodeArrRewards0 = GUINodeUtils.GetImmediateChildNodes(rewardsNode);
-        if (nodeArrRewards0 == null)
+        if (nodeArrRewards0 is null)
         {
             return;
         }
@@ -63,7 +64,7 @@ internal static unsafe class TriadResultReader
         foreach (var nodeCoinsA in nodeArrRewards0)
         {
             var nodeCoinsB = GUINodeUtils.PickChildNode(nodeCoinsA, 5, 6);
-            if (nodeCoinsB == null)
+            if (nodeCoinsB is null)
             {
                 continue;
             }
@@ -89,7 +90,7 @@ internal static unsafe class TriadResultReader
 
     private static bool TryReadResultFlags(AtkResNode*[]? nodes, int nodeIdx, int expectedNumNodes, UIStateTriadResults state)
     {
-        if (nodes == null)
+        if (nodes is null)
         {
             return false;
         }
@@ -98,18 +99,18 @@ internal static unsafe class TriadResultReader
     }
 
     private static bool TryReadResultFlags(AtkResNode* nodeResult, UIStateTriadResults state) =>
-        nodeResult != null && TryReadResultFlags(GUINodeUtils.GetImmediateChildNodes(nodeResult), state);
+        nodeResult is not null && TryReadResultFlags(GUINodeUtils.GetImmediateChildNodes(nodeResult), state);
 
     private static bool TryReadResultFlags(AtkResNode*[]? nodeArrResult0, UIStateTriadResults state, int expectedLength = 3)
     {
-        if (nodeArrResult0 == null || nodeArrResult0.Length != expectedLength)
+        if (nodeArrResult0 is not { Length: var length } || length != expectedLength)
         {
             return false;
         }
 
-        state.isDraw = nodeArrResult0[0] != null && nodeArrResult0[0]->IsVisible();
-        state.isLose = nodeArrResult0[1] != null && nodeArrResult0[1]->IsVisible();
-        state.isWin = nodeArrResult0[2] != null && nodeArrResult0[2]->IsVisible();
+        state.isDraw = GUINodeUtils.IsNodeVisible(nodeArrResult0[0]);
+        state.isLose = GUINodeUtils.IsNodeVisible(nodeArrResult0[1]);
+        state.isWin = GUINodeUtils.IsNodeVisible(nodeArrResult0[2]);
         return state.isDraw || state.isLose || state.isWin;
     }
 }

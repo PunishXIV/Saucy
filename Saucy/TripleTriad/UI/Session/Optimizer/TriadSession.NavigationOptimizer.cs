@@ -1,13 +1,12 @@
-#nullable disable
 using Saucy.IPC;
 using System;
 namespace Saucy.TripleTriad.UI;
 
 public partial class TriadSession
 {
-    public bool IsNavigationBlockedWaitingForOptimizer(TriadNpc npc)
+    public bool IsNavigationBlockedWaitingForOptimizer(TriadNpc? npc)
     {
-        if (!ShouldBuildOptimizedDeck() || npc == null)
+        if (!ShouldBuildOptimizedDeck() || npc is null)
         {
             return false;
         }

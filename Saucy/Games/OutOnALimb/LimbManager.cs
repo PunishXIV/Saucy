@@ -11,7 +11,7 @@ using static ECommons.GenericHelpers;
 
 namespace Saucy.OutOnALimb;
 
-public unsafe partial class LimbManager
+public unsafe partial class LimbManager(LimbConfig cfg)
 {
     private const GoldSaucerArcadeMachine Machine = GoldSaucerArcadeMachine.Limb;
     private const string MachineSanityThrottleKey = "Saucy.OutOnALimb.MachineSanityCheck";
@@ -31,7 +31,7 @@ public unsafe partial class LimbManager
         [LimbDifficulty.Titan] = 41, [LimbDifficulty.Morbol] = 44, [LimbDifficulty.Cactuar] = 47
     };
     private readonly List<HitResult> Results = [];
-    public LimbConfig Cfg;
+    public LimbConfig Cfg = cfg;
 
     private bool Exit;
     private int MinIndex;
@@ -44,8 +44,6 @@ public unsafe partial class LimbManager
     private bool RecordMinIndex;
     private int? Request;
     private int RequestInput;
-
-    public LimbManager(LimbConfig conf) => Cfg = conf;
 
     private void ToggleModule(bool enabled)
     {

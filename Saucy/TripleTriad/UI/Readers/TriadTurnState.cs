@@ -1,5 +1,6 @@
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Saucy.TripleTriad.Utils;
 using System;
 namespace Saucy.TripleTriad.UI;
 
@@ -27,7 +28,7 @@ internal static class TriadTurnState
 
     public static unsafe bool ReadIsPlayerTurn(AtkUnitBase* unit)
     {
-        if (unit == null || unit->AtkValuesCount <= PlayerTurnAtkValueIndex)
+        if (unit is null || unit->AtkValuesCount <= PlayerTurnAtkValueIndex)
         {
             return false;
         }
@@ -45,11 +46,11 @@ internal static class TriadTurnState
         (IsBoardPickPhase(turnState) && isPlayerTurn);
 
     public static unsafe bool IsTurnBannerVisible(AtkUnitBase* unit) =>
-        unit != null && HasTurnBannerText(unit->RootNode);
+        unit is not null && HasTurnBannerText(unit->RootNode);
 
     private static unsafe bool HasTurnBannerText(AtkResNode* node)
     {
-        if (node == null || !node->IsVisible())
+        if (!GUINodeUtils.IsNodeVisible(node))
         {
             return false;
         }

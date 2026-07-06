@@ -97,7 +97,7 @@ public static unsafe class SelectYesnoHelper
         for (var i = 1; i < 100; i++)
         {
             var addon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("SelectYesno", i).Address;
-            if (addon == null)
+            if (addon is null)
             {
                 return false;
             }
@@ -141,7 +141,7 @@ public static unsafe class SelectYesnoHelper
     }
 
     public static bool IsArcadeYesno(AddonSelectYesno* yesno) =>
-        yesno != null && IsArcadeAddon(&yesno->AtkUnitBase) && HasYesnoButtons(yesno);
+        yesno is not null && IsArcadeAddon(&yesno->AtkUnitBase) && HasYesnoButtons(yesno);
 
     public static bool ShouldPressLotteryYesno(AddonSelectYesno* yesno, AgentId lotteryAgent) =>
         IsSafeMinigameYesno(yesno) &&
@@ -152,7 +152,7 @@ public static unsafe class SelectYesnoHelper
     public static bool ShouldPressTriadYesno(AddonSelectYesno* yesno) => IsTriadYesno(yesno);
 
     public static bool IsSafeMinigameYesno(AddonSelectYesno* yesno) =>
-        yesno != null &&
+        yesno is not null &&
         HasYesnoButtons(yesno) &&
         !IsBlockedSystemPrompt(yesno) &&
         !IsTriadYesno(yesno) &&
@@ -162,7 +162,7 @@ public static unsafe class SelectYesnoHelper
 
     public static bool IsCuffPlayRoundPrompt(AddonSelectYesno* yesno)
     {
-        if (yesno == null || IsBlockedSystemPrompt(yesno) || IsTriadYesNoPrompt(yesno))
+        if (yesno is null || IsBlockedSystemPrompt(yesno) || IsTriadYesNoPrompt(yesno))
         {
             return false;
         }
@@ -229,7 +229,7 @@ public static unsafe class SelectYesnoHelper
     }
 
     public static bool IsTriadYesno(AddonSelectYesno* yesno) =>
-        yesno != null &&
+        yesno is not null &&
         HasYesnoButtons(yesno) &&
         !IsBlockedSystemPrompt(yesno) &&
         !IsArcadeAddon(&yesno->AtkUnitBase) &&
@@ -247,10 +247,10 @@ public static unsafe class SelectYesnoHelper
     }
 
     public static bool HasYesnoButtons(AddonSelectYesno* yesno) =>
-        yesno != null && (TryResolveYesNoButtons(yesno, out _, out _) || TryResolveYesButton(yesno, out _));
+        yesno is not null && (TryResolveYesNoButtons(yesno, out _, out _) || TryResolveYesButton(yesno, out _));
 
     public static bool IsArcadeDoubleDownYesno(AddonSelectYesno* yesno) =>
-        yesno != null &&
+        yesno is not null &&
         IsArcadeYesno(yesno) &&
         HasVisiblePayoutAmount(yesno) &&
         IsOutOnALimbDoubleDownContext();
@@ -277,7 +277,7 @@ public static unsafe class SelectYesnoHelper
 
     private static bool IsModuleManagedYesno(AddonSelectYesno* yesno)
     {
-        if (yesno == null || !HasYesnoButtons(yesno))
+        if (yesno is null || !HasYesnoButtons(yesno))
         {
             return false;
         }
@@ -290,7 +290,7 @@ public static unsafe class SelectYesnoHelper
     }
 
     public static bool IsRouteSafeYesno(AddonSelectYesno* yesno) =>
-        yesno != null &&
+        yesno is not null &&
         HasYesnoButtons(yesno) &&
         !IsBlockedSystemPrompt(yesno) &&
         !IsModuleManagedYesno(yesno);
@@ -322,7 +322,7 @@ public static unsafe class SelectYesnoHelper
 
     private static void TryCollectDigitGroupsFromTextNode(AtkTextNode* textNode, List<int> values)
     {
-        if (textNode == null || !((AtkResNode*)textNode)->IsVisible())
+        if (textNode is null || !((AtkResNode*)textNode)->IsVisible())
         {
             return;
         }
@@ -361,7 +361,7 @@ public static unsafe class SelectYesnoHelper
 
     private static bool TryResolve(AddonSelectYesno* yesno, out AddonSelectYesno* resolved)
     {
-        if (yesno != null && IsAddonReady(&yesno->AtkUnitBase))
+        if (yesno is not null && IsAddonReady(&yesno->AtkUnitBase))
         {
             resolved = yesno;
             return true;
@@ -381,7 +381,7 @@ public static unsafe class SelectYesnoHelper
         }
 
         var textNode = yesno->AtkUnitBase.GetTextNodeById(PromptTextNodeId);
-        if (textNode == null)
+        if (textNode is null)
         {
             return string.Empty;
         }
@@ -392,13 +392,13 @@ public static unsafe class SelectYesnoHelper
     private static bool TryGetVisibleButtonByNodeId(AddonSelectYesno* yesno, uint nodeId, out AtkComponentButton* button)
     {
         button = null;
-        if (yesno == null)
+        if (yesno is null)
         {
             return false;
         }
 
         button = yesno->AtkUnitBase.GetComponentButtonById(nodeId);
-        if (button == null || button->AtkResNode == null)
+        if (button is null || button->AtkResNode is null)
         {
             return false;
         }
@@ -418,7 +418,7 @@ public static unsafe class SelectYesnoHelper
         if (TryResolveYesNoButtons(yesno, out yesButton, out var noButton))
         {
             var targetButton = wantsYes ? yesButton : noButton;
-            if (targetButton != null &&
+            if (targetButton is not null &&
                 TryClickStructButton(yesno, targetButton, forceEnable: wantsYes))
             {
                 return true;
@@ -473,7 +473,7 @@ public static unsafe class SelectYesnoHelper
     private static bool TryResolveYesButton(AddonSelectYesno* yesno, out AtkComponentButton* yesButton)
     {
         yesButton = null;
-        if (yesno == null)
+        if (yesno is null)
         {
             return false;
         }
@@ -506,7 +506,7 @@ public static unsafe class SelectYesnoHelper
     {
         yesButton = null;
         noButton = null;
-        if (yesno == null)
+        if (yesno is null)
         {
             return false;
         }
@@ -561,7 +561,7 @@ public static unsafe class SelectYesnoHelper
     private static bool IsComponentNodeVisible(AddonSelectYesno* yesno, uint nodeId)
     {
         var componentNode = yesno->AtkUnitBase.GetComponentNodeById(nodeId);
-        if (componentNode == null)
+        if (componentNode is null)
         {
             return false;
         }
@@ -572,7 +572,7 @@ public static unsafe class SelectYesnoHelper
     private static bool HasVisibleStructButton(AtkComponentButton* button, out AtkComponentButton* resolved)
     {
         resolved = button;
-        if (button == null || button->AtkResNode == null)
+        if (button is null || button->AtkResNode is null)
         {
             resolved = null;
             return false;
@@ -587,7 +587,7 @@ public static unsafe class SelectYesnoHelper
 
     private static bool TryClickButton(AddonSelectYesno* yesno, AtkComponentButton* button, bool forceEnable = false)
     {
-        if (button == null)
+        if (button is null)
         {
             return false;
         }

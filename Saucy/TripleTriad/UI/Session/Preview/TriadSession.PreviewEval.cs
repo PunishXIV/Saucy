@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -14,7 +13,7 @@ public partial class TriadSession
         bool syncPreGameDeck,
         bool forceResim = false)
     {
-        if (string.IsNullOrEmpty(cacheKey) || deckData?.solverDeck == null || npc == null)
+        if (string.IsNullOrEmpty(cacheKey) || deckData?.solverDeck is null || npc is null)
         {
             return;
         }
@@ -130,14 +129,14 @@ public partial class TriadSession
         });
     }
 
-    private DeckData ParseDeckDataFromProfile(TriadProfileDeckReader.PlayerDeck deckOb, GameUIParser ctx)
+    private DeckData? ParseDeckDataFromProfile(TriadProfileDeckReader.PlayerDeck? deckOb, GameUIParser ctx)
     {
         if (deckOb == null)
         {
             return null;
         }
 
-        var cards = new TriadCard[5];
+        var cards = new TriadCard?[5];
         for (var cardIdx = 0; cardIdx < 5; cardIdx++)
         {
             var cardId = deckOb.cardIds[cardIdx];
@@ -146,21 +145,23 @@ public partial class TriadSession
                 return null;
             }
 
-            cards[cardIdx] = ctx.cards.FindById(cardId);
-            if (cards[cardIdx] == null)
+            var card = ctx.cards.FindById(cardId);
+            if (card is null)
             {
                 ctx.OnFailedCard($"id:{cardId}");
                 return null;
             }
+
+            cards[cardIdx] = card;
         }
 
         return new()
         {
-            id = deckOb.id, name = deckOb.name, solverDeck = new(cards)
+            id = deckOb.id, name = deckOb.name, solverDeck = new(cards!)
         };
     }
 
-    private DeckData ParseDeckDataFromUI(UIStateTriadPrepDeck deckOb, GameUIParser ctx)
+    private DeckData? ParseDeckDataFromUI(UIStateTriadPrepDeck deckOb, GameUIParser ctx)
     {
         var numValidCards = 0;
         for (var cardIdx = 0; cardIdx < 5; cardIdx++)
@@ -168,7 +169,7 @@ public partial class TriadSession
             numValidCards += string.IsNullOrEmpty(deckOb.cardTexPaths[cardIdx]) ? 0 : 1;
         }
 
-        DeckData deckData = null;
+        DeckData? deckData = null;
         if (numValidCards == 5)
         {
             deckData = new()
@@ -176,13 +177,13 @@ public partial class TriadSession
                 id = deckOb.id, name = deckOb.name
             };
 
-            var cards = new TriadCard[5];
+            var cards = new TriadCard?[5];
             for (var cardIdx = 0; cardIdx < 5; cardIdx++)
             {
                 cards[cardIdx] = ctx.ParseCard(deckOb.cardTexPaths[cardIdx]);
             }
 
-            deckData.solverDeck = ctx.HasErrors ? null : new TriadDeck(cards);
+            deckData.solverDeck = ctx.HasErrors ? null : new TriadDeck(cards!);
         }
 
         return deckData;

@@ -7,7 +7,7 @@ public static unsafe class AddonButton
 {
     public static bool TryClick(AtkUnitBase* addon, uint nodeId)
     {
-        if (addon == null)
+        if (addon is null)
         {
             return false;
         }
@@ -17,7 +17,10 @@ public static unsafe class AddonButton
 
     public static bool TryClick(AtkUnitBase* addon, AtkComponentButton* button, bool requireEnabled = true)
     {
-        if (addon == null || button == null || button->AtkResNode == null || !button->AtkResNode->IsVisible())
+        if (addon is null ||
+            button is null ||
+            button->AtkResNode is null ||
+            !button->AtkResNode->IsVisible())
         {
             return false;
         }

@@ -1,4 +1,5 @@
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Saucy.TripleTriad.Utils;
 namespace Saucy.TripleTriad.UI;
 
 internal static unsafe class TriadResultRewardReader
@@ -15,7 +16,7 @@ internal static unsafe class TriadResultRewardReader
     private static uint TryReadRewardItemIdFromAgent()
     {
         var agent = AgentTripleTriad.TryGet();
-        var itemId = agent != null ? agent->RewardItemId : 0;
+        var itemId = agent is not null ? agent->RewardItemId : 0;
         if (itemId > 0)
         {
             return itemId;
@@ -38,13 +39,13 @@ internal static unsafe class TriadResultRewardReader
     private static uint TryReadRewardItemIdFromUi(AddonTripleTriadResult* resultAddon)
     {
         var baseNode = &resultAddon->AtkUnitBase;
-        if (baseNode->RootNode == null)
+        if (baseNode->RootNode is null)
         {
             return 0;
         }
 
         var nodeArrL0 = GUINodeUtils.GetImmediateChildNodes(baseNode->RootNode);
-        if (nodeArrL0 == null)
+        if (nodeArrL0 is null)
         {
             return 0;
         }
@@ -55,7 +56,7 @@ internal static unsafe class TriadResultRewardReader
 
         // If the addon layout changed and the rewards panel isn't where we expect,
         // fall back to scanning the whole addon for a card texture.
-        var scanRoot = rewardsNode != null ? rewardsNode : baseNode->RootNode;
+        var scanRoot = rewardsNode is not null ? rewardsNode : baseNode->RootNode;
 
         foreach (var node in GUINodeUtils.GetAllChildNodes(scanRoot) ?? [])
         {
@@ -66,13 +67,13 @@ internal static unsafe class TriadResultRewardReader
             }
 
             var card = TriadCardDB.Get().FindByTexture(texPath);
-            if (card == null)
+            if (card is null)
             {
                 continue;
             }
 
             var cardInfo = GameCardDB.Get().FindById(card.Id);
-            if (cardInfo != null && cardInfo.ItemId > 0)
+            if (cardInfo is not null && cardInfo.ItemId > 0)
             {
                 return cardInfo.ItemId;
             }

@@ -8,7 +8,7 @@ internal static unsafe partial class TriadDeckSelectAutomation
     private static bool TryClickSelectButton(AtkUnitBase* addon, uint buttonId)
     {
         var button = addon->GetComponentButtonById(buttonId);
-        if (button == null || !button->IsEnabled || button->AtkResNode == null || !button->AtkResNode->IsVisible())
+        if (button is null || !button->IsEnabled || button->AtkResNode is null || !button->AtkResNode->IsVisible())
         {
             return false;
         }
@@ -219,7 +219,7 @@ internal static unsafe partial class TriadDeckSelectAutomation
         }
 
         var rowNode = (AtkResNode*)rowAddr;
-        if (rowNode == null)
+        if (rowNode is null)
         {
             return false;
         }
@@ -230,7 +230,7 @@ internal static unsafe partial class TriadDeckSelectAutomation
         }
 
         var children = GUINodeUtils.GetImmediateChildNodes(rowNode);
-        if (children == null)
+        if (children is null)
         {
             return false;
         }
@@ -248,13 +248,13 @@ internal static unsafe partial class TriadDeckSelectAutomation
 
     private static bool TryClickComponentButton(AtkResNode* node, AtkUnitBase* addon)
     {
-        if (node == null)
+        if (node is null)
         {
             return false;
         }
 
         var button = node->GetAsAtkComponentButton();
-        if (button == null || !button->IsEnabled || button->AtkResNode == null || !button->AtkResNode->IsVisible())
+        if (button is null || !button->IsEnabled || button->AtkResNode is null || !button->AtkResNode->IsVisible())
         {
             return false;
         }
