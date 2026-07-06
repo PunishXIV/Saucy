@@ -25,6 +25,7 @@ public class UIReaderTriadResults : IUIReader
 
         HasPendingNotify = false;
         framesSinceShown = 0;
+        TriadMgpTracker.Reset();
         TriadRematchAutomation.ResetResultMatchRecording();
     }
 
@@ -82,6 +83,13 @@ public class UIReaderTriadResults : IUIReader
 
     private void PublishResult()
     {
+        if (cachedState.numMGP < 0 &&
+            cachedState.isWin &&
+            TriadMgpTracker.TryConsumeWinReward(out var inventoryMgp))
+        {
+            cachedState.numMGP = inventoryMgp;
+        }
+
         if (cachedState.numMGP < 0)
         {
             cachedState.numMGP = 0;

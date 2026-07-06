@@ -228,7 +228,9 @@ public unsafe partial class PluginUI : Window
     private static void DrawTriadPanel()
     {
         DrawPanelHeader("Triple Triad");
-        TriadSettingsUi.Draw();
+        ImGuiEx.EzTabBar("###Triad",
+            ("Main", TriadSettingsUi.Draw, null, false),
+            ("Cache", TriadCacheSettingsUi.Draw, null, false));
     }
 
     private static void DrawPanelHeader(string title, string? subtitle = null) =>

@@ -70,7 +70,6 @@ internal static class TriadSettingsUi
         ImGui.Dummy(new(0, 4));
 
         SaucyTheme.DrawCard("Deck", null, DrawDeckBody);
-        SaucyTheme.DrawCard("Deck cache", "Per-character optimized decks", TriadCacheSettingsUi.Draw);
         SaucyTheme.DrawCard("Run mode", null, DrawRunModeBody);
         SaucyTheme.DrawCard("Travel", "Map navigation", TriadTravelMountUi.Draw);
         SaucyTheme.DrawCard("Notifications", null, DrawNotificationsBody);

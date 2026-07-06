@@ -1,7 +1,7 @@
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.AirForce;
+using Saucy.TripleTriad.Utils;
 using System;
-using System.Linq;
 namespace Saucy.Framework.UI;
 
 public class UIReaderGamesResults : IUIReader
@@ -170,7 +170,7 @@ public class UIReaderGamesResults : IUIReader
 
         if (GoldSaucerArcadeMachineHelper.IsEnabled(GoldSaucerArcadeMachine.Cuff))
         {
-            if (!int.TryParse(number->NodeText.ToString(), out cuffResults.numMGP))
+            if (!GoldSaucerRewardMgpParser.TryParseMgpDigits(GUINodeUtils.GetNodeText((AtkResNode*)number), out cuffResults.numMGP))
             {
                 cuffResults.numMGP = -1;
             }
@@ -188,7 +188,7 @@ public class UIReaderGamesResults : IUIReader
 
         if (GoldSaucerArcadeMachineHelper.IsEnabled(GoldSaucerArcadeMachine.Limb))
         {
-            if (!int.TryParse(number->NodeText.ToString().Where(char.IsDigit).ToArray(), out limbResults.numMGP))
+            if (!GoldSaucerRewardMgpParser.TryParseMgpDigits(GUINodeUtils.GetNodeText((AtkResNode*)number), out limbResults.numMGP))
             {
                 limbResults.numMGP = -1;
             }
@@ -196,7 +196,7 @@ public class UIReaderGamesResults : IUIReader
 
         if (AirForceAutomation.ShouldTrackReward)
         {
-            if (!int.TryParse(number->NodeText.ToString().Where(char.IsDigit).ToArray(), out airForceResults.numMGP))
+            if (!GoldSaucerRewardMgpParser.TryParseMgpDigits(GUINodeUtils.GetNodeText((AtkResNode*)number), out airForceResults.numMGP))
             {
                 airForceResults.numMGP = -1;
             }
@@ -265,31 +265,4 @@ public class UIReaderGamesResults : IUIReader
 
     private static unsafe bool TryParseRewardMgpFallback(AtkUnitBase* baseNode, out int mgp) =>
         GoldSaucerRewardMgpParser.TryParseFromAddon(baseNode, out mgp);
-
-    private static unsafe void TryParseMgpFromNode(AtkResNode* node, ref int bestMgp)
-    {
-        // Kept for TryGetRewardMgpTextNode path; fallback scan lives in GoldSaucerRewardMgpParser.
-        var textNode = node->GetAsAtkTextNode();
-        if (textNode == null)
-        {
-            return;
-        }
-
-        var text = textNode->NodeText.ToString();
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return;
-        }
-
-        var digits = new string([.. text.Where(char.IsDigit)]);
-        if (digits.Length == 0 || !int.TryParse(digits, out var parsed) || parsed <= 0)
-        {
-            return;
-        }
-
-        if (parsed > bestMgp)
-        {
-            bestMgp = parsed;
-        }
-    }
 }

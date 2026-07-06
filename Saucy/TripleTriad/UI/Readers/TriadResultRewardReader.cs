@@ -50,9 +50,7 @@ internal static unsafe class TriadResultRewardReader
             return 0;
         }
 
-        var rewardsNode = nodeArrL0.Length == 8
-            ? GUINodeUtils.PickNode(nodeArrL0, 7, 8)
-            : GUINodeUtils.PickNode(nodeArrL0, 8, 10);
+        var rewardsNode = TriadResultLayoutHelper.TryGetRewardsPanel(nodeArrL0);
 
         // If the addon layout changed and the rewards panel isn't where we expect,
         // fall back to scanning the whole addon for a card texture.
