@@ -29,6 +29,7 @@ public unsafe class JumboCactpot : Module
     private const uint InputConfirmNodeId = 31;
     private const int InputWarmupMs = 350;
     private const int InputBetweenClicksMs = 200;
+    private const int InputVerifyDelayMs = 400;
     private const int InputNextTicketResetMs = 1500;
     private const int CashierHandoffDismissMs = 600;
     private const int CashierNextRewardGraceMs = 3000;
@@ -41,9 +42,13 @@ public unsafe class JumboCactpot : Module
     private bool cashierRewardOpen;
     private DateTime? inputAddonSeenUtc;
     private bool inputConfirmed;
-    private bool inputRandomized;
-    private DateTime? inputRandomizedUtc;
+    private bool inputPrepared;
+    private DateTime? inputPreparedUtc;
+    private int ticketPurchaseIndex;
     private DateTime? rewardAddonSeenUtc;
+    private int keypadDigitIndex;
+    private int keypadEntryTarget = -1;
+    private DateTime? lastKeypadClickUtc;
 
     public override string Name => "Jumbo Cactpot";
 
@@ -74,6 +79,9 @@ public unsafe class JumboCactpot : Module
 
         ResetCashierHandoff();
         ticketFlow.Clear();
+        ticketPurchaseIndex = 0;
+        ResetKeypadEntry();
+        LotteryWeeklyInputHelper.ClearDiscoveryCache();
         JumboCactpotBrokerPath.Reset();
     }
 
@@ -90,10 +98,13 @@ public unsafe class JumboCactpot : Module
         JumboCactpotBrokerPath.Reset();
         rewardAddonSeenUtc = null;
         inputAddonSeenUtc = null;
-        inputRandomizedUtc = null;
-        inputRandomized = false;
+        inputPreparedUtc = null;
+        inputPrepared = false;
         inputConfirmed = false;
+        ticketPurchaseIndex = 0;
         ticketFlow.Clear();
+        ResetKeypadEntry();
+        LotteryWeeklyInputHelper.ClearDiscoveryCache();
         ResetCashierHandoff();
         CactpotSessionActivity.ResetJumbo();
     }
@@ -118,18 +129,20 @@ public unsafe class JumboCactpot : Module
     {
         ticketFlow.Mark();
         inputAddonSeenUtc = DateTime.UtcNow;
-        inputRandomizedUtc = null;
-        inputRandomized = false;
+        inputPreparedUtc = null;
+        inputPrepared = false;
         inputConfirmed = false;
+        ResetKeypadEntry();
     }
 
     private void OnInputFinalize(AddonEvent type, AddonArgs args)
     {
         ticketFlow.Mark();
         inputAddonSeenUtc = null;
-        inputRandomizedUtc = null;
-        inputRandomized = false;
+        inputPreparedUtc = null;
+        inputPrepared = false;
         inputConfirmed = false;
+        ResetKeypadEntry();
     }
 
     private void OnRewardSetup(AddonEvent type, AddonArgs args)
@@ -376,6 +389,8 @@ public unsafe class JumboCactpot : Module
         }
 
         brokerPathArmed = true;
+        ticketPurchaseIndex = 0;
+        ResetKeypadEntry();
         JumboCactpotBrokerPath.Request();
         Log("Cashier done; pathing to Jumbo broker once.");
     }
@@ -404,15 +419,15 @@ public unsafe class JumboCactpot : Module
 
         if (inputConfirmed)
         {
-            if (!inputRandomizedUtc.HasValue ||
-                (DateTime.UtcNow - inputRandomizedUtc.Value).TotalMilliseconds <= InputNextTicketResetMs)
+            if (!inputPreparedUtc.HasValue ||
+                (DateTime.UtcNow - inputPreparedUtc.Value).TotalMilliseconds <= InputNextTicketResetMs)
             {
                 return;
             }
 
             inputAddonSeenUtc = DateTime.UtcNow;
-            inputRandomizedUtc = null;
-            inputRandomized = false;
+            inputPreparedUtc = null;
+            inputPrepared = false;
             inputConfirmed = false;
         }
 
@@ -423,20 +438,26 @@ public unsafe class JumboCactpot : Module
 
         ticketFlow.Mark();
 
-        if (!inputRandomized)
+        if (!inputPrepared)
         {
-            if (AddonButton.TryClick(addon, InputRandomizeNodeId))
+            if (keypadDigitIndex is > 0 and < 4 &&
+                lastKeypadClickUtc.HasValue &&
+                (DateTime.UtcNow - lastKeypadClickUtc.Value).TotalMilliseconds < InputBetweenClicksMs)
             {
-                inputRandomized = true;
-                inputRandomizedUtc = DateTime.UtcNow;
-                Log($"Randomize clicked (node {InputRandomizeNodeId}).");
+                return;
+            }
+
+            if (TryPrepareTicketNumber(addon))
+            {
+                inputPrepared = true;
+                inputPreparedUtc = DateTime.UtcNow;
             }
 
             return;
         }
 
-        if (inputRandomizedUtc == null ||
-            (DateTime.UtcNow - inputRandomizedUtc.Value).TotalMilliseconds < InputBetweenClicksMs)
+        if (inputPreparedUtc == null ||
+            (DateTime.UtcNow - inputPreparedUtc.Value).TotalMilliseconds < InputBetweenClicksMs)
         {
             return;
         }
@@ -444,8 +465,82 @@ public unsafe class JumboCactpot : Module
         if (AddonButton.TryClick(addon, InputConfirmNodeId))
         {
             inputConfirmed = true;
+            ticketPurchaseIndex++;
             Log($"Purchase clicked (node {InputConfirmNodeId}).");
         }
+    }
+
+    private bool TryPrepareTicketNumber(AtkUnitBase* addon)
+    {
+        if (TryGetSpecificTicketNumber(out var specificNumber))
+        {
+            if (keypadEntryTarget != specificNumber)
+            {
+                keypadEntryTarget = specificNumber;
+                keypadDigitIndex = 0;
+            }
+
+            Span<char> formatted = stackalloc char[4];
+            JumboCactpotSettings.FormatTicketNumber(specificNumber, formatted);
+
+            if (keypadDigitIndex < 4)
+            {
+                if (!LotteryWeeklyInputHelper.TryClickKeypadDigit(addon, formatted[keypadDigitIndex] - '0'))
+                {
+                    Log($"Ticket {ticketPurchaseIndex + 1}: could not set {specificNumber:D4}; falling back to random.");
+                    ResetKeypadEntry();
+                    return TryClickRandom(addon);
+                }
+
+                keypadDigitIndex++;
+                lastKeypadClickUtc = DateTime.UtcNow;
+                return false;
+            }
+
+            if (lastKeypadClickUtc.HasValue &&
+                (DateTime.UtcNow - lastKeypadClickUtc.Value).TotalMilliseconds < InputVerifyDelayMs)
+            {
+                return false;
+            }
+
+            Log($"Ticket {ticketPurchaseIndex + 1}: set number {new string(formatted)}.");
+            ResetKeypadEntry();
+            return true;
+        }
+
+        ResetKeypadEntry();
+        return TryClickRandom(addon);
+    }
+
+    private bool TryClickRandom(AtkUnitBase* addon)
+    {
+        if (AddonButton.TryClick(addon, InputRandomizeNodeId))
+        {
+            Log($"Randomize clicked (node {InputRandomizeNodeId}).");
+            return true;
+        }
+
+        return false;
+    }
+
+    private void ResetKeypadEntry()
+    {
+        keypadDigitIndex = 0;
+        keypadEntryTarget = -1;
+        lastKeypadClickUtc = null;
+    }
+
+    private bool TryGetSpecificTicketNumber(out int number)
+    {
+        number = 0;
+        if (C.JumboCactpot.NumberMode != JumboCactpotNumberMode.Specific)
+        {
+            return false;
+        }
+
+        return JumboCactpotSettings.TryParseTicketNumber(
+            C.JumboCactpot.GetTicketNumber(ticketPurchaseIndex),
+            out number);
     }
 
     private void HandleBrokerMenu()

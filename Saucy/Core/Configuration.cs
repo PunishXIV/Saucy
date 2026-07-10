@@ -1,6 +1,7 @@
 using Dalamud.Configuration;
 using ECommons.Configuration;
 using Newtonsoft.Json;
+using Saucy.JumboCactpot;
 using Saucy.OutOnALimb;
 using System;
 using System.Collections.Generic;
@@ -71,6 +72,8 @@ public class Configuration : IPluginConfiguration
     public TriadCollectionSettings TriadCollection { get; set; } = new();
 
     public GoldSaucerGateSettings GoldSaucerGates { get; set; } = new();
+
+    public JumboCactpotSettings JumboCactpot { get; set; } = new();
 
     public bool PauseForAutoRetainer { get; set; }
 

@@ -6,6 +6,7 @@ using ECommons.ImGuiMethods;
 using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
 using PunishLib.ImGuiMethods;
 using Saucy.Framework;
+using Saucy.JumboCactpot;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -277,6 +278,8 @@ public unsafe partial class PluginUI : Window
                 }
             }
         });
+
+        DrawJumboCactpotDebugPanel();
     }
 
     private enum NavItem

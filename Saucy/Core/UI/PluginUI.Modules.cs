@@ -4,7 +4,11 @@ using ECommons.ImGuiMethods;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using Saucy.AirForce;
 using Saucy.CuffACur;
+using Saucy.JumboCactpot;
 using Saucy.OtherGames;
+using System;
+using System.Collections.Generic;
+using static ECommons.GenericHelpers;
 namespace Saucy;
 
 public unsafe partial class PluginUI
@@ -182,7 +186,115 @@ public unsafe partial class PluginUI
 
         ImGui.TextWrapped(
             "Collect prizes at the Cactpot cashier yourself. Saucy then paths you to the Jumbo " +
-            "broker and handles ticket purchase dialogue, randomizing, and confirms.");
+            "broker and handles ticket purchase dialogue and confirms.");
+
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Number selection");
+        var numberMode = C.JumboCactpot.NumberMode;
+        var save = false;
+        if (ImGui.RadioButton("Random##JumboNumbers", numberMode == JumboCactpotNumberMode.Random))
+        {
+            numberMode = JumboCactpotNumberMode.Random;
+            save = true;
+        }
+
+        ImGui.SameLine();
+        if (ImGui.RadioButton("Specific numbers##JumboNumbers", numberMode == JumboCactpotNumberMode.Specific))
+        {
+            numberMode = JumboCactpotNumberMode.Specific;
+            save = true;
+        }
+
+        if (save)
+        {
+            C.JumboCactpot.NumberMode = numberMode;
+            C.Save();
+        }
+
+        var specificEnabled = numberMode == JumboCactpotNumberMode.Specific;
+        if (!specificEnabled)
+        {
+            ImGui.BeginDisabled();
+        }
+
+        var ticket1 = C.JumboCactpot.Ticket1Number;
+        var ticket2 = C.JumboCactpot.Ticket2Number;
+        var ticket3 = C.JumboCactpot.Ticket3Number;
+        save |= DrawJumboTicketNumberField("Ticket 1 (100 MGP)", ref ticket1);
+        save |= DrawJumboTicketNumberField("Ticket 2 (150 MGP)", ref ticket2);
+        save |= DrawJumboTicketNumberField("Ticket 3 (200 MGP)", ref ticket3);
+        if (save)
+        {
+            C.JumboCactpot.Ticket1Number = ticket1;
+            C.JumboCactpot.Ticket2Number = ticket2;
+            C.JumboCactpot.Ticket3Number = ticket3;
+        }
+
+        if (!specificEnabled)
+        {
+            ImGui.EndDisabled();
+        }
+
+        if (save)
+        {
+            C.Save();
+        }
+
+        if (specificEnabled)
+        {
+            ImGui.TextDisabled("Leave a ticket blank to randomize that purchase.");
+        }
+    }
+
+    private static bool DrawJumboTicketNumberField(string label, ref string value)
+    {
+        var buffer = value ?? string.Empty;
+        if (buffer.Length > 4)
+        {
+            buffer = buffer[..4];
+        }
+
+        if (!ImGui.InputText(label, ref buffer, 4, ImGuiInputTextFlags.CharsDecimal))
+        {
+            return false;
+        }
+
+        buffer = buffer.Trim();
+        if (string.Equals(buffer, value, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        value = buffer;
+        return true;
+    }
+
+    private static void DrawJumboCactpotDebugPanel()
+    {
+        ImGuiLayout.DrawCollapsingSection("Jumbo Cactpot input", ImGuiTreeNodeFlags.DefaultOpen, () =>
+        {
+            if (!TryGetAddonByName<FFXIVClientStructs.FFXIV.Component.GUI.AtkUnitBase>(
+                    "LotteryWeeklyInput",
+                    out var addon) ||
+                !IsAddonReady(addon) ||
+                !addon->IsVisible)
+            {
+                ImGui.TextDisabled("Open the Jumbo ticket purchase window to inspect addon nodes.");
+                return;
+            }
+
+            var lines = new List<string>();
+            LotteryWeeklyInputHelper.CollectDebugLines(addon, lines);
+            var listHeight = Math.Clamp(lines.Count * ImGui.GetTextLineHeightWithSpacing() + 8f, 60f, 260f);
+            using var scroll = ImRaii.Child("##JumboInputDebug", new(0, listHeight), true);
+            if (scroll)
+            {
+                foreach (var line in lines)
+                {
+                    ImGui.TextUnformatted(line);
+                }
+            }
+        });
     }
 
     private static BannerInfo BuildBannerInfo()
