@@ -1,5 +1,6 @@
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using Dalamud.Game.ClientState.Conditions;
 using ECommons.Throttlers;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
@@ -49,6 +50,7 @@ public unsafe class JumboCactpot : Module
     private int keypadDigitIndex;
     private int keypadEntryTarget = -1;
     private DateTime? lastKeypadClickUtc;
+    private bool wasBetweenAreas;
 
     public override string Name => "Jumbo Cactpot";
 
@@ -69,6 +71,7 @@ public unsafe class JumboCactpot : Module
         Svc.AddonLifecycle.UnregisterListener(OnRewardFinalize);
         Svc.AddonLifecycle.UnregisterListener(OnTalkUpdate);
         Svc.Framework.Update -= OnFrameworkUpdate;
+        Svc.ClientState.TerritoryChanged -= OnTerritoryChanged;
 
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, InputAddonName, OnInputSetup);
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, InputAddonName, OnInputFinalize);
@@ -76,7 +79,9 @@ public unsafe class JumboCactpot : Module
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, RewardAddonName, OnRewardFinalize);
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "Talk", OnTalkUpdate);
         Svc.Framework.Update += OnFrameworkUpdate;
+        Svc.ClientState.TerritoryChanged += OnTerritoryChanged;
 
+        wasBetweenAreas = Svc.Condition[ConditionFlag.BetweenAreas];
         ResetCashierHandoff();
         ticketFlow.Clear();
         ticketPurchaseIndex = 0;
@@ -93,6 +98,7 @@ public unsafe class JumboCactpot : Module
         Svc.AddonLifecycle.UnregisterListener(OnRewardFinalize);
         Svc.AddonLifecycle.UnregisterListener(OnTalkUpdate);
         Svc.Framework.Update -= OnFrameworkUpdate;
+        Svc.ClientState.TerritoryChanged -= OnTerritoryChanged;
         ObjectHelper.ClearTrackedObjects(CactpotNpcs.JumboBrokerScope);
         ObjectHelper.ClearTrackedObjects(CactpotNpcs.CashierScope);
         JumboCactpotBrokerPath.Reset();
@@ -107,6 +113,7 @@ public unsafe class JumboCactpot : Module
         LotteryWeeklyInputHelper.ClearDiscoveryCache();
         ResetCashierHandoff();
         CactpotSessionActivity.ResetJumbo();
+        wasBetweenAreas = false;
     }
 
     private void OnTalkUpdate(AddonEvent type, AddonArgs args)
@@ -163,11 +170,24 @@ public unsafe class JumboCactpot : Module
         cashierRewardOpen = false;
     }
 
+    private void OnTerritoryChanged(uint territoryType) => AbandonJumboSession();
+
     private void OnFrameworkUpdate(IFramework framework)
     {
+        // Teleports keep territory 144 (aetheryte) or hold BetweenAreas before the
+        // territory swap — !InSaucer alone never sees those. Cancel mid-ticket handoff
+        // on any zone transition so YesAlready is not re-locked on landing.
+        var betweenAreas = Svc.Condition[ConditionFlag.BetweenAreas];
+        if ((betweenAreas && !wasBetweenAreas) || !InSaucer)
+        {
+            AbandonJumboSession();
+        }
+
+        wasBetweenAreas = betweenAreas;
+
         SyncYesAlreadyPauseState();
 
-        if (InSaucer)
+        if (InSaucer && !betweenAreas)
         {
             TickCashierHandoff();
             JumboCactpotBrokerPath.Tick();
@@ -191,43 +211,106 @@ public unsafe class JumboCactpot : Module
         ClearSessionIfIdle();
     }
 
-    private bool ShouldPauseYesAlready() =>
-        CactpotDialogueHelper.IsJumboInputVisible() ||
-        CactpotDialogueHelper.IsJumboRewardListVisible() ||
-        IsWaitingForNextCashierReward() ||
-        JumboCactpotBrokerPath.IsActive ||
-        brokerPathArmed ||
-        IsCashierHandoffPending() ||
-        (IsInCashierFlow() && (CactpotDialogueHelper.IsCashierUiVisible() || AgentHelper.IsActive(AgentId.LotteryWeekly))) ||
-        (ObjectHelper.IsTargeting(CactpotNpcs.JumboBrokerScope) && HasTicketFlowUi());
+    private bool ShouldPauseYesAlready()
+    {
+        // Never hold YesAlready across loads / teleports.
+        if (!InSaucer || Svc.Condition[ConditionFlag.BetweenAreas])
+        {
+            return false;
+        }
 
+        return CactpotDialogueHelper.IsJumboInputVisible() ||
+               CactpotDialogueHelper.IsJumboRewardListVisible() ||
+               IsWaitingForNextCashierReward() ||
+               JumboCactpotBrokerPath.IsActive ||
+               IsCashierHandoffPending() ||
+               (IsInCashierFlow() && (CactpotDialogueHelper.IsCashierUiVisible() || AgentHelper.IsActive(AgentId.LotteryWeekly))) ||
+               (ObjectHelper.IsTargeting(CactpotNpcs.JumboBrokerScope) && HasTicketFlowUi());
+    }
+
+    /// <summary>
+    /// True only during the brief post-cashier dismiss window before broker path arms.
+    /// <see cref="cashierDialogueSeen"/> alone must not keep YesAlready paused.
+    /// </summary>
     private bool IsCashierHandoffPending() =>
         cashierDialogueSeen &&
+        cashierHandoffDismissedUtc != null &&
         !brokerPathArmed &&
         !JumboCactpotBrokerPath.IsActive;
 
+    private bool HasJumboSessionState() =>
+        cashierDialogueSeen ||
+        cashierRewardOpen ||
+        brokerPathArmed ||
+        cashierHandoffDismissedUtc != null ||
+        lastCashierRewardClosedUtc != null ||
+        JumboCactpotBrokerPath.IsActive ||
+        JumboCactpotBrokerPath.IsComplete ||
+        ticketFlow.IsActive;
+
+    private void AbandonJumboSession()
+    {
+        if (!HasJumboSessionState())
+        {
+            return;
+        }
+
+        JumboCactpotBrokerPath.Reset();
+        ResetCashierHandoff();
+        ticketFlow.Clear();
+        ticketPurchaseIndex = 0;
+        ResetKeypadEntry();
+        rewardAddonSeenUtc = null;
+        inputAddonSeenUtc = null;
+        inputPreparedUtc = null;
+        inputPrepared = false;
+        inputConfirmed = false;
+        CactpotSessionActivity.ResetJumbo();
+        Log("Jumbo session abandoned (zone/teleport).");
+    }
+
     private void ClearSessionIfIdle()
     {
-        if (JumboCactpotBrokerPath.IsComplete && brokerPathArmed)
+        // Path may be Reset() by a teleport while brokerPathArmed is still true.
+        if (brokerPathArmed && !JumboCactpotBrokerPath.IsActive)
         {
             brokerPathArmed = false;
         }
 
-        if (ShouldPauseYesAlready())
+        // Do not gate cleanup on ShouldPauseYesAlready — sticky handoff flags used to
+        // make that true forever and prevent ResetCashierHandoff from ever running.
+        if (HasVisibleOrActiveJumboUi() || IsCashierHandoffPending())
         {
             return;
         }
 
         ticketFlow.Clear();
 
-        if (JumboCactpotBrokerPath.IsComplete &&
-            !IsInCashierFlow() &&
+        if (cashierHandoffDismissedUtc != null)
+        {
+            return;
+        }
+
+        if (!IsTargetingCashier() &&
             !HasTicketFlowUi() &&
-            !IsTargetingCashier())
+            !JumboCactpotBrokerPath.IsActive &&
+            !brokerPathArmed)
         {
             ResetCashierHandoff();
+            if (JumboCactpotBrokerPath.IsComplete)
+            {
+                JumboCactpotBrokerPath.Reset();
+            }
         }
     }
+
+    private bool HasVisibleOrActiveJumboUi() =>
+        CactpotDialogueHelper.IsJumboInputVisible() ||
+        CactpotDialogueHelper.IsJumboRewardListVisible() ||
+        IsWaitingForNextCashierReward() ||
+        JumboCactpotBrokerPath.IsActive ||
+        (IsInCashierFlow() && (CactpotDialogueHelper.IsCashierUiVisible() || AgentHelper.IsActive(AgentId.LotteryWeekly))) ||
+        (ObjectHelper.IsTargeting(CactpotNpcs.JumboBrokerScope) && HasTicketFlowUi());
 
     private void TryAdvanceCashierTalk()
     {

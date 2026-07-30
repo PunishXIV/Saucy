@@ -41,12 +41,28 @@ internal static class JumboCactpotBrokerPath
 
     internal static void Tick()
     {
-        if (IsComplete || !requested || !Vnavmesh.IsInstalled)
+        if (IsComplete || !requested)
         {
             return;
         }
 
-        if (!Player.Interactable || Svc.Condition[ConditionFlag.BetweenAreas])
+        // Without vnavmesh the path can never finish; drop the request so YesAlready
+        // is not paused indefinitely via IsActive.
+        if (!Vnavmesh.IsInstalled)
+        {
+            Reset();
+            return;
+        }
+
+        if (Svc.Condition[ConditionFlag.BetweenAreas])
+        {
+            // Teleport / zone load: drop the request. Resuming after landing re-locks
+            // YesAlready at the aetheryte even when the player abandoned ticket purchase.
+            Reset();
+            return;
+        }
+
+        if (!Player.Interactable)
         {
             return;
         }
