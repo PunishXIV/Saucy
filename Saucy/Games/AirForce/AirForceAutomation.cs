@@ -1,28 +1,31 @@
 using Dalamud.Game.ClientState.Conditions;
-using Dalamud.Game.ClientState.Objects.SubKinds;
 using ECommons;
-using ECommons.Automation;
-using ECommons.CSExtensions;
-using ECommons.GameHelpers;
-using ECommons.ImGuiMethods;
-using ECommons.Throttlers;
-using ECommons.WindowsFormsReflector;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
-using System.Linq;
+using System.Numerics;
+
 namespace Saucy.AirForce;
 
 public static unsafe class AirForceAutomation
 {
-    private static DateTime? rewardWindowUntilUtc;
-    private static bool wasInDuty;
+    private const int  MaxTargetWalk     = 128;
+    private const long MinShotIntervalMs = 500;
 
-    public static bool ShouldTrackReward
-        => rewardWindowUntilUtc != null && DateTime.UtcNow <= rewardWindowUntilUtc.Value;
+    private static readonly IFramework                Framework;
+    private static          bool                      Enabled;
+    internal static         FireCachedTargetDelegate? FireCachedTarget;
+    private static          long                      LastShotAt;
+
+    private static DateTime? rewardWindowUntilUtc;
+    private static bool      wasInDuty;
+
+    public static bool ShouldTrackReward => rewardWindowUntilUtc != null && DateTime.UtcNow <= rewardWindowUntilUtc.Value;
 
     public static void ClearRewardTracking()
     {
         rewardWindowUntilUtc = null;
-        wasInDuty = false;
+        wasInDuty            = false;
     }
 
     public static void ConsumeRewardTracking() => rewardWindowUntilUtc = null;
@@ -35,83 +38,98 @@ public static unsafe class AirForceAutomation
             return;
         }
 
-        var inDuty = Svc.Condition[ConditionFlag.BoundByDuty95] &&
-                     GenericHelpers.TryGetAddonByName("RideShooting", out AddonRideShooting* rideAddon) &&
-                     rideAddon->AtkUnitBase.IsReady();
+        var inDuty = Svc.Condition[ConditionFlag.BoundByDuty95]                               &&
+                     GenericHelpers.TryGetAddonByName("RideShooting", out AtkUnitBase* addon) &&
+                     addon->IsReady();
 
         if (inDuty)
         {
-            wasInDuty = true;
+            wasInDuty            = true;
             rewardWindowUntilUtc = null;
 
-            foreach (var x in Svc.Objects.OfType<IEventObj>().Where(x => x.BaseId.EqualsAny<uint>(
-                2009678,
-                2009676,
-                2009677,
-                2009679,
-                2015180,
-                2015179,
-                2015178,
-                2015183
-            )).Where(x => x.AnimationId == 1).OrderBy(Player.DistanceTo))
+            var now = Environment.TickCount64;
+            if (now - LastShotAt < MinShotIntervalMs)
             {
-                if (x.BaseId.EqualsAny<uint>(
-                    2015183,
-                    2009679
-                ))
-                {
-                    continue;
-                }
-
-                if (Svc.GameGui.WorldToScreen(x.Position, out var screen))
-                {
-                    if (EzThrottler.Throttle("Shoot", 250) && RideShootingAim.TrySetScreenAim(screen))
-                    {
-                        Svc.Framework.RunOnTick(() =>
-                            {
-                                _ = WindowsKeypress.SendKeypress(Keys.Space);
-                            },
-                            delayTicks: 1);
-                        break;
-                    }
-                }
+                return;
             }
+
+            var agent = AgentModule.Instance()->GetAgentByInternalId(AgentId.RideShooting);
+            if (agent == null)
+            {
+                return;
+            }
+
+            var addonEventInterface = *(nint*)((byte*)agent + 0x30);
+            if (addonEventInterface == 0)
+            {
+                return;
+            }
+
+            var context = addonEventInterface - 0x20;
+
+            var target = FindBestTarget(context);
+            if (target == 0)
+            {
+                return;
+            }
+
+            *(Vector3*)(context + 0xCA0) = *(Vector3*)(target + 0x00);
+            *(int*)(context     + 0xCB0) = 1;
+            *(ushort*)(context  + 0xCB4) = *(ushort*)(target + 0x30);
+
+            FireCachedTarget?.Invoke(context);
+
+            LastShotAt = now;
 
             return;
         }
 
         if (wasInDuty)
         {
-            wasInDuty = false;
+            wasInDuty            = false;
             rewardWindowUntilUtc = DateTime.UtcNow.AddMinutes(2);
         }
     }
 
-    public static void DrawDebug()
+    private static nint FindBestTarget(nint context)
     {
-        ImGuiEx.Text($"Enabled: {C.IsModuleEnabled(ModuleNames.AirForceOne)}");
-        ImGuiEx.Text($"In duty: {Svc.Condition[ConditionFlag.BoundByDuty95]}");
-        ImGuiEx.Text($"Tracking reward: {ShouldTrackReward}");
-
-        var addonReady = GenericHelpers.TryGetAddonByName("RideShooting", out AddonRideShooting* rideAddon) &&
-                         rideAddon->AtkUnitBase.IsReady();
-        ImGuiEx.Text($"RideShooting addon ready: {addonReady}");
-
-        var parityOk = RideShootingAim.VerifyLayoutParity(out var parityDetail);
-        ImGuiEx.Text($"Legacy vs typed layout: {(parityOk ? "OK" : "MISMATCH")} — {parityDetail}");
-
-        if (RideShootingAim.TryReadAim(out var aim))
+        var sentinel = *(nint*)(context + 0xC58);
+        if (sentinel == 0)
         {
-            ImGuiEx.Text($"Current aim: ({aim.X:F1}, {aim.Y:F1})");
+            return 0;
         }
 
-        var targets = Svc.Objects.OfType<IEventObj>().Where(x => x.BaseId.EqualsAny<uint>(
-            2009678, 2009676, 2009677, 2009679, 2015180, 2015179, 2015178, 2015183
-        )).Where(x => x.AnimationId == 1).OrderBy(Player.DistanceTo).Take(3).ToArray();
-        ImGuiEx.Text($"Shootable targets (anim=1): {targets.Length}");
-        foreach (var t in targets)
+        nint best = 0;
+
+        var node = *(nint*)(sentinel + 0x00);
+        for (var i = 0; i < MaxTargetWalk && node != 0 && node != sentinel; i++, node = *(nint*)(node + 0x00))
         {
-            ImGuiEx.Text($"  {t.Name} ({t.BaseId}) dist={Player.DistanceTo(t):F1}");
+            var target = *(nint*)(node + 0x10);
+            if (target == 0)
+            {
+                continue;
+            }
+
+            var kind       = *(int*)(target  + 0x4C);
+            var subState   = *(int*)(target  + 0x50);
+            var targetType = *(nint*)(target + 0x40);
+
+            if (kind != 2 || subState != 0 || targetType == 0)
+            {
+                continue;
+            }
+
+            var score = *(short*)(targetType + 0x04);
+            if (score < 0)
+            {
+                continue;
+            }
+
+            best = target;
         }
+
+        return best;
     }
+
+    internal delegate nint FireCachedTargetDelegate(nint context);
 }
