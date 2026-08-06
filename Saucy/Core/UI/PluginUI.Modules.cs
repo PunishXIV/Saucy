@@ -110,16 +110,7 @@ public unsafe partial class PluginUI
     private static void DrawAirForcePanel()
     {
         DrawPanelHeader("Air Force One", "ride shooting minigame");
-        if (C.ShowDebugUi)
-        {
-            ImGuiEx.EzTabBar("###AirForce",
-                ("Main", DrawAirForceMain, null, false),
-                ("Debug", AirForceAutomation.DrawDebug, null, false));
-        }
-        else
-        {
-            DrawAirForceMain();
-        }
+        DrawAirForceMain();
     }
 
     private static void DrawAirForceMain()
