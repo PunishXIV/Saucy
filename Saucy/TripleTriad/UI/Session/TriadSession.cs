@@ -56,6 +56,7 @@ public partial class TriadSession
     private bool _optimizerTimedOut;
     private bool _pauseOptimizerForActiveTriad;
     private bool _pauseOptimizerForNavmesh;
+    private bool _pauseOptimizerForQuestionable;
     private bool _pauseOptimizerForSolver;
 
     public int preGameBestId = -1;
@@ -106,6 +107,41 @@ public partial class TriadSession
         C.UseSimmedDeck &&
         C.UseCachedOptimizedDeckIfAvailable &&
         !ShouldBuildOptimizedDeck();
+
+    public bool ShouldSkipBackgroundOptimizedDeckBuild(TriadNpc npc)
+    {
+        if (TriadUiState.IsPrepDeckSelectVisible() || TriadUiState.IsMatchRegistrationVisible())
+        {
+            return false;
+        }
+
+        if (TriadRunSession.NavigationRequiresOptimizedDeckBuild || TriadMapNavigation.IsNavigationActive)
+        {
+            return false;
+        }
+
+        if (C.PauseOptimizedDeckBuildWhileQuestionable && Questionable.IsQuestingNow())
+        {
+            return true;
+        }
+
+        return C.SkipOptimizedDeckForBeatenOrCompletedNpcs && IsNpcBeatenOrAllCardsOwned(npc);
+    }
+
+    public static bool IsNpcBeatenOrAllCardsOwned(TriadNpc npc)
+    {
+        if (!GameNpcDB.Get().mapNpcs.TryGetValue(npc.Id, out var info))
+        {
+            return false;
+        }
+
+        if (TriadMemoryReads.IsAvailable && TriadMemoryReads.TryIsNpcBeatenOnce(info.triadId))
+        {
+            return true;
+        }
+
+        return info.rewardCards.Count > 0 && TriadCardFarmSession.HasAllNpcRewardsOwned(info);
+    }
 
     public string? GetAutoPickDeckSummary(TriadNpc? npc)
     {
@@ -223,6 +259,16 @@ public partial class TriadSession
         var hasFallbackDeck = hasUsableCache || hasAnyCache || hasProfileSaucyDeck;
         string WithFallbackNote(string message) =>
             hasFallbackDeck ? $"{message} · cached deck exists" : message;
+
+        if (ShouldSkipBackgroundOptimizedDeckBuild(npc))
+        {
+            if (C.PauseOptimizedDeckBuildWhileQuestionable && Questionable.IsQuestingNow())
+            {
+                return WithFallbackNote("Paused — Questionable is running");
+            }
+
+            return "Skipped — NPC beaten or all cards owned";
+        }
 
         if (OptimizerInProgress && TriadDeckOptimizerJobs.TryGetActive(out var job))
         {

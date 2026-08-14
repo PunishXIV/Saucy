@@ -94,6 +94,29 @@ internal static class TriadSettingsUi
         DrawDeckOptimizerMaxThreadsSlider();
         DrawDeckOptimizerTimeoutSlider();
 
+        var skipBeatenOrCompleted = C.SkipOptimizedDeckForBeatenOrCompletedNpcs;
+        if (ImGui.Checkbox("Skip beaten or completed NPCs", ref skipBeatenOrCompleted))
+        {
+            C.SkipOptimizedDeckForBeatenOrCompletedNpcs = skipBeatenOrCompleted;
+            C.Save();
+        }
+
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker(
+            "Don't start a background deck build when you target an NPC you've already beaten or whose cards you already own. " +
+            "Still builds at match prep if you challenge them.");
+
+        var pauseForQuestionable = C.PauseOptimizedDeckBuildWhileQuestionable;
+        if (ImGui.Checkbox("Pause while Questionable is running", ref pauseForQuestionable))
+        {
+            C.PauseOptimizedDeckBuildWhileQuestionable = pauseForQuestionable;
+            C.Save();
+        }
+
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker(
+            "Pauses background deck builds while Questionable (/qst) is questing. Match prep still builds if you challenge an NPC.");
+
         TriadDeckOptimizerStatusUi.DrawInline();
     }
 

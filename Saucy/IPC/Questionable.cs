@@ -25,7 +25,27 @@ internal static class Questionable
     [EzIPC]
     public static Func<string, bool> IsQuestUnobtainable = null!;
 
+    [EzIPC]
+    public static Func<bool> IsRunning = null!;
+
     public static bool IsInstalled => SubscriptionManager.IsInitialized(IPCNames.Questionable);
+
+    public static bool IsQuestingNow()
+    {
+        if (!IsInstalled || IsRunning is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            return IsRunning();
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }
 
 internal static class QuestionableTriad

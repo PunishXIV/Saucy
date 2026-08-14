@@ -291,19 +291,23 @@ public partial class TriadSession
         TriadDeckOptimizerJobs.UpdatePause(
             _pauseOptimizerForSolver ||
             _pauseOptimizerForActiveTriad ||
-            _pauseOptimizerForNavmesh);
+            _pauseOptimizerForNavmesh ||
+            _pauseOptimizerForQuestionable);
 
-    public void SyncDeckOptimizerPauseForVnavmesh()
+    public void SyncDeckOptimizerBackgroundPause()
     {
-        var shouldPause = Vnavmesh.ShouldDeferDeckOptimizerWork();
+        var pauseForNavmesh = Vnavmesh.ShouldDeferDeckOptimizerWork();
+        var pauseForQuestionable = C.PauseOptimizedDeckBuildWhileQuestionable && Questionable.IsQuestingNow();
         lock (_preGameLock)
         {
-            if (_pauseOptimizerForNavmesh == shouldPause)
+            if (_pauseOptimizerForNavmesh == pauseForNavmesh &&
+                _pauseOptimizerForQuestionable == pauseForQuestionable)
             {
                 return;
             }
 
-            _pauseOptimizerForNavmesh = shouldPause;
+            _pauseOptimizerForNavmesh = pauseForNavmesh;
+            _pauseOptimizerForQuestionable = pauseForQuestionable;
             UpdateDeckOptimizerPause();
         }
     }

@@ -134,6 +134,12 @@ public partial class TriadSession
             return;
         }
 
+        if (C.PauseOptimizedDeckBuildWhileQuestionable && Questionable.IsQuestingNow())
+        {
+            lastWorldTargetOptimizerNpcId = -1;
+            return;
+        }
+
         var npc = TriadTargetNpc.FromWorldTarget();
         if (npc == null)
         {
@@ -148,6 +154,12 @@ public partial class TriadSession
 
         if (Vnavmesh.ShouldDeferHeavyWork())
         {
+            return;
+        }
+
+        if (ShouldSkipBackgroundOptimizedDeckBuild(npc))
+        {
+            lastWorldTargetOptimizerNpcId = npc.Id;
             return;
         }
 

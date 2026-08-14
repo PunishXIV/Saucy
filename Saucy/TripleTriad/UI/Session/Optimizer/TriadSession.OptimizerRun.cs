@@ -47,6 +47,14 @@ public partial class TriadSession
 
         if (!premadeRequest &&
             !forceRebuild &&
+            !navigationRequest &&
+            ShouldSkipBackgroundOptimizedDeckBuild(npc))
+        {
+            return;
+        }
+
+        if (!premadeRequest &&
+            !forceRebuild &&
             !TriadRunSession.NavigationRequiresOptimizedDeckBuild &&
             TriadCardFarmSession.IsModeActive() &&
             C.OnlyUnobtainedCards &&

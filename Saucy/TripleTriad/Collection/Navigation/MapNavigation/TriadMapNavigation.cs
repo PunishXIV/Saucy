@@ -357,7 +357,7 @@ internal static unsafe partial class TriadMapNavigation
 
     private static void ClearPending()
     {
-        TriadRun.SyncDeckOptimizerPauseForVnavmesh();
+        TriadRun.SyncDeckOptimizerBackgroundPause();
         StopVnavIfRunning();
         _pending = null;
     }
