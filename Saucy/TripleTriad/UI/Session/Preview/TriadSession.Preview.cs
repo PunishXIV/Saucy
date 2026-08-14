@@ -451,7 +451,7 @@ public partial class TriadSession
         }
 
         return hasCompleteCardIds
-            ? "No decks with 5 cards"
-            : "Could not read profile decks";
+            ? "Profile decks aren't simmable"
+            : "No complete profile decks";
     }
 }

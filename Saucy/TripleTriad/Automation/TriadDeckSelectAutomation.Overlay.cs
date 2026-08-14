@@ -1,5 +1,6 @@
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Saucy.Framework;
 using System;
 using static ECommons.GenericHelpers;
 
@@ -107,26 +108,219 @@ internal static unsafe partial class TriadDeckSelectAutomation
         }
     }
 
-    private static bool TrySelectGameRecommendedDeck(AtkUnitBase* addon)
+    private static void TickGameRecommendedDeck(AtkUnitBase* addon)
     {
-        TriadDeckLog.Print("[Saucy] Using game recommended deck...");
+        if (recommendedAttempts >= MaxDeckSelectAttemptsPerScreen)
+        {
+            if (recommendedAttempts == MaxDeckSelectAttemptsPerScreen)
+            {
+                Svc.Chat.PrintError(
+                    "[Saucy] Could not use game recommended deck. Pick a deck manually or try another option.");
+                recommendedAttempts++;
+            }
+
+            return;
+        }
+
+        if (!recommendedClicked)
+        {
+            if (!TryClickGameRecommendedButton(addon))
+            {
+                recommendedAttempts++;
+                framesSinceAttempt = DeckSelectRetryCooldownFrames;
+                return;
+            }
+
+            recommendedClicked = true;
+            addon->Update(0);
+            if (IsSelectionComplete() || IsSelectionSettled(addon))
+            {
+                confirmedThisScreen = true;
+                ClearPending();
+                return;
+            }
+
+            framesSinceAttempt = DeckSelectRecommendedSettleFrames;
+            return;
+        }
+
+        if (TryConfirmGameRecommendedDeck(addon))
+        {
+            confirmedThisScreen = true;
+            ClearPending();
+            return;
+        }
+
+        recommendedAttempts++;
+        framesSinceAttempt = DeckSelectRetryCooldownFrames;
+    }
+
+    private static bool TryClickGameRecommendedButton(AtkUnitBase* addon)
+    {
+        if (TryClickBottomDeckSelectActionButton(addon, preferLeft: true))
+        {
+            TriadDeckLog.Print("[Saucy] Using game recommended deck...");
+            return true;
+        }
+
+        var list = TryGetDeckSelectList(addon);
         foreach (var buttonId in DeckSelectRecommendedButtonIds)
         {
-            if (!TryClickSelectButton(addon, buttonId))
+            var button = addon->GetComponentButtonById(buttonId);
+            if (IsButtonInsideList(button, list) || !TryClickSelectButton(addon, buttonId))
             {
                 continue;
             }
 
+            TriadDeckLog.Print("[Saucy] Using game recommended deck...");
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryConfirmGameRecommendedDeck(AtkUnitBase* addon)
+    {
+        if (TryDispatchSelectedDeckListItem(addon))
+        {
             addon->Update(0);
-            TryClickConfirmButton(addon);
-            addon->Update(0);
-            confirmedThisScreen = true;
             if (IsSelectionComplete() || IsSelectionSettled(addon))
             {
-                ClearPending();
+                return true;
+            }
+        }
+
+        TryClickConfirmButton(addon);
+        addon->Update(0);
+        if (IsSelectionComplete() || IsSelectionSettled(addon))
+        {
+            return true;
+        }
+
+        var selected = TryGetSelectedDeckListIndex(addon);
+        if (selected >= 0 && TryFireDeckSelectConfirmCallback(addon, selected))
+        {
+            return true;
+        }
+
+        return IsSelectionComplete() || IsSelectionSettled(addon);
+    }
+
+    private static bool TryDispatchSelectedDeckListItem(AtkUnitBase* addon)
+    {
+        var list = TryGetDeckSelectList(addon);
+        if (list is null)
+        {
+            return false;
+        }
+
+        var selected = list->SelectedItemIndex;
+        if (selected < 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            list->SelectItem(selected, true);
+            list->DispatchItemEvent(selected, AtkEventType.ListItemClick);
+            pendingDeckIndex = selected;
+            pendingProfileDeckId = selected;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Svc.Log.Verbose(ex, "[TriadAutomator] Recommended deck list confirm failed for index {0}", selected);
+            return false;
+        }
+    }
+
+    private static int TryGetSelectedDeckListIndex(AtkUnitBase* addon)
+    {
+        var list = TryGetDeckSelectList(addon);
+        return list is null ? -1 : list->SelectedItemIndex;
+    }
+
+    private static AtkComponentList* TryGetDeckSelectList(AtkUnitBase* addon)
+    {
+        AtkComponentList* best = null;
+        var bestLen = 0;
+        for (uint id = 1; id <= MaxDeckSelectNodeScan; id++)
+        {
+            var list = addon->GetComponentListById(id);
+            if (list is null || list->ListLength <= 0)
+            {
+                continue;
             }
 
-            return true;
+            if (list->ListLength <= bestLen)
+            {
+                continue;
+            }
+
+            best = list;
+            bestLen = list->ListLength;
+        }
+
+        return best;
+    }
+
+    private static bool TryClickBottomDeckSelectActionButton(AtkUnitBase* addon, bool preferLeft)
+    {
+        var list = TryGetDeckSelectList(addon);
+        AtkComponentButton* best = null;
+        var bestX = preferLeft ? float.MaxValue : float.MinValue;
+        var bestY = float.MinValue;
+        for (uint id = 1; id <= MaxDeckSelectNodeScan; id++)
+        {
+            var button = addon->GetComponentButtonById(id);
+            if (button is null ||
+                !button->IsEnabled ||
+                button->AtkResNode is null ||
+                !button->AtkResNode->IsVisible() ||
+                IsButtonInsideList(button, list))
+            {
+                continue;
+            }
+
+            var pos = GUINodeUtils.GetNodePosition(button->AtkResNode);
+            if (pos.Y < bestY - 8f)
+            {
+                continue;
+            }
+
+            if (pos.Y > bestY + 8f)
+            {
+                best = button;
+                bestX = pos.X;
+                bestY = pos.Y;
+                continue;
+            }
+
+            if (preferLeft ? pos.X < bestX : pos.X > bestX)
+            {
+                best = button;
+                bestX = pos.X;
+            }
+        }
+
+        return AddonButton.TryClick(addon, best);
+    }
+
+    private static bool IsButtonInsideList(AtkComponentButton* button, AtkComponentList* list)
+    {
+        if (button is null || list is null || list->OwnerNode is null || button->AtkResNode is null)
+        {
+            return false;
+        }
+
+        var listNode = (AtkResNode*)list->OwnerNode;
+        for (var node = button->AtkResNode; node is not null; node = node->ParentNode)
+        {
+            if (node == listNode)
+            {
+                return true;
+            }
         }
 
         return false;
@@ -152,7 +346,6 @@ internal static unsafe partial class TriadDeckSelectAutomation
             }
         }
 
-        confirmedThisScreen = true;
         return false;
     }
 

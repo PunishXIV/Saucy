@@ -140,7 +140,16 @@ public partial class TriadSession
 
         if (CountSimmableProfileDecks() == 0)
         {
-            return DescribeMissingSimmableDecks();
+            var missing = DescribeMissingSimmableDecks() ?? "No usable decks";
+            lock (_preGameLock)
+            {
+                if (ResolveSelectableDeckIndexLocked(-1, true) >= 0)
+                {
+                    return missing;
+                }
+            }
+
+            return $"{missing} — using game recommended";
         }
 
         if (ShouldBuildOptimizedDeck())

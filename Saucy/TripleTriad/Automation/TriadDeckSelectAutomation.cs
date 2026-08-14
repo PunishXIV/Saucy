@@ -13,7 +13,9 @@ internal static unsafe partial class TriadDeckSelectAutomation
     private const int DeckSelectBoardVisibleMaxFrames = 60;
     private const int DeckSelectBoardDismissDelayFrames = 15;
     private const int DeckSelectPostOptimizerCooldownFrames = TriadSession.DeckSelectPostProfileWriteFrames;
+    private const int DeckSelectRecommendedSettleFrames = 15;
     private const int MaxDeckSelectMethods = 5;
+    private const int MaxDeckSelectNodeScan = 48;
 
     private static readonly uint[] DeckSelectConfirmButtonIds =
     [
@@ -34,6 +36,8 @@ internal static unsafe partial class TriadDeckSelectAutomation
     private static int pendingProfileDeckId = -1;
     private static int pendingSelectMethod;
     private static bool awaitingConfirm;
+    private static bool recommendedClicked;
+    private static int recommendedAttempts;
     private static bool forceDismissedForMatch;
     private static int boardDismissFrames;
     private static int boardVisibleFrames;
@@ -239,17 +243,6 @@ internal static unsafe partial class TriadDeckSelectAutomation
                 return;
             }
 
-            if (attemptCount >= MaxDeckSelectAttemptsPerScreen)
-            {
-                if (attemptCount == MaxDeckSelectAttemptsPerScreen)
-                {
-                    Svc.Chat.PrintError("[Saucy] Could not select a deck automatically. Pick one manually.");
-                    attemptCount++;
-                }
-
-                return;
-            }
-
             if (!IsAddonReady(addon))
             {
                 return;
@@ -257,27 +250,21 @@ internal static unsafe partial class TriadDeckSelectAutomation
 
             uiReaderPrep.RefreshDeckSelectList((nint)addon);
 
-            if (!C.UseSimmedDeck && C.SelectedDeckIndex == Configuration.GameRecommendedDeckIndex)
+            if (recommendedClicked ||
+                (!C.UseSimmedDeck && C.SelectedDeckIndex == Configuration.GameRecommendedDeckIndex))
             {
-                if (attemptCount < MaxDeckSelectAttemptsPerScreen)
+                TickGameRecommendedDeck(addon);
+                return;
+            }
+
+            if (attemptCount >= MaxDeckSelectAttemptsPerScreen)
+            {
+                if (C.UseSimmedDeck && TriadRun.IsDeckSelectPrepBlocking(C.UseSimmedDeck))
                 {
-                    if (TrySelectGameRecommendedDeck(addon))
-                    {
-                        attemptCount++;
-                        framesSinceAttempt = DeckSelectRetryCooldownFrames;
-                    }
-                    else
-                    {
-                        attemptCount++;
-                        framesSinceAttempt = DeckSelectRetryCooldownFrames;
-                        if (attemptCount == MaxDeckSelectAttemptsPerScreen)
-                        {
-                            Svc.Chat.PrintError(
-                                "[Saucy] Could not use game recommended deck. Pick a deck manually or try another option.");
-                        }
-                    }
+                    return;
                 }
 
+                TickGameRecommendedDeck(addon);
                 return;
             }
 
@@ -316,6 +303,7 @@ internal static unsafe partial class TriadDeckSelectAutomation
                 AttemptedDeckIndices,
                 out var deck))
             {
+                TickGameRecommendedDeck(addon);
                 return;
             }
 
@@ -364,6 +352,8 @@ internal static unsafe partial class TriadDeckSelectAutomation
         attemptCount = 0;
         framesSinceAttempt = 0;
         FramesOpen = 0;
+        recommendedClicked = false;
+        recommendedAttempts = 0;
     }
 
     public static void PrepareRetryWithOptimizedDeck(int deckId)
@@ -387,6 +377,8 @@ internal static unsafe partial class TriadDeckSelectAutomation
         ClearPending();
         AttemptedDeckIndices.Clear();
         attemptCount = 0;
+        recommendedClicked = false;
+        recommendedAttempts = 0;
         framesSinceAttempt = DeckSelectPostOptimizerCooldownFrames;
         TriadRun.BeginDeckSelectPostWriteCooldown();
     }

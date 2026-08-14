@@ -171,7 +171,8 @@ internal static class TriadSettingsUi
 
         ImGui.SameLine();
         ImGuiComponents.HelpMarker(
-            "Picks a deck at deck select. Default: highest opening win % among your profile decks.");
+            "Picks a deck at deck select. Default: highest opening win % among your profile decks. " +
+            "If none of those decks have 5 cards, Saucy uses the game's Recommended button.");
 
         if (C.UseSimmedDeck)
         {

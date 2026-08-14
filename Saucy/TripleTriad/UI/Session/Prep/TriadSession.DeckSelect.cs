@@ -418,17 +418,9 @@ public partial class TriadSession
             }
         }
 
-        if (IsProfileDeckComplete(deckId))
-        {
-            return true;
-        }
-
-        if (IsProfileDeckSelectable(deckId))
-        {
-            return true;
-        }
-
-        return false;
+        // Named-but-empty slots are not playable. Selecting them never starts the match,
+        // so the game sits on deck select until the 30s timer expires.
+        return IsProfileDeckComplete(deckId);
     }
 
     private bool IsProfileDeckSelectable(int deckId)
