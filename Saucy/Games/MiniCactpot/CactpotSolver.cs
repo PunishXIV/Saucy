@@ -5,9 +5,6 @@ namespace Saucy.MiniCactpot;
 
 public sealed class CactpotSolver
 {
-    public const int TotalNumbers = 9;
-    public const int TotalLanes = 8;
-
     private const double EPS = 0.00001;
 
     private static readonly int[] Payouts = [0, 0, 0, 0, 0, 0, 10000, 36, 720, 360, 80, 252, 108, 72, 54, 180, 72, 180, 119, 36, 306, 1080, 144, 1800, 3600];

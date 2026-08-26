@@ -4,7 +4,6 @@ using ECommons.GameHelpers;
 using ECommons.ImGuiMethods;
 using Saucy.Framework;
 using System.Numerics;
-using static Saucy.Framework.ImGuiScopes;
 namespace Saucy.OtherGames;
 
 public class AnyWayTheWindBlows : Module
@@ -58,7 +57,7 @@ public class AnyWayTheWindBlows : Module
         {
             ImGuiHelpers.SetNextWindowPosRelativeMainViewport(new(pos.X - 15, pos.Y - 15));
             ImGui.SetNextWindowSize(new Vector2(90, 50) * ImGuiHelpers.GlobalScale);
-            using var pointerWindow = Window(
+            using var pointerWindow = ImGuiLayout.Window(
                 "Pointer",
                 ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoTitleBar |
                 ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoInputs);

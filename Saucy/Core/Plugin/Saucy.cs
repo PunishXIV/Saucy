@@ -235,4 +235,35 @@ public sealed partial class Saucy : IDalamudPlugin
             "[Saucy] Unknown command. Available: /saucy, /saucy stop, /saucy d, " +
             "/saucy tt go | stop | play <n> | cards any | cards all");
     }
+
+    private static void PrepareTriadSessionForPluginLoad()
+    {
+        TriadDeckOptimizerJobs.CancelActive(userCancelled: true);
+        SaucyParallelism.ResetEvalConcurrency();
+        TriadRun = new();
+        TriadRun.DebugScreenMemory.ResetSolver();
+    }
+
+    private static void PrepareTriadSessionForPluginUnload()
+    {
+        TriadRunSession.StopAllAutomation(announce: false);
+        DetachTriadUiReaders();
+        TriadRun.InvalidatePendingMoveCalc();
+        SaucyParallelism.ResetEvalConcurrency();
+    }
+
+    private static void DetachTriadUiReaders()
+    {
+        uiReaderGame.OnUIStateChanged -= TriadRun.UpdateGame;
+
+        uiReaderPrep.OnUIStateChanged -= TriadRun.UpdateDecks;
+        uiReaderPrep.OnMatchRequestChanged = null;
+        uiReaderPrep.OnDeckSelectionChanged = null;
+
+        uiReaderMatchResults.OnUpdated = null;
+
+        uiReaderGamesResults.OnCuffUpdated = null;
+        uiReaderGamesResults.OnLimbUpdated = null;
+        uiReaderGamesResults.OnAirForceUpdated = null;
+    }
 }

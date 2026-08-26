@@ -11,8 +11,6 @@ internal static unsafe class TriadPrepRequestReader
 
     public const int RegionalRuleSlot0 = 0;
     public const int RegionalRuleSlot1 = 1;
-    public const int MatchRuleSlot0 = 2;
-    public const int MatchRuleSlot1 = 3;
 
     public static void Read(AddonRequest* addon, UIStateTriadPrep state)
     {

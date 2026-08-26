@@ -161,7 +161,7 @@ internal static unsafe class TriadDialogueSkip
             return;
         }
 
-        if (QuestDialogueGuard.ShouldBlockTalk(
+        if (NpcDialogueGate.ShouldBlockQuestDialogue(
             TriadNpcGate.IsTargeting() ||
             TriadNpcGate.IsInDialogueFlow() ||
             TriadTargetNpc.FromWorldTarget() != null))
@@ -170,7 +170,7 @@ internal static unsafe class TriadDialogueSkip
         }
 
         if (SelectYesnoHelper.TryGetVisible(out var blockingYesno) &&
-            !SelectYesnoHelper.ShouldPressTriadYesno(blockingYesno))
+            !SelectYesnoHelper.IsTriadYesno(blockingYesno))
         {
             return;
         }
@@ -185,7 +185,7 @@ internal static unsafe class TriadDialogueSkip
     {
         if (Svc.Condition[ConditionFlag.OccupiedInQuestEvent] ||
             !SelectYesnoHelper.TryGetVisible(out var yesno) ||
-            !SelectYesnoHelper.ShouldPressTriadYesno(yesno))
+            !SelectYesnoHelper.IsTriadYesno(yesno))
         {
             return;
         }
@@ -195,7 +195,7 @@ internal static unsafe class TriadDialogueSkip
             return;
         }
 
-        if (QuestDialogueGuard.ShouldBlockYesno(
+        if (NpcDialogueGate.ShouldBlockQuestDialogue(
             TriadNpcGate.IsTargeting() || TriadNpcGate.IsInDialogueFlow()))
         {
             return;

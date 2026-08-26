@@ -175,7 +175,6 @@ internal static class TriadDeckOptimizerJobs
                     }
                     catch
                     {
-                        // ignored
                     }
                 });
             }
@@ -318,7 +317,6 @@ internal static class TriadDeckOptimizerJobs
         }
         catch
         {
-            // ignored
         }
 
         job.Optimizer.AbortProcess();

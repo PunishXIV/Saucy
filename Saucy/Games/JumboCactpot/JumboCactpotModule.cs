@@ -2,7 +2,6 @@ using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.ClientState.Conditions;
 using ECommons.Throttlers;
-using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.Cactpot;
@@ -174,9 +173,7 @@ public unsafe class JumboCactpot : Module
 
     private void OnFrameworkUpdate(IFramework framework)
     {
-        // Teleports keep territory 144 (aetheryte) or hold BetweenAreas before the
-        // territory swap — !InSaucer alone never sees those. Cancel mid-ticket handoff
-        // on any zone transition so YesAlready is not re-locked on landing.
+        // Same-territory aetheryte teleports never flip InSaucer; BetweenAreas must abandon too.
         var betweenAreas = Svc.Condition[ConditionFlag.BetweenAreas];
         if ((betweenAreas && !wasBetweenAreas) || !InSaucer)
         {
@@ -224,7 +221,7 @@ public unsafe class JumboCactpot : Module
                IsWaitingForNextCashierReward() ||
                JumboCactpotBrokerPath.IsActive ||
                IsCashierHandoffPending() ||
-               (IsInCashierFlow() && (CactpotDialogueHelper.IsCashierUiVisible() || AgentHelper.IsActive(AgentId.LotteryWeekly))) ||
+               (IsInCashierFlow() && (CactpotDialogueHelper.HasNpcDialogueUi() || AgentHelper.IsActive(AgentId.LotteryWeekly))) ||
                (ObjectHelper.IsTargeting(CactpotNpcs.JumboBrokerScope) && HasTicketFlowUi());
     }
 
@@ -277,8 +274,7 @@ public unsafe class JumboCactpot : Module
             brokerPathArmed = false;
         }
 
-        // Do not gate cleanup on ShouldPauseYesAlready — sticky handoff flags used to
-        // make that true forever and prevent ResetCashierHandoff from ever running.
+        // Do not gate cleanup on ShouldPauseYesAlready (sticky handoff flags deadlock reset).
         if (HasVisibleOrActiveJumboUi() || IsCashierHandoffPending())
         {
             return;
@@ -309,7 +305,7 @@ public unsafe class JumboCactpot : Module
         CactpotDialogueHelper.IsJumboRewardListVisible() ||
         IsWaitingForNextCashierReward() ||
         JumboCactpotBrokerPath.IsActive ||
-        (IsInCashierFlow() && (CactpotDialogueHelper.IsCashierUiVisible() || AgentHelper.IsActive(AgentId.LotteryWeekly))) ||
+        (IsInCashierFlow() && (CactpotDialogueHelper.HasNpcDialogueUi() || AgentHelper.IsActive(AgentId.LotteryWeekly))) ||
         (ObjectHelper.IsTargeting(CactpotNpcs.JumboBrokerScope) && HasTicketFlowUi());
 
     private void TryAdvanceCashierTalk()
@@ -418,7 +414,7 @@ public unsafe class JumboCactpot : Module
             return;
         }
 
-        if (IsTargetingCashier() && CactpotDialogueHelper.IsCashierUiVisible())
+        if (IsTargetingCashier() && CactpotDialogueHelper.HasNpcDialogueUi())
         {
             cashierDialogueSeen = true;
             cashierHandoffDismissedUtc = null;
@@ -719,8 +715,6 @@ public unsafe class JumboCactpot : Module
         AgentHelper.IsActive(AgentId.LotteryWeekly) ||
         ticketFlow.IsActive ||
         (SelectYesnoHelper.IsVisible() && ObjectHelper.IsTargeting(CactpotNpcs.JumboBrokerScope));
-
-    private bool IsJumboInputVisible() => CactpotDialogueHelper.IsJumboInputVisible();
 
     private static bool IsJumboAddonReady(string addonName) =>
         TryGetAddonByName<AtkUnitBase>(addonName, out var addon) &&

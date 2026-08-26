@@ -4,7 +4,6 @@ using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using System;
 using System.Numerics;
-using static Saucy.Framework.ImGuiScopes;
 namespace Saucy;
 
 internal static class ImGuiLayout
@@ -71,6 +70,21 @@ internal static class ImGuiLayout
             _headerActive.Dispose();
             _headerHovered.Dispose();
             _header.Dispose();
+        }
+    }
+
+    public static WindowScope Window(string name, ImGuiWindowFlags flags) => new(name, flags);
+
+    public readonly struct WindowScope(string name, ImGuiWindowFlags flags) : IDisposable
+    {
+        public bool Success { get; } = ImGui.Begin(name, flags);
+
+        public void Dispose()
+        {
+            if (Success)
+            {
+                ImGui.End();
+            }
         }
     }
 

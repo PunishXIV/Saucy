@@ -1,18 +1,9 @@
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using FFXIVClientStructs.FFXIV.Component.GUI;
+using Saucy.Framework;
 using System;
 namespace Saucy.TripleTriad.UI;
-
-internal static class CardListFilterMapping
-{
-    public static byte ToCollectionFilter(CardListFilterMode mode) =>
-        mode switch
-        {
-            CardListFilterMode.OwnedOnly => (byte)GameCardCollectionFilter.OnlyOwned,
-            CardListFilterMode.MissingOnly => (byte)GameCardCollectionFilter.OnlyMissing,
-            var _ => (byte)GameCardCollectionFilter.All
-        };
-}
 
 public unsafe class UIReaderTriadCardList : IUIReader
 {
@@ -24,7 +15,10 @@ public unsafe class UIReaderTriadCardList : IUIReader
         NodesNotReady
     }
 
+    private const int VisibleTabCount = 9;
+
     private nint cachedAddonAgentPtr;
+    private bool inAddonUpdate;
 
     public UIStateTriadCardList cachedState = new();
     private int lastNotifiedCardId = -1;
@@ -77,6 +71,24 @@ public unsafe class UIReaderTriadCardList : IUIReader
 
     public void OnAddonUpdate(nint addonPtr)
     {
+        if (inAddonUpdate)
+        {
+            return;
+        }
+
+        inAddonUpdate = true;
+        try
+        {
+            OnAddonUpdateCore(addonPtr);
+        }
+        finally
+        {
+            inAddonUpdate = false;
+        }
+    }
+
+    private void OnAddonUpdateCore(nint addonPtr)
+    {
         var addon = (AddonGSInfoCardList*)addonPtr;
         (cachedState.screenPos, cachedState.screenSize) = GUINodeUtils.GetNodePosAndSize(addon->AtkUnitBase.RootNode);
 
@@ -92,13 +104,13 @@ public unsafe class UIReaderTriadCardList : IUIReader
 
         var newPageIndex = (byte)addon->SelectedPage;
         var newCardIndex = (byte)addon->SelectedCardIndex;
-        var newFilterMode = CardListFilterMapping.ToCollectionFilter(CardListFilterMode.All);
+        var newFilterMode = ToCollectionFilter(CardListFilterMode.All);
 
         AgentGoldSaucer* agent = null;
         if (cachedAddonAgentPtr != nint.Zero)
         {
             agent = (AgentGoldSaucer*)cachedAddonAgentPtr;
-            newFilterMode = CardListFilterMapping.ToCollectionFilter(agent->CardListFilterMode);
+            newFilterMode = ToCollectionFilter(agent->CardListFilterMode);
         }
 
         var displayCardId = TriadCardListSelectionReader.TryParseCardIdFromDisplayLabel(addon);
@@ -162,7 +174,7 @@ public unsafe class UIReaderTriadCardList : IUIReader
         cachedState.pageIndex = newPageIndex;
         cachedState.cardIndex = newCardIndex;
         cachedState.filterMode = newFilterMode;
-        cachedState.isDeckEditMode = TriadDeckEditUi.IsDeckEditScreenOpen();
+        cachedState.isDeckEditMode = IsDeckEditScreenOpen();
         cachedState.selectedCardId = selectedCardId;
         cachedState.selectionMasked = newSelectionMasked;
 
@@ -230,7 +242,7 @@ public unsafe class UIReaderTriadCardList : IUIReader
 
         var addon = (AddonGSInfoCardList*)addonPtr;
         var agent = (AgentGoldSaucer*)cachedAddonAgentPtr;
-        var filterMode = CardListFilterMapping.ToCollectionFilter(agent->CardListFilterMode);
+        var filterMode = ToCollectionFilter(agent->CardListFilterMode);
         var displayCardId = TriadCardListSelectionReader.TryParseCardIdFromDisplayLabel(addon);
         pendingNavSourceCardId = TriadCardListSelectionReader.ReadSelectedCardId(addon, filterMode, agent, displayCardId);
 
@@ -306,22 +318,21 @@ public unsafe class UIReaderTriadCardList : IUIReader
         }
 
         var addon = (AddonGSInfoCardList*)addonPtr;
-        if (cachedAddonAgentPtr != nint.Zero)
+        if (addon->SelectedPage != pendingNavPage)
+        {
+            TrySwitchPage(addon, pendingNavPage);
+            return;
+        }
+
+        addon->SelectedCardIndex = pendingNavCell;
+        if (cachedState.isDeckEditMode && cachedAddonAgentPtr != nint.Zero)
         {
             var agent = (AgentGoldSaucer*)cachedAddonAgentPtr;
             agent->EditDeckSelectedPage = pendingNavPage;
             agent->EditDeckSelectedCardIndex = pendingNavCell;
         }
 
-        if (addon->SelectedPage != pendingNavPage)
-        {
-            addon->RequestedPage = pendingNavPage;
-            addon->TabController.SetTabIndexAndCallBack(pendingNavPage);
-            addon->AtkUnitBase.Update(0);
-            return;
-        }
-
-        if (!GoldSaucerCardListUi.TryClickCell(addonPtr, pendingNavCell))
+        if (!TryClickCardCell(addonPtr, pendingNavCell))
         {
             return;
         }
@@ -433,4 +444,95 @@ public unsafe class UIReaderTriadCardList : IUIReader
             }
         }
     }
+
+    private static byte ToCollectionFilter(CardListFilterMode mode) =>
+        mode switch
+        {
+            CardListFilterMode.OwnedOnly => (byte)GameCardCollectionFilter.OnlyOwned,
+            CardListFilterMode.MissingOnly => (byte)GameCardCollectionFilter.OnlyMissing,
+            var _ => (byte)GameCardCollectionFilter.All
+        };
+
+    private static bool IsDeckEditScreenOpen()
+    {
+        for (var idx = 0; idx < 8; idx++)
+        {
+            if (Svc.GameGui.GetAddonByName("GSInfoCardDeck", idx) != nint.Zero)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TrySwitchPage(AddonGSInfoCardList* addon, int pageIndex)
+    {
+        if (addon is null || pageIndex < 0)
+        {
+            return false;
+        }
+
+        if (addon->SelectedPage == pageIndex)
+        {
+            return true;
+        }
+
+        addon->RequestedPage = pageIndex;
+
+        if (TryClickVisiblePageTab(addon, pageIndex) || TryClickPageArrow(addon, pageIndex))
+        {
+            return false;
+        }
+
+        addon->TabController.SetTabIndexAndCallBack(pageIndex);
+        addon->AtkUnitBase.Update(0);
+        return false;
+    }
+
+    private static bool TryClickCardCell(nint addonPtr, int cellIndex)
+    {
+        if (addonPtr == nint.Zero || cellIndex < 0 || cellIndex >= 30)
+        {
+            return false;
+        }
+
+        var addon = (AddonGSInfoCardList*)addonPtr;
+        return AddonButton.TryClick(&addon->AtkUnitBase, addon->CardButtons[cellIndex], false);
+    }
+
+    private static bool TryClickVisiblePageTab(AddonGSInfoCardList* addon, int pageIndex)
+    {
+        var tabIndex = addon->TabController.TabIndex;
+        var tabCount = addon->TabController.TabCount;
+        if (tabCount <= 0)
+        {
+            tabCount = VisibleTabCount;
+        }
+
+        var visibleStart = addon->SelectedPage - tabIndex;
+        if (visibleStart < 0)
+        {
+            visibleStart = 0;
+        }
+
+        var visibleTab = pageIndex - visibleStart;
+        if (visibleTab < 0 || visibleTab >= tabCount || visibleTab >= VisibleTabCount)
+        {
+            return false;
+        }
+
+        return TryClickPageButton(&addon->AtkUnitBase, addon->TabControllerNodes.TabButtons[visibleTab].Value);
+    }
+
+    private static bool TryClickPageArrow(AddonGSInfoCardList* addon, int pageIndex)
+    {
+        AtkComponentButton* button = pageIndex < addon->SelectedPage
+            ? addon->TabControllerNodes.BackButton
+            : addon->TabControllerNodes.ForwardButton;
+        return TryClickPageButton(&addon->AtkUnitBase, button);
+    }
+
+    private static bool TryClickPageButton(AtkUnitBase* addon, AtkComponentButton* button) =>
+        button is not null && AddonButton.TryClick(addon, button, false);
 }

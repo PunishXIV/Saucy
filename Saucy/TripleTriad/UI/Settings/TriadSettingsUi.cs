@@ -2,10 +2,12 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
+using Lumina.Excel.Sheets;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 namespace Saucy.TripleTriad;
 
 internal static class TriadSettingsUi
@@ -71,9 +73,9 @@ internal static class TriadSettingsUi
 
         SaucyTheme.DrawCard("Deck", null, DrawDeckBody);
         SaucyTheme.DrawCard("Run mode", null, DrawRunModeBody);
-        SaucyTheme.DrawCard("Travel", "Map navigation", TriadTravelMountUi.Draw);
+        SaucyTheme.DrawCard("Travel", "Map navigation", DrawTravelMount);
         SaucyTheme.DrawCard("Notifications", null, DrawNotificationsBody);
-        SaucyTheme.DrawCard("Dependencies", "Optional integrations", TriadDependenciesUi.Draw);
+        SaucyTheme.DrawCard("Dependencies", "Optional integrations", DrawDependencies);
     }
 
     private static void DrawDeckOptimizerSettings()
@@ -117,7 +119,7 @@ internal static class TriadSettingsUi
         ImGuiComponents.HelpMarker(
             "Pauses background deck builds while Questionable (/qst) is questing. Match prep still builds if you challenge an NPC.");
 
-        TriadDeckOptimizerStatusUi.DrawInline();
+        DrawDeckOptimizerStatus();
     }
 
     private static void DrawDeckOptimizerMaxThreadsSlider()
@@ -543,5 +545,131 @@ internal static class TriadSettingsUi
         }
 
         return TriadDeckEvalDisplay.FormatDeckNameWithWinChance(deckName, TriadRun.GetDeckPreviewData(targetNpc, deckId));
+    }
+
+    private static void DrawDependencies() =>
+        PluginDependenciesUi.Draw(
+            "Optional plugins for pathing to NPCs on the map, teleporting when needed, and starting unlock quests from Saucy.",
+            [
+                PluginDependenciesUi.Vnavmesh(
+                    "Walk to Triple Triad NPCs from Saucy map links after you arrive in the zone."),
+                PluginDependenciesUi.LifestreamPlugin(
+                    "Teleport to the nearest aetheryte before pathing when the NPC is far away or in another zone."),
+                PluginDependenciesUi.QuestionablePlugin(
+                    "Start Triple Triad unlock quests from Saucy card and NPC search.")
+            ]);
+
+    private static void DrawTravelMount()
+    {
+        ImGui.TextWrapped("Mount used before vnavmesh pathing to Triple Triad NPCs.");
+        ImGui.Dummy(new(0, 4));
+
+        var selectedMountId = C.TriadCollection.TravelMountId;
+        ImGui.SetNextItemWidth(280f * ImGuiHelpers.GlobalScale);
+        using var mountCombo = ImRaii.Combo("##TriadTravelMount", GetTravelMountPreviewLabel(selectedMountId));
+        if (mountCombo)
+        {
+            if (ImGui.Selectable("Mount roulette", selectedMountId == 0))
+            {
+                C.TriadCollection.TravelMountId = 0;
+                C.Save();
+            }
+
+            foreach (var mount in GetOwnedTravelMounts())
+            {
+                if (ImGui.Selectable(mount.Name, selectedMountId == mount.Id))
+                {
+                    C.TriadCollection.TravelMountId = mount.Id;
+                    C.Save();
+                }
+            }
+        }
+
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker(
+            "Default uses the game's Mount Roulette general action. Pick a mount to always summon that one before map navigation.");
+    }
+
+    private static string GetTravelMountPreviewLabel(uint mountId)
+    {
+        if (mountId == 0)
+        {
+            return "Mount roulette";
+        }
+
+        var mountSheet = Svc.Data.GetExcelSheet<Mount>();
+        var row = mountSheet?.GetRowOrDefault(mountId);
+        if (row == null)
+        {
+            return $"Mount #{mountId} (unavailable)";
+        }
+
+        var name = row.Value.Singular.ExtractText();
+        if (!TravelMountHelper.IsMountUnlocked(mountId))
+        {
+            return $"{name} (unavailable)";
+        }
+
+        return name;
+    }
+
+    private static (uint Id, string Name)[] GetOwnedTravelMounts()
+    {
+        var mountSheet = Svc.Data.GetExcelSheet<Mount>();
+
+        return
+        [
+            .. mountSheet
+                .Where(mount => mount.RowId != 0 && TravelMountHelper.IsMountUnlocked(mount.RowId))
+                .Select(mount => (Id: mount.RowId, Name: mount.Singular.ExtractText()))
+                .Where(mount => !string.IsNullOrWhiteSpace(mount.Name))
+                .OrderBy(mount => mount.Name, StringComparer.OrdinalIgnoreCase)
+        ];
+    }
+
+    private static void DrawDeckOptimizerStatus()
+    {
+        if (!TriadRun.ShouldBuildOptimizedDeck() ||
+            !TriadDeckOptimizerJobs.TryGetActive(out var job))
+        {
+            return;
+        }
+
+        ImGui.Spacing();
+        SaucyTheme.TextWarning($"Building deck for {job.NpcName}…");
+
+        var openingLabel = job.FormatBestWinChance();
+        if (!string.IsNullOrEmpty(openingLabel))
+        {
+            ImGui.Text($"Opening win chance: {openingLabel}");
+            if (job.OpeningEvalInFlight)
+            {
+                ImGui.SameLine();
+                ImGui.TextDisabled("(updating…)");
+            }
+        }
+        else if (job.OpeningEvalInFlight)
+        {
+            ImGui.TextDisabled("Opening win chance: calculating…");
+        }
+
+        var progress = Math.Clamp(job.ProgressPercent, 0, 100) / 100f;
+        ImGui.ProgressBar(progress, new Vector2(-1, 0));
+
+        ImGui.TextDisabled($"Cards owned: {job.NumOwnedCards:N0}");
+        ImGui.TextDisabled($"Possible decks: {job.NumPossibleDecksDesc}");
+        ImGui.TextDisabled($"Tested: {job.NumTestedDecksDesc}");
+        ImGui.TextDisabled($"Progress: {job.ProgressPercent}%");
+        ImGui.TextDisabled($"Time left: {job.FormatTimeLeftDesc()}");
+
+        if (ImGui.Button("Cancel build", new(-1, 0)))
+        {
+            TriadRun.CancelDeckOptimizerJob(userCancelled: true);
+        }
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Stops the current background deck build.");
+        }
     }
 }

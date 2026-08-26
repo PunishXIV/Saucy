@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 namespace Saucy.TripleTriad.UI;
 
@@ -193,7 +193,7 @@ public class UIStateTriadGame : IEquatable<UIStateTriadGame>
                 ETriadCardOwner.Unknown;
         }
 
-        if (move == 2)
+        if (TriadTurnState.IsForcedCardPickPhase(move))
         {
             for (var idx = 0; idx < blueDeck.Length; idx++)
             {

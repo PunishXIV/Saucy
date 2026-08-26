@@ -5,7 +5,7 @@ namespace Saucy.AirForce;
 
 public class AirForceOne : Module
 {
-    private const   string FireCachedTargetSignature = "48 8B C4 53 48 81 EC ?? ?? ?? ?? 0F 29 70 ?? 0F 57 C9 0F 29 78 ?? 48 8B D9 F3 0F 10 B9 ?? ?? ?? ?? BA FF FF 00 00";
+    private const string FireCachedTargetSignature = "48 8B C4 53 48 81 EC ?? ?? ?? ?? 0F 29 70 ?? 0F 57 C9 0F 29 78 ?? 48 8B D9 F3 0F 10 B9 ?? ?? ?? ?? BA FF FF 00 00";
     public override string Name => "Air Force One";
 
     public override void Enable()

@@ -18,18 +18,6 @@ internal static unsafe class CactpotDialogueHelper
         SelectStringHelper.IsNpcListMenuVisible() ||
         SelectYesnoHelper.IsVisible();
 
-    public static bool IsCashierUiVisible() => HasNpcDialogueUi();
-
-    public static bool IsLotteryWeeklyUiVisible() =>
-        SelectStringHelper.TryGetLotteryWeeklyMenu(out _) ||
-        (SelectYesnoHelper.TryGetVisible(out var yesno) &&
-         SelectYesnoHelper.ShouldPressLotteryYesno(yesno, AgentId.LotteryWeekly));
-
-    public static bool IsLotteryDailyUiVisible() =>
-        SelectStringHelper.TryGetLotteryDailyMenu(out _) ||
-        (SelectYesnoHelper.TryGetVisible(out var yesno) &&
-         SelectYesnoHelper.ShouldPressLotteryYesno(yesno, AgentId.LotteryDaily));
-
     public static bool IsJumboRewardListVisible() =>
         TryGetAddonByName<AtkUnitBase>("LotteryWeeklyRewardList", out var addon) &&
         IsAddonReady(addon) &&
@@ -117,7 +105,7 @@ internal static unsafe class CactpotDialogueHelper
             return false;
         }
 
-        if (QuestDialogueGuard.ShouldBlockYesno(
+        if (NpcDialogueGate.ShouldBlockQuestDialogue(
                 ObjectHelper.IsTargeting(scope) || IsTargetingCashier()))
         {
             return false;
@@ -285,4 +273,32 @@ internal static unsafe class CactpotDialogueHelper
             return false;
         }
     }
+}
+
+internal static class CactpotNpcs
+{
+    public const string MiniScope = "MiniCactpot";
+    public const string JumboBrokerScope = "JumboCactpot.Broker";
+    public const string CashierScope = "JumboCactpot.Cashier";
+
+    public const uint MiniBrokerBaseId = 1010445;
+    public const uint JumboBrokerBaseId = 1010446;
+    public const uint CashierBaseId = 1010451;
+}
+
+internal static class CactpotSessionActivity
+{
+    internal static bool IsMiniActive { get; private set; }
+
+    internal static bool IsJumboActive { get; private set; }
+
+    internal static void SyncMini(bool inSaucer, bool shouldPause) =>
+        IsMiniActive = inSaucer && shouldPause;
+
+    internal static void SyncJumbo(bool inSaucer, bool shouldPause) =>
+        IsJumboActive = inSaucer && shouldPause;
+
+    internal static void ResetMini() => IsMiniActive = false;
+
+    internal static void ResetJumbo() => IsJumboActive = false;
 }

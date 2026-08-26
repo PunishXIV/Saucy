@@ -1,6 +1,5 @@
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.Framework;
-using Saucy.TripleTriad.Utils;
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;

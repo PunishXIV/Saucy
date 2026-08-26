@@ -16,57 +16,13 @@ using AetheryteSheet = Lumina.Excel.Sheets.Aetheryte;
 
 namespace Saucy.TripleTriad;
 
-internal static class AethernetShardLookup
-{
-#pragma warning disable IDE0028 // StringComparer cannot use collection expressions without losing comparer semantics
-    private static readonly Dictionary<string, uint> Cache = new(StringComparer.OrdinalIgnoreCase);
-#pragma warning restore IDE0028
-
-    public static uint Resolve(string shardName)
-    {
-        if (string.IsNullOrEmpty(shardName))
-        {
-            return 0;
-        }
-
-        if (Cache.TryGetValue(shardName, out var cached))
-        {
-            return cached;
-        }
-
-        var sheet = Svc.Data.GetExcelSheet<AetheryteSheet>();
-        if (sheet == null)
-        {
-            return 0;
-        }
-
-        foreach (var row in sheet)
-        {
-            if (row.IsAetheryte)
-            {
-                continue;
-            }
-
-            var name = row.AethernetName.ValueNullable?.Name.ToString();
-            if (string.IsNullOrEmpty(name))
-            {
-                continue;
-            }
-
-            if (name.Equals(shardName, StringComparison.OrdinalIgnoreCase))
-            {
-                Cache[shardName] = row.RowId;
-                return row.RowId;
-            }
-        }
-
-        return 0;
-    }
-}
-
 internal static unsafe class MultiAreaRouteExecutor
 {
     private const uint GeneralActionDismount = 23;
+
+#pragma warning disable IDE0028
+    private static readonly Dictionary<string, uint> AethernetShardCache = new(StringComparer.OrdinalIgnoreCase);
+#pragma warning restore IDE0028
 
     public static bool TryBeginRoute(
         MultiAreaRoute route,
@@ -263,7 +219,7 @@ internal static unsafe class MultiAreaRouteExecutor
     {
         if (!string.IsNullOrEmpty(step.AethernetShardName))
         {
-            return AethernetShardLookup.Resolve(step.AethernetShardName);
+            return ResolveAethernetShard(step.AethernetShardName);
         }
 
         return step.AetheryteId;
@@ -507,6 +463,47 @@ internal static unsafe class MultiAreaRouteExecutor
     }
 
     private static bool IsBetweenAreas() => Svc.Condition[ConditionFlag.BetweenAreas];
+
+    private static uint ResolveAethernetShard(string shardName)
+    {
+        if (string.IsNullOrEmpty(shardName))
+        {
+            return 0;
+        }
+
+        if (AethernetShardCache.TryGetValue(shardName, out var cached))
+        {
+            return cached;
+        }
+
+        var sheet = Svc.Data.GetExcelSheet<AetheryteSheet>();
+        if (sheet == null)
+        {
+            return 0;
+        }
+
+        foreach (var row in sheet)
+        {
+            if (row.IsAetheryte)
+            {
+                continue;
+            }
+
+            var name = row.AethernetName.ValueNullable?.Name.ToString();
+            if (string.IsNullOrEmpty(name))
+            {
+                continue;
+            }
+
+            if (name.Equals(shardName, StringComparison.OrdinalIgnoreCase))
+            {
+                AethernetShardCache[shardName] = row.RowId;
+                return row.RowId;
+            }
+        }
+
+        return 0;
+    }
 
     internal sealed class RouteExecution
     {

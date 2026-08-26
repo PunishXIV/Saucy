@@ -1,4 +1,4 @@
-﻿using FFXIVClientStructs.FFXIV.Component.GUI;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -44,7 +44,7 @@ public static class GUINodeUtils
 
         var listAddr = new List<ulong> { (ulong)node->ChildNode };
         node = node->ChildNode;
-        while (node->PrevSiblingNode is not null)
+        while (node->PrevSiblingNode is not null && listAddr.Count < 64)
         {
             listAddr.Add((ulong)node->PrevSiblingNode);
             node = node->PrevSiblingNode;
@@ -65,9 +65,9 @@ public static class GUINodeUtils
         return ConvertToNodeArr(list);
     }
 
-    private static unsafe void RecursiveAppendChildNodes(AtkResNode* node, List<ulong> listAddr)
+    private static unsafe void RecursiveAppendChildNodes(AtkResNode* node, List<ulong> listAddr, int depth = 0)
     {
-        if (node is null)
+        if (node is null || depth > 24)
         {
             return;
         }
@@ -79,13 +79,15 @@ public static class GUINodeUtils
             return;
         }
 
-        RecursiveAppendChildNodes(node->ChildNode, listAddr);
+        RecursiveAppendChildNodes(node->ChildNode, listAddr, depth + 1);
 
         var linkNode = node->ChildNode;
-        while (linkNode->PrevSiblingNode is not null)
+        var siblingCount = 0;
+        while (linkNode->PrevSiblingNode is not null && siblingCount < 64)
         {
-            RecursiveAppendChildNodes(linkNode->PrevSiblingNode, listAddr);
+            RecursiveAppendChildNodes(linkNode->PrevSiblingNode, listAddr, depth + 1);
             linkNode = linkNode->PrevSiblingNode;
+            siblingCount++;
         }
     }
 

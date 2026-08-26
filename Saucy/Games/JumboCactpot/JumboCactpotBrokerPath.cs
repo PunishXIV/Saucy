@@ -46,8 +46,7 @@ internal static class JumboCactpotBrokerPath
             return;
         }
 
-        // Without vnavmesh the path can never finish; drop the request so YesAlready
-        // is not paused indefinitely via IsActive.
+        // Without vnavmesh the path never completes and YesAlready stays paused.
         if (!Vnavmesh.IsInstalled)
         {
             Reset();
@@ -56,8 +55,6 @@ internal static class JumboCactpotBrokerPath
 
         if (Svc.Condition[ConditionFlag.BetweenAreas])
         {
-            // Teleport / zone load: drop the request. Resuming after landing re-locks
-            // YesAlready at the aetheryte even when the player abandoned ticket purchase.
             Reset();
             return;
         }

@@ -1,5 +1,6 @@
 ﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using System;
@@ -430,7 +431,7 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
             return CardUtils.FormatDeckEditListLabel(listCardDisplayNos[idx], cardOb);
         }
 
-        return $"[{CardUtils.GetOrderDesc(cardOb)}] {CardUtils.GetRarityDesc(cardOb)} {CardUtils.GetUIDesc(cardOb)}";
+        return $"[{CardUtils.GetOrderDesc(cardOb)}] {CardUtils.GetRarityDesc(cardOb)} {cardOb.Name}";
     }
 
     private void DrawCardsTab()
@@ -459,7 +460,7 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
                     }
 
                     var itemDesc = FormatCardListLabel(idx, cardOb);
-                    if (searchFilterCard.PassFilterBool(itemDesc))
+                    if (PassesTextFilter(searchFilterCard, itemDesc))
                     {
                         var isSelected = selectedCardIdx == idx;
                         if (ImGui.Selectable(itemDesc, isSelected))
@@ -578,7 +579,7 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
                         itemDesc = $"NPC #{npcOb.Id}";
                     }
 
-                    if (searchFilterNpc.PassFilterBool(itemDesc))
+                    if (PassesTextFilter(searchFilterNpc, itemDesc))
                     {
                         visibleCount++;
                         var isSelected = selectedNpcIdx == idx;
@@ -668,7 +669,7 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
             }
         });
 
-        TriadCollectionPremadeDeckUi.DrawForNpc(npcData.Item1);
+        DrawPremadeDeckForNpc(npcData.Item1);
 
         ImGui.Spacing();
         ImGui.Text($"Unowned rewards: {numNotOwnedRewards}");
@@ -683,7 +684,7 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
                         (var cardOb, var cardListIdx) = listNpcReward[idx];
                         var isCardOwned = settingsDB.ownedCards.Contains(cardOb);
 
-                        var itemDesc = $"{CardUtils.GetOrderDesc(cardOb)} {CardUtils.GetUIDesc(cardOb)}";
+                        var itemDesc = $"{CardUtils.GetOrderDesc(cardOb)} {cardOb.Name}";
                         var isSelected = selectedCardIdx == cardListIdx;
 
                         if (isCardOwned)
@@ -717,6 +718,18 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
 
     private static float GetContentWidth() =>
         MathF.Max(1f, ImGui.GetContentRegionAvail().X);
+
+    private static bool PassesTextFilter(ImGuiTextFilterPtr filter, ImU8String text)
+    {
+        var ret = false;
+        fixed (byte* textPtr = text)
+        {
+            ret = ImGuiNative.PassFilter(filter.Handle, textPtr, textPtr + text.Length) != 0;
+        }
+
+        text.Recycle();
+        return ret;
+    }
 
     private static Vector2 GetListBoxSize(float visibleLines) =>
         new(GetContentWidth(), ImGui.GetTextLineHeightWithSpacing() * visibleLines);
@@ -802,6 +815,57 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
         if (listNpcReward.Count > 1)
         {
             listNpcReward.Sort((a, b) => a.Item1.Name.CompareTo(b.Item1.Name));
+        }
+    }
+
+    private static void DrawPremadeDeckForNpc(TriadNpc npc)
+    {
+        if (npc == null)
+        {
+            return;
+        }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        ImGui.Text("Optimized deck");
+        ImGuiComponents.HelpMarker(
+            "Builds a deck from your owned cards and saves it to profile slot 5. Run this before travel so it is ready at match prep.");
+
+        var status = TriadRun.DescribePremadeDeckOptimizerStatus(npc);
+        if (!string.IsNullOrEmpty(status))
+        {
+            ImGui.TextWrapped(status);
+        }
+
+        var canRun = TriadRun.CanRequestPremadeDeckOptimizer(npc, out var blockReason);
+        var hasReady = TriadRun.HasPremadeDeckReadyForNpc(npc);
+        var isRunning = TriadRun.IsPremadeOptimizerForNpc(npc);
+
+        using var buildDisabled = ImRaii.Disabled(!canRun || isRunning);
+        if (ImGui.Button("Build deck", new(-1, 0)))
+        {
+            TriadRun.RequestPremadeDeckOptimizer(npc);
+        }
+
+        if (!canRun && !string.IsNullOrEmpty(blockReason) && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            ImGui.SetTooltip(blockReason);
+        }
+
+        if (hasReady)
+        {
+            using var rebuildDisabled = ImRaii.Disabled(isRunning);
+            if (ImGui.Button("Rebuild deck", new(-1, 0)))
+            {
+                TriadRun.RequestPremadeDeckOptimizer(npc, true);
+            }
+
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip("Runs a fresh build and overwrites the deck in profile slot 5.");
+            }
         }
     }
 }

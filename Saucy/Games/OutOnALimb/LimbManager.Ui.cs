@@ -121,7 +121,7 @@ public unsafe partial class LimbManager
                 }
 
                 ImGuiEx.Text($"Button enabled: {button->IsEnabled}");
-                ImGuiEx.Text($"Seconds remaining: {LimbArcadeTimer.TryGetSecondsRemaining()?.ToString() ?? "n/a"}");
+                ImGuiEx.Text($"Seconds remaining: {TryGetArcadeSecondsRemaining()?.ToString() ?? "n/a"}");
                 {
                     var na = AtkStage.Instance()->GetNumberArrayData(NumberArrayType.GoldSaucerArcadeMachine);
                     if (na != null)

@@ -44,9 +44,6 @@ internal static unsafe partial class TriadMapNavigation
         bool fly = true,
         TriadNavigationGoal goal = TriadNavigationGoal.FarmCards)
     {
-        // Pre-flight unlock check — runs BEFORE anything else (Battle Hall block, duplicate-navigation
-        // check, deck-optimizer prep, teleport). If the NPC's prerequisite quest isn't complete, refuse
-        // to do anything: no teleport, no walk, no interaction spam.
         if (TryRejectLockedNpcOnClick(npc))
         {
             return;

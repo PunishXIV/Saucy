@@ -14,13 +14,13 @@ internal static unsafe class TravelMountHelper
     public static bool CanMountInCurrentTerritory() =>
         CanMountInTerritory(Svc.ClientState.TerritoryType);
 
-    public static bool CanMountInTerritory(uint territoryId)
+    private static bool CanMountInTerritory(uint territoryId)
     {
         var row = Svc.Data.GetExcelSheet<TerritoryType>()?.GetRowOrDefault(territoryId);
         return row != null && row.Value.Mount;
     }
 
-    public static bool IsFlyingUnlocked()
+    private static bool IsFlyingUnlocked()
     {
         var uiState = UIState.Instance();
         return uiState != null && uiState->PlayerState.CanFly;

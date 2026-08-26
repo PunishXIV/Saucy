@@ -1,3 +1,4 @@
+using Dalamud.Game.ClientState.Conditions;
 using Saucy.CuffACur;
 using Saucy.Framework;
 using Saucy.IPC;
@@ -29,7 +30,7 @@ public sealed partial class Saucy
             }
 
             UpdateTriadAutoOpen();
-            GoldSaucerDutyFinderDefer.Tick();
+            TickDutyFinderDefer();
             AutoRetainerPause.Tick();
 
             if (C.UseSimmedDeck && TriadRun.ShouldBuildOptimizedDeck())
@@ -155,5 +156,23 @@ public sealed partial class Saucy
         return TriadLocalClientStructs.TryGetRequest(out var _) ||
                TriadLocalClientStructs.TryGetSelDeck(out var _) ||
                TriadLocalClientStructs.TryGetBoard(out var _);
+    }
+
+    private static void TickDutyFinderDefer()
+    {
+        if (!Svc.Condition[ConditionFlag.WaitingForDutyFinder])
+        {
+            return;
+        }
+
+        foreach (var machine in GoldSaucerArcadeMachineHelper.All)
+        {
+            if (GoldSaucerArcadeMachineHelper.IsEnabled(machine))
+            {
+                GoldSaucerArcadeRunSession.ArmStopForDutyFinder(machine);
+            }
+        }
+
+        TriadRunSession.ApplyDutyFinderDeferIfNeeded();
     }
 }

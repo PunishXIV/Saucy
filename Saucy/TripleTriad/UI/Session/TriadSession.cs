@@ -335,9 +335,12 @@ public partial class TriadSession
 
     public bool IsMoveReadyForPlacement() =>
         !hasMove ||
-        (TriadRunSession.ModuleEnabled && !TriadBuddyIntegration.IsLoaded()) ||
+        (TriadRunSession.ModuleEnabled && !IsTriadBuddyLoaded()) ||
         TriadCardFarmSession.IsModeActive() ||
         (_moveReadyUtc.HasValue && DateTime.UtcNow - _moveReadyUtc.Value >= MoveHighlightGracePeriod);
+
+    private static bool IsTriadBuddyLoaded() =>
+        Svc.PluginInterface.InstalledPlugins.Any(p => p.InternalName == "TriadBuddy" && p.IsLoaded);
 
     public class DeckData
     {
@@ -346,12 +349,4 @@ public partial class TriadSession
         public string? name;
         public TriadDeck? solverDeck;
     }
-}
-
-internal static class TriadBuddyIntegration
-{
-    private const string PluginInternalName = "TriadBuddy";
-
-    public static bool IsLoaded() =>
-        Svc.PluginInterface.InstalledPlugins.Any(p => p.InternalName == PluginInternalName && p.IsLoaded);
 }

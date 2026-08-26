@@ -1,6 +1,5 @@
-﻿using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using Saucy.TripleTriad.Utils;
 using System;
 using System.Collections.Generic;
 namespace Saucy.TripleTriad.UI;
@@ -187,9 +186,9 @@ public class UIReaderTriadGame : IUIReader
         return candidates;
     }
 
-    private static unsafe void CollectVisibleTextNodes(AtkResNode* node, List<string> output)
+    private static unsafe void CollectVisibleTextNodes(AtkResNode* node, List<string> output, int depth = 0)
     {
-        if (node is null || !node->IsVisible())
+        if (node is null || depth > 24 || !node->IsVisible())
         {
             return;
         }
@@ -205,7 +204,7 @@ public class UIReaderTriadGame : IUIReader
 
         foreach (var child in GUINodeUtils.GetImmediateChildNodes(node) ?? [])
         {
-            CollectVisibleTextNodes(child, output);
+            CollectVisibleTextNodes(child, output, depth + 1);
         }
     }
 

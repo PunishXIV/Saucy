@@ -1,12 +1,19 @@
+using Dalamud.Game.ClientState.Conditions;
+using ECommons.GameHelpers;
+using ECommons.Throttlers;
+using Saucy.Framework;
+using Saucy.IPC;
 namespace Saucy.TripleTriad;
 
 internal static class TriadAutomator
 {
+    private const string SanityThrottleKey = "Saucy.TriadAutomator.SanityCheck";
+
     public static void RunModule()
     {
         TriadCardFarmSession.TickDisplaySync();
 
-        TriadNpcSanityCheck.Tick();
+        TickNpcSanityCheck();
         if (!TriadRunSession.ModuleEnabled)
         {
             return;
@@ -82,5 +89,66 @@ internal static class TriadAutomator
                 }
             }
         }
+    }
+
+    private static void TickNpcSanityCheck()
+    {
+        if (ShouldSkipNpcSanityCheck())
+        {
+            return;
+        }
+
+        if (!EzThrottler.Throttle(SanityThrottleKey, 1000))
+        {
+            return;
+        }
+
+        if (TriadNpcProximity.IsRelevantTriadNpcNearby())
+        {
+            return;
+        }
+
+        var npcName = TriadNpcProximity.ResolveTriadNpcForProximityCheck()?.Name;
+        TriadRunSession.DisableModule(string.IsNullOrEmpty(npcName)
+            ? "No Triple Triad NPC nearby. Move closer to the NPC you want to play."
+            : $"No Triple Triad NPC nearby ({npcName}). Move closer to the NPC you want to play.");
+    }
+
+    private static bool ShouldSkipNpcSanityCheck()
+    {
+        if (!TriadRunSession.ModuleEnabled || !TriadRunSession.ShouldContinue())
+        {
+            return true;
+        }
+
+        if (TriadUiState.IsAutomationFlowActive())
+        {
+            return true;
+        }
+
+        if (TalkHelper.IsVisible() || SelectStringHelper.IsNpcListMenuVisible())
+        {
+            return true;
+        }
+
+        if (TriadCardFarmSession.HasPendingDrops() &&
+            (TriadCardFarmSession.IsModeActive() || TriadCardFarmSession.SessionActive))
+        {
+            return true;
+        }
+
+        if (TriadRematchAutomation.RematchPending ||
+            TriadRematchAutomation.PendingRegistrationDismiss ||
+            TriadCardFarmSession.IsDropVerificationPending())
+        {
+            return true;
+        }
+
+        if (!Player.Available || Svc.Condition[ConditionFlag.BetweenAreas])
+        {
+            return true;
+        }
+
+        return Lifestream.IsBusyNow() || Vnavmesh.IsMoving() || TriadMapNavigation.IsNavigationActive;
     }
 }

@@ -5,12 +5,14 @@ namespace Saucy.TripleTriad;
 internal static unsafe class TriadBoardAutomation
 {
     private static bool boardActiveForSnapshot;
+    private static bool placingCard;
 
     public static bool Tick()
     {
         if (!TriadUiState.IsBoardVisible())
         {
             boardActiveForSnapshot = false;
+            placingCard = false;
             return false;
         }
 
@@ -52,6 +54,12 @@ internal static unsafe class TriadBoardAutomation
 
     private static bool PlaceCard(int which, int slot)
     {
+        if (placingCard)
+        {
+            return false;
+        }
+
+        placingCard = true;
         try
         {
             if (!TriadLocalClientStructs.TryGetBoard(out var addon, false))
@@ -68,6 +76,10 @@ internal static unsafe class TriadBoardAutomation
         {
             Svc.Log.Error(ex, "[TriadBoardAutomation] PlaceCard failed");
             return false;
+        }
+        finally
+        {
+            placingCard = false;
         }
     }
 }

@@ -2,8 +2,10 @@ using ECommons.Throttlers;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.Framework;
+using Saucy.OutOnALimb.ECEmbedded;
 using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using static ECommons.GenericHelpers;
 namespace Saucy.OutOnALimb;
 
@@ -180,7 +182,7 @@ public unsafe partial class LimbManager
             return;
         }
 
-        var rawTimer = LimbArcadeTimer.TryGetSecondsRemaining();
+        var rawTimer = TryGetArcadeSecondsRemaining();
         var secondsRemaining = rawTimer ?? 0;
         var continueRound = secondsRemaining > Cfg.MinSecondsForAnotherRound;
 
@@ -338,4 +340,34 @@ public unsafe partial class LimbManager
             PluginLog.Debug($"{result}");
         }
     }
+
+    private static int? TryGetArcadeSecondsRemaining()
+    {
+        var data = AtkStage.Instance()->GetNumberArrayData(NumberArrayType.GoldSaucerArcadeMachine);
+        if (data == null)
+        {
+            return null;
+        }
+
+        return data->IntArray[2];
+    }
+}
+
+[StructLayout(LayoutKind.Explicit)]
+internal unsafe struct AddonMiniGameBotanist
+{
+    [FieldOffset(0)] public AtkUnitBase AtkUnitBase;
+    [FieldOffset(0x2D1)] public byte HitPendingRaw;
+    [FieldOffset(0x328)] public uint Health;
+
+    public readonly bool HitPending => HitPendingRaw != 0;
+
+    internal static AddonMiniGameBotanist* From(AtkUnitBase* addon) => (AddonMiniGameBotanist*)addon;
+}
+
+public unsafe class ReaderMiniGameBotanist(AtkUnitBase* UnitBase, int BeginOffset = 0) : AtkReader(UnitBase, BeginOffset)
+{
+    public uint State => ReadUInt(0) ?? 0;
+
+    public uint SwingsLeft => ReadUInt(11) ?? 0;
 }

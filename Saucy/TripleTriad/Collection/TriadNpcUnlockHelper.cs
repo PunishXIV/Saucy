@@ -83,10 +83,10 @@ internal static class TriadNpcUnlockHelper
     public static bool IsUnlockRequirementSatisfied(GameNpcInfo? info) =>
         info != null && AreUnlockQuestsComplete(info, out var _);
 
-    public static string FormatLockedMessage(string npcName, uint incompleteQuestId, string? incompleteQuestName) =>
+    private static string FormatLockedMessage(string npcName, uint incompleteQuestId, string? incompleteQuestName) =>
         $"[Saucy] {npcName}'s Triple Triad isn't unlocked yet — complete {FormatQuestLabel(incompleteQuestId, incompleteQuestName)} first.";
 
-    public static string FormatLockedMessageAnyOf(string npcName, IReadOnlyList<(uint QuestId, string? QuestName)> quests)
+    private static string FormatLockedMessageAnyOf(string npcName, IReadOnlyList<(uint QuestId, string? QuestName)> quests)
     {
         if (quests.Count == 0)
         {
@@ -102,13 +102,13 @@ internal static class TriadNpcUnlockHelper
         return $"[Saucy] {npcName}'s Triple Triad isn't unlocked yet — complete one of: {labels}.";
     }
 
-    public static string FormatCouldNotVerifyMessage(string npcName) =>
+    private static string FormatCouldNotVerifyMessage(string npcName) =>
         $"[Saucy] Could not verify Triple Triad unlock for {npcName}.";
 
     public static string FormatNavigationInteractAbortMessage(TriadNpc? npc) =>
         $"[Saucy] Triple Triad is not available with {npc?.Name ?? "this NPC"} (unlocked yet?). Aborting.";
 
-    public static string FormatQuestLabel(uint questId, string? questName) =>
+    private static string FormatQuestLabel(uint questId, string? questName) =>
         string.IsNullOrEmpty(questName) ? $"quest #{questId}" : $"\"{questName}\"";
 
     private static bool TryResolveGameNpcInfo(TriadNpc npc, out GameNpcInfo info) =>

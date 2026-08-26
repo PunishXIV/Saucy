@@ -1,5 +1,4 @@
 using ECommons.Automation;
-using ECommons.Automation.UIInput;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -149,9 +148,7 @@ public static unsafe class SelectYesnoHelper
          IsArcadeYesno(yesno) ||
          AgentHelper.IsActive(lotteryAgent));
 
-    public static bool ShouldPressTriadYesno(AddonSelectYesno* yesno) => IsTriadYesno(yesno);
-
-    public static bool IsSafeMinigameYesno(AddonSelectYesno* yesno) =>
+    private static bool IsSafeMinigameYesno(AddonSelectYesno* yesno) =>
         yesno is not null &&
         HasYesnoButtons(yesno) &&
         !IsBlockedSystemPrompt(yesno) &&
@@ -160,7 +157,7 @@ public static unsafe class SelectYesnoHelper
         !IsCuffPlayRoundPrompt(yesno) &&
         !IsArcadeDoubleDownYesno(yesno);
 
-    public static bool IsCuffPlayRoundPrompt(AddonSelectYesno* yesno)
+    private static bool IsCuffPlayRoundPrompt(AddonSelectYesno* yesno)
     {
         if (yesno is null || IsBlockedSystemPrompt(yesno) || IsTriadYesNoPrompt(yesno))
         {
@@ -192,7 +189,7 @@ public static unsafe class SelectYesnoHelper
                text.Contains("プレイ", StringComparison.OrdinalIgnoreCase);
     }
 
-    public static bool IsTriadYesNoPrompt(AddonSelectYesno* yesno)
+    private static bool IsTriadYesNoPrompt(AddonSelectYesno* yesno)
     {
         if (IsBlockedSystemPrompt(yesno) || IsArcadeDoubleDownYesno(yesno))
         {

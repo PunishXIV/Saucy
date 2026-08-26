@@ -1,6 +1,7 @@
 using Dalamud.Game.ClientState.Conditions;
 using ECommons.Automation;
 using Saucy.Framework;
+using Saucy.IPC;
 using Saucy.OtherGames;
 using System;
 namespace Saucy.TripleTriad;
@@ -286,7 +287,8 @@ internal static class TriadRunSession
 
     public static void StopAllAutomation(bool announce = true)
     {
-        GateShared.StopAll();
+        BossMod.TryDisableGateAi();
+        WindBlowsGateMovement.ReleaseIfOwned();
         TriadMapNavigation.CancelActiveNavigation();
         ModuleEnabled = false;
         ClearDutyFinderDefer();

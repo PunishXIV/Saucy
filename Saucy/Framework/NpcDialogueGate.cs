@@ -1,8 +1,12 @@
+using Dalamud.Game.ClientState.Conditions;
 using System;
 namespace Saucy.Framework;
 
 public static class NpcDialogueGate
 {
+    public static bool ShouldBlockQuestDialogue(bool isAtTrackedNpc) =>
+        Svc.Condition[ConditionFlag.OccupiedInQuestEvent] && !isAtTrackedNpc;
+
     public static bool CanAutomateYesno(string scope, bool inTimedFlow) =>
         ObjectHelper.HasInitiatedDialogue(scope) ||
         (inTimedFlow && ObjectHelper.IsTargeting(scope));

@@ -1,6 +1,5 @@
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.AirForce;
-using Saucy.TripleTriad.Utils;
 using System;
 namespace Saucy.Framework.UI;
 

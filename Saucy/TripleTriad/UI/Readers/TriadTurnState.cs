@@ -1,12 +1,12 @@
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using Saucy.TripleTriad.Utils;
 using System;
 namespace Saucy.TripleTriad.UI;
 
 internal static class TriadTurnState
 {
     public const int PlayerTurnAtkValueIndex = 23;
+    private const int MaxBannerWalkDepth = 24;
 
     private static readonly string[] TurnBannerMarkers =
     [
@@ -46,11 +46,11 @@ internal static class TriadTurnState
         (IsBoardPickPhase(turnState) && isPlayerTurn);
 
     public static unsafe bool IsTurnBannerVisible(AtkUnitBase* unit) =>
-        unit is not null && HasTurnBannerText(unit->RootNode);
+        unit is not null && HasTurnBannerText(unit->RootNode, 0);
 
-    private static unsafe bool HasTurnBannerText(AtkResNode* node)
+    private static unsafe bool HasTurnBannerText(AtkResNode* node, int depth)
     {
-        if (!GUINodeUtils.IsNodeVisible(node))
+        if (depth > MaxBannerWalkDepth || !GUINodeUtils.IsNodeVisible(node))
         {
             return false;
         }
@@ -62,7 +62,7 @@ internal static class TriadTurnState
 
         foreach (var child in GUINodeUtils.GetImmediateChildNodes(node) ?? [])
         {
-            if (HasTurnBannerText(child))
+            if (HasTurnBannerText(child, depth + 1))
             {
                 return true;
             }

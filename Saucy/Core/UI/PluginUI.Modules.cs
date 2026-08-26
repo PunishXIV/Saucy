@@ -5,7 +5,6 @@ using FFXIVClientStructs.FFXIV.Client.Game;
 using Saucy.AirForce;
 using Saucy.CuffACur;
 using Saucy.JumboCactpot;
-using Saucy.OtherGames;
 using System;
 using System.Collections.Generic;
 using static ECommons.GenericHelpers;
@@ -72,7 +71,7 @@ public unsafe partial class PluginUI
         }
 
         ImGui.Dummy(new(0, 4));
-        SaucyTheme.DrawCard("Dependencies", "Optional integrations", GoldSaucerGateDependenciesUi.DrawSliceIsRight);
+        SaucyTheme.DrawCard("Dependencies", "Optional integrations", DrawSliceIsRightDependencies);
     }
 
     private static void DrawWindBlowsPanel()
@@ -104,7 +103,7 @@ public unsafe partial class PluginUI
         }
 
         ImGui.Dummy(new(0, 4));
-        SaucyTheme.DrawCard("Dependencies", "Optional integrations", GoldSaucerGateDependenciesUi.DrawWindBlows);
+        SaucyTheme.DrawCard("Dependencies", "Optional integrations", DrawWindBlowsDependencies);
     }
 
     private static void DrawAirForcePanel()
@@ -339,4 +338,21 @@ public unsafe partial class PluginUI
             Mgp = mgp, SessionDelta = sessionDelta, ModuleStatus = status
         };
     }
+
+    private static void DrawSliceIsRightDependencies() =>
+        PluginDependenciesUi.Draw(
+            "Optional plugin for automatic dodging during the GATE. Overlays still work without it.",
+            [
+                PluginDependenciesUi.BossModPlugin(
+                    "Provides the Slice is Right boss module (hazard zones) and the VBM AI preset Saucy activates during the GATE. " +
+                    "Keep the Gold Saucer Slice is Right module enabled in Boss Mod settings.")
+            ]);
+
+    private static void DrawWindBlowsDependencies() =>
+        PluginDependenciesUi.Draw(
+            "Optional plugin for automatic movement to the safe spot. Overlays still work without it.",
+            [
+                PluginDependenciesUi.Vnavmesh(
+                    "Pathfinds you onto the statistical safe spot during the GATE.")
+            ]);
 }

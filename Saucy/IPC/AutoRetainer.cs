@@ -63,7 +63,6 @@ internal static class AutoRetainerIpc
         }
         catch
         {
-            // ignored
         }
     }
 }

@@ -4,6 +4,9 @@ namespace Saucy.TripleTriad.GameLogic;
 
 public abstract class TriadGameAgentGraphExplorer : TriadGameAgent
 {
+    // Sudden Death can recurse; cap depth so Chaos matches cannot 0xC00000FD the game thread.
+    private const int MaxSearchDepth = 20;
+
     private Random failsafeRandStream;
     protected int sessionSeed;
 
@@ -49,6 +52,11 @@ public abstract class TriadGameAgentGraphExplorer : TriadGameAgent
         bestCardIdx = -1;
         bestBoardPos = -1;
         bestActionResult = SolverResult.Zero;
+
+        if (searchLevel > MaxSearchDepth)
+        {
+            return bestActionResult;
+        }
 
         float numWinsTotal = 0;
         float numDrawsTotal = 0;

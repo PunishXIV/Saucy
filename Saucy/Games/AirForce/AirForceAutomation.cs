@@ -9,23 +9,21 @@ namespace Saucy.AirForce;
 
 public static unsafe class AirForceAutomation
 {
-    private const int  MaxTargetWalk     = 128;
+    private const int MaxTargetWalk = 128;
     private const long MinShotIntervalMs = 500;
 
-    private static readonly IFramework                Framework;
-    private static          bool                      Enabled;
-    internal static         FireCachedTargetDelegate? FireCachedTarget;
-    private static          long                      LastShotAt;
+    internal static FireCachedTargetDelegate? FireCachedTarget;
+    private static long LastShotAt;
 
     private static DateTime? rewardWindowUntilUtc;
-    private static bool      wasInDuty;
+    private static bool wasInDuty;
 
     public static bool ShouldTrackReward => rewardWindowUntilUtc != null && DateTime.UtcNow <= rewardWindowUntilUtc.Value;
 
     public static void ClearRewardTracking()
     {
         rewardWindowUntilUtc = null;
-        wasInDuty            = false;
+        wasInDuty = false;
     }
 
     public static void ConsumeRewardTracking() => rewardWindowUntilUtc = null;
@@ -38,13 +36,13 @@ public static unsafe class AirForceAutomation
             return;
         }
 
-        var inDuty = Svc.Condition[ConditionFlag.BoundByDuty95]                               &&
+        var inDuty = Svc.Condition[ConditionFlag.BoundByDuty95] &&
                      GenericHelpers.TryGetAddonByName("RideShooting", out AtkUnitBase* addon) &&
                      addon->IsReady();
 
         if (inDuty)
         {
-            wasInDuty            = true;
+            wasInDuty = true;
             rewardWindowUntilUtc = null;
 
             var now = Environment.TickCount64;
@@ -74,8 +72,8 @@ public static unsafe class AirForceAutomation
             }
 
             *(Vector3*)(context + 0xCA0) = *(Vector3*)(target + 0x00);
-            *(int*)(context     + 0xCB0) = 1;
-            *(ushort*)(context  + 0xCB4) = *(ushort*)(target + 0x30);
+            *(int*)(context + 0xCB0) = 1;
+            *(ushort*)(context + 0xCB4) = *(ushort*)(target + 0x30);
 
             FireCachedTarget?.Invoke(context);
 
@@ -86,7 +84,7 @@ public static unsafe class AirForceAutomation
 
         if (wasInDuty)
         {
-            wasInDuty            = false;
+            wasInDuty = false;
             rewardWindowUntilUtc = DateTime.UtcNow.AddMinutes(2);
         }
     }
@@ -110,8 +108,8 @@ public static unsafe class AirForceAutomation
                 continue;
             }
 
-            var kind       = *(int*)(target  + 0x4C);
-            var subState   = *(int*)(target  + 0x50);
+            var kind = *(int*)(target + 0x4C);
+            var subState = *(int*)(target + 0x50);
             var targetType = *(nint*)(target + 0x40);
 
             if (kind != 2 || subState != 0 || targetType == 0)

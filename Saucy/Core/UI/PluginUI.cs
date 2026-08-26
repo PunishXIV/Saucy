@@ -6,10 +6,10 @@ using ECommons.ImGuiMethods;
 using FFXIVClientStructs.FFXIV.Client.Game.GoldSaucer;
 using PunishLib.ImGuiMethods;
 using Saucy.Framework;
-using Saucy.JumboCactpot;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Reflection;
 using static ECommons.GenericHelpers;
 namespace Saucy;
 
@@ -146,9 +146,7 @@ public unsafe partial class PluginUI : Window
             }
         }
 
-        TitleBarVersion.DrawFromContext(
-            TitleBarButtons.Count,
-            AllowPinning || AllowClickthrough);
+        DrawTitleBarVersion(TitleBarButtons.Count, AllowPinning || AllowClickthrough);
     }
 
     private void DrawSidebar()
@@ -296,4 +294,74 @@ public unsafe partial class PluginUI : Window
         About,
         Debug
     }
+
+    private static void DrawTitleBarVersion(int customTitleBarButtonCount, bool showAdditionalOptionsButton)
+    {
+        var windowPos = ImGui.GetWindowPos();
+        var windowSize = ImGui.GetWindowSize();
+        if (windowSize.X <= 0f || windowSize.Y <= 0f)
+        {
+            return;
+        }
+
+        var text = GetTitleBarVersionLabel();
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        var textSize = ImGui.CalcTextSize(text);
+        var style = ImGui.GetStyle();
+        var buttonSize = ImGui.GetFontSize();
+        var spacing = style.ItemInnerSpacing.X;
+
+        // Match Dalamud WindowHost.DrawTitleBarButtons: native close (+ collapse when menu is right),
+        // then custom title bar buttons laid out from the right edge inward.
+        var numNativeButtons = 1;
+        if (style.WindowMenuButtonPosition == ImGuiDir.Right)
+        {
+            numNativeButtons++;
+        }
+
+        var numCustomButtons = customTitleBarButtonCount + (showAdditionalOptionsButton ? 1 : 0);
+        var padRight = (numNativeButtons + numCustomButtons) * (buttonSize + spacing);
+
+        var titleBarMaxX = windowPos.X + windowSize.X;
+        var position = new Vector2(
+            titleBarMaxX - padRight - textSize.X,
+            windowPos.Y + style.FramePadding.Y);
+
+        var color = ImGui.ColorConvertFloat4ToU32(
+            SaucyTheme.Enabled
+                ? SaucyTheme.ColorOr(SaucyTheme.BodyText, ImGuiCol.TextDisabled) with { W = 0.72f }
+                : style.Colors[(int)ImGuiCol.TextDisabled]);
+
+        // Window draw list keeps Saucy's z-order. Expand clip to the full window so title-bar
+        // coordinates are not culled by the content-area clip active during Draw().
+        var drawList = ImGui.GetWindowDrawList();
+        var clipMax = windowPos + windowSize;
+        drawList.PushClipRect(windowPos, clipMax, false);
+        drawList.AddText(
+            ImGui.GetFont(),
+            ImGui.GetFontSize(),
+            position,
+            color,
+            text);
+        drawList.PopClipRect();
+    }
+
+    private static string GetTitleBarVersionLabel()
+    {
+        var manifestVersion = Svc.PluginInterface.Manifest.AssemblyVersion;
+        if (manifestVersion != null)
+        {
+            return "v" + FormatTitleBarVersion(manifestVersion);
+        }
+
+        var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
+        return assemblyVersion != null ? "v" + FormatTitleBarVersion(assemblyVersion) : "v?.?.?.?";
+    }
+
+    private static string FormatTitleBarVersion(Version version) =>
+        version.Revision >= 0 ? version.ToString(4) : version.ToString(3);
 }

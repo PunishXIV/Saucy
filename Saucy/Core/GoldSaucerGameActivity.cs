@@ -1,9 +1,7 @@
 using Dalamud.Game.ClientState.Conditions;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Saucy.AirForce;
 using Saucy.Cactpot;
 using Saucy.Framework;
-using Saucy.JumboCactpot;
 using Saucy.OtherGames;
 
 namespace Saucy;

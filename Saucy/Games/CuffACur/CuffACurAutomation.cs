@@ -1,6 +1,8 @@
+using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Hooking;
+using Dalamud.Interface.Components;
 using ECommons.ImGuiMethods;
 using ECommons.Throttlers;
 using FFXIVClientStructs.FFXIV.Client.UI;
@@ -9,7 +11,7 @@ using Saucy.Framework;
 using System;
 namespace Saucy.CuffACur;
 
-public unsafe partial class CuffACurAutomation
+public unsafe class CuffACurAutomation
 {
     public delegate nint UnknownFunction(nint a1, ushort a2, int a3, void* a4);
     private const GoldSaucerArcadeMachine Machine = GoldSaucerArcadeMachine.Cuff;
@@ -246,6 +248,39 @@ public unsafe partial class CuffACurAutomation
         }
 
         return ObjectHelper.HasInitiatedArcadeMenu(ArcadeMachineScopes.Cuff);
+    }
+
+    public static void DrawSettings()
+    {
+        var enabled = IsEnabled;
+        if (ImGui.Checkbox("Enable", ref enabled))
+        {
+            if (enabled && !IsAnyCuffMachineInRange())
+            {
+                DuoLog.Warning("No Cuff-a-Cur machine nearby. Move closer to a punching machine.");
+            }
+            else
+            {
+                if (enabled)
+                {
+                    GoldSaucerRunSettingsUi.CommitDraftMatchCount(GoldSaucerArcadeMachine.Cuff);
+                    GoldSaucerArcadeMachineHelper.DisableConflictingModules(GoldSaucerArcadeMachine.Cuff);
+                }
+
+                C.SetModuleEnabled(ModuleNames.CuffACur, enabled);
+                C.Save();
+            }
+        }
+
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker(
+            "Use \"Fixed match count\" below to stop after a set number of games.");
+
+        ImGui.Dummy(new(0, 4));
+
+        GoldSaucerRunSettingsUi.Draw(
+            GoldSaucerArcadeMachine.Cuff,
+            "Runs automatically when enabled. Start the minigame at the Gold Saucer punching machine.");
     }
 
     public static void DrawDebug()

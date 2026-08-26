@@ -221,16 +221,6 @@ internal static class AetheryteHelper
     public static bool IsPlayerNearAetheryte(uint aetheryteId) =>
         IsPlayerWithinAetheryteRange(aetheryteId, AethernetHubPlanningRange);
 
-    public static bool IsPlayerInAethernetRange(uint aetheryteId)
-    {
-        if (aetheryteId == 0)
-        {
-            return false;
-        }
-
-        return GetHorizontalDistanceToAetheryte(aetheryteId) <= AethernetHubUseRange;
-    }
-
     private static bool IsPlayerWithinAetheryteRange(uint aetheryteId, float range)
     {
         if (aetheryteId == 0)

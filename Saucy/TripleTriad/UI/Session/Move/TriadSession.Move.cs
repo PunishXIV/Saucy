@@ -99,8 +99,7 @@ public partial class TriadSession
             var newCardIdx = bestCardIdx;
             var newBoardIdx = newCardIdx < 0 ? -1 : bestBoardPos;
 
-            // Forced-card override (mirrors upstream): under Swap+Chaos the solver can pick
-            // a non-forced card; the game won't accept that, so force the forced index.
+            // Swap+Chaos: solver may pick a non-forced card; the game will reject it.
             var forcedCardIdx = DebugScreenMemory.gameState.forcedCardIdx;
             if (forcedCardIdx >= 0 && newCardIdx != forcedCardIdx)
             {

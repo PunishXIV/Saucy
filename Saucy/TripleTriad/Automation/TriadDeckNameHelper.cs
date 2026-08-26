@@ -3,7 +3,7 @@ namespace Saucy.TripleTriad;
 
 internal static class TriadDeckNameHelper
 {
-    public static bool NamesMatch(string a, string b)
+    private static bool NamesMatch(string a, string b)
     {
         if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b))
         {
@@ -38,7 +38,7 @@ internal static class TriadDeckNameHelper
                npcName.StartsWith(deckBase, StringComparison.OrdinalIgnoreCase);
     }
 
-    public static string StripSuffix(string name)
+    private static string StripSuffix(string name)
     {
         if (string.IsNullOrEmpty(name))
         {
