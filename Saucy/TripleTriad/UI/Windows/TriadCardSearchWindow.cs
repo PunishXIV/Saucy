@@ -431,7 +431,7 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
             return CardUtils.FormatDeckEditListLabel(listCardDisplayNos[idx], cardOb);
         }
 
-        return $"[{CardUtils.GetOrderDesc(cardOb)}] {CardUtils.GetRarityDesc(cardOb)} {cardOb.Name}";
+        return $"{CardUtils.GetOrderDesc(cardOb)}  {CardUtils.GetRarityDesc(cardOb)}  {cardOb.Name}";
     }
 
     private void DrawCardsTab()
@@ -450,6 +450,7 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
         {
             if (cardsList)
             {
+                ImGui.SetScrollX(0);
                 for (var idx = 0; idx < listCards.Count; idx++)
                 {
                     (var cardOb, var cardInfo) = listCards[idx];
@@ -463,15 +464,10 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
                     if (PassesTextFilter(searchFilterCard, itemDesc))
                     {
                         var isSelected = selectedCardIdx == idx;
-                        if (ImGui.Selectable(itemDesc, isSelected))
+                        if (DrawCardListRow(cardOb.Id, itemDesc, isSelected))
                         {
                             selectedCardIdx = idx;
                             OnCardSelectionChanged();
-                        }
-
-                        if (isSelected)
-                        {
-                            ImGui.SetItemDefaultFocus();
                         }
                     }
                 }
@@ -684,27 +680,22 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
                         (var cardOb, var cardListIdx) = listNpcReward[idx];
                         var isCardOwned = settingsDB.ownedCards.Contains(cardOb);
 
-                        var itemDesc = $"{CardUtils.GetOrderDesc(cardOb)} {cardOb.Name}";
+                        var itemDesc = $"{CardUtils.GetOrderDesc(cardOb)}  {CardUtils.GetRarityDesc(cardOb)}  {cardOb.Name}";
                         var isSelected = selectedCardIdx == cardListIdx;
 
                         if (isCardOwned)
                         {
                             using var ownedColor = ImRaii.PushColor(ImGuiCol.Text, 0xffa8a8a8);
-                            if (ImGui.Selectable($"{CardUtils.GetRarityDesc(cardOb)}  {itemDesc}", isSelected))
+                            if (DrawCardListRow(cardOb.Id, itemDesc, isSelected))
                             {
                                 selectedCardIdx = cardListIdx;
                                 OnCardSelectionChanged();
                             }
                         }
-                        else if (ImGui.Selectable($"{CardUtils.GetRarityDesc(cardOb)}  {itemDesc}", isSelected))
+                        else if (DrawCardListRow(cardOb.Id, itemDesc, isSelected))
                         {
                             selectedCardIdx = cardListIdx;
                             OnCardSelectionChanged();
-                        }
-
-                        if (isSelected)
-                        {
-                            ImGui.SetItemDefaultFocus();
                         }
                     }
                 }
@@ -718,6 +709,19 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
 
     private static float GetContentWidth() =>
         MathF.Max(1f, ImGui.GetContentRegionAvail().X);
+
+    private static bool DrawCardListRow(int id, string label, bool isSelected)
+    {
+        var rowX = ImGui.GetCursorPosX();
+        var rowY = ImGui.GetCursorPosY();
+        ImGui.PushID(id);
+        var clicked = ImGui.Selectable("##row"u8, isSelected, ImGuiSelectableFlags.None, new Vector2(0, ImGui.GetTextLineHeight()));
+        ImGui.SetCursorPosX(rowX);
+        ImGui.SetCursorPosY(rowY);
+        ImGui.TextUnformatted(label);
+        ImGui.PopID();
+        return clicked;
+    }
 
     private static bool PassesTextFilter(ImGuiTextFilterPtr filter, ImU8String text)
     {

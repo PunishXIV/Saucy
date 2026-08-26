@@ -6,14 +6,14 @@ internal static class CardUtils
     {
         if (card.SortOrder > 1000)
         {
-            return $"Ex.{card.SortOrder - 1000}";
+            return $"Ex. {card.SortOrder - 1000}";
         }
 
-        return $"No.{card.SortOrder}";
+        return $"No. {card.SortOrder}";
     }
 
     public static string GetRarityDesc(TriadCard card) => $"{(int)card.Rarity + 1}★";
 
     public static string FormatDeckEditListLabel(int displayNo, TriadCard card) =>
-        $"[No.{displayNo}] {GetRarityDesc(card)} {card.Name}";
+        $"No. {displayNo}  {GetRarityDesc(card)}  {card.Name}";
 }

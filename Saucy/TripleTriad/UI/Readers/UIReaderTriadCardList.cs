@@ -15,8 +15,6 @@ public unsafe class UIReaderTriadCardList : IUIReader
         NodesNotReady
     }
 
-    private const int VisibleTabCount = 9;
-
     private nint cachedAddonAgentPtr;
     private bool inAddonUpdate;
 
@@ -266,6 +264,8 @@ public unsafe class UIReaderTriadCardList : IUIReader
 
         pendingNavPage = pageIndex;
         pendingNavCell = cellIndex;
+        agent->EditDeckSelectedPage = pageIndex;
+        addon->RequestedPage = pageIndex;
 
         if (cardId > 0)
         {
@@ -318,20 +318,24 @@ public unsafe class UIReaderTriadCardList : IUIReader
         }
 
         var addon = (AddonGSInfoCardList*)addonPtr;
+        if (cachedAddonAgentPtr != nint.Zero)
+        {
+            var agent = (AgentGoldSaucer*)cachedAddonAgentPtr;
+            agent->EditDeckSelectedPage = pendingNavPage;
+            if (cachedState.isDeckEditMode)
+            {
+                agent->EditDeckSelectedCardIndex = pendingNavCell;
+            }
+        }
+
+        addon->RequestedPage = pendingNavPage;
+
         if (addon->SelectedPage != pendingNavPage)
         {
-            TrySwitchPage(addon, pendingNavPage);
             return;
         }
 
         addon->SelectedCardIndex = pendingNavCell;
-        if (cachedState.isDeckEditMode && cachedAddonAgentPtr != nint.Zero)
-        {
-            var agent = (AgentGoldSaucer*)cachedAddonAgentPtr;
-            agent->EditDeckSelectedPage = pendingNavPage;
-            agent->EditDeckSelectedCardIndex = pendingNavCell;
-        }
-
         if (!TryClickCardCell(addonPtr, pendingNavCell))
         {
             return;
@@ -466,30 +470,6 @@ public unsafe class UIReaderTriadCardList : IUIReader
         return false;
     }
 
-    private static bool TrySwitchPage(AddonGSInfoCardList* addon, int pageIndex)
-    {
-        if (addon is null || pageIndex < 0)
-        {
-            return false;
-        }
-
-        if (addon->SelectedPage == pageIndex)
-        {
-            return true;
-        }
-
-        addon->RequestedPage = pageIndex;
-
-        if (TryClickVisiblePageTab(addon, pageIndex) || TryClickPageArrow(addon, pageIndex))
-        {
-            return false;
-        }
-
-        addon->TabController.SetTabIndexAndCallBack(pageIndex);
-        addon->AtkUnitBase.Update(0);
-        return false;
-    }
-
     private static bool TryClickCardCell(nint addonPtr, int cellIndex)
     {
         if (addonPtr == nint.Zero || cellIndex < 0 || cellIndex >= 30)
@@ -500,39 +480,4 @@ public unsafe class UIReaderTriadCardList : IUIReader
         var addon = (AddonGSInfoCardList*)addonPtr;
         return AddonButton.TryClick(&addon->AtkUnitBase, addon->CardButtons[cellIndex], false);
     }
-
-    private static bool TryClickVisiblePageTab(AddonGSInfoCardList* addon, int pageIndex)
-    {
-        var tabIndex = addon->TabController.TabIndex;
-        var tabCount = addon->TabController.TabCount;
-        if (tabCount <= 0)
-        {
-            tabCount = VisibleTabCount;
-        }
-
-        var visibleStart = addon->SelectedPage - tabIndex;
-        if (visibleStart < 0)
-        {
-            visibleStart = 0;
-        }
-
-        var visibleTab = pageIndex - visibleStart;
-        if (visibleTab < 0 || visibleTab >= tabCount || visibleTab >= VisibleTabCount)
-        {
-            return false;
-        }
-
-        return TryClickPageButton(&addon->AtkUnitBase, addon->TabControllerNodes.TabButtons[visibleTab].Value);
-    }
-
-    private static bool TryClickPageArrow(AddonGSInfoCardList* addon, int pageIndex)
-    {
-        AtkComponentButton* button = pageIndex < addon->SelectedPage
-            ? addon->TabControllerNodes.BackButton
-            : addon->TabControllerNodes.ForwardButton;
-        return TryClickPageButton(&addon->AtkUnitBase, button);
-    }
-
-    private static bool TryClickPageButton(AtkUnitBase* addon, AtkComponentButton* button) =>
-        button is not null && AddonButton.TryClick(addon, button, false);
 }
