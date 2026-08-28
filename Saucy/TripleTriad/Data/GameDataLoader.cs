@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 namespace Saucy.TripleTriad.Data;
 
@@ -13,33 +14,29 @@ public partial class GameDataLoader
     private readonly Dictionary<uint, uint> mapNpcUnlockQuestId = [];
     public bool IsDataReady { get; private set; }
 
-    public void StartAsyncWork() =>
-        Task.Run(async () =>
+    public async Task StartAsyncWork(CancellationToken cancellationToken)
+    {
+        for (var retryIdx = 3; retryIdx >= 0; retryIdx--)
         {
-            for (var retryIdx = 3; retryIdx >= 0; retryIdx--)
+            cancellationToken.ThrowIfCancellationRequested();
+            var needsRetry = false;
+            try
             {
-                var needsRetry = false;
-                try
-                {
-                    ParseGameData();
-                }
-                catch (Exception ex)
-                {
-                    needsRetry = retryIdx > 1;
-                    Svc.Log.Warning(ex, "exception while parsing! retry:{0}", needsRetry);
-                }
-
-                if (needsRetry)
-                {
-                    await Task.Delay(2000);
-                    Svc.Log.Info("retrying game data parsers...");
-                }
-                else
-                {
-                    break;
-                }
+                ParseGameData();
             }
-        });
+            catch (Exception ex)
+            {
+                needsRetry = retryIdx > 1;
+                Svc.Log.Warning(ex, "exception while parsing! retry:{0}", needsRetry);
+            }
+
+            if (!needsRetry)
+                break;
+
+            await Task.Delay(2000, cancellationToken).ConfigureAwait(false);
+            Svc.Log.Info("retrying game data parsers...");
+        }
+    }
 
     private void ParseGameData()
     {
@@ -69,13 +66,8 @@ public partial class GameDataLoader
             FixLocalizedNameCasing();
             cardInfoDB.OnLoaded();
 
-            var cardCount = cardDB.cards.Count;
-            var npcCount = npcDB.npcs.Count;
-            Svc.Framework.Run(() =>
-            {
-                IsDataReady = true;
-                Svc.Log.Info($"Loaded game data for cards:{cardCount}, npcs:{npcCount}");
-            });
+            IsDataReady = true;
+            Svc.Log.Info($"Loaded game data for cards:{cardDB.cards.Count}, npcs:{npcDB.npcs.Count}");
         }
         else
         {

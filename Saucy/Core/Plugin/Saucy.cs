@@ -10,11 +10,13 @@ using Saucy.IPC;
 using Saucy.OutOnALimb;
 using System;
 using System.Collections.Specialized;
+using System.Threading;
+using System.Threading.Tasks;
 using Module = ECommons.Module;
 
 namespace Saucy;
 
-public sealed partial class Saucy : IDalamudPlugin
+public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAsyncDalamudPlugin
 {
     private const string commandName = "/saucy";
     public static Saucy P = null!;
@@ -34,12 +36,23 @@ public sealed partial class Saucy : IDalamudPlugin
     private bool _autoOpenedForTriadFlow;
     private Mp3FileReader? _currentReader;
     private WaveOutEvent? _currentWaveOut;
+    private bool _ecommonsReady;
+    private bool _initialized;
     private TriadCollectionHost? _triadCollectionHost;
 
     public LimbManager LimbManager = null!;
-    public Saucy(IDalamudPluginInterface pluginInterface)
+
+    public async Task LoadAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Initialize();
+        await dataLoader.StartAsyncWork(cancellationToken).ConfigureAwait(false);
+    }
+
+    private void Initialize()
     {
         ECommonsMain.Init(pluginInterface, this, Module.All);
+        _ecommonsReady = true;
         PunishLibMain.Init(pluginInterface, "Saucy", new AboutPlugin());
         EzConfig.Migrate<Configuration>();
         C = EzConfig.Init<Configuration>();
@@ -75,7 +88,6 @@ public sealed partial class Saucy : IDalamudPlugin
         });
 
         dataLoader = new();
-        dataLoader.StartAsyncWork();
 
         TriadRun.profileGS = new();
 
@@ -116,26 +128,37 @@ public sealed partial class Saucy : IDalamudPlugin
         SubscriptionManager.Prepare();
         SubscriptionManager.Subscribe();
         Svc.Framework.Update += RunBot;
+        _initialized = true;
     }
+
     public string Name => "Saucy";
     public static Configuration C { get; private set; } = null!;
 
-    public void Dispose()
+    public ValueTask DisposeAsync()
     {
-        Svc.Commands.RemoveHandler(commandName);
-        Svc.PluginInterface.UiBuilder.OpenMainUi -= EzConfigGui.Open;
-        Svc.Framework.Update -= RunBot;
-        PrepareTriadSessionForPluginUnload();
-        _triadCollectionHost?.Dispose();
-        YesAlready.ResumeIfPausedBySaucy();
-        SubscriptionManager.DisposeAll();
-        TriadMapNavigation.CancelActiveNavigation();
-        _triadCollectionHost = null;
-        lock (_lockObj) { DisposeAudio(); }
-        CuffACurAutomation.FuncHook?.Dispose();
-        ModuleManager.Dispose();
-        ECommonsMain.Dispose();
+        if (_initialized)
+        {
+            Svc.Commands.RemoveHandler(commandName);
+            Svc.PluginInterface.UiBuilder.OpenMainUi -= EzConfigGui.Open;
+            Svc.Framework.Update -= RunBot;
+            PrepareTriadSessionForPluginUnload();
+            _triadCollectionHost?.Dispose();
+            YesAlready.ResumeIfPausedBySaucy();
+            SubscriptionManager.DisposeAll();
+            TriadMapNavigation.CancelActiveNavigation();
+            _triadCollectionHost = null;
+            lock (_lockObj) { DisposeAudio(); }
+            CuffACurAutomation.FuncHook?.Dispose();
+            ModuleManager.Dispose();
+        }
+
+        if (_ecommonsReady)
+        {
+            ECommonsMain.Dispose();
+        }
+
         P = null!;
+        return ValueTask.CompletedTask;
     }
 
     private void OnChange(object? sender, NotifyCollectionChangedEventArgs e)
