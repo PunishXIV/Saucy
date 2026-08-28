@@ -763,11 +763,6 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
 
             var collectionFilter = ResolveNavigationCollectionFilter();
             var collectionPos = cardInfo.Collection[(int)collectionFilter];
-            Svc.Log.Information(
-                $"[CardSearch] overlay click {cardOb.Name} #{cardOb.Id} {CardUtils.GetOrderDesc(cardOb)} " +
-                $"filter={collectionFilter} mapped page={collectionPos.PageIndex} cell={collectionPos.CellIndex} " +
-                $"game page={uiReaderCardList.cachedState.pageIndex} cell={uiReaderCardList.cachedState.cardIndex} " +
-                $"selected=#{uiReaderCardList.cachedState.selectedCardId} deckEdit={uiReaderCardList.cachedState.isDeckEditMode}");
             uiReaderCardList.SetPageAndGridView(collectionPos.PageIndex, collectionPos.CellIndex, cardOb.Id);
         }
     }
