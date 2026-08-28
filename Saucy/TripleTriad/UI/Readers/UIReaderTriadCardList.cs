@@ -19,6 +19,8 @@ public unsafe class UIReaderTriadCardList : IUIReader
     private bool inAddonUpdate;
 
     public UIStateTriadCardList cachedState = new();
+    private int lastLoggedSelectedPage = int.MinValue;
+    private string lastLoggedNavAction = "";
     private int lastNotifiedCardId = -1;
     public Action<UIStateTriadCardList>? OnUIStateChanged;
     public Action<bool>? OnVisibilityChanged;
@@ -38,7 +40,14 @@ public unsafe class UIReaderTriadCardList : IUIReader
     public void OnAddonLost()
     {
         cachedAddonAgentPtr = nint.Zero;
-        ClearPendingNavigation();
+        if (pendingNavPage >= 0)
+        {
+            ClearPendingNavigation("addon lost");
+        }
+        else
+        {
+            ClearPendingNavigation();
+        }
         SetStatus(Status.AddonNotFound);
     }
 
@@ -101,7 +110,7 @@ public unsafe class UIReaderTriadCardList : IUIReader
             GUINodeUtils.GetNodePosAndSize(&descNode->AtkResNode);
 
         var newPageIndex = (byte)addon->SelectedPage;
-        var newCardIndex = (byte)addon->SelectedCardIndex;
+        var newCardIndex = (byte)SanitizeCellIndex(addon->SelectedCardIndex);
         var newFilterMode = ToCollectionFilter(CardListFilterMode.All);
 
         AgentGoldSaucer* agent = null;
@@ -127,17 +136,11 @@ public unsafe class UIReaderTriadCardList : IUIReader
 
             if (IsPendingNavigationComplete(addon))
             {
-                ClearPendingNavigation();
+                ClearPendingNavigation($"done {FormatCard(pendingNavCardId)} page={newPageIndex} cell={newCardIndex} display={displayCardId}");
             }
-            else if (gameSelectedCardId == pendingNavCardId)
+            else if (gameSelectedCardId == pendingNavCardId && newPageIndex == pendingNavPage)
             {
-                ClearPendingNavigation();
-            }
-            else if (gameSelectedCardId > 0 &&
-                     gameSelectedCardId != pendingNavSourceCardId &&
-                     gameSelectedCardId != pendingNavCardId)
-            {
-                ClearPendingNavigation();
+                ClearPendingNavigation($"done via selection {FormatCard(gameSelectedCardId)} page={newPageIndex} cell={newCardIndex}");
             }
             else if (gameSelectedCardId == pendingNavSourceCardId && !atPendingCell)
             {
@@ -235,6 +238,7 @@ public unsafe class UIReaderTriadCardList : IUIReader
 
         if (addonPtr == nint.Zero || cachedAddonAgentPtr == nint.Zero)
         {
+            Log($"GSInfoCardList or agent not found for {FormatCard(cardId)} page={pageIndex} cell={cellIndex}");
             return false;
         }
 
@@ -250,6 +254,7 @@ public unsafe class UIReaderTriadCardList : IUIReader
 
         if (pageIndex < 0 || pageIndex >= GameCardDB.MaxGridPages || cellIndex < 0 || cellIndex >= GameCardDB.MaxGridCells)
         {
+            Log($"invalid grid page={pageIndex} cell={cellIndex} for {FormatCard(cardId)} (max page {GameCardDB.MaxGridPages}, cells {GameCardDB.MaxGridCells})");
             pendingNavPage = -1;
             pendingNavCell = -1;
             if (cardId > 0)
@@ -264,8 +269,14 @@ public unsafe class UIReaderTriadCardList : IUIReader
 
         pendingNavPage = pageIndex;
         pendingNavCell = cellIndex;
+        lastLoggedNavAction = "";
+        lastLoggedSelectedPage = int.MinValue;
         agent->EditDeckSelectedPage = pageIndex;
         addon->RequestedPage = pageIndex;
+        Log(
+            $"nav start {FormatCard(cardId)} -> page {pageIndex} cell {cellIndex} filter={filterMode} " +
+            $"from {FormatCard(pendingNavSourceCardId)} addon page={addon->SelectedPage} cell={SanitizeCellIndex(addon->SelectedCardIndex)} " +
+            $"requested={addon->RequestedPage} agentPage={agent->EditDeckSelectedPage} deckEdit={IsDeckEditScreenOpen()}");
 
         if (cardId > 0)
         {
@@ -294,14 +305,21 @@ public unsafe class UIReaderTriadCardList : IUIReader
         return !GameCardDB.Get().ownedCardIds.Contains(cardId);
     }
 
-    private void ClearPendingNavigation()
+    private void ClearPendingNavigation(string? reason = null)
     {
+        if (!string.IsNullOrEmpty(reason) && (pendingNavPage >= 0 || pendingNavCardId > 0))
+        {
+            Log(reason);
+        }
+
         pendingNavPage = -1;
         pendingNavCell = -1;
         pendingNavCardId = 0;
         pendingNavAttempts = 0;
         pendingNavGraceFrames = 0;
         pendingNavSourceCardId = -1;
+        lastLoggedNavAction = "";
+        lastLoggedSelectedPage = int.MinValue;
     }
 
     private void TickPendingCardNavigation(nint addonPtr)
@@ -311,17 +329,21 @@ public unsafe class UIReaderTriadCardList : IUIReader
             return;
         }
 
+        var addon = (AddonGSInfoCardList*)addonPtr;
         if (--pendingNavAttempts <= 0)
         {
-            ClearPendingNavigation();
+            ClearPendingNavigation(
+                $"timeout wanted {FormatCard(pendingNavCardId)} page={pendingNavPage} cell={pendingNavCell}; " +
+                $"addon page={addon->SelectedPage} requested={addon->RequestedPage} cell={SanitizeCellIndex(addon->SelectedCardIndex)}");
             return;
         }
 
-        var addon = (AddonGSInfoCardList*)addonPtr;
+        var agentPage = -1;
         if (cachedAddonAgentPtr != nint.Zero)
         {
             var agent = (AgentGoldSaucer*)cachedAddonAgentPtr;
             agent->EditDeckSelectedPage = pendingNavPage;
+            agentPage = agent->EditDeckSelectedPage;
             if (cachedState.isDeckEditMode)
             {
                 agent->EditDeckSelectedCardIndex = pendingNavCell;
@@ -332,24 +354,45 @@ public unsafe class UIReaderTriadCardList : IUIReader
 
         if (addon->SelectedPage != pendingNavPage)
         {
+            if (lastLoggedNavAction != "wait-page" || lastLoggedSelectedPage != addon->SelectedPage)
+            {
+                Log($"waiting for page {pendingNavPage}, still on {addon->SelectedPage} (requested={addon->RequestedPage} agentPage={agentPage})");
+                lastLoggedNavAction = "wait-page";
+                lastLoggedSelectedPage = addon->SelectedPage;
+            }
+
             return;
         }
 
+        var currentCell = SanitizeCellIndex(addon->SelectedCardIndex);
         addon->SelectedCardIndex = pendingNavCell;
+        if (lastLoggedNavAction != "click")
+        {
+            Log($"page {pendingNavPage} ready (cell {currentCell}), clicking cell {pendingNavCell} for {FormatCard(pendingNavCardId)}");
+            lastLoggedNavAction = "click";
+        }
+
         if (!TryClickCardCell(addonPtr, pendingNavCell))
         {
+            if (lastLoggedNavAction != "click-fail")
+            {
+                Log($"cell {pendingNavCell} click failed on page {pendingNavPage}");
+                lastLoggedNavAction = "click-fail";
+            }
+
             return;
         }
 
         if (IsPendingNavigationComplete(addon))
         {
-            ClearPendingNavigation();
+            var displayCardId = TriadCardListSelectionReader.TryParseCardIdFromDisplayLabel(addon);
+            ClearPendingNavigation($"done after click {FormatCard(pendingNavCardId)} page={addon->SelectedPage} cell={SanitizeCellIndex(addon->SelectedCardIndex)} display={displayCardId}");
         }
     }
 
     private bool IsPendingNavigationComplete(AddonGSInfoCardList* addon)
     {
-        if (addon->SelectedPage != pendingNavPage || addon->SelectedCardIndex != pendingNavCell)
+        if (addon->SelectedPage != pendingNavPage || SanitizeCellIndex(addon->SelectedCardIndex) != pendingNavCell)
         {
             return false;
         }
@@ -470,6 +513,9 @@ public unsafe class UIReaderTriadCardList : IUIReader
         return false;
     }
 
+    private static int SanitizeCellIndex(int cellIndex) =>
+        cellIndex is >= 0 and < 30 ? cellIndex : 0;
+
     private static bool TryClickCardCell(nint addonPtr, int cellIndex)
     {
         if (addonPtr == nint.Zero || cellIndex < 0 || cellIndex >= 30)
@@ -479,5 +525,21 @@ public unsafe class UIReaderTriadCardList : IUIReader
 
         var addon = (AddonGSInfoCardList*)addonPtr;
         return AddonButton.TryClick(&addon->AtkUnitBase, addon->CardButtons[cellIndex], false);
+    }
+
+    private static void Log(string message) =>
+        Svc.Log.Information($"[CardSearch] {message}");
+
+    private static string FormatCard(int cardId)
+    {
+        if (cardId <= 0)
+        {
+            return cardId.ToString();
+        }
+
+        var card = TriadCardDB.Get().FindById(cardId);
+        return card == null
+            ? $"#{cardId}"
+            : $"{card.Name} #{cardId} {CardUtils.GetOrderDesc(card)}";
     }
 }
