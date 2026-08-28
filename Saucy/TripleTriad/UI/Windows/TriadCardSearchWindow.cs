@@ -738,16 +738,8 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
     private static Vector2 GetListBoxSize(float visibleLines) =>
         new(GetContentWidth(), ImGui.GetTextLineHeightWithSpacing() * visibleLines);
 
-    private GameCardCollectionFilter ResolveNavigationCollectionFilter()
-    {
-        var collectionFilter = uiReaderCardList.cachedState.GetActiveCollectionFilter();
-        if (showNotOwnedOnly && collectionFilter == GameCardCollectionFilter.All)
-        {
-            return GameCardCollectionFilter.OnlyMissing;
-        }
-
-        return collectionFilter;
-    }
+    private GameCardCollectionFilter ResolveNavigationCollectionFilter() =>
+        uiReaderCardList.cachedState.GetActiveCollectionFilter();
 
     private void OnCardSelectionChanged()
     {
@@ -763,6 +755,13 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
 
             var collectionFilter = ResolveNavigationCollectionFilter();
             var collectionPos = cardInfo.Collection[(int)collectionFilter];
+            Svc.Log.Information(
+                $"[CardSearch] overlay click {cardOb.Name} #{cardOb.Id} {CardUtils.GetOrderDesc(cardOb)} " +
+                $"navFilter={collectionFilter} gameFilter={uiReaderCardList.cachedState.GetActiveCollectionFilter()} " +
+                $"overlayUnowned={showNotOwnedOnly} overlayNpcOnly={showNpcMatchesOnly} " +
+                $"mapped page={collectionPos.PageIndex} cell={collectionPos.CellIndex} " +
+                $"game page={uiReaderCardList.cachedState.pageIndex} cell={uiReaderCardList.cachedState.cardIndex} " +
+                $"selected=#{uiReaderCardList.cachedState.selectedCardId} deckEdit={uiReaderCardList.cachedState.isDeckEditMode}");
             uiReaderCardList.SetPageAndGridView(collectionPos.PageIndex, collectionPos.CellIndex, cardOb.Id);
         }
     }

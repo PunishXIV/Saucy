@@ -51,12 +51,20 @@ internal static unsafe class TriadCardListSelectionReader
 
     public static int TryParseCardIdFromDisplayLabel(AddonGSInfoCardList* addon)
     {
-        if (addon->SelectedCardNumber == null)
+        var fromSelected = addon->SelectedCardNumber != null
+            ? TryParseCardIdFromDisplayLabel(GUINodeUtils.GetNodeText(&addon->SelectedCardNumber->AtkResNode))
+            : -1;
+        if (fromSelected > 0)
+        {
+            return fromSelected;
+        }
+
+        if (addon->PreviewedCardNumber == null)
         {
             return -1;
         }
 
-        return TryParseCardIdFromDisplayLabel(GUINodeUtils.GetNodeText(&addon->SelectedCardNumber->AtkResNode));
+        return TryParseCardIdFromDisplayLabel(GUINodeUtils.GetNodeText(&addon->PreviewedCardNumber->AtkResNode));
     }
 
     public static int TryParseCardIdFromDisplayLabel(string? text)
@@ -67,9 +75,23 @@ internal static unsafe class TriadCardListSelectionReader
         }
 
         var exIndex = text.IndexOf("Ex.", StringComparison.OrdinalIgnoreCase);
+        if (exIndex < 0)
+        {
+            exIndex = text.IndexOf("Ex．", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (exIndex < 0)
+        {
+            var exToken = text.IndexOf("Ex", StringComparison.OrdinalIgnoreCase);
+            if (exToken >= 0 && (exToken + 2 >= text.Length || !char.IsLetter(text[exToken + 2])))
+            {
+                exIndex = exToken;
+            }
+        }
+
         if (exIndex >= 0)
         {
-            var exNumber = ParseDisplayNumber(text[(exIndex + 3)..]);
+            var exNumber = ParseDisplayNumber(text[(exIndex + 2)..]);
             if (exNumber > 0)
             {
                 return TriadCardDB.Get().FindBySortOrder(1000 + exNumber)?.Id ?? -1;
@@ -327,7 +349,7 @@ internal static unsafe class TriadCardListSelectionReader
 
     private static int ParseDisplayNumber(string text)
     {
-        text = text.TrimStart(' ', '.', ':', '°', 'º', '№', '#');
+        text = text.TrimStart(' ', '.', '．', ':', '°', 'º', '№', '#', '·');
         var end = 0;
         while (end < text.Length && char.IsDigit(text[end]))
         {

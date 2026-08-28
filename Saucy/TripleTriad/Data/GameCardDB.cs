@@ -220,7 +220,7 @@ public class GameCardDB
         var sortedTriadCards = new List<TriadCard>();
         foreach (var cardOb in cardsDB.cards)
         {
-            if (cardOb != null && cardOb.IsValid())
+            if (cardOb != null && cardOb.IsValid() && !string.IsNullOrWhiteSpace(cardOb.Name))
             {
                 sortedTriadCards.Add(cardOb);
             }
@@ -230,6 +230,7 @@ public class GameCardDB
 
         for (var filterIdx = 0; filterIdx < 3; filterIdx++)
         {
+            var groupIdx = 0;
             var pageIdx = 0;
             var cellIdx = 0;
             var filterMaxPage = 0;
@@ -247,6 +248,13 @@ public class GameCardDB
 
                     if (isMatchingFilter)
                     {
+                        if (groupIdx != cardOb.Group)
+                        {
+                            groupIdx = cardOb.Group;
+                            pageIdx++;
+                            cellIdx = 0;
+                        }
+
                         if (cellIdx >= MaxGridCells)
                         {
                             cellIdx = 0;
