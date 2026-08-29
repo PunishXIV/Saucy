@@ -36,22 +36,6 @@ internal static unsafe partial class TriadMapNavigation
     private static bool IsPlayerWithinNpcInteractionRange(PendingNavigation pending) =>
         pending.Npc != null && IsPlayerWithinNpcInteractionRange(pending.Npc, pending.Destination);
 
-    private static bool IsPlayerWithinNpcPathArrivalRange(TriadNpc npc, Vector3 fallbackDestination)
-    {
-        if (!IsPlayerInNpcTerritory(npc))
-        {
-            return false;
-        }
-
-        if (FindTriadNpcObject(npc) is { } obj)
-        {
-            return HorizontalDistance(Player.Position, obj.Position) <= NpcPathArrivalRange + 0.5f;
-        }
-
-        var npcPos = ResolveLiveTriadNpcPosition(npc) ?? fallbackDestination;
-        return HorizontalDistance(Player.Position, npcPos) <= NpcPathArrivalRange + 0.5f;
-    }
-
     private static bool IsPlayerInNpcTerritory(TriadNpc npc)
     {
         if (_pending?.TargetTerritoryId is uint pendingTerritory and not 0)
@@ -67,12 +51,9 @@ internal static unsafe partial class TriadMapNavigation
         return true;
     }
 
-    private static bool IsPlayerWithinNpcPathArrivalRange(PendingNavigation pending) =>
-        pending.Npc != null && IsPlayerWithinNpcPathArrivalRange(pending.Npc, pending.Destination);
-
     private static bool TryBeginMovingToNpcIfAlreadyNearby(PendingNavigation pending)
     {
-        if (!IsPlayerWithinNpcPathArrivalRange(pending))
+        if (!IsPlayerWithinNpcInteractionRange(pending))
         {
             return false;
         }
@@ -103,7 +84,7 @@ internal static unsafe partial class TriadMapNavigation
         var withinInteractionRange = horizDistToNpc <= NpcInteractionRange;
         var tooCloseToInteract = horizDistToNpc < NpcMinStandoffDistance;
 
-        if (withinInteractionRange)
+        if (withinInteractionRange && !tooCloseToInteract)
         {
             StopVnavIfRunning();
         }
@@ -279,7 +260,7 @@ internal static unsafe partial class TriadMapNavigation
 
         var npcPos = ResolveLiveTriadNpcPosition(pending.Npc) ?? pending.Destination;
         var horizDistToNpc = HorizontalDistance(Player.Position, npcPos);
-        if (horizDistToNpc <= NpcInteractionRange)
+        if (horizDistToNpc is <= NpcInteractionRange and >= NpcMinStandoffDistance)
         {
             StopVnavIfRunning();
         }
@@ -315,10 +296,14 @@ internal static unsafe partial class TriadMapNavigation
 
     private static bool TryBackoffFromNpc(Vector3 npcPos, bool fly)
     {
-        StopVnavIfRunning();
         if (Vnavmesh.IsMoving())
         {
             return true;
+        }
+
+        if (!EzThrottler.Throttle("SaucyNavNpcBackoff", 2000))
+        {
+            return false;
         }
 
         return TryPathToNpcBackoff(npcPos, fly);

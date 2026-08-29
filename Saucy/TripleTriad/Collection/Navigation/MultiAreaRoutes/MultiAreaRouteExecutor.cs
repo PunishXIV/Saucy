@@ -280,6 +280,11 @@ internal static unsafe class MultiAreaRouteExecutor
                 return false;
             }
 
+            if (!Vnavmesh.CanStartPathfind())
+            {
+                return false;
+            }
+
             var approachPoint = TriadMapNavigation.ResolveNpcPathPoint(ResolveApproachPoint(step));
             var fly = TravelMountHelper.ResolveUseFlying(step.Fly);
             if (!Vnavmesh.TryMoveTo(approachPoint, fly, step.Range) &&

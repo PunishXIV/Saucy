@@ -415,6 +415,15 @@ internal static class AetheryteHelper
             var hubTerritoryId = GetAetheryteTerritoryId(hubAetheryteId);
             if (hubTerritoryId != 0 && hubTerritoryId != destinationTerritoryId)
             {
+                // Cross-zone hubs (Idyllshire → Hinterlands, Kugane → Ruby Sea) are only useful
+                // when teleporting in. Walking to that hub while already in the NPC's zone
+                // paths toward another territory's coordinates (often open water) and Lifestream
+                // then leaves the zone to come back.
+                if (inTargetTerritory)
+                {
+                    return (false, null);
+                }
+
                 return (true, null);
             }
         }
@@ -441,10 +450,23 @@ internal static class AetheryteHelper
                       && IsPlayerNearAetheryte(hubAetheryteId);
         if (inTargetTerritory && !nearHub)
         {
-            if (savings < MinAethernetWalkSavings)
+            if (hubAetheryteId == 0)
+            {
+                return (false, "no aethernet hub to walk to");
+            }
+
+            var walkToHub = GetHorizontalDistanceToAetheryte(hubAetheryteId);
+            if (walkToHub >= float.MaxValue)
+            {
+                return (false, "could not resolve aethernet hub position");
+            }
+
+            var aethernetTrip = walkToHub + shardDistance;
+            var netSavings = walkDistance - aethernetTrip;
+            if (netSavings < MinAethernetWalkSavings)
             {
                 return (false,
-                    $"not at aethernet hub and shard only saves {savings:F0}y (need {MinAethernetWalkSavings}y)");
+                    $"walking to hub then shard is not shorter (walk {walkDistance:F0}y, via hub {aethernetTrip:F0}y)");
             }
 
             return (true, null);

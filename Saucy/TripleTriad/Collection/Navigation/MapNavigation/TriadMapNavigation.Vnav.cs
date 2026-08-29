@@ -1,5 +1,6 @@
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
+using ECommons.Throttlers;
 using Saucy.IPC;
 using System;
 using System.Numerics;
@@ -88,7 +89,8 @@ internal static partial class TriadMapNavigation
 
         if (Vnavmesh.IsMoving())
         {
-            StopVnavIfRunning();
+            BeginPostVnavPhase(pending);
+            return;
         }
 
         // Henchman waits for Nav.IsReady && player not busy before pathing.
@@ -125,6 +127,11 @@ internal static partial class TriadMapNavigation
         }
 
         if (!TryEnsureMountedForNav(pending))
+        {
+            return;
+        }
+
+        if (!EzThrottler.Throttle("SaucyNavStartVnav", 2000))
         {
             return;
         }

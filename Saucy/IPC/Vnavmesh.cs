@@ -11,6 +11,12 @@ internal static class Vnavmesh
 
     public const float AetheryteCloseRange = 8.5f;
 
+    /// <summary>
+    /// vnav often completes a few tenths outside the requested stop radius. Without this slack,
+    /// callers re-issue PathfindAndMove every tick (Bocchi treasure-hunt ~2y spam).
+    /// </summary>
+    public const float ArrivalSlack = 0.5f;
+
     [EzIPC("Nav.IsReady")]
     private static Func<bool> NavIsReadyRpc = null!;
 
@@ -84,6 +90,13 @@ internal static class Vnavmesh
 
     public static bool IsMoving() => IsPathRunning() || IsPathfindInProgress();
 
+    /// <summary>
+    /// SimpleMove rejects stacked calls with "Pathfinding task is in progress".
+    /// Path.Stop does not clear that pending task — wait for the slot (Ocelot VNavmeshIpc).
+    /// </summary>
+    public static bool CanStartPathfind() =>
+        IsInstalled && IsNavReady() && !IsPathfindInProgress();
+
     public static void StopPath()
     {
         if (IsInstalled)
@@ -97,44 +110,52 @@ internal static class Vnavmesh
             ? point
             : null;
 
-    public static bool TryPathfindAndMoveTo(Vector3 destination, bool fly = false) =>
-        IsInstalled &&
-        IsNavReady() &&
-        SimpleMovePathfindAndMoveToRpc.TryInvoke(destination, fly, out var started) &&
-        started;
-
-    public static bool TryPathfindAndMoveCloseTo(Vector3 destination, bool fly, float range) =>
-        IsInstalled &&
-        IsNavReady() &&
-        SimpleMovePathfindAndMoveCloseToRpc.TryInvoke(destination, fly, range, out var started) &&
-        started;
-
-    public static bool TryMoveTo(Vector3 destination, bool fly, float closeRange = 0f)
+    public static bool TryPathfindAndMoveTo(Vector3 destination, bool fly = false)
     {
-        if (closeRange > 0f && IsWithinHorizontalRange(destination, closeRange))
-        {
-            return true;
-        }
-
-        var started = closeRange > 0f
-            ? TryPathfindAndMoveCloseTo(destination, fly, closeRange)
-            : TryPathfindAndMoveTo(destination, fly);
-        if (!started)
+        if (!CanStartPathfind())
         {
             return false;
         }
 
-        return IsMoving() || (closeRange > 0f && IsWithinHorizontalRange(destination, closeRange));
+        return SimpleMovePathfindAndMoveToRpc.TryInvoke(destination, fly, out var started) && started;
+    }
+
+    public static bool TryPathfindAndMoveCloseTo(Vector3 destination, bool fly, float range)
+    {
+        if (!CanStartPathfind())
+        {
+            return false;
+        }
+
+        return SimpleMovePathfindAndMoveCloseToRpc.TryInvoke(destination, fly, range, out var started) &&
+               started;
+    }
+
+    public static bool TryMoveTo(Vector3 destination, bool fly, float closeRange = 0f)
+    {
+        if (closeRange > 0f && IsWithinHorizontalRange(destination, closeRange + ArrivalSlack))
+        {
+            return true;
+        }
+
+        return closeRange > 0f
+            ? TryPathfindAndMoveCloseTo(destination, fly, closeRange)
+            : TryPathfindAndMoveTo(destination, fly);
     }
 
     public static bool TickArrival(Vector3 destination, float closeRange)
     {
-        if (IsWithinHorizontalRange(destination, closeRange) && IsMoving())
+        if (!IsWithinHorizontalRange(destination, closeRange + ArrivalSlack))
+        {
+            return false;
+        }
+
+        if (IsPathRunning())
         {
             StopPath();
         }
 
-        return IsWithinHorizontalRange(destination, closeRange) && !IsMoving();
+        return true;
     }
 
     public static bool IsWithinHorizontalRange(Vector3 destination, float range)

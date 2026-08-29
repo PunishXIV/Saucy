@@ -103,6 +103,11 @@ internal static class JumboCactpotBrokerPath
             Vnavmesh.StopPath();
         }
 
+        if (!Vnavmesh.CanStartPathfind())
+        {
+            return;
+        }
+
         if (ObjectHelper.TryMoveToBaseId(CactpotNpcs.JumboBrokerBaseId))
         {
             activePathTargetBaseId = CactpotNpcs.JumboBrokerBaseId;

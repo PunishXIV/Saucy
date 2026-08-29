@@ -97,7 +97,7 @@ internal static partial class TriadMapNavigation
 
         if (inTargetTerritory)
         {
-            if (npc != null && IsPlayerWithinNpcPathArrivalRange(npc, pointOnFloor))
+            if (npc != null && IsPlayerWithinNpcInteractionRange(npc, pointOnFloor))
             {
                 StopVnavIfRunning();
                 BeginPending(
@@ -242,6 +242,12 @@ internal static partial class TriadMapNavigation
         }
 
         if (travelPlan.HubAetheryteId != 0 &&
+            !AetheryteHelper.IsPlayerInAetheryteTerritory(travelPlan.HubAetheryteId))
+        {
+            return false;
+        }
+
+        if (travelPlan.HubAetheryteId != 0 &&
             AetheryteHelper.IsPlayerNearAetheryte(travelPlan.HubAetheryteId))
         {
             return TryStartAethernetTravel(location, pointOnFloor, fly, targetTerritoryId, travelPlan, npc);
@@ -259,6 +265,7 @@ internal static partial class TriadMapNavigation
         TriadNpc? npc = null)
     {
         if (travelPlan.HubAetheryteId == 0 ||
+            !AetheryteHelper.IsPlayerInAetheryteTerritory(travelPlan.HubAetheryteId) ||
             AetheryteHelper.GetAetheryteApproachPosition(travelPlan.HubAetheryteId) == null)
         {
             return false;
@@ -282,6 +289,20 @@ internal static partial class TriadMapNavigation
 
     private static void TickApproachingAethernetHub(PendingNavigation pending)
     {
+        if (pending.HubAetheryteId != 0 &&
+            !AetheryteHelper.IsPlayerInAetheryteTerritory(pending.HubAetheryteId))
+        {
+            Svc.Chat.PrintError("[Saucy] Aethernet hub is in another zone. Walking to NPC instead.");
+            StopVnavIfRunning();
+            pending.PendingAethernetShardId = 0;
+            pending.PendingAethernetShardName = null;
+            pending.HubAetheryteId = 0;
+            pending.Phase = NavigationPhase.WaitingForNavReady;
+            pending.PhaseStartedUtc = DateTime.UtcNow;
+            pending.AttemptMountBeforeNav = true;
+            return;
+        }
+
         if (pending.HubAetheryteId != 0 && AetheryteHelper.IsPlayerNearAetheryte(pending.HubAetheryteId))
         {
             if (TryBeginPendingAethernet(pending))
@@ -300,7 +321,7 @@ internal static partial class TriadMapNavigation
             return;
         }
 
-        if (!Vnavmesh.IsNavReady())
+        if (!Vnavmesh.CanStartPathfind())
         {
             Vnavmesh.TryEnsureNavMeshLoading();
             return;
