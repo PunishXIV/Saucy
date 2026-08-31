@@ -1,15 +1,19 @@
 using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.ClientState.Objects.Types;
 using ECommons.GameHelpers;
 using Saucy.Cactpot;
 using Saucy.Framework;
 using Saucy.IPC;
-using AgentId = FFXIVClientStructs.FFXIV.Client.UI.Agent.AgentId;
+using Saucy.TripleTriad;
 
 namespace Saucy.JumboCactpot;
 
 internal static class JumboCactpotBrokerPath
 {
     private const string BrokerInteractKey = "Saucy.JumboCactpot.BrokerInteract";
+
+    private const float BrokerPathCloseRange = 2f;
+    private const float BrokerInteractRange = 3f;
 
     private static bool requested;
     private static uint? activePathTargetBaseId;
@@ -81,15 +85,21 @@ internal static class JumboCactpotBrokerPath
             return;
         }
 
-        if (ObjectHelper.HasArrivedAt(npc))
+        if (CanInteractWithBroker(npc))
         {
             activePathTargetBaseId = null;
-            if (Vnavmesh.IsMoving())
+            if (Vnavmesh.IsPathRunning())
             {
                 Vnavmesh.StopPath();
+                return;
             }
 
-            ObjectHelper.TryInteractWithBaseId(CactpotNpcs.JumboBrokerBaseId, throttleKey: BrokerInteractKey);
+            if (!TravelMountHelper.TryDismount())
+            {
+                return;
+            }
+
+            ObjectHelper.TryInteractWithObject(npc, BrokerInteractKey);
             return;
         }
 
@@ -105,14 +115,19 @@ internal static class JumboCactpotBrokerPath
 
         if (!Vnavmesh.CanStartPathfind())
         {
+            Vnavmesh.TryEnsureNavMeshLoading();
             return;
         }
 
-        if (ObjectHelper.TryMoveToBaseId(CactpotNpcs.JumboBrokerBaseId))
+        if (ObjectHelper.TryMoveToBaseId(CactpotNpcs.JumboBrokerBaseId, BrokerPathCloseRange))
         {
             activePathTargetBaseId = CactpotNpcs.JumboBrokerBaseId;
         }
     }
+
+    private static bool CanInteractWithBroker(IGameObject npc) =>
+        Vnavmesh.IsWithinHorizontalRange(npc.Position, BrokerInteractRange) ||
+        ObjectHelper.GetHorizontalEdgeDistance(npc) <= 2.25f;
 
     private static void Finish()
     {
@@ -127,7 +142,7 @@ internal static class JumboCactpotBrokerPath
 
     private static bool IsBrokerFlowActive() =>
         ObjectHelper.HasInitiatedDialogue(CactpotNpcs.JumboBrokerScope) ||
-        AgentHelper.IsActive(AgentId.LotteryWeekly);
+        CactpotDialogueHelper.IsJumboInputVisible();
 
     private static bool IsMovementPaused() =>
         TalkHelper.IsVisible() ||

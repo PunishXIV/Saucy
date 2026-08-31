@@ -149,7 +149,7 @@ public static unsafe class ObjectHelper
 
     public static bool TryInteractWithBaseId(
         uint baseId,
-        float interactRange = Vnavmesh.NpcCloseRange,
+        float interactRange = Vnavmesh.NpcInteractRange,
         string throttleKey = "Saucy.Object.Interact")
     {
         if (!Player.Interactable)
@@ -157,8 +157,8 @@ public static unsafe class ObjectHelper
             return false;
         }
 
-        var obj = FindNearestByBaseId(baseId, interactRange + 1f);
-        if (obj == null || Player.DistanceTo(obj) > interactRange)
+        var obj = FindNearestByBaseId(baseId, interactRange + 2f);
+        if (obj == null || !Vnavmesh.IsWithinHorizontalRange(obj.Position, interactRange))
         {
             return false;
         }

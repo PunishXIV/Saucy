@@ -14,8 +14,11 @@ internal static class Vnavmesh
     /// <summary>
     /// vnav often completes a few tenths outside the requested stop radius. Without this slack,
     /// callers re-issue PathfindAndMove every tick (Bocchi treasure-hunt ~2y spam).
+    /// Interact range must be at least CloseRange + this, or arrival returns true and interact never fires.
     /// </summary>
     public const float ArrivalSlack = 0.5f;
+
+    public const float NpcInteractRange = NpcCloseRange + ArrivalSlack;
 
     [EzIPC("Nav.IsReady")]
     private static Func<bool> NavIsReadyRpc = null!;
