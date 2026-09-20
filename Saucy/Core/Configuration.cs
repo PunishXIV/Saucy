@@ -63,6 +63,9 @@ public class Configuration : IPluginConfiguration
 
     public bool SaucyThemeEnabled { get; set; } = true;
 
+    // null = follow the Dalamud UI language.
+    public Localization.UiLanguage? UiLanguage { get; set; }
+
     public bool CollectionUiEnabled { get; set; } = true;
 
     [JsonProperty("BackgroundWorkCpuCores")]

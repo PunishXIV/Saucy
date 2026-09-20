@@ -47,7 +47,10 @@ public partial class TriadSession
         {
             if (!string.IsNullOrEmpty(blockReason))
             {
-                TriadDeckLog.Print($"[Saucy] {blockReason}");
+                // The argument is deliberately pre-localized: blockReason is a runtime key, so
+                // LocText cannot defer it. Safe because this value is printed immediately and
+                // its English form is never read.
+                TriadDeckLog.Print(LocText.Of("[Saucy] {0}", Loc.T(blockReason)));
             }
 
             return;
@@ -74,29 +77,29 @@ public partial class TriadSession
 
         if (!C.UseSimmedDeck)
         {
-            return "Enable Auto-pick best deck in Triad settings.";
+            return Loc.T("Enable Auto-pick best deck in Triad settings.");
         }
 
         if (OptimizerInProgress && IsPremadeOptimizerForNpc(npc) &&
             TriadDeckOptimizerJobs.TryGetActive(out var job))
         {
             var best = job.FormatBestWinChance();
-            if (string.IsNullOrEmpty(best) || best == "…")
+            if (string.IsNullOrEmpty(best) || best == TriadDeckOptimizerJobSnapshot.PendingWinChance)
             {
-                return $"Building deck… {job.ProgressPercent}%";
+                return Loc.T("Building deck… {0}%", job.ProgressPercent);
             }
 
-            return $"Building deck… {job.ProgressPercent}% ({best})";
+            return Loc.T("Building deck… {0}% ({1})", job.ProgressPercent, best);
         }
 
         if (HasPremadeDeckReadyForNpc(npc))
         {
-            return $"Ready in profile slot {SaucyProfileDeckSlotIndex + 1}";
+            return Loc.T("Ready in profile slot {0}", SaucyProfileDeckSlotIndex + 1);
         }
 
         if (_optimizerTimedOut && preGameNpc?.Id == npc.Id)
         {
-            return "Last build timed out; try again.";
+            return Loc.T("Last build timed out; try again.");
         }
 
         return string.Empty;

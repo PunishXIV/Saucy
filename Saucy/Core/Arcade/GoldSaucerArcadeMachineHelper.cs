@@ -60,20 +60,20 @@ internal static class GoldSaucerArcadeMachineHelper
             IsEnabled(GoldSaucerArcadeMachine.Cuff))
         {
             C.SetModuleEnabled(ModuleNames.CuffACur, false);
-            disabled.Add("Cuff-a-Cur");
+            disabled.Add(ModuleDisplayNames.CuffACur);
         }
 
         if (keeping != GoldSaucerArcadeMachine.Limb &&
             IsEnabled(GoldSaucerArcadeMachine.Limb))
         {
             C.SetModuleEnabled(ModuleNames.OutOnALimb, false);
-            disabled.Add("Out on a Limb");
+            disabled.Add(ModuleDisplayNames.OutOnALimb);
         }
 
         if (keeping != null && TriadRunSession.ModuleEnabled)
         {
             TriadRunSession.ModuleEnabled = false;
-            disabled.Add("Triple Triad");
+            disabled.Add(ModuleDisplayNames.TripleTriad);
         }
 
         if (disabled.Count == 0)
@@ -83,11 +83,17 @@ internal static class GoldSaucerArcadeMachineHelper
 
         var enabledLabel = keeping switch
         {
-            GoldSaucerArcadeMachine.Cuff => "Cuff-a-Cur",
-            GoldSaucerArcadeMachine.Limb => "Out on a Limb",
-            var _ => "Triple Triad"
+            GoldSaucerArcadeMachine.Cuff => ModuleDisplayNames.CuffACur,
+            GoldSaucerArcadeMachine.Limb => ModuleDisplayNames.OutOnALimb,
+            var _ => ModuleDisplayNames.TripleTriad
         };
 
-        DuoLog.Warning($"Disabled {string.Join(" and ", disabled)} to enable {enabledLabel}.");
+        // Two whole sentences rather than joining a list: CJK wants 、 where English wants
+        // " and ", and a punctuation-only key is not something a translator can act on.
+        // At most two modules can be disabled here — whichever of the three is being kept
+        // is skipped, and the Triple Triad branch only runs when an arcade machine is kept.
+        DuoLog.Warning(disabled.Count == 1
+            ? Loc.T("Disabled {0} to enable {1}.", Loc.T(disabled[0]), Loc.T(enabledLabel))
+            : Loc.T("Disabled {0} and {1} to enable {2}.", Loc.T(disabled[0]), Loc.T(disabled[1]), Loc.T(enabledLabel)));
     }
 }

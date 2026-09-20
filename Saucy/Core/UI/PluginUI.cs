@@ -22,13 +22,14 @@ public unsafe partial class PluginUI : Window
 
     private static readonly string[] SidebarLabels =
     [
-        "Out on a Limb",
-        "Cuff-a-Cur",
-        "Slice is Right",
-        "Wind Blows",
-        "Triple Triad",
-        "Mini-Cactpot",
-        "Jumbo Cactpot",
+        ModuleDisplayNames.OutOnALimb,
+        ModuleDisplayNames.CuffACur,
+        ModuleDisplayNames.SliceIsRight,
+        ModuleDisplayNames.WindBlows,
+        ModuleDisplayNames.AirForceOne,
+        ModuleDisplayNames.TripleTriad,
+        ModuleDisplayNames.MiniCactpot,
+        ModuleDisplayNames.JumboCactpot,
         "Stats",
         "About",
         "Debug",
@@ -54,7 +55,7 @@ public unsafe partial class PluginUI : Window
 
         TitleBarButtons.Add(new()
         {
-            ShowTooltip = () => ImGui.SetTooltip("♥ Ko-fi (to support my gacha addiction)"),
+            ShowTooltip = () => ImGui.SetTooltip(Loc.T("♥ Ko-fi (to support my gacha addiction)")),
             Icon = FontAwesomeIcon.Heart,
             IconOffset = new(1, 1),
             Click = _ => ShellStart(KagekazuKofiUrl)
@@ -87,7 +88,7 @@ public unsafe partial class PluginUI : Window
         var maxLabel = 0f;
         foreach (var s in SidebarLabels)
         {
-            var w = ImGui.CalcTextSize(s).X;
+            var w = ImGui.CalcTextSize(Loc.T(s)).X;
             if (w > maxLabel)
             {
                 maxLabel = w;
@@ -113,7 +114,9 @@ public unsafe partial class PluginUI : Window
         var showDelta = info.SessionDelta > 0
                         && Environment.TickCount64 - _lastMgpIncreaseMs < DeltaVisibleMs;
         var delta = showDelta ? $"  +{info.SessionDelta:N0}" : "";
-        var status = info.ModuleStatus == "Idle" ? "Idle" : $"Enabled: {info.ModuleStatus}";
+        var status = info.ModuleStatus == ModuleDisplayNames.Idle
+            ? Loc.T(ModuleDisplayNames.Idle)
+            : Loc.T("Enabled: {0}", Loc.T(info.ModuleStatus));
         WindowName = $"Saucy  \u2022  {status}  \u2022  MGP {info.Mgp:N0}{delta}###Saucy";
     }
 
@@ -151,35 +154,36 @@ public unsafe partial class PluginUI : Window
 
     private void DrawSidebar()
     {
-        DrawSidebarHeader("MACHINES");
-        NavSelectable("Out on a Limb", NavItem.OutOnALimb);
-        NavSelectable("Cuff-a-Cur", NavItem.CuffACur);
+        DrawSidebarHeader(Loc.T("MACHINES"));
+        NavSelectable(Loc.T("Out on a Limb"), NavItem.OutOnALimb);
+        NavSelectable(Loc.T("Cuff-a-Cur"), NavItem.CuffACur);
 
         ImGui.Dummy(new(0, 6));
-        DrawSidebarHeader("GATES");
-        NavSelectable("Slice is Right", NavItem.SliceIsRight);
-        NavSelectable("Wind Blows", NavItem.AnyWayTheWindBlows);
-        NavSelectable("Air Force One", NavItem.AirForceOne);
+        DrawSidebarHeader(Loc.T("GATES"));
+        NavSelectable(Loc.T("Slice is Right"), NavItem.SliceIsRight);
+        NavSelectable(Loc.T("Wind Blows"), NavItem.AnyWayTheWindBlows);
+        NavSelectable(Loc.T("Air Force One"), NavItem.AirForceOne);
 
         ImGui.Dummy(new(0, 6));
-        DrawSidebarHeader("OTHER GAMES");
-        NavSelectable("Triple Triad", NavItem.TripleTriad);
-        NavSelectable("Mini-Cactpot", NavItem.MiniCactpot);
-        NavSelectable("Jumbo Cactpot", NavItem.JumboCactpot);
+        DrawSidebarHeader(Loc.T("OTHER GAMES"));
+        NavSelectable(Loc.T("Triple Triad"), NavItem.TripleTriad);
+        NavSelectable(Loc.T("Mini-Cactpot"), NavItem.MiniCactpot);
+        NavSelectable(Loc.T("Jumbo Cactpot"), NavItem.JumboCactpot);
 
         ImGui.Dummy(new(0, 6));
         ImGui.Separator();
-        NavSelectable("Stats", NavItem.Stats);
-        NavSelectable("About", NavItem.About);
+        NavSelectable(Loc.T("Stats"), NavItem.Stats);
+        NavSelectable(Loc.T("About"), NavItem.About);
         if (C.ShowDebugUi)
         {
-            NavSelectable("Debug", NavItem.Debug);
+            NavSelectable(Loc.T("Debug"), NavItem.Debug);
         }
 
         var style = ImGui.GetStyle();
         var checkboxH = ImGui.GetFrameHeight();
         var creditH = ImGui.GetTextLineHeight();
-        var bottomBlockH = style.ItemSpacing.Y + 1f + style.ItemSpacing.Y + checkboxH + style.ItemSpacing.Y + creditH;
+        var bottomBlockH = style.ItemSpacing.Y + 1f + style.ItemSpacing.Y + checkboxH + style.ItemSpacing.Y
+                           + checkboxH + style.ItemSpacing.Y + creditH;
         var targetY = ImGui.GetWindowHeight() - style.WindowPadding.Y - bottomBlockH;
         if (targetY > ImGui.GetCursorPosY())
         {
@@ -187,13 +191,43 @@ public unsafe partial class PluginUI : Window
         }
 
         ImGui.Separator();
+        DrawLanguageSelector();
         var on = C.SaucyThemeEnabled;
-        if (ImGui.Checkbox("Saucy theme", ref on))
+        if (ImGui.Checkbox($"{Loc.T("Saucy theme")}###SaucyTheme", ref on))
         {
             C.SaucyThemeEnabled = on;
             C.Save();
         }
-        ImGui.TextDisabled("Designed by Wah");
+        ImGui.TextDisabled(Loc.T("Designed by Wah"));
+    }
+
+    private static void DrawLanguageSelector()
+    {
+        string[] labels = [Loc.T("Automatic"), "English", "简体中文"];
+        var index = C.UiLanguage switch
+        {
+            null => 0,
+            UiLanguage.English => 1,
+            _ => 2
+        };
+
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.Combo("##SaucyLanguage", ref index, labels, labels.Length))
+        {
+            C.UiLanguage = index switch
+            {
+                0 => null,
+                1 => UiLanguage.English,
+                _ => UiLanguage.ChineseSimplified
+            };
+            Loc.Apply(C.UiLanguage);
+            Saucy.RefreshCommandHelp();
+            C.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip(Loc.T("Language"));
+        }
     }
 
     private void NavSelectable(string label, NavItem item)
@@ -226,10 +260,10 @@ public unsafe partial class PluginUI : Window
 
     private static void DrawTriadPanel()
     {
-        DrawPanelHeader("Triple Triad");
+        DrawPanelHeader(Loc.T("Triple Triad"));
         ImGuiEx.EzTabBar("###Triad",
-            ("Main", TriadSettingsUi.Draw, null, false),
-            ("Cache", TriadCacheSettingsUi.Draw, null, false));
+            ($"{Loc.T("Main")}###SaucyTriadMain", TriadSettingsUi.Draw, null, false),
+            ($"{Loc.T("Cache")}###SaucyTriadCache", TriadCacheSettingsUi.Draw, null, false));
     }
 
     private static void DrawPanelHeader(string title, string? subtitle = null) =>
@@ -237,7 +271,7 @@ public unsafe partial class PluginUI : Window
 
     private void DrawDebugTab()
     {
-        ImGuiLayout.DrawCollapsingSection("Gold Saucer gate", ImGuiTreeNodeFlags.DefaultOpen, () =>
+        ImGuiLayout.DrawCollapsingSection(Loc.T("Gold Saucer gate"), "SaucyDebugGate", ImGuiTreeNodeFlags.DefaultOpen, () =>
         {
             if (GoldSaucerManager.Instance() != null && GoldSaucerManager.Instance()->CurrentGFateDirector != null)
             {
@@ -248,11 +282,11 @@ public unsafe partial class PluginUI : Window
             }
             else
             {
-                ImGui.TextDisabled("No active gate director.");
+                ImGui.TextDisabled(Loc.T("No active gate director."));
             }
         });
 
-        ImGuiLayout.DrawCollapsingSection("Triple Triad NPC menu", ImGuiTreeNodeFlags.DefaultOpen, () =>
+        ImGuiLayout.DrawCollapsingSection(Loc.T("Triple Triad NPC menu"), "SaucyDebugTriadMenu", ImGuiTreeNodeFlags.DefaultOpen, () =>
         {
             ImGui.Text($"Navigation active: {TriadMapNavigation.IsNavigationActive}");
             ImGui.Text($"Awaiting triad start: {TriadMapNavigation.IsAwaitingTriadStartDialog()}");
@@ -261,7 +295,7 @@ public unsafe partial class PluginUI : Window
             SelectStringHelper.CollectTriadMenuDebugLines(menuLines);
             if (menuLines.Count == 0)
             {
-                ImGui.TextDisabled("No select string menu open.");
+                ImGui.TextDisabled(Loc.T("No select string menu open."));
             }
             else
             {

@@ -123,7 +123,7 @@ internal static unsafe partial class TriadMapNavigation
 
             if (DateTime.UtcNow - pending.PhaseStartedUtc > TimeSpan.FromSeconds(45))
             {
-                Svc.Chat.PrintError("[Saucy] Could not reach the Triple Triad NPC.");
+                Svc.Chat.PrintError(Loc.T("[Saucy] Could not reach the Triple Triad NPC."));
                 ClearPending();
             }
 
@@ -168,12 +168,12 @@ internal static unsafe partial class TriadMapNavigation
         if (TryBeginTriadMatchAfterDeckOptimizer(pending) && !pending.AnnouncedTriadStart)
         {
             pending.AnnouncedTriadStart = true;
-            Svc.Chat.Print($"[Saucy] Arrived at {pending.Npc!.Name}. Starting Triple Triad...");
+            Svc.Chat.Print(Loc.T("[Saucy] Arrived at {0}. Starting Triple Triad...", pending.Npc!.Name));
         }
 
         if (DateTime.UtcNow - pending.PhaseStartedUtc > TimeSpan.FromSeconds(45))
         {
-            Svc.Chat.PrintError("[Saucy] Could not reach the Triple Triad NPC.");
+            Svc.Chat.PrintError(Loc.T("[Saucy] Could not reach the Triple Triad NPC."));
             ClearPending();
         }
     }
@@ -289,7 +289,7 @@ internal static unsafe partial class TriadMapNavigation
 
         if (DateTime.UtcNow - pending.PhaseStartedUtc > NpcInteractionPhaseTimeout)
         {
-            Svc.Chat.PrintError("[Saucy] Could not open Triple Triad with this NPC.");
+            Svc.Chat.PrintError(Loc.T("[Saucy] Could not open Triple Triad with this NPC."));
             ClearPending();
         }
     }

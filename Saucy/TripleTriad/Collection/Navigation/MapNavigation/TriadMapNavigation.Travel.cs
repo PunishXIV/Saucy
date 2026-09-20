@@ -17,14 +17,14 @@ internal static partial class TriadMapNavigation
 
         if (!Vnavmesh.IsInstalled)
         {
-            Svc.Chat.Print("[Saucy] Install vnavmesh to path to NPCs from Saucy.");
+            Svc.Chat.Print(Loc.T("[Saucy] Install vnavmesh to path to NPCs from Saucy."));
             return false;
         }
 
         var destination = ResolveDestination(location, npc);
         if (destination == null)
         {
-            Svc.Chat.PrintError("[Saucy] Could not resolve NPC map coordinates.");
+            Svc.Chat.PrintError(Loc.T("[Saucy] Could not resolve NPC map coordinates."));
             return false;
         }
 
@@ -36,8 +36,8 @@ internal static partial class TriadMapNavigation
         {
             if (!inTargetTerritory)
             {
-                Svc.Chat.Print(
-                    $"[Saucy] {location.PlaceName} is in another zone. Install Lifestream to teleport there.");
+                Svc.Chat.Print(Loc.T(
+                    "[Saucy] {0} is in another zone. Install Lifestream to teleport there.", location.PlaceName));
                 return false;
             }
 
@@ -46,7 +46,7 @@ internal static partial class TriadMapNavigation
 
         if (Lifestream.IsBusyNow())
         {
-            Svc.Chat.Print("[Saucy] Lifestream is busy. Try again in a moment.");
+            Svc.Chat.Print(Loc.T("[Saucy] Lifestream is busy. Try again in a moment."));
             return false;
         }
 
@@ -62,7 +62,7 @@ internal static partial class TriadMapNavigation
                     if (!AetheryteHelper.IsPlayerInAetheryteTerritory(directAetheryte) &&
                         !Lifestream.TryTeleport(directAetheryte))
                     {
-                        Svc.Chat.PrintError("[Saucy] Lifestream could not start teleport.");
+                        Svc.Chat.PrintError(Loc.T("[Saucy] Lifestream could not start teleport."));
                         return false;
                     }
 
@@ -76,8 +76,9 @@ internal static partial class TriadMapNavigation
                         expectedPostTeleportTerritoryId: DomanEnclaveRoute.DomanEnclaveTerritoryId);
                     if (!AetheryteHelper.IsPlayerInAetheryteTerritory(directAetheryte))
                     {
-                        Svc.Chat.Print(
-                            $"[Saucy] Teleporting to {AetheryteHelper.FormatTeleportDestination(directAetheryte)}.");
+                        Svc.Chat.Print(Loc.T(
+                            "[Saucy] Teleporting to {0}.",
+                            AetheryteHelper.FormatTeleportDestination(directAetheryte)));
                     }
 
                     return true;
@@ -90,8 +91,8 @@ internal static partial class TriadMapNavigation
         var travelPlan = AetheryteHelper.FindBestTravelPlan(targetTerritoryId, pointOnFloor, inTargetTerritory);
         if (!inTargetTerritory && !travelPlan.HasTeleport && !travelPlan.HasAethernet)
         {
-            Svc.Chat.Print(
-                $"[Saucy] No unlocked aetheryte found for {location.PlaceName}. Opening map.");
+            Svc.Chat.Print(Loc.T(
+                "[Saucy] No unlocked aetheryte found for {0}. Opening map.", location.PlaceName));
             return false;
         }
 
@@ -120,7 +121,7 @@ internal static partial class TriadMapNavigation
 
             if (!string.IsNullOrEmpty(travelPlan.AethernetSkipReason))
             {
-                Svc.Chat.Print($"[Saucy] Walking: {travelPlan.AethernetSkipReason}.");
+                Svc.Chat.Print(Loc.T("[Saucy] Walking: {0}.", travelPlan.AethernetSkipReason));
             }
 
             return TryStartVnavImmediate(location, pointOnFloor, fly, npc);
@@ -136,7 +137,7 @@ internal static partial class TriadMapNavigation
         {
             if (!Lifestream.TryTeleport(travelPlan.TeleportAetheryteId))
             {
-                Svc.Chat.PrintError("[Saucy] Lifestream could not start teleport.");
+                Svc.Chat.PrintError(Loc.T("[Saucy] Lifestream could not start teleport."));
                 return false;
             }
         }
@@ -158,12 +159,15 @@ internal static partial class TriadMapNavigation
         {
             Svc.Chat.Print(
                 skipTeleport
-                    ? $"[Saucy] Lifestream aethernet to {travelPlan.AethernetShardName}."
-                    : $"[Saucy] Teleporting to {teleportDestination}, then Lifestream aethernet to {travelPlan.AethernetShardName}.");
+                    ? Loc.T("[Saucy] Lifestream aethernet to {0}.", travelPlan.AethernetShardName ?? string.Empty)
+                    : Loc.T(
+                        "[Saucy] Teleporting to {0}, then Lifestream aethernet to {1}.",
+                        teleportDestination,
+                        travelPlan.AethernetShardName ?? string.Empty));
         }
         else if (!skipTeleport)
         {
-            Svc.Chat.Print($"[Saucy] Teleporting to {teleportDestination}.");
+            Svc.Chat.Print(Loc.T("[Saucy] Teleporting to {0}.", teleportDestination));
         }
 
         return true;
@@ -218,14 +222,14 @@ internal static partial class TriadMapNavigation
         pending.Destination = ResolvePostRouteDestination(pending);
         if (TryBeginMovingToNpcIfAlreadyNearby(pending))
         {
-            Svc.Chat.Print($"[Saucy] Arrived in {pending.Location.PlaceName}.");
+            Svc.Chat.Print(Loc.T("[Saucy] Arrived in {0}.", pending.Location.PlaceName));
             return;
         }
 
         pending.Phase = NavigationPhase.WaitingForNavReady;
         pending.PhaseStartedUtc = DateTime.UtcNow;
         pending.AttemptMountBeforeNav = true;
-        Svc.Chat.Print($"[Saucy] Arrived in {pending.Location.PlaceName}. Waiting for vnavmesh...");
+        Svc.Chat.Print(Loc.T("[Saucy] Arrived in {0}. Waiting for vnavmesh...", pending.Location.PlaceName));
     }
 
     private static bool TryStartInTerritoryAethernet(
@@ -282,8 +286,9 @@ internal static partial class TriadMapNavigation
             aethernetShardName: travelPlan.AethernetShardName,
             hubAetheryteId: travelPlan.HubAetheryteId,
             startingPhase: NavigationPhase.ApproachingAethernetHub);
-        Svc.Chat.Print(
-            $"[Saucy] Walking to aethernet hub, then Lifestream to {travelPlan.AethernetShardName}.");
+        Svc.Chat.Print(Loc.T(
+            "[Saucy] Walking to aethernet hub, then Lifestream to {0}.",
+            travelPlan.AethernetShardName ?? string.Empty));
         return true;
     }
 
@@ -292,7 +297,7 @@ internal static partial class TriadMapNavigation
         if (pending.HubAetheryteId != 0 &&
             !AetheryteHelper.IsPlayerInAetheryteTerritory(pending.HubAetheryteId))
         {
-            Svc.Chat.PrintError("[Saucy] Aethernet hub is in another zone. Walking to NPC instead.");
+            Svc.Chat.PrintError(Loc.T("[Saucy] Aethernet hub is in another zone. Walking to NPC instead."));
             StopVnavIfRunning();
             pending.PendingAethernetShardId = 0;
             pending.PendingAethernetShardName = null;
@@ -330,7 +335,7 @@ internal static partial class TriadMapNavigation
         var hubPos = AetheryteHelper.GetAetheryteApproachPosition(pending.HubAetheryteId);
         if (hubPos == null)
         {
-            Svc.Chat.PrintError("[Saucy] Could not resolve aethernet hub position. Walking to NPC instead.");
+            Svc.Chat.PrintError(Loc.T("[Saucy] Could not resolve aethernet hub position. Walking to NPC instead."));
             pending.PendingAethernetShardId = 0;
             pending.PendingAethernetShardName = null;
             pending.Phase = NavigationPhase.WaitingForNavReady;
@@ -359,7 +364,7 @@ internal static partial class TriadMapNavigation
 
         if (DateTime.UtcNow - pending.PhaseStartedUtc > TimeSpan.FromSeconds(45))
         {
-            Svc.Chat.PrintError("[Saucy] Could not reach the aethernet hub. Walking to NPC instead.");
+            Svc.Chat.PrintError(Loc.T("[Saucy] Could not reach the aethernet hub. Walking to NPC instead."));
             pending.PendingAethernetShardId = 0;
             pending.PendingAethernetShardName = null;
             pending.Phase = NavigationPhase.WaitingForNavReady;
@@ -384,8 +389,9 @@ internal static partial class TriadMapNavigation
         if (!Lifestream.TryAethernetViaLiCommand(
             travelPlan.AethernetShardName ?? AetheryteHelper.GetAethernetShardName(travelPlan.AethernetShardId)))
         {
-            Svc.Chat.Print(
-                $"[Saucy] Lifestream could not start aethernet to {travelPlan.AethernetShardName}. Walking instead.");
+            Svc.Chat.Print(Loc.T(
+                "[Saucy] Lifestream could not start aethernet to {0}. Walking instead.",
+                travelPlan.AethernetShardName ?? string.Empty));
             return false;
         }
 
@@ -399,7 +405,7 @@ internal static partial class TriadMapNavigation
             startingPhase: NavigationPhase.WaitingForAethernet,
             activeAethernetShardId: travelPlan.AethernetShardId,
             hubAetheryteId: travelPlan.HubAetheryteId);
-        Svc.Chat.Print($"[Saucy] Lifestream: aethernet to {travelPlan.AethernetShardName}.");
+        Svc.Chat.Print(Loc.T("[Saucy] Lifestream: aethernet to {0}.", travelPlan.AethernetShardName ?? string.Empty));
         return true;
     }
 
@@ -426,7 +432,7 @@ internal static partial class TriadMapNavigation
             pending.PendingAethernetShardId = 0;
             pending.PendingAethernetShardName = null;
             EnterWaitingForAethernet(pending, shardId, hubId);
-            Svc.Chat.Print($"[Saucy] Lifestream: aethernet to {shardName}.");
+            Svc.Chat.Print(Loc.T("[Saucy] Lifestream: aethernet to {0}.", shardName ?? string.Empty));
             return true;
         }
 
@@ -434,7 +440,7 @@ internal static partial class TriadMapNavigation
         {
             if (EzThrottler.Throttle("SaucyNavAethernetRetry", 3000))
             {
-                Svc.Chat.Print($"[Saucy] Waiting for Lifestream aethernet to {shardName}...");
+                Svc.Chat.Print(Loc.T("[Saucy] Waiting for Lifestream aethernet to {0}...", shardName ?? string.Empty));
             }
 
             return false;
@@ -442,8 +448,9 @@ internal static partial class TriadMapNavigation
 
         pending.PendingAethernetShardId = 0;
         pending.PendingAethernetShardName = null;
-        Svc.Chat.Print(
-            $"[Saucy] Lifestream could not take aethernet to {shardName}. Walking from here instead.");
+        Svc.Chat.Print(Loc.T(
+            "[Saucy] Lifestream could not take aethernet to {0}. Walking from here instead.",
+            shardName ?? string.Empty));
         return false;
     }
 
@@ -522,7 +529,7 @@ internal static partial class TriadMapNavigation
         {
             if (DateTime.UtcNow - pending.PhaseStartedUtc > AethernetStartupTimeout)
             {
-                Svc.Chat.PrintError("[Saucy] Aethernet travel did not start. Walking instead.");
+                Svc.Chat.PrintError(Loc.T("[Saucy] Aethernet travel did not start. Walking instead."));
                 return true;
             }
 

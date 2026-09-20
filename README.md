@@ -20,4 +20,6 @@ Automates certain Gold Saucer mini-games.
 
 Tracks Stats for Lifetime, Sessions, Hourly MGP and more!
 
+Localized in English and 简体中文 (Simplified Chinese). The UI follows the Dalamud language by default and can be switched from the sidebar's language selector.
+
 <!-- Repository Header End -->

@@ -20,7 +20,7 @@ public class TriadCardInfoWindow : Window, IDisposable
     private TriadCard? selectedCard;
     private GameCardInfo? selectedCardInfo;
 
-    public TriadCardInfoWindow(UIReaderTriadCardList uiReaderCardList, TriadCardSearchWindow cardSearchWindow) : base("Card Info")
+    public TriadCardInfoWindow(UIReaderTriadCardList uiReaderCardList, TriadCardSearchWindow cardSearchWindow) : base(Loc.T("Card Info") + "###SaucyCardInfo")
     {
         this.uiReaderCardList = uiReaderCardList;
         this.cardSearchWindow = cardSearchWindow;
@@ -80,6 +80,8 @@ public class TriadCardInfoWindow : Window, IDisposable
 
     public override void PreDraw()
     {
+        // Re-resolve every frame so the title follows a language change without a reload.
+        WindowName = Loc.T("Card Info") + "###SaucyCardInfo";
         uiReaderCardList.RefreshLiveSelectionState();
         SyncSelectedCardFromReader();
 
@@ -152,7 +154,7 @@ public class TriadCardInfoWindow : Window, IDisposable
                 ImGui.AlignTextToFramePadding();
             }
 
-            ImGui.Text("Reward from:");
+            ImGui.Text(Loc.T("Reward from:"));
 
             if (selectedCardInfo != null && rewardNpc != null && rewardNpcInfo != null && rewardNpcInfo.Location != null)
             {
@@ -167,18 +169,18 @@ public class TriadCardInfoWindow : Window, IDisposable
                 if (TriadBattleHall.ShouldBlockMapNavigation(rewardNpc, rewardNpcInfo.Location))
                 {
                     using var blockedText = ImRaii.PushColor(ImGuiCol.Text, colorGray);
-                    ImGui.TextWrapped(TriadBattleHall.NavigationBlockedMessage);
+                    ImGui.TextWrapped(Loc.T(TriadBattleHall.NavigationBlockedMessage));
                 }
                 else
                 {
-                    TriadNpcMapUi.DrawMapLocationRow(rewardNpcInfo.Location, "Show on map", rewardNpc);
+                    TriadNpcMapUi.DrawMapLocationRow(rewardNpcInfo.Location, Loc.T("Show on map"), rewardNpc);
                 }
 
                 ImGui.TextColored(colorGray, rewardNpcRules);
             }
             else
             {
-                ImGui.TextColored(colorGray, "Not available");
+                ImGui.TextColored(colorGray, Loc.T("Not available"));
             }
         }
     }
@@ -194,7 +196,7 @@ public class TriadCardInfoWindow : Window, IDisposable
         if (ImGui.IsItemHovered())
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            ImGui.SetTooltip("Show in NPC tab");
+            ImGui.SetTooltip(Loc.T("Show in NPC tab"));
         }
     }
 

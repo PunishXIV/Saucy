@@ -110,8 +110,8 @@ internal static class TriadAutomator
 
         var npcName = TriadNpcProximity.ResolveTriadNpcForProximityCheck()?.Name;
         TriadRunSession.DisableModule(string.IsNullOrEmpty(npcName)
-            ? "No Triple Triad NPC nearby. Move closer to the NPC you want to play."
-            : $"No Triple Triad NPC nearby ({npcName}). Move closer to the NPC you want to play.");
+            ? Loc.T("No Triple Triad NPC nearby. Move closer to the NPC you want to play.")
+            : Loc.T("No Triple Triad NPC nearby ({0}). Move closer to the NPC you want to play.", npcName));
     }
 
     private static bool ShouldSkipNpcSanityCheck()

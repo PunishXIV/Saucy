@@ -88,7 +88,7 @@ internal static unsafe class AutoRetainerPause
         closingUi = false;
         handlingStartedUtc = DateTime.UtcNow;
 
-        Svc.Chat.Print("[Saucy] Pausing arcade automation — retainers ready at nearby bell.");
+        Svc.Chat.Print(Loc.T("[Saucy] Pausing arcade automation — retainers ready at nearby bell."));
     }
 
     private static void TickHandling()
@@ -96,7 +96,7 @@ internal static unsafe class AutoRetainerPause
         var elapsed = DateTime.UtcNow - handlingStartedUtc;
         if (elapsed.TotalSeconds > HandlingTimeoutSeconds)
         {
-            Svc.Chat.Print("[Saucy] AutoRetainer pause timed out; resuming automation.");
+            Svc.Chat.Print(Loc.T("[Saucy] AutoRetainer pause timed out; resuming automation."));
             Reset(forceStopAutoRetainer: true);
             return;
         }
@@ -152,7 +152,7 @@ internal static unsafe class AutoRetainerPause
             Player.Interactable &&
             !Svc.Condition[ConditionFlag.OccupiedSummoningBell])
         {
-            Svc.Chat.Print("[Saucy] AutoRetainer finished; resuming automation.");
+            Svc.Chat.Print(Loc.T("[Saucy] AutoRetainer finished; resuming automation."));
             Reset(forceStopAutoRetainer: true);
         }
     }

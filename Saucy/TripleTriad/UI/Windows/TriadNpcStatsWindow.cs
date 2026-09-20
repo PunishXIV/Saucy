@@ -11,7 +11,7 @@ public class TriadNpcStatsWindow : Window, IDisposable
     private GameNpcInfo? npcInfo;
     private string? npcName;
 
-    public TriadNpcStatsWindow(StatTracker statTracker) : base("NPC stats")
+    public TriadNpcStatsWindow(StatTracker statTracker) : base(Loc.T("NPC stats") + "###SaucyNpcStats")
     {
         this.statTracker = statTracker;
 
@@ -48,6 +48,12 @@ public class TriadNpcStatsWindow : Window, IDisposable
         }
     }
 
+    public override void PreDraw()
+    {
+        // Re-resolve every frame so the title follows a language change without a reload.
+        WindowName = Loc.T("NPC stats") + "###SaucyNpcStats";
+    }
+
     public override void Draw()
     {
         var colorName = SaucyTheme.ColorOr(SaucyTheme.SectionTitle, ImGuiCol.Text);
@@ -61,27 +67,31 @@ public class TriadNpcStatsWindow : Window, IDisposable
             var savedStats = statTracker.GetNpcStatsOrDefault(npcInfo);
             var numMatches = savedStats.GetNumMatches();
 
-            ImGui.Text($"Matches tracked: {numMatches}");
+            ImGui.Text(Loc.T("Matches tracked: {0}", numMatches));
             ImGui.Spacing();
 
-            ImGui.Text("Game stats:");
+            ImGui.Text(Loc.T("Game stats:"));
             ImGui.Indent();
-            ImGui.Text($"{savedStats.NumWins} wins,");
-            ImGui.SameLine();
-            ImGui.Text($"{savedStats.NumDraws} draws,");
-            ImGui.SameLine();
-            ImGui.Text($"{savedStats.NumLosses} losses");
+            // One key rather than three fragments: the separators and their order are the
+            // translator's to choose, and CJK does not want an ASCII ", " welded on.
+            ImGui.Text(Loc.T(
+                "{0} wins, {1} draws, {2} losses",
+                savedStats.NumWins,
+                savedStats.NumDraws,
+                savedStats.NumLosses));
             if (numMatches > 0)
             {
-                var winPctDesc = (1.0f * savedStats.NumWins / numMatches).ToString("P1").Replace("%", "%%");
-                ImGui.TextColored(colorValue, $"{winPctDesc} wins");
+                // No "%%" escaping: Dalamud's ImGui.Text* overloads all route to
+                // igTextUnformatted, so a bare '%' is rendered literally.
+                var winPctDesc = (1.0f * savedStats.NumWins / numMatches).ToString("P1");
+                ImGui.TextColored(colorValue, Loc.T("Win rate: {0}", winPctDesc));
             }
             ImGui.Unindent();
             ImGui.Spacing();
 
-            ImGui.Text("Reward stats:");
+            ImGui.Text(Loc.T("Reward stats:"));
             ImGui.Indent();
-            ImGui.Text($"MGP: {savedStats.NumCoins}");
+            ImGui.Text(Loc.T("MGP: {0}", savedStats.NumCoins));
 
             var cardDB = TriadCardDB.Get();
             var gameCardDB = GameCardDB.Get();
@@ -93,7 +103,7 @@ public class TriadNpcStatsWindow : Window, IDisposable
                     var cardOb = cardDB.FindById(kvp.Key);
                     if (cardOb != null && cardOb.IsValid() && gameCardDB.mapCards.TryGetValue(kvp.Key, out var cardInfo))
                     {
-                        ImGui.Text($"{cardOb.Name} card: {kvp.Value}");
+                        ImGui.Text(Loc.T("{0} card: {1}", cardOb.Name, kvp.Value));
                         sumNetGain += kvp.Value * cardInfo.SaleValue;
 
                         if (savedStats.NumWins > 0)
@@ -101,7 +111,7 @@ public class TriadNpcStatsWindow : Window, IDisposable
                             var dropPct = 1.0f * kvp.Value / savedStats.NumWins;
 
                             ImGui.SameLine();
-                            ImGui.TextColored(colorValue, dropPct.ToString("P1").Replace("%", "%%"));
+                            ImGui.TextColored(colorValue, dropPct.ToString("P1"));
                         }
                     }
                 }
@@ -110,13 +120,13 @@ public class TriadNpcStatsWindow : Window, IDisposable
             ImGui.Unindent();
             ImGui.Spacing();
 
-            ImGui.Text("MGP per match:");
+            ImGui.Text(Loc.T("MGP per match:"));
             ImGui.SameLine();
             if (numMatches > 0)
             {
                 ImGui.TextColored(colorValue, $"{(1.0f * sumNetGain / numMatches):0.#}");
                 ImGui.SameLine();
-                ImGuiComponents.HelpMarker("Includes MGP from selling cards");
+                ImGuiComponents.HelpMarker(Loc.T("Includes MGP from selling cards"));
             }
             else
             {
@@ -125,19 +135,19 @@ public class TriadNpcStatsWindow : Window, IDisposable
 
             ImGui.NewLine();
 
-            if (ImGui.Button("Copy"))
+            if (ImGui.Button(Loc.T("Copy")))
             {
                 CopyStatstoClipboard(savedStats);
             }
             ImGui.SameLine();
-            if (ImGui.Button("Reset"))
+            if (ImGui.Button(Loc.T("Reset")))
             {
                 statTracker.RemoveNpcStats(npcInfo);
             }
         }
         else
         {
-            ImGui.Text("NPC stats");
+            ImGui.Text(Loc.T("NPC stats"));
             ImGui.SameLine();
             ImGui.TextColored(colorGray, "--");
         }
@@ -145,7 +155,8 @@ public class TriadNpcStatsWindow : Window, IDisposable
 
     private void CopyStatstoClipboard(TriadNpcStatRecord savedStats)
     {
-        var desc = $"{npcName} stats:\n{savedStats.GetNumMatches()} matches (W:{savedStats.NumWins}/D:{savedStats.NumDraws}/L:{savedStats.NumLosses})";
+        var desc = Loc.T("{0} stats:", npcName) + "\n" +
+                   Loc.T("{0} matches (W:{1}/D:{2}/L:{3})", savedStats.GetNumMatches(), savedStats.NumWins, savedStats.NumDraws, savedStats.NumLosses);
         if (savedStats.Cards.Count > 0)
         {
             var cardDB = TriadCardDB.Get();
@@ -163,7 +174,7 @@ public class TriadNpcStatsWindow : Window, IDisposable
         }
         else
         {
-            desc += "\nno card drops";
+            desc += "\n" + Loc.T("no card drops");
         }
 
         ImGui.SetClipboardText(desc);

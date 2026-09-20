@@ -150,7 +150,7 @@ internal static unsafe partial class TriadMapNavigation
         }
         else if (DateTime.UtcNow - pending.StartedUtc > timeout)
         {
-            Svc.Chat.PrintError("[Saucy] Navigation timed out.");
+            Svc.Chat.PrintError(Loc.T("[Saucy] Navigation timed out."));
             ClearPending();
             return;
         }

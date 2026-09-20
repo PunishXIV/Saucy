@@ -146,7 +146,7 @@ public unsafe partial class LimbManager(LimbConfig cfg)
             return;
         }
 
-        DuoLog.Warning("No Out on a Limb machine nearby. Move closer to the machine.");
+        DuoLog.Warning(Loc.T("No Out on a Limb machine nearby. Move closer to the machine."));
         DisableModule();
     }
 

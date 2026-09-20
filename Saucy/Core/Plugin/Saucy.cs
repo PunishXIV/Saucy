@@ -49,6 +49,45 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
         await dataLoader.StartAsyncWork(cancellationToken).ConfigureAwait(false);
     }
 
+    private void RegisterCommand() =>
+        Svc.Commands.AddHandler(commandName, new(OnCommand)
+        {
+            HelpMessage = string.Join(
+                '\n',
+                Loc.T("Opens the Saucy menu."),
+                Loc.T("/saucy stop → stop all navigation and automation"),
+                Loc.T("/saucy tt go → enable Triple Triad automation"),
+                Loc.T("/saucy tt stop → stop Triple Triad automation"),
+                Loc.T("/saucy tt play <n> → fixed match count"),
+                Loc.T("/saucy tt cards any → stop after first card drop"),
+                Loc.T("/saucy tt cards all → farm all NPC cards once"),
+                Loc.T("/saucy d → toggle debug panels"))
+        });
+
+    /// <summary>Re-registers the command so <c>/xlhelp</c> shows the help text in the current UI language.</summary>
+    internal static void RefreshCommandHelp()
+    {
+        if (P is null)
+        {
+            return;
+        }
+
+        Svc.Commands.RemoveHandler(commandName);
+        P.RegisterCommand();
+    }
+
+    /// <summary>Follows the Dalamud UI language while the config is set to Automatic.</summary>
+    private void OnDalamudLanguageChanged(string languageCode)
+    {
+        if (C.UiLanguage != null)
+        {
+            return;
+        }
+
+        Loc.Apply(null);
+        RefreshCommandHelp();
+    }
+
     private void Initialize()
     {
         ECommonsMain.Init(pluginInterface, this, Module.All);
@@ -57,6 +96,7 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
         EzConfig.Migrate<Configuration>();
         C = EzConfig.Init<Configuration>();
         C.MigrateToBackgroundCpuCores();
+        Loc.Apply(C.UiLanguage);
         TriadRunSession.ModuleEnabled = false;
         TriadCardFarmSession.DeactivateSession(clearProgress: true);
         TriadRunSession.ResetRunModeForPluginLoad();
@@ -74,18 +114,9 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
 
         EzConfigGui.Init(_pluginUi);
         Svc.PluginInterface.UiBuilder.OpenMainUi += EzConfigGui.Open;
+        Svc.PluginInterface.LanguageChanged += OnDalamudLanguageChanged;
 
-        Svc.Commands.AddHandler(commandName, new(OnCommand)
-        {
-            HelpMessage = "Opens the Saucy menu.\n" +
-                          "/saucy stop → stop all navigation and automation\n" +
-                          "/saucy tt go → enable Triple Triad automation\n" +
-                          "/saucy tt stop → stop Triple Triad automation\n" +
-                          "/saucy tt play <n> → fixed match count\n" +
-                          "/saucy tt cards any → stop after first card drop\n" +
-                          "/saucy tt cards all → farm all NPC cards once\n" +
-                          "/saucy d → toggle debug panels"
-        });
+        RegisterCommand();
 
         dataLoader = new();
 
@@ -140,6 +171,7 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
         {
             Svc.Commands.RemoveHandler(commandName);
             Svc.PluginInterface.UiBuilder.OpenMainUi -= EzConfigGui.Open;
+            Svc.PluginInterface.LanguageChanged -= OnDalamudLanguageChanged;
             Svc.Framework.Update -= RunBot;
             PrepareTriadSessionForPluginUnload();
             _triadCollectionHost?.Dispose();
@@ -211,7 +243,7 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
             {
                 TriadRunSession.ModuleEnabled = true;
                 TriadRunSession.BeginAutomationSession();
-                Svc.Chat.Print("[Saucy] Triple Triad automation enabled.");
+                Svc.Chat.Print(Loc.T("[Saucy] Triple Triad automation enabled."));
                 return;
             }
 
@@ -226,11 +258,11 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
                 if (args.Length >= 3 && int.TryParse(args[2], out var val) && val > 0)
                 {
                     TriadRunSession.ApplyRunMode(TriadRunMode.PlayXTimes, matchCount: val);
-                    Svc.Chat.Print($"[Saucy] Fixed match count enabled: {val} matches.");
+                    Svc.Chat.Print(Loc.T("[Saucy] Fixed match count enabled: {0} matches.", val));
                 }
                 else
                 {
-                    Svc.Chat.Print("[Saucy] Usage: /saucy tt play <number of matches>");
+                    Svc.Chat.Print(Loc.T("[Saucy] Usage: /saucy tt play <number of matches>"));
                 }
 
                 return;
@@ -241,22 +273,22 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
                 if (args[2].Equals("any", StringComparison.OrdinalIgnoreCase))
                 {
                     TriadRunSession.ApplyRunMode(TriadRunMode.PlayUntilAnyCard);
-                    Svc.Chat.Print("[Saucy] Stopping after the first card drop.");
+                    Svc.Chat.Print(Loc.T("[Saucy] Stopping after the first card drop."));
                     return;
                 }
 
                 if (args[2].Equals("all", StringComparison.OrdinalIgnoreCase))
                 {
                     TriadRunSession.ApplyRunMode(TriadRunMode.PlayUntilAllCards);
-                    Svc.Chat.Print("[Saucy] Farming all NPC cards once.");
+                    Svc.Chat.Print(Loc.T("[Saucy] Farming all NPC cards once."));
                     return;
                 }
             }
         }
 
-        Svc.Chat.Print(
+        Svc.Chat.Print(Loc.T(
             "[Saucy] Unknown command. Available: /saucy, /saucy stop, /saucy d, " +
-            "/saucy tt go | stop | play <n> | cards any | cards all");
+            "/saucy tt go | stop | play <n> | cards any | cards all"));
     }
 
     private static void PrepareTriadSessionForPluginLoad()

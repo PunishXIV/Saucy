@@ -80,7 +80,7 @@ internal static class GoldSaucerArcadeFakeBreak
             remaining = TimeSpan.Zero;
         }
 
-        line = $"On break — {remaining.Minutes:D2}:{remaining.Seconds:D2} remaining";
+        line = Loc.T("On break — {0}:{1} remaining", remaining.Minutes.ToString("D2"), remaining.Seconds.ToString("D2"));
         return true;
     }
 

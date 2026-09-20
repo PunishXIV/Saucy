@@ -125,7 +125,7 @@ internal static class TriadRunSession
             npcInfo != null &&
             TriadCardFarmSession.HasAllNpcRewardsOwned(npcInfo))
         {
-            Svc.Chat.Print($"[Saucy] You already have every card from {npc.Name}. Farming MGP instead.");
+            Svc.Chat.Print(Loc.T("[Saucy] You already have every card from {0}. Farming MGP instead.", npc.Name));
             goal = TriadNavigationGoal.FarmMgp;
         }
 
@@ -303,7 +303,7 @@ internal static class TriadRunSession
         TriadDeckOptimizerJobs.CancelActive(userCancelled: true);
         if (announce)
         {
-            Svc.Chat.Print("[Saucy] Stopped navigation, travel, and triad automation.");
+            Svc.Chat.Print(Loc.T("[Saucy] Stopped navigation, travel, and triad automation."));
         }
     }
 

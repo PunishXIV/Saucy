@@ -28,7 +28,7 @@ internal static class GoldSaucerRunSettingsUi
 
         var settings = GoldSaucerArcadeRunSession.GetSettings(machine);
         var playFixedCount = settings.PlayXTimes;
-        if (ImGui.Checkbox("Fixed match count", ref playFixedCount))
+        if (ImGui.Checkbox($"{Loc.T("Fixed match count")}###GoldSaucerFixedCount{(int)machine}", ref playFixedCount))
         {
             settings.PlayXTimes = playFixedCount;
             if (playFixedCount && settings.MatchCount <= 0)
@@ -41,12 +41,12 @@ internal static class GoldSaucerRunSettingsUi
 
         if (!settings.PlayXTimes)
         {
-            ImGui.TextDisabled("No stop condition — runs until automation is disabled.");
-            ImGui.TextDisabled("Stops queuing new games while Duty Finder is ready.");
+            ImGui.TextDisabled(Loc.T("No stop condition — runs until automation is disabled."));
+            ImGui.TextDisabled(Loc.T("Stops queuing new games while Duty Finder is ready."));
         }
         else
         {
-            ImGui.Text("How many times:");
+            ImGui.Text(Loc.T("How many times:"));
             ImGui.SameLine();
             ImGui.SetNextItemWidth(CompactCountInputWidth * ImGuiHelpers.GlobalScale);
             var count = Math.Max(1, settings.MatchCount);
@@ -61,7 +61,7 @@ internal static class GoldSaucerRunSettingsUi
             var remaining = GoldSaucerArcadeMachineHelper.IsEnabled(machine)
                 ? GoldSaucerArcadeRunSession.GetRemaining(machine)
                 : Math.Max(1, settings.MatchCount);
-            ImGui.TextDisabled($"Matches left this session: {remaining}");
+            ImGui.TextDisabled(Loc.T("Matches left this session: {0}", remaining));
         }
 
         ImGui.Dummy(new(0, 4));
@@ -70,23 +70,23 @@ internal static class GoldSaucerRunSettingsUi
         // PauseForAutoRetainer is a global flag and the pause applies to both arcade machines
         // (Cuff-a-Cur and Out on a Limb), so surface the toggle under both, not Cuff only.
         ImGui.Dummy(new(0, 4));
-        SaucyTheme.DrawCard("AutoRetainer", "Placed bell must be in range", DrawAutoRetainerIntegration);
+        SaucyTheme.DrawCard("AutoRetainer", Loc.T("Placed bell must be in range"), DrawAutoRetainerIntegration);
     }
 
     private static void DrawAutoRetainerIntegration()
     {
         var pause = C.PauseForAutoRetainer;
-        if (ImGui.Checkbox("Pause when retainers are ready (bell nearby)", ref pause))
+        if (ImGui.Checkbox($"{Loc.T("Pause when retainers are ready (bell nearby)")}###SaucyPauseForAutoRetainer", ref pause))
         {
             C.PauseForAutoRetainer = pause;
             C.Save();
         }
 
         ImGui.SameLine();
-        ImGuiComponents.HelpMarker(
+        ImGuiComponents.HelpMarker(Loc.T(
             "Cuff-a-Cur and Out on a Limb only. When a placed summoning bell is in range " +
-            "and AutoRetainer reports retainers ready, Saucy finishes the current game, opens the bell, runs " +
-            "waits for Autoretainer to finish, then resumes.");
+            "and AutoRetainer reports retainers ready, Saucy finishes the current game, opens the bell, " +
+            "waits for AutoRetainer to finish, then resumes."));
 
         if (!C.PauseForAutoRetainer)
         {
@@ -97,20 +97,20 @@ internal static class GoldSaucerRunSettingsUi
 
         if (AutoRetainerPause.IsHandling)
         {
-            ImGui.TextDisabled("Waiting for AutoRetainer…");
+            ImGui.TextDisabled(Loc.T("Waiting for AutoRetainer…"));
         }
         else if (AutoRetainerPause.IsBlocking)
         {
-            ImGui.TextDisabled("Retainers ready — finishing current game…");
+            ImGui.TextDisabled(Loc.T("Retainers ready — finishing current game…"));
         }
         else if (!AutoRetainerPause.HasBellInRange())
         {
-            ImGui.TextDisabled("No placed summoning bell in range.");
+            ImGui.TextDisabled(Loc.T("No placed summoning bell in range."));
         }
 
         ImGui.Dummy(new(0, 4));
         PluginDependenciesUi.Draw(
-            "Optional plugin for retainer venture automation.",
+            Loc.T("Optional plugin for retainer venture automation."),
             [AutoRetainerDependency()]);
     }
 
@@ -118,7 +118,7 @@ internal static class GoldSaucerRunSettingsUi
         new(
             "AutoRetainer",
             IPCNames.AutoRetainer,
-            "Collects and reassigns retainer ventures. Saucy enables it at the bell automatically.",
+            Loc.T("Collects and reassigns retainer ventures. Saucy enables it at the bell automatically."),
             "https://love.puni.sh/ment.json",
             [],
             () => AutoRetainerIpc.IsInstalled);
@@ -140,7 +140,7 @@ internal static class GoldSaucerRunSettingsUi
     private static void DrawFakeBreakSettings(GoldSaucerArcadeMachine machine, GoldSaucerArcadeRunSettings settings)
     {
         var enableFakeBreak = settings.EnableFakeBreak;
-        if (ImGui.Checkbox("Take a break", ref enableFakeBreak))
+        if (ImGui.Checkbox($"{Loc.T("Take a break")}###GoldSaucerFakeBreak{(int)machine}", ref enableFakeBreak))
         {
             settings.EnableFakeBreak = enableFakeBreak;
             if (enableFakeBreak)
@@ -156,8 +156,8 @@ internal static class GoldSaucerRunSettingsUi
         }
 
         ImGui.SameLine();
-        ImGuiComponents.HelpMarker(
-            "After playing for a while, pause starting new games for a short break. Current games can still finish.");
+        ImGuiComponents.HelpMarker(Loc.T(
+            "After playing for a while, pause starting new games for a short break. Current games can still finish."));
 
         if (!settings.EnableFakeBreak)
         {
@@ -171,7 +171,8 @@ internal static class GoldSaucerRunSettingsUi
 
         ImGui.SetNextItemWidth(120f);
         var playMinutes = settings.FakeBreakPlayMinutes;
-        if (ImGui.DragInt("Play time before break (minutes)", ref playMinutes, 1f, 1, 24 * 60))
+        if (ImGui.DragInt($"{Loc.T("Play time before break (minutes)")}###GoldSaucerFakeBreakPlay{(int)machine}",
+                ref playMinutes, 1f, 1, 24 * 60))
         {
             settings.FakeBreakPlayMinutes = playMinutes;
             C.Save();
@@ -179,7 +180,8 @@ internal static class GoldSaucerRunSettingsUi
 
         ImGui.SetNextItemWidth(120f);
         var breakMinutes = settings.FakeBreakMinutes;
-        if (ImGui.DragInt("Break length (minutes)", ref breakMinutes, 1f, 1, 120))
+        if (ImGui.DragInt($"{Loc.T("Break length (minutes)")}###GoldSaucerFakeBreakLength{(int)machine}",
+                ref breakMinutes, 1f, 1, 120))
         {
             settings.FakeBreakMinutes = breakMinutes;
             C.Save();

@@ -319,7 +319,7 @@ internal static unsafe partial class TriadDeckSelectAutomation
 
             if (!TriadRun.TryResolveDeckListIndex(deck, out var resolvedListIndex))
             {
-                Svc.Chat.PrintError($"[Saucy] Could not find deck {deck + 1} in the selection list.");
+                Svc.Chat.PrintError(Loc.T("[Saucy] Could not find deck {0} in the selection list.", deck + 1));
                 AttemptedDeckIndices.Add(deck);
                 attemptCount++;
                 return;
@@ -421,7 +421,7 @@ internal static unsafe partial class TriadDeckSelectAutomation
 
         if (boardDismissFrames == DeckSelectBoardVisibleMaxFrames)
         {
-            Svc.Chat.PrintError("[Saucy] Match started without a deck. Confirm deck selection manually.");
+            Svc.Chat.PrintError(Loc.T("[Saucy] Match started without a deck. Confirm deck selection manually."));
         }
     }
 

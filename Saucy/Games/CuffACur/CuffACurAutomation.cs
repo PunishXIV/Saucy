@@ -199,7 +199,7 @@ public unsafe class CuffACurAutomation
 
     private static void TryDisableForMissingMachine()
     {
-        DuoLog.Warning("No Cuff-a-Cur machine nearby. Move closer to the machine.");
+        DuoLog.Warning(Loc.T("No Cuff-a-Cur machine nearby. Move closer to the machine."));
         DisableModule();
     }
 
@@ -253,11 +253,11 @@ public unsafe class CuffACurAutomation
     public static void DrawSettings()
     {
         var enabled = IsEnabled;
-        if (ImGui.Checkbox("Enable", ref enabled))
+        if (ImGui.Checkbox(Loc.T("Enable"), ref enabled))
         {
             if (enabled && !IsAnyCuffMachineInRange())
             {
-                DuoLog.Warning("No Cuff-a-Cur machine nearby. Move closer to a punching machine.");
+                DuoLog.Warning(Loc.T("No Cuff-a-Cur machine nearby. Move closer to a punching machine."));
             }
             else
             {
@@ -274,13 +274,13 @@ public unsafe class CuffACurAutomation
 
         ImGui.SameLine();
         ImGuiComponents.HelpMarker(
-            "Use \"Fixed match count\" below to stop after a set number of games.");
+            Loc.T("Use \"Fixed match count\" below to stop after a set number of games."));
 
         ImGui.Dummy(new(0, 4));
 
         GoldSaucerRunSettingsUi.Draw(
             GoldSaucerArcadeMachine.Cuff,
-            "Runs automatically when enabled. Start the minigame at the Gold Saucer punching machine.");
+            Loc.T("Runs automatically when enabled. Start the minigame at the Gold Saucer punching machine."));
     }
 
     public static void DrawDebug()

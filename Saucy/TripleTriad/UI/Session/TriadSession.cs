@@ -156,7 +156,7 @@ public partial class TriadSession
         {
             if (OptimizerInProgress || IsPreviewEvalPendingForNpc(npc, previewRules))
             {
-                return "In match…";
+                return Loc.T("In match…");
             }
         }
         else if (TriadUiState.IsAutomationFlowActive())
@@ -164,19 +164,19 @@ public partial class TriadSession
             if (OptimizerInProgress || IsPreviewEvalPendingForNpc(npc, previewRules))
             {
                 return OptimizerInProgress && TriadDeckOptimizerJobs.TryGetActive(out var activeJob)
-                    ? $"Building deck… {activeJob.ProgressPercent}%"
-                    : "Calculating…";
+                    ? Loc.T("Building deck… {0}%", activeJob.ProgressPercent)
+                    : Loc.T("Calculating…");
             }
         }
 
         if (!dataLoader.IsDataReady)
         {
-            return "Loading card data…";
+            return Loc.T("Loading card data…");
         }
 
         if (CountSimmableProfileDecks() == 0)
         {
-            var missing = DescribeMissingSimmableDecks() ?? "No usable decks";
+            var missing = DescribeMissingSimmableDecks();
             lock (_preGameLock)
             {
                 if (ResolveSelectableDeckIndexLocked(-1, true) >= 0)
@@ -185,7 +185,7 @@ public partial class TriadSession
                 }
             }
 
-            return $"{missing} — using game recommended";
+            return Loc.T("{0} — using game recommended", missing);
         }
 
         if (ShouldBuildOptimizedDeck())
@@ -199,7 +199,7 @@ public partial class TriadSession
 
         if (IsPreviewEvalPendingForNpc(npc, previewRules))
         {
-            return "Calculating…";
+            return Loc.T("Calculating…");
         }
 
         int deckId;
@@ -236,6 +236,8 @@ public partial class TriadSession
             return null;
         }
 
+        // Both halves are already localized (or numeric), and " · " reads the same in CJK,
+        // so a key here would be punctuation a translator cannot act on.
         return string.IsNullOrWhiteSpace(deckName) ? winLabel : $"{winLabel} · {deckName}";
     }
 
@@ -258,35 +260,35 @@ public partial class TriadSession
 
         var hasFallbackDeck = hasUsableCache || hasAnyCache || hasProfileSaucyDeck;
         string WithFallbackNote(string message) =>
-            hasFallbackDeck ? $"{message} · cached deck exists" : message;
+            hasFallbackDeck ? Loc.T("{0} · cached deck exists", message) : message;
 
         if (ShouldSkipBackgroundOptimizedDeckBuild(npc))
         {
             if (C.PauseOptimizedDeckBuildWhileQuestionable && Questionable.IsQuestingNow())
             {
-                return WithFallbackNote("Paused — Questionable is running");
+                return WithFallbackNote(Loc.T("Paused — Questionable is running"));
             }
 
-            return "Skipped — NPC beaten or all cards owned";
+            return Loc.T("Skipped — NPC beaten or all cards owned");
         }
 
         if (OptimizerInProgress && TriadDeckOptimizerJobs.TryGetActive(out var job))
         {
-            var progress = $"Building deck… {job.ProgressPercent}%";
+            // Same two shapes as TriadSession.PremadeOptimizer: one sentence key per shape
+            // beats composing a translated fragment into a punctuation-only hull.
             var best = job.FormatBestWinChance();
-            if (!string.IsNullOrEmpty(best) && best != "…")
-            {
-                progress += $" ({best})";
-            }
+            var progress = string.IsNullOrEmpty(best) || best == TriadDeckOptimizerJobSnapshot.PendingWinChance
+                ? Loc.T("Building deck… {0}%", job.ProgressPercent)
+                : Loc.T("Building deck… {0}% ({1})", job.ProgressPercent, best);
 
             if (rebuildingForNewCards)
             {
-                return $"{progress} · rebuilding after new cards";
+                return Loc.T("{0} · rebuilding after new cards", progress);
             }
 
             if (hasFallbackDeck)
             {
-                return $"{progress} · generating new (cached deck exists)";
+                return Loc.T("{0} · generating new (cached deck exists)", progress);
             }
 
             return progress;
@@ -294,7 +296,7 @@ public partial class TriadSession
 
         if (Vnavmesh.ShouldDeferDeckOptimizerWork())
         {
-            return WithFallbackNote("Waiting for vnavmesh…");
+            return WithFallbackNote(Loc.T("Waiting for vnavmesh…"));
         }
 
         if (!_optimizerTimedOut && !OptimizerInProgress && !HasOptimizedDeckApplied)
@@ -303,31 +305,31 @@ public partial class TriadSession
             {
                 if (IsOptimizerStartBlockedForSessionLocked(sessionKey))
                 {
-                    return WithFallbackNote("Optimizer cooling down · still generating new");
+                    return WithFallbackNote(Loc.T("Optimizer cooling down · still generating new"));
                 }
             }
 
             if (rebuildingForNewCards)
             {
-                return "Cached deck outdated · generating new…";
+                return Loc.T("Cached deck outdated · generating new…");
             }
 
             if (hasUsableCache || hasAnyCache)
             {
-                return "Cached deck exists · still generating new…";
+                return Loc.T("Cached deck exists · still generating new…");
             }
 
             if (hasProfileSaucyDeck)
             {
-                return $"Profile deck in slot {SaucyProfileDeckSlotIndex + 1} · still generating new…";
+                return Loc.T("Profile deck in slot {0} · still generating new…", SaucyProfileDeckSlotIndex + 1);
             }
 
-            return "Waiting for optimized deck…";
+            return Loc.T("Waiting for optimized deck…");
         }
 
         if (_optimizerTimedOut && !HasOptimizedDeckApplied)
         {
-            return WithFallbackNote("Last build timed out · still generating new…");
+            return WithFallbackNote(Loc.T("Last build timed out · still generating new…"));
         }
 
         return null;
