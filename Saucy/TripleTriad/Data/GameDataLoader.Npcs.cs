@@ -155,7 +155,7 @@ public partial class GameDataLoader
             }
 
             var npcIdData = mapTriadNpcData[rowData.RowId];
-            var npcOb = new TriadNpc(nameLocId, listRules, cardsFixed, cardsVariable)
+            var npcOb = new TriadNpc(nameLocId, npcIdData.ENpcId, listRules, cardsFixed, cardsVariable)
             {
                 Name = npcIdData.Name
             };

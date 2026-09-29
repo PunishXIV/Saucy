@@ -10,23 +10,26 @@ public class TriadNpc
 
     public bool hasLocMarkup;
     public int Id;
+    public uint BaseID;
     public string Name = string.Empty;
     public Regex NamePartialRegex;
 
     public Regex NameRegex;
     public List<TriadGameModifier> Rules;
 
-    public TriadNpc(int id, List<TriadGameModifier> rules, int[] cardsAlways, int[] cardsPool)
+    public TriadNpc(int id, uint dataId, List<TriadGameModifier> rules, int[] cardsAlways, int[] cardsPool)
     {
         Id = id;
+        BaseID = dataId;
         Rules = rules;
         Deck = new(cardsAlways, cardsPool);
         hasLocMarkup = false;
     }
 
-    public TriadNpc(int id, List<TriadGameModifier> rules, List<TriadCard> rewards, TriadDeck deck)
+    public TriadNpc(int id, uint dataId, List<TriadGameModifier> rules, List<TriadCard> rewards, TriadDeck deck)
     {
         Id = id;
+        BaseID = dataId;
         Rules = rules;
         Deck = deck;
         hasLocMarkup = false;
@@ -131,6 +134,18 @@ public class TriadNpcDB
             }
         }
 
+        return null;
+    }
+
+    public TriadNpc FindByBaseID(uint baseId)
+    {
+        foreach (var x in SnapshotNpcs())
+        {
+            if (x != null && x.BaseID == baseId)
+            {
+                return x;
+            }
+        }
         return null;
     }
 

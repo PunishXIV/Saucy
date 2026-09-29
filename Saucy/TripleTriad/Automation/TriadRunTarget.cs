@@ -19,8 +19,9 @@ internal static class TriadTargetNpc
 {
     public static TriadNpc? FromWorldTarget()
     {
-        var name = Svc.Targets.Target?.Name.TextValue;
-        return TriadNpcDB.Get().FindMatchingName(name);
+        var id = Svc.Targets.Target?.BaseId ?? 0;
+        var npc = TriadNpcDB.Get().FindByBaseID(id);
+        return npc;
     }
 
     public static TriadNpc? FromSolverContext() =>
