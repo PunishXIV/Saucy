@@ -50,7 +50,6 @@ internal static class JumboCactpotBrokerPath
             return;
         }
 
-        // Without vnavmesh the path never completes and YesAlready stays paused.
         if (!Vnavmesh.IsInstalled)
         {
             Reset();

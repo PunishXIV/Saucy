@@ -93,7 +93,6 @@ internal static partial class TriadMapNavigation
             return;
         }
 
-        // Henchman waits for Nav.IsReady && player not busy before pathing.
         if (!CanBeginLocalNavigation())
         {
             return;

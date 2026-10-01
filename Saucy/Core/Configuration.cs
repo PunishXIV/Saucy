@@ -34,7 +34,6 @@ public class Configuration : IPluginConfiguration
     [JsonIgnore]
     public TriadRunMode TriadRunMode { get; set; } = TriadRunMode.None;
 
-    // Session-only: toggled via "/saucy d" so debug surfaces stay hidden for normal use.
     [JsonIgnore]
     public bool ShowDebugUi { get; set; }
 

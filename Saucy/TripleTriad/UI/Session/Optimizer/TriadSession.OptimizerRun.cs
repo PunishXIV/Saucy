@@ -270,7 +270,6 @@ public partial class TriadSession
             return true;
         }
 
-        // No cached or profile deck for this NPC/session — run the optimizer (and save to cache on success).
         return false;
     }
 

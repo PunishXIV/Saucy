@@ -10,11 +10,7 @@ internal static class Vnavmesh
 
     public const float AetheryteCloseRange = 8.5f;
 
-    /// <summary>
-    /// vnav often completes a few tenths outside the requested stop radius. Without this slack,
-    /// callers re-issue PathfindAndMove every tick.
-    /// Interact range must be at least CloseRange + this, or arrival returns true and interact never fires.
-    /// </summary>
+    // vnav often stops a few tenths outside the requested radius; without this slack callers re-path every tick.
     public const float ArrivalSlack = 0.5f;
 
     public const float NpcInteractRange = NpcCloseRange + ArrivalSlack;

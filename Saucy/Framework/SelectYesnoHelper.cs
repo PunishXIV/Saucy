@@ -14,17 +14,14 @@ public static unsafe class SelectYesnoHelper
 {
     public const uint PromptTextNodeId = 2;
 
-    /// <summary>Standard SelectYesno (Yes=8, No=11). Skip when ticket layout node 12 is visible.</summary>
     public const uint YesButtonNodeId = 8;
 
     public const uint NoButtonNodeId = 11;
 
-    /// <summary>Lottery "buy another ticket?" (Yes=11, No=12 HoldButton).</summary>
     public const uint TicketPurchaseYesButtonNodeId = 11;
 
     public const uint TicketPurchaseNoButtonNodeId = 12;
 
-    /// <summary>LotteryWeekly nested SelectString follow-up layout.</summary>
     public const uint AlternateYesButtonNodeId = 13;
 
     public const uint AlternateNoButtonNodeId = 10;

@@ -203,7 +203,6 @@ public class GameUIParser
             return null;
         }
 
-        // The UI only shows a name, which isn't unique; the NPC being played is our target, so trust its base id first.
         if (TriadTargetNpc.FromWorldTarget() is { } targetNpc)
         {
             return targetNpc;

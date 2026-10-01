@@ -87,7 +87,6 @@ internal static partial class TriadMapNavigation
     {
         var indoor = IsIndoorTerritory(Svc.ClientState.TerritoryType);
 
-        // Live/baked NPC coords already carry world height — only accept floor snaps that stay near XZ.
         if (position.Y > 1f)
         {
             var snapped = Vnavmesh.TryGetPointOnFloor(position, indoor, 4f);
@@ -101,7 +100,6 @@ internal static partial class TriadMapNavigation
             return position;
         }
 
-        // Map links arrive at Y=0. Snap at destination XZ using current player altitude when flying.
         var playerFloor = Vnavmesh.TryGetPointOnFloor(Player.Position, indoor) ?? Player.Position;
         var referenceY = Svc.Condition[ConditionFlag.Mounted]
             ? Player.Position.Y
@@ -153,7 +151,6 @@ internal static partial class TriadMapNavigation
             return worldPos;
         }
 
-        // Keep the map-link XZ shown in Saucy UI; keep Level-sheet Y for aerial platforms.
         return new(fromLink.Value.X, worldPos.Y, fromLink.Value.Z);
     }
 

@@ -33,7 +33,6 @@ internal static class Lifestream
         }
         catch
         {
-            // Lifestream not loaded or IPC unavailable.
         }
     }
 

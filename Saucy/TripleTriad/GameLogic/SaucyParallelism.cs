@@ -76,10 +76,7 @@ internal static class SaucyParallelism
         }
     }
 
-    // Wine routes thread suspension through the separate wineserver process; saturating
-    // every host core with solver threads starves it mid-GC-suspend and crashes the game.
-    // Under Wine every thread count is clamped to half the logical cores, including explicit
-    // user settings: an over-high slider value would otherwise bypass the cap and crash.
+    // Wine suspends threads via wineserver; saturating every core starves it and crashes the game, so all thread counts are capped under Wine.
     private static int CapForWine(int threads) =>
         IsWineHost ? Math.Min(threads, Math.Max(1, LogicalProcessorCount / 2)) : threads;
 

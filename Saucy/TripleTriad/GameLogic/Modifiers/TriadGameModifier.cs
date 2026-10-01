@@ -83,7 +83,6 @@ public class TriadGameModifier : IComparable
 
 public class TriadGameModifierDB
 {
-    // Indexed by RuleIndex; the constructor verifies the order.
     private static readonly Func<TriadGameModifier>[] Factories =
     [
         () => new TriadGameModifierNone(),
@@ -128,6 +127,5 @@ public class TriadGameModifierDB
     }
     public static TriadGameModifierDB Get() => instance;
 
-    /// <summary>New, unconfigured instance of the same rule as <paramref name="mod"/>.</summary>
     public static TriadGameModifier CreateFresh(TriadGameModifier mod) => Factories[mod.GetLocalizationId()]();
 }

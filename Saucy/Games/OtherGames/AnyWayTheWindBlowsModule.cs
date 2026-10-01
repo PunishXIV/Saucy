@@ -97,7 +97,6 @@ public class AnyWayTheWindBlows : Module
     {
         public static SafeSpotWrapper SafeSpot => new(66.96f, -4.48f, -24.69f);
 
-        /// Event Square GATE circle (shared with Slice is Right). Safe spot sits on the southern wing.
         public static Vector3 PlatformCenter => new(67.0f, -4.48f, -24.55f);
 
         public const float PlatformRadius = 3.5f;

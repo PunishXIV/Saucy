@@ -9,10 +9,6 @@ using System;
 using System.Collections.Generic;
 namespace Saucy.TripleTriad;
 
-/// <summary>
-/// Uses Triple Triad card items sitting in the inventory so they get added to the collection,
-/// once triad automation is idle.
-/// </summary>
 internal static unsafe class TriadCardAutoRegister
 {
     private const string ThrottleKey = "Saucy.TriadCardAutoRegister";

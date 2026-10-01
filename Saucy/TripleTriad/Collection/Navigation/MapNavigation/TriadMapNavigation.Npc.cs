@@ -275,9 +275,6 @@ internal static unsafe partial class TriadMapNavigation
         {
             pending.NpcInteractionAttempts++;
 
-            // Abort fast if we've fired several interactions without ever reaching the Triple Triad menu —
-            // most often the NPC's Triple Triad isn't unlocked yet (quest prerequisite), and each interaction
-            // just spawns a Talk dialog that we keep dismissing. With the 1s interact throttle this gives up within seconds.
             if (pending.NpcInteractionAttempts >= NpcInteractionAttemptsAbortLimit)
             {
                 TriadNpcUnlockHelper.Announce(TriadNpcUnlockHelper.FormatNavigationInteractAbortMessage(pending.Npc));

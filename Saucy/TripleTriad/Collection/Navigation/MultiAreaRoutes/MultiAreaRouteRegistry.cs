@@ -163,7 +163,6 @@ internal static class JeunoFirstWalkRoute
     private const uint MamookAetheryteId = 206;
     private const uint EntranceDataId = 2014450;
     private static readonly Vector3 YakTelPortalApproachPoint = new(-527.2f, -152.4f, 668.5f);
-    // z6e1 / z6e1_2 only — do not include 1190–1192 (Shaaloani / Heritage Found / Windward Wilds).
     private static readonly uint[] LowerJeunoTerritoryIds = [1264, 1265];
 
     internal static readonly MultiAreaRoute Route = new()

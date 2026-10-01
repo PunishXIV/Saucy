@@ -114,10 +114,7 @@ public class TriadGameSimulation
         UpdateSpecialRules();
     }
 
-    /// <summary>
-    ///     Deep-clones modifiers so parallel simulations never share modifier instances
-    ///     (MemberwiseClone shares nested Roulette resolved rules).
-    /// </summary>
+    // Deep copy: MemberwiseClone would share Roulette's resolved rule between parallel simulations.
     public void DeepCopyModifiersFrom(TriadGameSimulation source)
     {
         modifiers.Clear();

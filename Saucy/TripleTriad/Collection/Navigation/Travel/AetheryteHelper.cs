@@ -23,8 +23,6 @@ internal static class AetheryteHelper
     private const byte MapMarkerDataTypeAetheryte = 3;
     private const byte MapMarkerDataTypeAethernet = 4;
 
-    // Lumina Aetheryte sheet: IsAetheryte + AethernetGroup distinguish hubs, shards, and standalone crystals.
-
     private static AetheryteSheet? TryGetAetheryteRow(uint rowId) =>
         Svc.Data.GetExcelSheet<AetheryteSheet>()?.GetRowOrDefault(rowId);
 
@@ -321,7 +319,6 @@ internal static class AetheryteHelper
             return false;
         }
 
-        // In-game aethernet is only available from the hub crystal for that network, not standalone zone aetherytes.
         if (hubAetheryteId == 0 || teleportAetheryteId != hubAetheryteId)
         {
             return false;
@@ -332,7 +329,6 @@ internal static class AetheryteHelper
             destinationTerritoryId != 0 &&
             teleportTerritoryId != destinationTerritoryId)
         {
-            // Hub teleports (e.g. Idyllshire) land in a different zone than the NPC — always aethernet in.
             return true;
         }
 
@@ -415,10 +411,6 @@ internal static class AetheryteHelper
             var hubTerritoryId = GetAetheryteTerritoryId(hubAetheryteId);
             if (hubTerritoryId != 0 && hubTerritoryId != destinationTerritoryId)
             {
-                // Cross-zone hubs (Idyllshire → Hinterlands, Kugane → Ruby Sea) are only useful
-                // when teleporting in. Walking to that hub while already in the NPC's zone
-                // paths toward another territory's coordinates (often open water) and Lifestream
-                // then leaves the zone to come back.
                 if (inTargetTerritory)
                 {
                     return (false, null);

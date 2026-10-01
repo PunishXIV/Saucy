@@ -174,7 +174,6 @@ public unsafe class JumboCactpot : Module
 
     private void OnFrameworkUpdate(IFramework framework)
     {
-        // Same-territory aetheryte teleports never flip InSaucer; BetweenAreas must abandon too.
         var betweenAreas = Svc.Condition[ConditionFlag.BetweenAreas];
         if ((betweenAreas && !wasBetweenAreas) || !InSaucer)
         {
@@ -211,7 +210,6 @@ public unsafe class JumboCactpot : Module
 
     private bool ShouldPauseYesAlready()
     {
-        // Never hold YesAlready across loads / teleports.
         if (!InSaucer || Svc.Condition[ConditionFlag.BetweenAreas])
         {
             return false;
@@ -226,10 +224,6 @@ public unsafe class JumboCactpot : Module
                (ObjectHelper.IsTargeting(CactpotNpcs.JumboBrokerScope) && HasTicketFlowUi());
     }
 
-    /// <summary>
-    /// True only during the brief post-cashier dismiss window before broker path arms.
-    /// <see cref="cashierDialogueSeen"/> alone must not keep YesAlready paused.
-    /// </summary>
     private bool IsCashierHandoffPending() =>
         cashierDialogueSeen &&
         cashierHandoffDismissedUtc != null &&
@@ -269,13 +263,11 @@ public unsafe class JumboCactpot : Module
 
     private void ClearSessionIfIdle()
     {
-        // Path may be Reset() by a teleport while brokerPathArmed is still true.
         if (brokerPathArmed && !JumboCactpotBrokerPath.IsActive)
         {
             brokerPathArmed = false;
         }
 
-        // Do not gate cleanup on ShouldPauseYesAlready (sticky handoff flags deadlock reset).
         if (HasVisibleOrActiveJumboUi() || IsCashierHandoffPending())
         {
             return;

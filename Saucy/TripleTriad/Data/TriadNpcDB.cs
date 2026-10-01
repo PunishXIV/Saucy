@@ -55,7 +55,6 @@ public class TriadNpc
 
     public override string ToString() => Name;
 
-    // Names aren't unique (e.g. Black Brush vendor vs. To Kweh quest NPC), so match live objects by ENpc base id only.
     public bool IsMatchingObject(Dalamud.Game.ClientState.Objects.Types.IGameObject obj) =>
         obj != null && BaseID != 0 && obj.BaseId == BaseID;
 

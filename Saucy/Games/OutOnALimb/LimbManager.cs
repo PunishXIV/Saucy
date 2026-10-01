@@ -300,7 +300,6 @@ public unsafe partial class LimbManager(LimbConfig cfg)
                 HasLimbSessionUi,
                 () => FindNearestLimbMachine() != null);
 
-            // MiniGameBotanist/Aimg can stay open after OccupiedInQuestEvent drops mid-round.
             if (HasLimbSessionUi())
             {
                 RunLimbMinigame();
