@@ -80,3 +80,54 @@ public class TriadGameModifier : IComparable
 
     public override int GetHashCode() => GetLocalizationId();
 }
+
+public class TriadGameModifierDB
+{
+    // Indexed by RuleIndex; the constructor verifies the order.
+    private static readonly Func<TriadGameModifier>[] Factories =
+    [
+        () => new TriadGameModifierNone(),
+        () => new TriadGameModifierRoulette(),
+        () => new TriadGameModifierAllOpen(),
+        () => new TriadGameModifierThreeOpen(),
+        () => new TriadGameModifierSuddenDeath(),
+        () => new TriadGameModifierReverse(),
+        () => new TriadGameModifierFallenAce(),
+        () => new TriadGameModifierSame(),
+        () => new TriadGameModifierPlus(),
+        () => new TriadGameModifierAscension(),
+        () => new TriadGameModifierDescension(),
+        () => new TriadGameModifierOrder(),
+        () => new TriadGameModifierChaos(),
+        () => new TriadGameModifierSwap(),
+        () => new TriadGameModifierRandom(),
+        () => new TriadGameModifierDraft(),
+    ];
+
+    private static readonly TriadGameModifierDB instance = new();
+    public List<TriadGameModifier> mods;
+
+    public TriadGameModifierDB()
+    {
+        mods = [];
+        foreach (var factory in Factories)
+        {
+            mods.Add(factory());
+        }
+
+        mods.Sort((a, b) => (a.GetLocalizationId().CompareTo(b.GetLocalizationId())));
+
+        for (var idx = 0; idx < mods.Count; idx++)
+        {
+            if (mods[idx].GetLocalizationId() != idx)
+            {
+                Logger.WriteLine("FAILED to initialize modifiers!");
+                break;
+            }
+        }
+    }
+    public static TriadGameModifierDB Get() => instance;
+
+    /// <summary>New, unconfigured instance of the same rule as <paramref name="mod"/>.</summary>
+    public static TriadGameModifier CreateFresh(TriadGameModifier mod) => Factories[mod.GetLocalizationId()]();
+}

@@ -477,6 +477,16 @@ internal static class TriadSettingsUi
 
     private static void DrawNotificationsBody()
     {
+        var autoRegister = C.AutoRegisterTriadCards;
+        if (ImGui.Checkbox("Register won cards automatically", ref autoRegister))
+        {
+            C.AutoRegisterTriadCards = autoRegister;
+            C.Save();
+        }
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker(
+            "Uses Triple Triad card items in your inventory that aren't in your collection yet, once triad automation is idle.");
+
         var logOutAfterRun = C.LogOutAfterTriadRun;
         if (ImGui.Checkbox("Log out when run completes", ref logOutAfterRun))
         {

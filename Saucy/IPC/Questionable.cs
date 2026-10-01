@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Globalization;
 namespace Saucy.IPC;
 
-[IPC(IPCNames.Questionable)]
 internal static class Questionable
 {
     [EzIPC]

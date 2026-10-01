@@ -14,6 +14,7 @@ namespace Saucy.JumboCactpot;
 
 public unsafe class JumboCactpot : Module
 {
+    public override string InternalName => ModuleNames.JumboCactpot;
     private const string InputAddonName = "LotteryWeeklyInput";
     private const string RewardAddonName = "LotteryWeeklyRewardList";
     private const string TalkThrottleKey = "Saucy.JumboCactpot.Talk";

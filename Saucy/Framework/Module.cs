@@ -1,6 +1,18 @@
-﻿using ECommons.Automation.NeoTaskManager;
+﻿using ECommons;
+using ECommons.Automation.NeoTaskManager;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 namespace Saucy.Framework;
+
+public interface IModule
+{
+    string InternalName { get; }
+    string Name { get; }
+    bool IsEnabled { get; }
+    void Enable();
+    void Disable();
+}
 
 public abstract partial class Module : IModule
 {
@@ -30,7 +42,6 @@ public abstract partial class Module : IModule
 
     public Module()
     {
-        InternalName = GetType().Name;
         TaskManagerConfiguration = CreateTaskManagerConfiguration();
         TaskManager = new(TaskManagerConfiguration);
     }
@@ -40,7 +51,7 @@ public abstract partial class Module : IModule
 
     public GateType CurrentGate => GateDirector.GetCurrentGate();
 
-    public string InternalName { get; init; }
+    public abstract string InternalName { get; }
     public abstract string Name { get; }
     public virtual bool IsEnabled { get; protected set; }
     public virtual void Enable() { }
@@ -95,4 +106,53 @@ public abstract partial class Module
     public void LogVerbose(string message) => PluginLog.Verbose($"[{InternalName}] {message}");
     public void LogWarning(string message) => PluginLog.Warning($"[{InternalName}] {message}");
     public void LogError(string message) => PluginLog.Error($"[{InternalName}] {message}");
+}
+
+public class ModuleManager : IDisposable
+{
+    private readonly List<Module> _modules = [];
+
+    public ModuleManager()
+    {
+        Func<Module>[] factories =
+        [
+            () => new MiniCactpot.MiniCactpot(),
+            () => new JumboCactpot.JumboCactpot(),
+            () => new OtherGames.SliceIsRight(),
+            () => new OtherGames.AnyWayTheWindBlows(),
+            () => new OutOnALimb.OutOnALimbModule(),
+            () => new CuffACur.CuffACurModule(),
+            () => new AirForce.AirForceOne(),
+        ];
+        foreach (var factory in factories)
+        {
+            try
+            {
+                _modules.Add(factory());
+            }
+            catch (Exception ex)
+            {
+                Svc.Log.Error(ex, $"[{nameof(ModuleManager)}] Failed to create module");
+            }
+        }
+
+        foreach (var m in _modules)
+        {
+            if (!C.EnabledModules.Contains(m.InternalName))
+            {
+                continue;
+            }
+            GenericHelpers.TryExecute(m.EnableInternal);
+        }
+    }
+
+    public IReadOnlyList<Module> Modules => _modules.AsReadOnly();
+
+    public void Dispose()
+    {
+        _modules.ForEach(m => m.DisableInternal());
+        _modules.Clear();
+    }
+
+    public T? GetModule<T>() where T : class, IModule => _modules.OfType<T>().FirstOrDefault();
 }

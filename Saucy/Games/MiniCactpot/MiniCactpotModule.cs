@@ -16,6 +16,7 @@ namespace Saucy.MiniCactpot;
 
 public unsafe class MiniCactpot : Module
 {
+    public override string InternalName => ModuleNames.MiniCactpot;
     private const uint ConfirmButtonNodeId = 67;
 
     private const string TalkThrottleKey = "Saucy.MiniCactpot.Talk";

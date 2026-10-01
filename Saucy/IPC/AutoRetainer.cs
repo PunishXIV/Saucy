@@ -2,7 +2,6 @@ using ECommons.EzIpcManager;
 using System;
 namespace Saucy.IPC;
 
-[IPC(IPCNames.AutoRetainer)]
 internal static class AutoRetainerIpc
 {
     [EzIPC("PluginState.IsBusy")]

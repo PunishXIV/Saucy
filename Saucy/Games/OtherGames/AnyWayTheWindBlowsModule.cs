@@ -8,6 +8,7 @@ namespace Saucy.OtherGames;
 
 public class AnyWayTheWindBlows : Module
 {
+    public override string InternalName => ModuleNames.AnyWayTheWindBlows;
     public override string Name => "Any Way the Wind Blows";
 
     public override void Enable()

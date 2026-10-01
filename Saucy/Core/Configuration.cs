@@ -53,6 +53,7 @@ public class Configuration : IPluginConfiguration
     public bool PlaySound { get; set; } = false;
     public string SelectedSound { get; set; } = "Moogle";
     public bool OnlyUnobtainedCards { get; set; } = false;
+    public bool AutoRegisterTriadCards { get; set; } = false;
     public bool OpenAutomatically { get; set; } = false;
 
     public LimbConfig LimbConfig { get; set; } = new();

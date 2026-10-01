@@ -1,8 +1,15 @@
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System.Collections.Generic;
 using static ECommons.GenericHelpers;
-
 namespace Saucy.Framework.UI;
+
+public interface IUIReader
+{
+    string GetAddonName();
+    void OnAddonLost();
+    void OnAddonShown(nint addonPtr);
+    void OnAddonUpdate(nint addonPtr);
+}
 
 public class UIReaderScheduler(IGameGui gameGui)
 {

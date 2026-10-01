@@ -2,7 +2,6 @@ using ECommons.EzIpcManager;
 using System;
 namespace Saucy.IPC;
 
-[IPC(IPCNames.Lifestream)]
 internal static class Lifestream
 {
     [EzIPC]

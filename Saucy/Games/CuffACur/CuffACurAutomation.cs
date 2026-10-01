@@ -11,6 +11,18 @@ using Saucy.Framework;
 using System;
 namespace Saucy.CuffACur;
 
+public class CuffACurModule : Module
+{
+    public override string InternalName => ModuleNames.CuffACur;
+    public override string Name => "Cuff-a-Cur";
+
+    public override void Enable() =>
+        GoldSaucerArcadeLifecycle.OnModuleEnabled(GoldSaucerArcadeMachine.Cuff);
+
+    public override void Disable() =>
+        GoldSaucerArcadeLifecycle.OnModuleDisabled(GoldSaucerArcadeMachine.Cuff);
+}
+
 public unsafe class CuffACurAutomation
 {
     public delegate nint UnknownFunction(nint a1, ushort a2, int a3, void* a4);

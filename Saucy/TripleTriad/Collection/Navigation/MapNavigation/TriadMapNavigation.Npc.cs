@@ -277,7 +277,7 @@ internal static unsafe partial class TriadMapNavigation
 
             // Abort fast if we've fired several interactions without ever reaching the Triple Triad menu —
             // most often the NPC's Triple Triad isn't unlocked yet (quest prerequisite), and each interaction
-            // just spawns a Talk dialog that we keep dismissing. Six interactions ≈ 6 seconds (1s throttle).
+            // just spawns a Talk dialog that we keep dismissing. With the 1s interact throttle this gives up within seconds.
             if (pending.NpcInteractionAttempts >= NpcInteractionAttemptsAbortLimit)
             {
                 TriadNpcUnlockHelper.Announce(TriadNpcUnlockHelper.FormatNavigationInteractAbortMessage(pending.Npc));
@@ -444,7 +444,7 @@ internal static unsafe partial class TriadMapNavigation
         }
 
         return Svc.Objects
-            .Where(obj => obj.ObjectKind == DalamudObjectKind.EventNpc && npc.IsMatchingName(obj.Name.ToString()))
+            .Where(obj => obj.ObjectKind == DalamudObjectKind.EventNpc && npc.IsMatchingObject(obj))
             .OrderBy(obj => HorizontalDistance(Player.Position, obj.Position))
             .FirstOrDefault();
     }

@@ -9,7 +9,6 @@ using Saucy.Framework;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Reflection;
 using static ECommons.GenericHelpers;
 namespace Saucy;
 
@@ -358,8 +357,7 @@ public unsafe partial class PluginUI : Window
             return "v" + FormatTitleBarVersion(manifestVersion);
         }
 
-        var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
-        return assemblyVersion != null ? "v" + FormatTitleBarVersion(assemblyVersion) : "v?.?.?.?";
+        return "v?.?.?.?";
     }
 
     private static string FormatTitleBarVersion(Version version) =>

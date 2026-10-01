@@ -179,6 +179,11 @@ public class GameUIParser
 
     public TriadNpc? ParseNpcNameStart(string desc, bool markFailed = true)
     {
+        if (TriadTargetNpc.FromWorldTarget() is { } targetNpc)
+        {
+            return targetNpc;
+        }
+
         var matchPattern = (desc.Length > PartialNpcNameLength) ? desc[..PartialNpcNameLength] : desc;
 
         var matchOb = npcs.FindByNameStart(matchPattern);
@@ -196,6 +201,12 @@ public class GameUIParser
         if (trimmed.Length == 0)
         {
             return null;
+        }
+
+        // The UI only shows a name, which isn't unique; the NPC being played is our target, so trust its base id first.
+        if (TriadTargetNpc.FromWorldTarget() is { } targetNpc)
+        {
+            return targetNpc;
         }
 
         var matchOb = npcs.Find(trimmed) ??

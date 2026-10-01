@@ -1,6 +1,8 @@
 using Dalamud.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 namespace Saucy.TripleTriad.GameLogic;
 
 [Serializable]
@@ -50,4 +52,30 @@ public sealed class TriadOptimizedDeckCacheCharacterView
     public bool IsCurrentCharacter { get; init; }
 
     public IReadOnlyList<TriadOptimizedDeckCacheEntry> Entries { get; init; } = [];
+}
+
+internal static class TriadEvalCacheKey
+{
+    private const string RulesVersion = "v5";
+
+    public static string Build(TriadNpc? npc, IEnumerable<TriadGameModifier> regionMods) =>
+        npc is null ? string.Empty : Build(npc.Name, regionMods);
+
+    public static string Build(string npcName, IEnumerable<TriadGameModifier> rules)
+    {
+        if (string.IsNullOrEmpty(npcName))
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder(npcName);
+        builder.Append('|').Append(RulesVersion);
+        foreach (var ruleIndex in rules.Select(mod => mod.GetLocalizationId()).Order())
+        {
+            builder.Append('|');
+            builder.Append(ruleIndex);
+        }
+
+        return builder.ToString();
+    }
 }

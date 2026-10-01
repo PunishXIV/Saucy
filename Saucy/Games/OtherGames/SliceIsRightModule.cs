@@ -12,13 +12,14 @@ namespace Saucy.OtherGames;
 
 public unsafe class SliceIsRight : Module
 {
+    public override string InternalName => ModuleNames.SliceIsRight;
     private const float MaxDistance = 30f;
 
     // Bamboo telegraphs activate ~5s after the helper spawns, then resolve ~7s later (Boss Mod timing).
     private const double TelegraphDelaySeconds = 5;
     private const double TelegraphDurationSeconds = 7;
 
-    // EventObj GimmickId values (original working detection via GameObject+0x80).
+    // Telegraph shape ids: EventObj BaseId on current clients, GimmickId on older ones.
     private const uint GimmickSingleRect = 2010777;
     private const uint GimmickDoubleRect = 2010778;
     private const uint GimmickCircle = 2010779;
@@ -112,7 +113,7 @@ public unsafe class SliceIsRight : Module
             return false;
         }
 
-        // Telegraph shape is BaseId on EventObj (2010777–2010779). GimmickId is unused on current clients.
+        // Current clients expose the shape as BaseId; GimmickId is kept as a fallback.
         if (gameObject.ObjectKind == ObjectKind.EventObj)
         {
             if (gameObject.BaseId is >= GimmickSingleRect and <= GimmickCircle)

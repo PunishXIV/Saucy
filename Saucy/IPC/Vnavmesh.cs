@@ -4,7 +4,6 @@ using System;
 using System.Numerics;
 namespace Saucy.IPC;
 
-[IPC(IPCNames.Vnavmesh)]
 internal static class Vnavmesh
 {
     public const float NpcCloseRange = 3f;
@@ -13,7 +12,7 @@ internal static class Vnavmesh
 
     /// <summary>
     /// vnav often completes a few tenths outside the requested stop radius. Without this slack,
-    /// callers re-issue PathfindAndMove every tick (Bocchi treasure-hunt ~2y spam).
+    /// callers re-issue PathfindAndMove every tick.
     /// Interact range must be at least CloseRange + this, or arrival returns true and interact never fires.
     /// </summary>
     public const float ArrivalSlack = 0.5f;
@@ -70,7 +69,6 @@ internal static class Vnavmesh
             return;
         }
 
-        // Match Henchman: poll until ready. Only kick a load when vnavmesh is not already building.
         if (IsBuildInProgress())
         {
             return;
@@ -82,7 +80,6 @@ internal static class Vnavmesh
     public static bool ShouldDeferHeavyWork() =>
         IsInstalled && (!IsNavReady() || IsBuildInProgress() || IsPathfindInProgress());
 
-    /// Navmesh build/load, path calculation, and active movement all contend with deck optimizer CPU.
     public static bool ShouldDeferDeckOptimizerWork() =>
         IsInstalled && (!IsNavReady() || IsBuildInProgress() || IsMoving());
 
@@ -93,11 +90,7 @@ internal static class Vnavmesh
 
     public static bool IsMoving() => IsPathRunning() || IsPathfindInProgress();
 
-    /// <summary>
-    /// SimpleMove rejects stacked calls with "Pathfinding task is in progress".
-    /// Path.Stop does not clear that pending task — wait for the slot (Ocelot VNavmeshIpc).
-    /// </summary>
-    public static bool CanStartPathfind() =>
+     public static bool CanStartPathfind() =>
         IsInstalled && IsNavReady() && !IsPathfindInProgress();
 
     public static void StopPath()
