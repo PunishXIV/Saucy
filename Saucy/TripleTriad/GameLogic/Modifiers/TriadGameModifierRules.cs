@@ -392,14 +392,10 @@ public class TriadGameModifierPlus : TriadGameModifier
     }
 }
 
-public class TriadGameModifierAscension : TriadGameModifier
+// Ascension/Descension: each placed card shifts the score of every card sharing its type by TypeStep.
+public abstract class TriadGameModifierTypeShift : TriadGameModifier
 {
-    public TriadGameModifierAscension()
-    {
-        RuleName = "Ascension";
-        RuleIndex = 9;
-        Features = EFeature.CardPlaced | EFeature.PostCapture;
-    }
+    protected abstract int TypeStep { get; }
 
     public override void OnCardPlaced(TriadGameSimulationState gameData, int boardPos)
     {
@@ -424,7 +420,7 @@ public class TriadGameModifierAscension : TriadGameModifier
         var checkCard = gameData.board[boardPos];
         if (checkCard.card.Type != ETriadCardType.None)
         {
-            var scoreMod = checkCard.scoreModifier + 1;
+            var scoreMod = checkCard.scoreModifier + TypeStep;
             gameData.typeMods[(int)checkCard.card.Type] = scoreMod;
 
             for (var Idx = 0; Idx < gameData.board.Length; Idx++)
@@ -454,7 +450,7 @@ public class TriadGameModifierAscension : TriadGameModifier
             var checkCard = gameData.board[Idx];
             if (checkCard != null && checkCard.card.Type != ETriadCardType.None)
             {
-                gameData.typeMods[(int)checkCard.card.Type] += 1;
+                gameData.typeMods[(int)checkCard.card.Type] += TypeStep;
             }
         }
 
@@ -467,6 +463,18 @@ public class TriadGameModifierAscension : TriadGameModifier
             }
         }
     }
+}
+
+public class TriadGameModifierAscension : TriadGameModifierTypeShift
+{
+    public TriadGameModifierAscension()
+    {
+        RuleName = "Ascension";
+        RuleIndex = 9;
+        Features = EFeature.CardPlaced | EFeature.PostCapture;
+    }
+
+    protected override int TypeStep => 1;
 
     public override void OnScoreCard(TriadCard card, ref float score)
     {
@@ -481,7 +489,7 @@ public class TriadGameModifierAscension : TriadGameModifier
     }
 }
 
-public class TriadGameModifierDescension : TriadGameModifier
+public class TriadGameModifierDescension : TriadGameModifierTypeShift
 {
     public TriadGameModifierDescension()
     {
@@ -490,72 +498,7 @@ public class TriadGameModifierDescension : TriadGameModifier
         Features = EFeature.CardPlaced | EFeature.PostCapture;
     }
 
-    public override void OnCardPlaced(TriadGameSimulationState gameData, int boardPos)
-    {
-        var checkCard = gameData.board[boardPos];
-        if (checkCard.card.Type != ETriadCardType.None)
-        {
-            var scoreMod = gameData.typeMods[(int)checkCard.card.Type];
-            if (scoreMod != 0)
-            {
-                checkCard.scoreModifier = scoreMod;
-
-                if (gameData.bDebugRules)
-                {
-                    Logger.WriteLine(">> " + RuleName + "! [" + boardPos + "] " + checkCard.card.Name + " is: " + ((scoreMod > 0) ? "+" : "") + scoreMod);
-                }
-            }
-        }
-    }
-
-    public override void OnPostCaptures(TriadGameSimulationState gameData, int boardPos)
-    {
-        var checkCard = gameData.board[boardPos];
-        if (checkCard.card.Type != ETriadCardType.None)
-        {
-            var scoreMod = checkCard.scoreModifier - 1;
-            gameData.typeMods[(int)checkCard.card.Type] = scoreMod;
-
-            for (var Idx = 0; Idx < gameData.board.Length; Idx++)
-            {
-                var otherCard = gameData.board[Idx];
-                if ((otherCard != null) && (checkCard.card.Type == otherCard.card.Type))
-                {
-                    otherCard.scoreModifier = scoreMod;
-                    if (gameData.bDebugRules)
-                    {
-                        Logger.WriteLine(">> " + RuleName + "! [" + Idx + "] " + otherCard.card.Name + " is: " + ((scoreMod > 0) ? "+" : "") + scoreMod);
-                    }
-                }
-            }
-        }
-    }
-
-    public override void OnScreenUpdate(TriadGameSimulationState gameData)
-    {
-        for (var Idx = 0; Idx < gameData.typeMods.Length; Idx++)
-        {
-            gameData.typeMods[Idx] = 0;
-        }
-
-        for (var Idx = 0; Idx < gameData.board.Length; Idx++)
-        {
-            var checkCard = gameData.board[Idx];
-            if (checkCard != null && checkCard.card.Type != ETriadCardType.None)
-            {
-                gameData.typeMods[(int)checkCard.card.Type] -= 1;
-            }
-        }
-
-        for (var Idx = 0; Idx < gameData.board.Length; Idx++)
-        {
-            var checkCard = gameData.board[Idx];
-            if (checkCard != null && checkCard.card.Type != ETriadCardType.None)
-            {
-                checkCard.scoreModifier = gameData.typeMods[(int)checkCard.card.Type];
-            }
-        }
-    }
+    protected override int TypeStep => -1;
 
     public override void OnScoreCard(TriadCard card, ref float score)
     {

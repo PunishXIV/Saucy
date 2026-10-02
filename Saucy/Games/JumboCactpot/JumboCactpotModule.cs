@@ -65,13 +65,7 @@ public unsafe class JumboCactpot : Module
             [CactpotNpcs.CashierBaseId],
             logLabel: CactpotNpcs.CashierScope);
 
-        Svc.AddonLifecycle.UnregisterListener(OnInputSetup);
-        Svc.AddonLifecycle.UnregisterListener(OnInputFinalize);
-        Svc.AddonLifecycle.UnregisterListener(OnRewardSetup);
-        Svc.AddonLifecycle.UnregisterListener(OnRewardFinalize);
-        Svc.AddonLifecycle.UnregisterListener(OnTalkUpdate);
-        Svc.Framework.Update -= OnFrameworkUpdate;
-        Svc.ClientState.TerritoryChanged -= OnTerritoryChanged;
+        UnsubscribeEvents();
 
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, InputAddonName, OnInputSetup);
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, InputAddonName, OnInputFinalize);
@@ -90,7 +84,7 @@ public unsafe class JumboCactpot : Module
         JumboCactpotBrokerPath.Reset();
     }
 
-    public override void Disable()
+    private void UnsubscribeEvents()
     {
         Svc.AddonLifecycle.UnregisterListener(OnInputSetup);
         Svc.AddonLifecycle.UnregisterListener(OnInputFinalize);
@@ -99,6 +93,11 @@ public unsafe class JumboCactpot : Module
         Svc.AddonLifecycle.UnregisterListener(OnTalkUpdate);
         Svc.Framework.Update -= OnFrameworkUpdate;
         Svc.ClientState.TerritoryChanged -= OnTerritoryChanged;
+    }
+
+    public override void Disable()
+    {
+        UnsubscribeEvents();
         ObjectHelper.ClearTrackedObjects(CactpotNpcs.JumboBrokerScope);
         ObjectHelper.ClearTrackedObjects(CactpotNpcs.CashierScope);
         JumboCactpotBrokerPath.Reset();

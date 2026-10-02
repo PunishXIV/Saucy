@@ -43,49 +43,31 @@ public class TriadDeck
         UpdateDeckId();
     }
 
-    public TriadDeck(IEnumerable<int> knownCardIds, IEnumerable<int> unknownCardlIds)
+    public TriadDeck(IEnumerable<int> knownCardIds, IEnumerable<int> unknownCardIds)
     {
-        var cardDB = TriadCardDB.Get();
-
-        knownCards = [];
-        foreach (var id in knownCardIds)
-        {
-            var card = cardDB.cards[id];
-            if (card != null && card.IsValid())
-            {
-                knownCards.Add(card);
-            }
-        }
-
-        unknownCardPool = [];
-        foreach (var id in unknownCardlIds)
-        {
-            var card = cardDB.cards[id];
-            if (card != null && card.IsValid())
-            {
-                unknownCardPool.Add(card);
-            }
-        }
-
+        knownCards = ResolveValidCards(knownCardIds);
+        unknownCardPool = ResolveValidCards(unknownCardIds);
         UpdateDeckId();
     }
 
-    public TriadDeck(IEnumerable<int> knownCardIds)
+    public TriadDeck(IEnumerable<int> knownCardIds) : this(knownCardIds, [])
+    {
+    }
+
+    private static List<TriadCard> ResolveValidCards(IEnumerable<int> cardIds)
     {
         var cardDB = TriadCardDB.Get();
-
-        knownCards = [];
-        foreach (var id in knownCardIds)
+        var cards = new List<TriadCard>();
+        foreach (var id in cardIds)
         {
             var card = cardDB.cards[id];
             if (card != null && card.IsValid())
             {
-                knownCards.Add(card);
+                cards.Add(card);
             }
         }
 
-        unknownCardPool = [];
-        UpdateDeckId();
+        return cards;
     }
 
     public ETriadDeckState GetDeckState()
