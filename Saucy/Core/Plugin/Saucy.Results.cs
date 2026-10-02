@@ -110,6 +110,9 @@ public sealed partial class Saucy
 
     private void CheckResults(UIStateTriadResults obj)
     {
+        // Per-NPC stats cover every match, not just Saucy-driven ones.
+        _triadCollectionHost?.RecordMatchResult(obj);
+
         if (TriadRunSession.ModuleEnabled)
         {
             StatsSessionClock.MarkTriadActive();

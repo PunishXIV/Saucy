@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 namespace Saucy.TripleTriad;
 
 public class StatTracker
@@ -25,23 +26,33 @@ public class StatTracker
         savedStats.NumDraws += uiState.isDraw ? 1 : 0;
         savedStats.NumLosses += uiState.isLose ? 1 : 0;
 
-        if (uiState.isWin && TriadRewardDropTracker.TryGetVerifiedNpcCardDrop(out var droppedCard) && droppedCard != null)
+        if (uiState.isWin && TryResolveRewardCard(npcInfo, uiState.cardItemId, out var cardId))
         {
-            var cardId = droppedCard.CardId;
-            if (cardId > 0)
-            {
-                if (savedStats.Cards.TryGetValue(cardId, out var _))
-                {
-                    savedStats.Cards[cardId] += 1;
-                }
-                else
-                {
-                    savedStats.Cards.Add(cardId, 1);
-                }
-            }
+            savedStats.Cards[cardId] = savedStats.Cards.GetValueOrDefault(cardId) + 1;
         }
 
         C.Save();
+    }
+
+    // The result addon's reward card also covers duplicates; the ownership-diff tracker only sees first-time drops.
+    private static bool TryResolveRewardCard(GameNpcInfo npcInfo, uint resultCardItemId, out int cardId)
+    {
+        var resultCard = resultCardItemId > 0 ? GameCardDB.Get().FindByItemId(resultCardItemId) : null;
+        if (resultCard != null && npcInfo.rewardCards.Contains(resultCard.CardId))
+        {
+            cardId = resultCard.CardId;
+            return cardId > 0;
+        }
+
+        if (TriadRewardDropTracker.TryGetVerifiedNpcCardDrop(out var droppedCard, resultCardItemId) &&
+            droppedCard != null && npcInfo.rewardCards.Contains(droppedCard.CardId))
+        {
+            cardId = droppedCard.CardId;
+            return cardId > 0;
+        }
+
+        cardId = -1;
+        return false;
     }
 
     public TriadNpcStatRecord? GetNpcStats(GameNpcInfo npcInfo)
