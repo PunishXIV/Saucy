@@ -47,10 +47,6 @@ public abstract partial class Module : IModule
     }
     public bool InSaucer => GateDirector.InSaucer;
 
-    public bool PlayerOnStage => GateDirector.IsPlayerOnStage();
-
-    public GateType CurrentGate => GateDirector.GetCurrentGate();
-
     public abstract string InternalName { get; }
     public abstract string Name { get; }
     public virtual bool IsEnabled { get; protected set; }
@@ -102,9 +98,7 @@ public abstract partial class Module
 public abstract partial class Module
 {
     public void Log(string message) => PluginLog.Information($"[{InternalName}] {message}");
-    public void LogDebug(string message) => PluginLog.Debug($"[{InternalName}] {message}");
     public void LogVerbose(string message) => PluginLog.Verbose($"[{InternalName}] {message}");
-    public void LogWarning(string message) => PluginLog.Warning($"[{InternalName}] {message}");
     public void LogError(string message) => PluginLog.Error($"[{InternalName}] {message}");
 }
 

@@ -239,7 +239,7 @@ public class TriadGameSimulation
         y = pos / TriadGameSimulationState.boardSize;
     }
 
-    public static int[] GetNeighbors(TriadGameSimulationState gameState, int boardPos)
+    public static int[] GetNeighbors(int boardPos)
     {
         GetBoardXY(boardPos, out var boardPosX, out var boardPosY);
 
@@ -353,7 +353,7 @@ public class TriadGameSimulation
     {
         for (var idxPos = 0; idxPos < 9; idxPos++)
         {
-            cachedNeis[idxPos] = GetNeighbors(null, idxPos);
+            cachedNeis[idxPos] = GetNeighbors(idxPos);
         }
     }
 }

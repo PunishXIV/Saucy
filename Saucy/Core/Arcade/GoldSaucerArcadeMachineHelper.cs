@@ -28,14 +28,6 @@ internal static class GoldSaucerArcadeMachineHelper
         return false;
     }
 
-    public static string GetModuleName(GoldSaucerArcadeMachine machine) =>
-        machine switch
-        {
-            GoldSaucerArcadeMachine.Cuff => ModuleNames.CuffACur,
-            GoldSaucerArcadeMachine.Limb => ModuleNames.OutOnALimb,
-            var _ => throw new ArgumentOutOfRangeException(nameof(machine))
-        };
-
     public static string GetScope(GoldSaucerArcadeMachine machine) =>
         machine switch
         {

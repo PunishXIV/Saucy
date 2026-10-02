@@ -95,7 +95,7 @@ internal static unsafe class MultiAreaRouteExecutor
             MultiAreaRouteStepKind.Mount => TickMount(),
             MultiAreaRouteStepKind.MoveTo => TickMoveTo(step, execution),
             MultiAreaRouteStepKind.Interact => TickInteract(step),
-            MultiAreaRouteStepKind.SelectYesno => TickSelectYesno(step),
+            MultiAreaRouteStepKind.SelectYesno => TickSelectYesno(),
             MultiAreaRouteStepKind.WaitForZone => TickWaitForZone(execution),
             var _ => false
         };
@@ -225,7 +225,7 @@ internal static unsafe class MultiAreaRouteExecutor
         return step.AetheryteId;
     }
 
-    private static bool TickSelectYesno(MultiAreaRouteStep step)
+    private static bool TickSelectYesno()
     {
         if (!SelectYesnoHelper.TryGetVisible(out var yesno))
         {

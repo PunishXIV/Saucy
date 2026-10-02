@@ -34,15 +34,6 @@
           "NAudio.WinMM": "2.3.0"
         }
       },
-      "NAudio.Lame": {
-        "type": "Direct",
-        "requested": "[2.1.0, )",
-        "resolved": "2.1.0",
-        "contentHash": "Y+FtVgvjT+bNpBFqDiAKcFGelix1UavpX66vLymzWalXOGvY+MsoLNKL6aNGA0INjvBxeI3qd1LlD+bg7Nv2Ww==",
-        "dependencies": {
-          "NAudio.Core": "2.1.0"
-        }
-      },
       "NAudio.Asio": {
         "type": "Transitive",
         "resolved": "2.3.0",

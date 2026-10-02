@@ -201,7 +201,7 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
     public void OnUIStateChanged(UIStateTriadCardList uiState)
     {
         RebuildCardList(uiState);
-        SyncSelectionFromGame(uiState);
+        SyncSelectionFromGame();
     }
 
     private void RebuildCardList(UIStateTriadCardList uiState)
@@ -286,7 +286,7 @@ public unsafe class TriadCardSearchWindow : Window, IDisposable
         }
     }
 
-    private void SyncSelectionFromGame(UIStateTriadCardList uiState)
+    private void SyncSelectionFromGame()
     {
         if (!IsGameDataReady || listCards.Count == 0)
         {

@@ -159,23 +159,6 @@ public class TriadDeck
         return -1;
     }
 
-    public bool SetCard(int Idx, TriadCard card)
-    {
-        var bResult = false;
-        if (Idx < knownCards.Count)
-        {
-            knownCards[Idx] = card;
-            bResult = true;
-        }
-        else if (Idx < (knownCards.Count + unknownCardPool.Count))
-        {
-            unknownCardPool[Idx - knownCards.Count] = card;
-            bResult = true;
-        }
-
-        return bResult;
-    }
-
     public int GetPower()
     {
         var SumRating = 0;
@@ -306,22 +289,6 @@ public abstract class TriadDeckInstance
     {
         var cardIdx = GetFirstAvailableCardFast();
         return (cardIdx < 0) ? null : GetCard(cardIdx);
-    }
-
-    public List<TriadCard> GetAvailableCards()
-    {
-        List<TriadCard> cards = [];
-        for (var Idx = 0; Idx < maxAvailableCards; Idx++)
-        {
-            var bIsAvailable = (availableCardMask & (1 << Idx)) != 0;
-            if (bIsAvailable)
-            {
-                var card = GetCard(Idx);
-                cards.Add(card);
-            }
-        }
-
-        return cards;
     }
 }
 

@@ -182,7 +182,7 @@ internal static class TriadDeckOptimizerJobs
             optimizer.Initialize(request.Npc, request.RegionMods, request.LockedCards);
             startedPassId = jobPassId;
 
-            _ = optimizer.Process(request.Npc, request.RegionMods, request.LockedCards)
+            _ = optimizer.Process(request.LockedCards)
                 .ContinueWith(
                     _ => FinishOnThreadPool(jobPassId),
                     CancellationToken.None,

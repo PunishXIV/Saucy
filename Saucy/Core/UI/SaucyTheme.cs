@@ -172,8 +172,6 @@ internal static class SaucyTheme
 
     public static void TextWarning(string text) => ImGui.TextColored(TextWarningColor, text);
 
-    public static void TextError(string text) => ImGui.TextColored(TextErrorColor, text);
-
     public static void TextErrorWrapped(string text)
     {
         using var color = ImRaii.PushColor(ImGuiCol.Text, TextErrorColor);

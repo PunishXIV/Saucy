@@ -2,7 +2,6 @@ using Dalamud.Game.ClientState.Conditions;
 using ECommons;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using Saucy.Framework;
 using System;
 using System.Numerics;
 using System.Runtime.InteropServices;

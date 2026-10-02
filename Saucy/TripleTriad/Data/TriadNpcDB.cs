@@ -26,15 +26,6 @@ public class TriadNpc
         hasLocMarkup = false;
     }
 
-    public TriadNpc(int id, uint dataId, List<TriadGameModifier> rules, List<TriadCard> rewards, TriadDeck deck)
-    {
-        Id = id;
-        BaseID = dataId;
-        Rules = rules;
-        Deck = deck;
-        hasLocMarkup = false;
-    }
-
     public void OnNameUpdated()
     {
         hasLocMarkup = Name.Contains('[');

@@ -59,48 +59,6 @@ public class TriadGameModifierAllOpen : TriadGameModifier
         RuleIndex = 2;
         SpecialMod = ETriadGameSpecialMod.SelectVisible5;
     }
-
-    public static void StaticMakeKnown(TriadGameSimulationState gameData, List<int> redIndices)
-    {
-        const int deckSize = 5;
-
-        if (gameData.deckRed is TriadDeckInstanceManual deckRedEx && redIndices.Count <= deckSize)
-        {
-            if (gameData.bDebugRules)
-            {
-                Logger.WriteLine(">> Open:{0}! red indices:{1}", redIndices.Count, string.Join(", ", redIndices));
-            }
-
-            var redDeckVisible = new TriadDeck(deckRedEx.deck.knownCards, deckRedEx.deck.unknownCardPool);
-            for (var idx = 0; idx < redIndices.Count; idx++)
-            {
-                var cardIdx = redIndices[idx];
-                if (cardIdx < deckRedEx.deck.knownCards.Count)
-                {
-                }
-                else
-                {
-                    var idxU = cardIdx - deckRedEx.deck.knownCards.Count;
-                    var cardOb = deckRedEx.deck.unknownCardPool[idxU];
-                    redDeckVisible.knownCards.Add(cardOb);
-                    redDeckVisible.unknownCardPool.Remove(cardOb);
-                }
-            }
-
-            for (var idx = 0; (idx < redDeckVisible.knownCards.Count) && (redDeckVisible.knownCards.Count > deckSize); idx++)
-            {
-                var cardOb = redDeckVisible.knownCards[idx];
-                var orgIdx = deckRedEx.GetCardIndex(cardOb);
-                if (!redIndices.Contains(orgIdx))
-                {
-                    redDeckVisible.knownCards.RemoveAt(idx);
-                    idx--;
-                }
-            }
-
-            gameData.deckRed = new TriadDeckInstanceManual(redDeckVisible);
-        }
-    }
 }
 
 public class TriadGameModifierThreeOpen : TriadGameModifier
@@ -220,15 +178,6 @@ public class TriadGameModifierRandom : TriadGameModifier
         RuleName = "Random";
         RuleIndex = 14;
         SpecialMod = ETriadGameSpecialMod.RandomizeBlueDeck;
-    }
-
-    public static void StaticRandomized(TriadGameSimulationState gameData)
-    {
-        if (gameData.bDebugRules)
-        {
-            var DummyOb = new TriadGameModifierRandom();
-            Logger.WriteLine(">> " + DummyOb.RuleName + "! blue deck:" + gameData.deckBlue);
-        }
     }
 }
 
@@ -628,32 +577,6 @@ public class TriadGameModifierSwap : TriadGameModifier
         RuleName = "Swap";
         RuleIndex = 13;
         SpecialMod = ETriadGameSpecialMod.SwapCards;
-    }
-
-    public static void StaticSwapCards(TriadGameSimulationState gameData, TriadCard swapFromBlue, int blueSlotIdx, TriadCard swapFromRed, int redSlotIdx)
-    {
-        if (gameData.deckBlue is TriadDeckInstanceManual deckBlueEx && gameData.deckRed is TriadDeckInstanceManual deckRedEx)
-        {
-            var bIsRedFromKnown = redSlotIdx < deckRedEx.deck.knownCards.Count;
-            if (gameData.bDebugRules)
-            {
-                var DummyOb = new TriadGameModifierSwap();
-                Logger.WriteLine(">> " + DummyOb.RuleName + "! blue[" + blueSlotIdx + "]:" + swapFromBlue.Name +
-                                 " <-> red[" + redSlotIdx + (bIsRedFromKnown ? "" : ":Opt") + "]:" + swapFromRed.Name);
-            }
-
-            var blueDeckSwapped = new TriadDeck(deckBlueEx.deck.knownCards, deckBlueEx.deck.unknownCardPool);
-            var redDeckSwapped = new TriadDeck(deckRedEx.deck.knownCards, deckRedEx.deck.unknownCardPool);
-
-            redDeckSwapped.knownCards.Add(swapFromBlue);
-            redDeckSwapped.knownCards.Remove(swapFromRed);
-            redDeckSwapped.unknownCardPool.Remove(swapFromRed);
-
-            blueDeckSwapped.knownCards[blueSlotIdx] = swapFromRed;
-
-            gameData.deckBlue = new TriadDeckInstanceManual(blueDeckSwapped);
-            gameData.deckRed = new TriadDeckInstanceManual(redDeckSwapped);
-        }
     }
 }
 

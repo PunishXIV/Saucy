@@ -4,7 +4,6 @@ using ECommons.GameHelpers;
 using Saucy.Cactpot;
 using Saucy.Framework;
 using Saucy.IPC;
-using Saucy.TripleTriad;
 
 namespace Saucy.JumboCactpot;
 

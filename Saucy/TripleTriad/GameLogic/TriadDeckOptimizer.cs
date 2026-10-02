@@ -8,7 +8,6 @@ namespace Saucy.TripleTriad.GameLogic;
 public partial class TriadDeckOptimizer
 {
     public delegate void FoundDeckDelegate(TriadDeck deck, float estWinChance);
-    public delegate void UpdatePossibleCount(string numPossibleDesc);
     private const int DeckSlotCommon = -1;
     private const int DeckSlotLocked = -2;
 
@@ -119,12 +118,12 @@ public partial class TriadDeckOptimizer
         }
     }
 
-    public Task Process(TriadNpc npc, TriadGameModifier[] regionMods, List<TriadCard> lockedCards)
+    public Task Process(List<TriadCard> lockedCards)
     {
         numTestedDecks = 0;
         bAbort = false;
 
-        return Task.Run(() => { FindDecksScored(regionMods, lockedCards); });
+        return Task.Run(() => { FindDecksScored(lockedCards); });
     }
 
     public void AbortProcess() => bAbort = true;

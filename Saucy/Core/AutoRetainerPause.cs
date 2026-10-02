@@ -44,8 +44,6 @@ internal static unsafe class AutoRetainerPause
 
     public static bool HasBellInRange() => FindNearbySummoningBell() != null;
 
-    public static bool BlocksArcadeSessions(GoldSaucerArcadeMachine machine) => IsBlocking;
-
     public static void Tick()
     {
         if (!C.PauseForAutoRetainer || !AutoRetainerIpc.IsInstalled)

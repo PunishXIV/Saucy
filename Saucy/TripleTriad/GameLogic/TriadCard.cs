@@ -75,9 +75,6 @@ public class TriadCard : IEquatable<TriadCard>
         OptimizerScore = TriadDeckOptimizer.GetCardScore(this);
     }
 
-    public int SmallIconId => 88000 + Id;
-    public int BigIconId => 87000 + Id;
-
     public bool Equals(TriadCard other) => (other != null) && (Id == other.Id);
 
     public override bool Equals(object obj) => Equals(obj as TriadCard);

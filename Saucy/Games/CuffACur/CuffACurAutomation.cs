@@ -166,7 +166,7 @@ public unsafe class CuffACurAutomation
             }
 
             if (GoldSaucerArcadeFakeBreak.IsActive(Machine) ||
-                AutoRetainerPause.BlocksArcadeSessions(Machine))
+                AutoRetainerPause.IsBlocking)
             {
                 ArcadeMachineSession.ClearInteractPending(Machine);
                 return;

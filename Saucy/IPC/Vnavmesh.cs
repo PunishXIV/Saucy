@@ -13,8 +13,6 @@ internal static class Vnavmesh
     // vnav often stops a few tenths outside the requested radius; without this slack callers re-path every tick.
     public const float ArrivalSlack = 0.5f;
 
-    public const float NpcInteractRange = NpcCloseRange + ArrivalSlack;
-
     [EzIPC("Nav.IsReady")]
     private static Func<bool> NavIsReadyRpc = null!;
 
@@ -86,7 +84,7 @@ internal static class Vnavmesh
 
     public static bool IsMoving() => IsPathRunning() || IsPathfindInProgress();
 
-     public static bool CanStartPathfind() =>
+    public static bool CanStartPathfind() =>
         IsInstalled && IsNavReady() && !IsPathfindInProgress();
 
     public static void StopPath()

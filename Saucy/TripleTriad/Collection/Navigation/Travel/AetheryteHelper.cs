@@ -38,12 +38,6 @@ internal static class AetheryteHelper
         return row != null && IsAethernetHubRow(row.Value);
     }
 
-    private static bool IsAethernetShard(uint rowId)
-    {
-        var row = TryGetAetheryteRow(rowId);
-        return row != null && IsAethernetShardRow(row.Value);
-    }
-
     private static bool TerritoryHasAethernetNetwork(uint territoryId)
     {
         var sheet = Svc.Data.GetExcelSheet<AetheryteSheet>();
@@ -87,9 +81,6 @@ internal static class AetheryteHelper
 
     public static Vector3? GetAethernetShardWorldPosition(uint aethernetShardRowId) =>
         aethernetShardRowId != 0 ? GetWorldPosition(aethernetShardRowId) : null;
-
-    public static Vector3? GetAetheryteWorldPosition(uint aetheryteId) =>
-        aetheryteId != 0 ? ResolveAetherytePosition(aetheryteId) : null;
 
     public static string? GetAethernetShardName(uint aethernetShardRowId)
     {

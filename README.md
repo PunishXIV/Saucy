@@ -7,17 +7,17 @@
 Automates certain Gold Saucer mini-games.
 
 </div>
-
-<div align="left">
-<h4>Currently supports:</h1>
-<ul>
-<li>Cuff-a-cur</li>
-<li>Triple Triad</li>
-<li>Out on a Limb</li>
-<li>Slice is Right</li>
-<li>Auto Cactpot</li>
-<li>Air Force One</li>
-
-Tracks Stats for Lifetime, Sessions, Hourly MGP and more!
-
 <!-- Repository Header End -->
+
+#### Currently supports
+
+- Triple Triad
+- Mini Cactpot
+- Jumbo Cactpot
+- Cuff-a-Cur
+- Out on a Limb
+- Air Force One
+- GATE: The Slice is Right
+- GATE: Any Way the Wind Blows
+
+Tracks stats for lifetime, sessions, hourly MGP and more!

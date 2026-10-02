@@ -9,7 +9,7 @@ namespace Saucy.TripleTriad.GameLogic;
 
 public partial class TriadDeckOptimizer
 {
-    private void FindDecksScored(TriadGameModifier[] regionMods, List<TriadCard> lockedCards)
+    private void FindDecksScored(List<TriadCard> lockedCards)
     {
         var stopwatch = new Stopwatch();
         stopwatch.Start();

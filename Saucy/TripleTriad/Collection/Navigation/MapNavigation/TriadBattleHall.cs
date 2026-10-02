@@ -30,14 +30,6 @@ internal static class TriadBattleHall
     public static bool IsBattleHallNpc(GameNpcInfo info) =>
         info?.Location != null && IsBattleHallLocation(info.Location);
 
-    public static bool IsBattleHallCard(GameCardInfo cardInfo) =>
-        cardInfo != null &&
-        cardInfo.RewardNpcs.Count > 0 &&
-        cardInfo.RewardNpcs.TrueForAll(IsBattleHallRewardNpc);
-
-    private static bool IsBattleHallRewardNpc(int npcId) =>
-        GameNpcDB.Get().mapNpcs.TryGetValue(npcId, out var info) && IsBattleHallNpc(info);
-
     public static bool ShouldBlockMapNavigation(TriadNpc? npc, MapLinkPayload? location) =>
         (npc != null && IsBattleHallNpc(npc)) ||
         (location != null && IsBattleHallLocation(location));
