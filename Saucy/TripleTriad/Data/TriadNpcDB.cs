@@ -10,7 +10,6 @@ public class TriadNpc
 
     public bool hasLocMarkup;
     public int Id;
-    public uint BaseID;
     public HashSet<uint> BaseIDs = [];
     public string Name = string.Empty;
     public Regex NamePartialRegex;
@@ -21,7 +20,6 @@ public class TriadNpc
     public TriadNpc(int id, uint dataId, List<TriadGameModifier> rules, int[] cardsAlways, int[] cardsPool)
     {
         Id = id;
-        BaseID = dataId;
         BaseIDs.Add(dataId);
         Rules = rules;
         Deck = new(cardsAlways, cardsPool);
