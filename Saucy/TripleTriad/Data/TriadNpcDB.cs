@@ -11,6 +11,7 @@ public class TriadNpc
     public bool hasLocMarkup;
     public int Id;
     public uint BaseID;
+    public HashSet<uint> BaseIDs = [];
     public string Name = string.Empty;
     public Regex NamePartialRegex;
 
@@ -21,6 +22,7 @@ public class TriadNpc
     {
         Id = id;
         BaseID = dataId;
+        BaseIDs.Add(dataId);
         Rules = rules;
         Deck = new(cardsAlways, cardsPool);
         hasLocMarkup = false;
@@ -46,8 +48,10 @@ public class TriadNpc
 
     public override string ToString() => Name;
 
+    public bool IsMatchingBaseID(uint baseId) => baseId != 0 && BaseIDs.Contains(baseId);
+
     public bool IsMatchingObject(Dalamud.Game.ClientState.Objects.Types.IGameObject obj) =>
-        obj != null && BaseID != 0 && obj.BaseId == BaseID;
+        obj != null && IsMatchingBaseID(obj.BaseId);
 
     public bool IsMatchingName(string testName)
     {
@@ -135,7 +139,7 @@ public class TriadNpcDB
     {
         foreach (var x in SnapshotNpcs())
         {
-            if (x != null && x.BaseID == baseId)
+            if (x != null && x.IsMatchingBaseID(baseId))
             {
                 return x;
             }
