@@ -110,6 +110,9 @@ public sealed partial class Saucy
 
     private void CheckResults(UIStateTriadResults obj)
     {
+        // Per-NPC stats cover every match, not just Saucy-driven ones.
+        _triadCollectionHost?.RecordMatchResult(obj);
+
         if (TriadRunSession.ModuleEnabled)
         {
             StatsSessionClock.MarkTriadActive();
@@ -146,8 +149,6 @@ public sealed partial class Saucy
                 if (TriadCardFarmSession.IsModeActive())
                 {
                     TriadCardFarmSession.DetectAndProcessDrops(obj.cardItemId);
-                    // Only count as handled when the drop maps to a farm target;
-                    // duplicates of owned cards fall through to the generic recorder.
                     cardStatsRecorded = TriadCardFarmSession.IsFarmRewardItem(obj.cardItemId);
                     if (!TriadCardFarmSession.IsComplete() &&
                         TriadCardFarmSession.ShouldScheduleDropVerification(obj.cardItemId))

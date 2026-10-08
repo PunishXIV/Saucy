@@ -95,17 +95,14 @@ public class TriadNpcStatsWindow : Window, IDisposable
 
             var cardDB = TriadCardDB.Get();
             var gameCardDB = GameCardDB.Get();
-            var sumNetGain = savedStats.NumCoins - (numMatches * npcInfo.matchFee);
             foreach (var kvp in savedStats.Cards)
             {
                 if (kvp.Key >= 0 && kvp.Key < cardDB.cards.Count && kvp.Value > 0)
                 {
                     var cardOb = cardDB.FindById(kvp.Key);
-                    if (cardOb != null && cardOb.IsValid() && gameCardDB.mapCards.TryGetValue(kvp.Key, out var cardInfo))
+                    if (cardOb != null && cardOb.IsValid() && gameCardDB.mapCards.ContainsKey(kvp.Key))
                     {
                         ImGui.Text(Loc.T("{0} card: {1}", cardOb.Name, kvp.Value));
-                        sumNetGain += kvp.Value * cardInfo.SaleValue;
-
                         if (savedStats.NumWins > 0)
                         {
                             var dropPct = 1.0f * kvp.Value / savedStats.NumWins;
@@ -122,9 +119,9 @@ public class TriadNpcStatsWindow : Window, IDisposable
 
             ImGui.Text(Loc.T("MGP per match:"));
             ImGui.SameLine();
-            if (numMatches > 0)
+            if (StatTracker.GetAverageRewardPerMatchDesc(C.TriadCollection, npcInfo, out var avgMgpPerMatch))
             {
-                ImGui.TextColored(colorValue, $"{(1.0f * sumNetGain / numMatches):0.#}");
+                ImGui.TextColored(colorValue, $"{avgMgpPerMatch:0.#}");
                 ImGui.SameLine();
                 ImGuiComponents.HelpMarker(Loc.T("Includes MGP from selling cards"));
             }

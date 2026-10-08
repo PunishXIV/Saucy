@@ -140,7 +140,6 @@ internal static unsafe class LotteryWeeklyInputHelper
                 continue;
             }
 
-            // Display diamonds reuse digit labels above the keypad; prefer the lower keypad row.
             var keypadButton = candidates[0];
             for (var i = 1; i < candidates.Count; i++)
             {

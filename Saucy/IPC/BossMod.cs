@@ -2,7 +2,6 @@ using ECommons.EzIpcManager;
 using System;
 namespace Saucy.IPC;
 
-[IPC(IPCNames.BossMod)]
 internal static class BossMod
 {
     public const string GateAiPresetName = "VBM AI";

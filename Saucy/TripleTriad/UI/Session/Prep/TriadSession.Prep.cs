@@ -30,8 +30,6 @@ public partial class TriadSession
         ApplyRunTargetNpc(npc, startOptimizer, forNavigation);
     }
 
-    public void ResetRunTargetNpcSession() => _lastAppliedRunTargetNpcId = -1;
-
     public void KickAutomationDeckOptimizer()
     {
         if (!TriadRunSession.ModuleEnabled || !ShouldBuildOptimizedDeck())

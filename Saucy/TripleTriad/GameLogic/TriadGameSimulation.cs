@@ -97,7 +97,7 @@ public class TriadGameSimulation
         {
             foreach (var mod in modsA)
             {
-                var modCopy = (TriadGameModifier)Activator.CreateInstance(mod.GetType());
+                var modCopy = TriadGameModifierDB.CreateFresh(mod);
                 modifiers.Add(modCopy);
             }
         }
@@ -106,7 +106,7 @@ public class TriadGameSimulation
         {
             foreach (var mod in modsB)
             {
-                var modCopy = (TriadGameModifier)Activator.CreateInstance(mod.GetType());
+                var modCopy = TriadGameModifierDB.CreateFresh(mod);
                 modifiers.Add(modCopy);
             }
         }
@@ -114,10 +114,7 @@ public class TriadGameSimulation
         UpdateSpecialRules();
     }
 
-    /// <summary>
-    ///     Deep-clones modifiers so parallel simulations never share modifier instances
-    ///     (MemberwiseClone shares nested Roulette resolved rules).
-    /// </summary>
+    // Deep copy: MemberwiseClone would share Roulette's resolved rule between parallel simulations.
     public void DeepCopyModifiersFrom(TriadGameSimulation source)
     {
         modifiers.Clear();
@@ -131,7 +128,7 @@ public class TriadGameSimulation
 
     private static TriadGameModifier CloneModifierDeep(TriadGameModifier mod)
     {
-        var clone = (TriadGameModifier)Activator.CreateInstance(mod.GetType())!;
+        var clone = TriadGameModifierDB.CreateFresh(mod);
         if (mod is TriadGameModifierRoulette roulette && roulette.GetResolvedRule() is { } resolvedRule)
         {
             ((TriadGameModifierRoulette)clone).SetRuleInstance(CloneModifierDeep(resolvedRule));
@@ -242,7 +239,7 @@ public class TriadGameSimulation
         y = pos / TriadGameSimulationState.boardSize;
     }
 
-    public static int[] GetNeighbors(TriadGameSimulationState gameState, int boardPos)
+    public static int[] GetNeighbors(int boardPos)
     {
         GetBoardXY(boardPos, out var boardPosX, out var boardPosY);
 
@@ -356,7 +353,7 @@ public class TriadGameSimulation
     {
         for (var idxPos = 0; idxPos < 9; idxPos++)
         {
-            cachedNeis[idxPos] = GetNeighbors(null, idxPos);
+            cachedNeis[idxPos] = GetNeighbors(idxPos);
         }
     }
 }

@@ -9,7 +9,6 @@ using Saucy.Framework;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Reflection;
 using static ECommons.GenericHelpers;
 namespace Saucy;
 
@@ -349,8 +348,6 @@ public unsafe partial class PluginUI : Window
         var buttonSize = ImGui.GetFontSize();
         var spacing = style.ItemInnerSpacing.X;
 
-        // Match Dalamud WindowHost.DrawTitleBarButtons: native close (+ collapse when menu is right),
-        // then custom title bar buttons laid out from the right edge inward.
         var numNativeButtons = 1;
         if (style.WindowMenuButtonPosition == ImGuiDir.Right)
         {
@@ -370,8 +367,6 @@ public unsafe partial class PluginUI : Window
                 ? SaucyTheme.ColorOr(SaucyTheme.BodyText, ImGuiCol.TextDisabled) with { W = 0.72f }
                 : style.Colors[(int)ImGuiCol.TextDisabled]);
 
-        // Window draw list keeps Saucy's z-order. Expand clip to the full window so title-bar
-        // coordinates are not culled by the content-area clip active during Draw().
         var drawList = ImGui.GetWindowDrawList();
         var clipMax = windowPos + windowSize;
         drawList.PushClipRect(windowPos, clipMax, false);
@@ -392,8 +387,7 @@ public unsafe partial class PluginUI : Window
             return "v" + FormatTitleBarVersion(manifestVersion);
         }
 
-        var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
-        return assemblyVersion != null ? "v" + FormatTitleBarVersion(assemblyVersion) : "v?.?.?.?";
+        return "v?.?.?.?";
     }
 
     private static string FormatTitleBarVersion(Version version) =>

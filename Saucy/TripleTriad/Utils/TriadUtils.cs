@@ -4,6 +4,34 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 namespace Saucy.TripleTriad.Utils;
 
+internal static class CardUtils
+{
+    public static string GetOrderDesc(TriadCard card)
+    {
+        if (card.SortOrder > 1000)
+        {
+            return $"Ex. {card.SortOrder - 1000}";
+        }
+
+        return $"No. {card.SortOrder}";
+    }
+
+    public static string GetRarityDesc(TriadCard card) => $"{(int)card.Rarity + 1}★";
+
+    public static string FormatDeckEditListLabel(int displayNo, TriadCard card) =>
+        $"No. {displayNo}  {GetRarityDesc(card)}  {card.Name}";
+}
+
+public class Logger
+{
+    public static void WriteLine(string fmt, params object[] args)
+    {
+#if DEBUG
+        Svc.Log?.Info(string.Format(fmt, args));
+#endif
+    }
+}
+
 public static class GUINodeUtils
 {
     public static unsafe bool IsNodeVisible(AtkResNode* node) =>

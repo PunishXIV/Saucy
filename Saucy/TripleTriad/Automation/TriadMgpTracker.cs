@@ -22,7 +22,6 @@ internal static unsafe class TriadMgpTracker
         mgpAtMatchStart = -1;
     }
 
-    // Match fee is deducted before the board opens; a win adds gross prize MGP on top.
     public static bool TryConsumeWinReward(out int mgp)
     {
         mgp = -1;

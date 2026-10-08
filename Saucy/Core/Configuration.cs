@@ -34,7 +34,6 @@ public class Configuration : IPluginConfiguration
     [JsonIgnore]
     public TriadRunMode TriadRunMode { get; set; } = TriadRunMode.None;
 
-    // Session-only: toggled via "/saucy d" so debug surfaces stay hidden for normal use.
     [JsonIgnore]
     public bool ShowDebugUi { get; set; }
 
@@ -53,6 +52,7 @@ public class Configuration : IPluginConfiguration
     public bool PlaySound { get; set; } = false;
     public string SelectedSound { get; set; } = "Moogle";
     public bool OnlyUnobtainedCards { get; set; } = false;
+    public bool AutoRegisterTriadCards { get; set; } = false;
     public bool OpenAutomatically { get; set; } = false;
 
     public LimbConfig LimbConfig { get; set; } = new();

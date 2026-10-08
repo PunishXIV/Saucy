@@ -12,18 +12,16 @@ namespace Saucy.OtherGames;
 
 public unsafe class SliceIsRight : Module
 {
+    public override string InternalName => ModuleNames.SliceIsRight;
     private const float MaxDistance = 30f;
 
-    // Bamboo telegraphs activate ~5s after the helper spawns, then resolve ~7s later (Boss Mod timing).
     private const double TelegraphDelaySeconds = 5;
     private const double TelegraphDurationSeconds = 7;
 
-    // EventObj GimmickId values (original working detection via GameObject+0x80).
     private const uint GimmickSingleRect = 2010777;
     private const uint GimmickDoubleRect = 2010778;
     private const uint GimmickCircle = 2010779;
 
-    // Boss Mod helper actor OIDs, exposed as BaseId on spawned helpers.
     private const uint HelperSingleRectOid = 0x1EAE99;
     private const uint HelperDoubleRectOid = 0x1EAE9A;
     private const uint HelperCircleOid = 0x1EAE9B;
@@ -81,8 +79,6 @@ public unsafe class SliceIsRight : Module
         EnsureColours();
         PruneDespawnedObjects();
 
-        // Draw into a fullscreen overlay window's draw list, the same pattern the other gate
-        // overlays use. ImGui.GetForegroundDrawList() produced no visible output here under Dalamud.
         using var overlay = new ImGuiLayout.FullscreenOverlayScope("slice", (ImGuiWindowFlags)787337);
         if (!overlay.Success)
         {
@@ -112,7 +108,6 @@ public unsafe class SliceIsRight : Module
             return false;
         }
 
-        // Telegraph shape is BaseId on EventObj (2010777–2010779). GimmickId is unused on current clients.
         if (gameObject.ObjectKind == ObjectKind.EventObj)
         {
             if (gameObject.BaseId is >= GimmickSingleRect and <= GimmickCircle)

@@ -42,6 +42,14 @@ internal sealed class TriadCollectionHost : IDisposable
         pluginInterface.UiBuilder.Draw += OnDraw;
     }
 
+    public void RecordMatchResult(UIStateTriadResults result)
+    {
+        if (TriadRun.lastGameNpc is { } npc)
+        {
+            _statTracker.OnMatchFinished(npc.Id, result);
+        }
+    }
+
     public void Dispose()
 
     {

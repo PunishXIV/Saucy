@@ -10,25 +10,19 @@ public class TriadNpc
 
     public bool hasLocMarkup;
     public int Id;
+    public HashSet<uint> BaseIDs = [];
     public string Name = string.Empty;
     public Regex NamePartialRegex;
 
     public Regex NameRegex;
     public List<TriadGameModifier> Rules;
 
-    public TriadNpc(int id, List<TriadGameModifier> rules, int[] cardsAlways, int[] cardsPool)
+    public TriadNpc(int id, uint dataId, List<TriadGameModifier> rules, int[] cardsAlways, int[] cardsPool)
     {
         Id = id;
+        BaseIDs.Add(dataId);
         Rules = rules;
         Deck = new(cardsAlways, cardsPool);
-        hasLocMarkup = false;
-    }
-
-    public TriadNpc(int id, List<TriadGameModifier> rules, List<TriadCard> rewards, TriadDeck deck)
-    {
-        Id = id;
-        Rules = rules;
-        Deck = deck;
         hasLocMarkup = false;
     }
 
@@ -51,6 +45,11 @@ public class TriadNpc
         string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim().ToLowerInvariant();
 
     public override string ToString() => Name;
+
+    public bool IsMatchingBaseID(uint baseId) => baseId != 0 && BaseIDs.Contains(baseId);
+
+    public bool IsMatchingObject(Dalamud.Game.ClientState.Objects.Types.IGameObject obj) =>
+        obj != null && IsMatchingBaseID(obj.BaseId);
 
     public bool IsMatchingName(string testName)
     {
@@ -134,21 +133,15 @@ public class TriadNpcDB
         return null;
     }
 
-    public TriadNpc FindMatchingName(string testName)
+    public TriadNpc FindByBaseID(uint baseId)
     {
-        if (string.IsNullOrWhiteSpace(testName))
+        foreach (var x in SnapshotNpcs())
         {
-            return null;
-        }
-
-        foreach (var npc in SnapshotNpcs())
-        {
-            if (npc != null && npc.IsMatchingName(testName))
+            if (x != null && x.IsMatchingBaseID(baseId))
             {
-                return npc;
+                return x;
             }
         }
-
         return null;
     }
 

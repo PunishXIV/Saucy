@@ -43,49 +43,31 @@ public class TriadDeck
         UpdateDeckId();
     }
 
-    public TriadDeck(IEnumerable<int> knownCardIds, IEnumerable<int> unknownCardlIds)
+    public TriadDeck(IEnumerable<int> knownCardIds, IEnumerable<int> unknownCardIds)
     {
-        var cardDB = TriadCardDB.Get();
-
-        knownCards = [];
-        foreach (var id in knownCardIds)
-        {
-            var card = cardDB.cards[id];
-            if (card != null && card.IsValid())
-            {
-                knownCards.Add(card);
-            }
-        }
-
-        unknownCardPool = [];
-        foreach (var id in unknownCardlIds)
-        {
-            var card = cardDB.cards[id];
-            if (card != null && card.IsValid())
-            {
-                unknownCardPool.Add(card);
-            }
-        }
-
+        knownCards = ResolveValidCards(knownCardIds);
+        unknownCardPool = ResolveValidCards(unknownCardIds);
         UpdateDeckId();
     }
 
-    public TriadDeck(IEnumerable<int> knownCardIds)
+    public TriadDeck(IEnumerable<int> knownCardIds) : this(knownCardIds, [])
+    {
+    }
+
+    private static List<TriadCard> ResolveValidCards(IEnumerable<int> cardIds)
     {
         var cardDB = TriadCardDB.Get();
-
-        knownCards = [];
-        foreach (var id in knownCardIds)
+        var cards = new List<TriadCard>();
+        foreach (var id in cardIds)
         {
             var card = cardDB.cards[id];
             if (card != null && card.IsValid())
             {
-                knownCards.Add(card);
+                cards.Add(card);
             }
         }
 
-        unknownCardPool = [];
-        UpdateDeckId();
+        return cards;
     }
 
     public ETriadDeckState GetDeckState()
@@ -157,23 +139,6 @@ public class TriadDeck
         }
 
         return -1;
-    }
-
-    public bool SetCard(int Idx, TriadCard card)
-    {
-        var bResult = false;
-        if (Idx < knownCards.Count)
-        {
-            knownCards[Idx] = card;
-            bResult = true;
-        }
-        else if (Idx < (knownCards.Count + unknownCardPool.Count))
-        {
-            unknownCardPool[Idx - knownCards.Count] = card;
-            bResult = true;
-        }
-
-        return bResult;
     }
 
     public int GetPower()
@@ -306,22 +271,6 @@ public abstract class TriadDeckInstance
     {
         var cardIdx = GetFirstAvailableCardFast();
         return (cardIdx < 0) ? null : GetCard(cardIdx);
-    }
-
-    public List<TriadCard> GetAvailableCards()
-    {
-        List<TriadCard> cards = [];
-        for (var Idx = 0; Idx < maxAvailableCards; Idx++)
-        {
-            var bIsAvailable = (availableCardMask & (1 << Idx)) != 0;
-            if (bIsAvailable)
-            {
-                var card = GetCard(Idx);
-                cards.Add(card);
-            }
-        }
-
-        return cards;
     }
 }
 

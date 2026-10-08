@@ -280,7 +280,6 @@ public partial class TriadSession
             return true;
         }
 
-        // No cached or profile deck for this NPC/session — run the optimizer (and save to cache on success).
         return false;
     }
 
@@ -617,7 +616,7 @@ public partial class TriadSession
 
         ScheduleOptimizedDeckPreviewEval(targetDeckId, appliedDeck, npc, preGameMods);
         BeginDeckSelectPostWriteCooldown();
-        Svc.Framework.Run(() => TriadDeckSelectAutomation.PrepareRetryWithOptimizedDeck(targetDeckId));
+        Svc.Framework.Run(() => TriadDeckSelectAutomation.PrepareRetryWithOptimizedDeck());
     }
 
     private static bool TryExtractCardIdsFromProfileDeck(TriadProfileDeckReader.PlayerDeck deck, out ushort[] cardIds)

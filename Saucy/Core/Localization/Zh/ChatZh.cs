@@ -23,7 +23,6 @@ internal static class ChatZh
 
         // Deck select automation
         ["[Saucy] Could not find deck {0} in the selection list."] = "[Saucy] 在选择列表中找不到卡组 {0}。",
-        ["[Saucy] Match started without a deck. Confirm deck selection manually."] = "[Saucy] 对局已开始但未选择卡组，请手动确认卡组选择。",
         ["[Saucy] Could not use game recommended deck. Pick a deck manually or try another option."] =
             "[Saucy] 无法使用游戏推荐卡组，请手动选择卡组或尝试其他选项。",
         ["[Saucy] Using game recommended deck..."] = "[Saucy] 正在使用游戏推荐卡组…",

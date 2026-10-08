@@ -66,7 +66,6 @@ internal static partial class TriadMapNavigation
                         return false;
                     }
 
-                    StopVnavIfRunning();
                     BeginPending(
                         location,
                         pointOnFloor,
@@ -142,7 +141,6 @@ internal static partial class TriadMapNavigation
             }
         }
 
-        StopVnavIfRunning();
         BeginPending(
             location,
             pointOnFloor,
@@ -349,7 +347,7 @@ internal static partial class TriadMapNavigation
             return;
         }
 
-        if (!TryEnsureMountedForNav(pending))
+        if (!TryEnsureMountedForNav())
         {
             return;
         }
@@ -395,7 +393,6 @@ internal static partial class TriadMapNavigation
             return false;
         }
 
-        StopVnavIfRunning();
         BeginPending(
             location,
             pointOnFloor,

@@ -15,7 +15,6 @@ namespace Saucy;
 
 internal static unsafe class AutoRetainerPause
 {
-    // Placed summoning bell furnishing (HousingEventObject BaseId 196630).
     private const uint SummoningBellBaseId = 196630;
     private const float BellInteractRange = 6f;
     private const int HandlingTimeoutSeconds = 120;
@@ -44,8 +43,6 @@ internal static unsafe class AutoRetainerPause
         IsHandling || (C.PauseForAutoRetainer && IsRetainerPauseArmed());
 
     public static bool HasBellInRange() => FindNearbySummoningBell() != null;
-
-    public static bool BlocksArcadeSessions(GoldSaucerArcadeMachine machine) => IsBlocking;
 
     public static void Tick()
     {
@@ -112,7 +109,6 @@ internal static unsafe class AutoRetainerPause
             return;
         }
 
-        // Same as AutoDuty: enable AutoRetainer at the bell so users don't need expert OpenBell settings.
         if (!autoRetainerEnableSent &&
             Svc.Condition[ConditionFlag.OccupiedSummoningBell] &&
             AutoRetainerIpc.AreAnyRetainersReady())
@@ -253,7 +249,6 @@ internal static unsafe class AutoRetainerPause
             Svc.Targets.Target = null;
             while (TryCloseRetainerUiStep())
             {
-                // Best-effort close on reset/timeout.
             }
 
             DisableAutoRetainer();

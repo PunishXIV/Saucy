@@ -203,9 +203,6 @@ internal static unsafe class TriadRematchAutomation
             }
         }
 
-        // Wait for the results reader to publish stats (MGP/card rewards populate a
-        // moment after the addon reports ready) before recording and moving on;
-        // the reader's own frame fallback bounds how long this can stall.
         if (TriadRunSession.ModuleEnabled &&
             !IsResultMatchRecorded((nint)addon) &&
             !uiReaderMatchResults.HasPendingNotify &&

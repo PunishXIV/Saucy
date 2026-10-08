@@ -7,19 +7,19 @@
 Automates certain Gold Saucer mini-games.
 
 </div>
+<!-- Repository Header End -->
 
-<div align="left">
-<h4>Currently supports:</h1>
-<ul>
-<li>Cuff-a-cur</li>
-<li>Triple Triad</li>
-<li>Out on a Limb</li>
-<li>Slice is Right</li>
-<li>Auto Cactpot</li>
-<li>Air Force One</li>
+#### Currently supports
 
-Tracks Stats for Lifetime, Sessions, Hourly MGP and more!
+- Triple Triad
+- Mini Cactpot
+- Jumbo Cactpot
+- Cuff-a-Cur
+- Out on a Limb
+- Air Force One
+- GATE: The Slice is Right
+- GATE: Any Way the Wind Blows
+
+Tracks stats for lifetime, sessions, hourly MGP and more!
 
 Localized in English and 简体中文 (Simplified Chinese). The UI follows the Dalamud language by default and can be switched from the sidebar's language selector.
-
-<!-- Repository Header End -->

@@ -62,10 +62,6 @@ public class TriadGameSolver
     public void InitializeSimulation(IEnumerable<TriadGameModifier> modsA, IEnumerable<TriadGameModifier> modsB) => simulation.Initialize(modsA, modsB);
     public void InitializeSimulation(IEnumerable<TriadGameModifier> mods) => simulation.Initialize(mods);
 
-    /// <summary>
-    ///     Independent solver for parallel simulations. Each worker needs its own modifier instances
-    ///     because rule handlers mutate per-match state during <see cref="TriadGameSimulation.StartGame" />.
-    /// </summary>
     public TriadGameSolver CreateWorkerCopy()
     {
         var worker = new TriadGameSolver(new TriadGameAgentRandom(null, 0));

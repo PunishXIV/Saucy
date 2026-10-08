@@ -55,6 +55,8 @@ public sealed partial class Saucy
                 return;
             }
 
+            TriadCardAutoRegister.Tick();
+
             if (TriadDialogueSkip.ShouldRun())
             {
                 TriadDialogueSkip.Tick();

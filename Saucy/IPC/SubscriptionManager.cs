@@ -2,31 +2,30 @@ using ECommons.EzIpcManager;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 namespace Saucy.IPC;
+
+internal static class IPCNames
+{
+    public const string Lifestream = "Lifestream";
+    public const string BossMod = "BossMod";
+    public const string Vnavmesh = "vnavmesh";
+    public const string Questionable = "Questionable";
+    public const string AutoRetainer = "AutoRetainer";
+}
 
 internal static class SubscriptionManager
 {
-    private static IpcEntry[]? _ipcEntries;
+    private static readonly IpcEntry[] IpcEntries =
+    [
+        new(typeof(AutoRetainerIpc), IPCNames.AutoRetainer),
+        new(typeof(BossMod), IPCNames.BossMod),
+        new(typeof(Lifestream), IPCNames.Lifestream),
+        new(typeof(Questionable), IPCNames.Questionable),
+        new(typeof(Vnavmesh), IPCNames.Vnavmesh),
+    ];
+
     private static readonly Dictionary<string, EzIPCDisposalToken[]> InitializedIpcs = [];
     private static int _subscribeTick;
-
-    internal static void Prepare()
-    {
-        if (_ipcEntries != null)
-        {
-            return;
-        }
-
-        _ipcEntries =
-        [
-            .. Assembly.GetExecutingAssembly()
-                .GetTypes()
-                .Select(type => (Type: type, Attr: type.GetCustomAttribute<IPCAttribute>()))
-                .Where(entry => entry.Attr != null)
-                .Select(entry => new IpcEntry(entry.Type, entry.Attr!.Name))
-        ];
-    }
 
     internal static bool IsInitialized(string plugin) =>
         InitializedIpcs.ContainsKey(plugin) && IsLoaded(plugin);
@@ -38,8 +37,7 @@ internal static class SubscriptionManager
     {
         try
         {
-            Prepare();
-            var entries = _ipcEntries!;
+            var entries = IpcEntries;
             var allInitialized = InitializedIpcs.Count == entries.Length;
             _subscribeTick++;
 

@@ -156,7 +156,6 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
 
         _triadCollectionHost = new(pluginInterface);
 
-        SubscriptionManager.Prepare();
         SubscriptionManager.Subscribe();
         Svc.Framework.Update += RunBot;
         _initialized = true;

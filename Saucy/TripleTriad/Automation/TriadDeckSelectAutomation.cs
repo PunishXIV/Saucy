@@ -1,4 +1,3 @@
-using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Collections.Generic;
 using static ECommons.GenericHelpers;
@@ -356,7 +355,7 @@ internal static unsafe partial class TriadDeckSelectAutomation
         recommendedAttempts = 0;
     }
 
-    public static void PrepareRetryWithOptimizedDeck(int deckId)
+    public static void PrepareRetryWithOptimizedDeck()
     {
         if (!TriadRunSession.ShouldContinue() || !TriadUiState.IsPrepDeckSelectVisible())
         {
@@ -381,48 +380,6 @@ internal static unsafe partial class TriadDeckSelectAutomation
         recommendedAttempts = 0;
         framesSinceAttempt = DeckSelectPostOptimizerCooldownFrames;
         TriadRun.BeginDeckSelectPostWriteCooldown();
-    }
-
-    private static void TickBoardVisibleRecoverDeck(AtkUnitBase* addon)
-    {
-        boardDismissFrames++;
-
-        if (!addon->IsVisible)
-        {
-            try
-            {
-                addon->IsVisible = true;
-                addon->Update(0);
-            }
-            catch (Exception ex)
-            {
-                Svc.Log.Verbose(ex, "[TriadAutomator] Could not re-show deck select for recovery");
-            }
-        }
-
-        if (pendingProfileDeckId >= 0 && pendingDeckIndex >= 0)
-        {
-            TryApplyDeckSelection(addon, pendingProfileDeckId, pendingDeckIndex, pendingSelectMethod);
-        }
-        else if (IsAddonReady(addon))
-        {
-            uiReaderPrep.RefreshDeckSelectList((nint)addon);
-            if (C.UseSimmedDeck && TrySelectPreferredProfileDeck(addon))
-            {
-                framesSinceAttempt = DeckSelectRetryCooldownFrames;
-            }
-            else if (C.UseSimmedDeck && TriadRun.ShouldTryVisibleSaucyDeckRowSelect() && TrySelectVisibleSaucyDeck(addon))
-            {
-                framesSinceAttempt = DeckSelectRetryCooldownFrames;
-            }
-        }
-
-        TryCloseDeckSelectGracefully(addon);
-
-        if (boardDismissFrames == DeckSelectBoardVisibleMaxFrames)
-        {
-            Svc.Chat.PrintError(Loc.T("[Saucy] Match started without a deck. Confirm deck selection manually."));
-        }
     }
 
     internal static bool IsBoardHandsPopulated()

@@ -93,7 +93,6 @@ internal static partial class TriadMapNavigation
             return;
         }
 
-        // Henchman waits for Nav.IsReady && player not busy before pathing.
         if (!CanBeginLocalNavigation())
         {
             return;
@@ -107,7 +106,7 @@ internal static partial class TriadMapNavigation
             pending.LastAnnouncedBuildProgress = -1;
         }
 
-        if (pending.AttemptMountBeforeNav && !TryEnsureMountedForNav(pending))
+        if (pending.AttemptMountBeforeNav && !TryEnsureMountedForNav())
         {
             if (DateTime.UtcNow - pending.PhaseStartedUtc > MountBeforeNavTimeout)
             {
@@ -126,7 +125,7 @@ internal static partial class TriadMapNavigation
             return;
         }
 
-        if (!TryEnsureMountedForNav(pending))
+        if (!TryEnsureMountedForNav())
         {
             return;
         }
@@ -198,7 +197,7 @@ internal static partial class TriadMapNavigation
         return pending.Destination;
     }
 
-    private static bool TryEnsureMountedForNav(PendingNavigation pending)
+    private static bool TryEnsureMountedForNav()
     {
         if (!TravelMountHelper.CanMountInCurrentTerritory())
         {
@@ -232,7 +231,7 @@ internal static partial class TriadMapNavigation
             return false;
         }
 
-        if (!TryEnsureMountedForNav(pending))
+        if (!TryEnsureMountedForNav())
         {
             return false;
         }
@@ -276,7 +275,7 @@ internal static partial class TriadMapNavigation
             return false;
         }
 
-        if (!TryEnsureMountedForNav(pending))
+        if (!TryEnsureMountedForNav())
         {
             return false;
         }

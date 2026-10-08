@@ -144,28 +144,6 @@ public static unsafe class ObjectHelper
         return Vnavmesh.TryMoveTo(obj.Position, false, closeRange);
     }
 
-    public static bool HasArrivedAt(IGameObject obj, float closeRange = Vnavmesh.NpcCloseRange) =>
-        Vnavmesh.TickArrival(obj.Position, closeRange);
-
-    public static bool TryInteractWithBaseId(
-        uint baseId,
-        float interactRange = Vnavmesh.NpcInteractRange,
-        string throttleKey = "Saucy.Object.Interact")
-    {
-        if (!Player.Interactable)
-        {
-            return false;
-        }
-
-        var obj = FindNearestByBaseId(baseId, interactRange + 2f);
-        if (obj == null || !Vnavmesh.IsWithinHorizontalRange(obj.Position, interactRange))
-        {
-            return false;
-        }
-
-        return TryInteractWithObject(obj, throttleKey);
-    }
-
     public static IGameObject? FindNearest(
         string scope,
         Func<IGameObject, float> getDistance,

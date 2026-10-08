@@ -99,7 +99,6 @@ public partial class TriadSession
             var newCardIdx = bestCardIdx;
             var newBoardIdx = newCardIdx < 0 ? -1 : bestBoardPos;
 
-            // Swap+Chaos: solver may pick a non-forced card; the game will reject it.
             var forcedCardIdx = DebugScreenMemory.gameState.forcedCardIdx;
             if (forcedCardIdx >= 0 && newCardIdx != forcedCardIdx)
             {

@@ -8,8 +8,43 @@ using Saucy.Framework;
 using System;
 using System.Collections.Generic;
 using static ECommons.GenericHelpers;
-
 namespace Saucy.OutOnALimb;
+
+public class OutOnALimbModule : Module
+{
+    public override string InternalName => ModuleNames.OutOnALimb;
+    public override string Name => "Out on a Limb";
+
+    public override void Enable() =>
+        GoldSaucerArcadeLifecycle.OnModuleEnabled(GoldSaucerArcadeMachine.Limb);
+
+    public override void Disable() =>
+        GoldSaucerArcadeLifecycle.OnModuleDisabled(GoldSaucerArcadeMachine.Limb);
+}
+
+[Serializable]
+public class LimbConfig
+{
+    public LimbDifficulty LimbDifficulty = LimbDifficulty.Titan;
+    public int MinSecondsForAnotherRound = 12;
+    public int Step = 10;
+}
+
+public enum LimbDifficulty
+{
+    Titan, Morbol, Cactuar
+}
+
+public enum HitPower
+{
+    Unobserved, Nothing, Weak, Strong, Maximum
+}
+
+public class HitResult(int cursor, HitPower power)
+{
+    public int Position = cursor;
+    public HitPower Power = power;
+}
 
 public unsafe partial class LimbManager(LimbConfig cfg)
 {
@@ -265,7 +300,6 @@ public unsafe partial class LimbManager(LimbConfig cfg)
                 HasLimbSessionUi,
                 () => FindNearestLimbMachine() != null);
 
-            // MiniGameBotanist/Aimg can stay open after OccupiedInQuestEvent drops mid-round.
             if (HasLimbSessionUi())
             {
                 RunLimbMinigame();
@@ -304,7 +338,7 @@ public unsafe partial class LimbManager(LimbConfig cfg)
             }
 
             if (GoldSaucerArcadeFakeBreak.IsActive(Machine) ||
-                AutoRetainerPause.BlocksArcadeSessions(Machine))
+                AutoRetainerPause.IsBlocking)
             {
                 ArcadeMachineSession.ClearInteractPending(Machine);
                 return;

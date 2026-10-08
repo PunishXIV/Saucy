@@ -128,7 +128,6 @@ internal static unsafe class TriadDialogueSkip
 
     private static void RunDialogueAutomation()
     {
-        // SelectIconString can stay "visible" after picking Triad while Talk is already open.
         if (TalkHelper.IsVisible())
         {
             TryAdvanceTalk();

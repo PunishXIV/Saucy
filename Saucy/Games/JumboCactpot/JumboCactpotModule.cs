@@ -14,6 +14,7 @@ namespace Saucy.JumboCactpot;
 
 public unsafe class JumboCactpot : Module
 {
+    public override string InternalName => ModuleNames.JumboCactpot;
     private const string InputAddonName = "LotteryWeeklyInput";
     private const string RewardAddonName = "LotteryWeeklyRewardList";
     private const string TalkThrottleKey = "Saucy.JumboCactpot.Talk";
@@ -64,13 +65,7 @@ public unsafe class JumboCactpot : Module
             [CactpotNpcs.CashierBaseId],
             logLabel: CactpotNpcs.CashierScope);
 
-        Svc.AddonLifecycle.UnregisterListener(OnInputSetup);
-        Svc.AddonLifecycle.UnregisterListener(OnInputFinalize);
-        Svc.AddonLifecycle.UnregisterListener(OnRewardSetup);
-        Svc.AddonLifecycle.UnregisterListener(OnRewardFinalize);
-        Svc.AddonLifecycle.UnregisterListener(OnTalkUpdate);
-        Svc.Framework.Update -= OnFrameworkUpdate;
-        Svc.ClientState.TerritoryChanged -= OnTerritoryChanged;
+        UnsubscribeEvents();
 
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, InputAddonName, OnInputSetup);
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, InputAddonName, OnInputFinalize);
@@ -89,7 +84,7 @@ public unsafe class JumboCactpot : Module
         JumboCactpotBrokerPath.Reset();
     }
 
-    public override void Disable()
+    private void UnsubscribeEvents()
     {
         Svc.AddonLifecycle.UnregisterListener(OnInputSetup);
         Svc.AddonLifecycle.UnregisterListener(OnInputFinalize);
@@ -98,6 +93,11 @@ public unsafe class JumboCactpot : Module
         Svc.AddonLifecycle.UnregisterListener(OnTalkUpdate);
         Svc.Framework.Update -= OnFrameworkUpdate;
         Svc.ClientState.TerritoryChanged -= OnTerritoryChanged;
+    }
+
+    public override void Disable()
+    {
+        UnsubscribeEvents();
         ObjectHelper.ClearTrackedObjects(CactpotNpcs.JumboBrokerScope);
         ObjectHelper.ClearTrackedObjects(CactpotNpcs.CashierScope);
         JumboCactpotBrokerPath.Reset();
@@ -173,7 +173,6 @@ public unsafe class JumboCactpot : Module
 
     private void OnFrameworkUpdate(IFramework framework)
     {
-        // Same-territory aetheryte teleports never flip InSaucer; BetweenAreas must abandon too.
         var betweenAreas = Svc.Condition[ConditionFlag.BetweenAreas];
         if ((betweenAreas && !wasBetweenAreas) || !InSaucer)
         {
@@ -210,7 +209,6 @@ public unsafe class JumboCactpot : Module
 
     private bool ShouldPauseYesAlready()
     {
-        // Never hold YesAlready across loads / teleports.
         if (!InSaucer || Svc.Condition[ConditionFlag.BetweenAreas])
         {
             return false;
@@ -225,10 +223,6 @@ public unsafe class JumboCactpot : Module
                (ObjectHelper.IsTargeting(CactpotNpcs.JumboBrokerScope) && HasTicketFlowUi());
     }
 
-    /// <summary>
-    /// True only during the brief post-cashier dismiss window before broker path arms.
-    /// <see cref="cashierDialogueSeen"/> alone must not keep YesAlready paused.
-    /// </summary>
     private bool IsCashierHandoffPending() =>
         cashierDialogueSeen &&
         cashierHandoffDismissedUtc != null &&
@@ -268,13 +262,11 @@ public unsafe class JumboCactpot : Module
 
     private void ClearSessionIfIdle()
     {
-        // Path may be Reset() by a teleport while brokerPathArmed is still true.
         if (brokerPathArmed && !JumboCactpotBrokerPath.IsActive)
         {
             brokerPathArmed = false;
         }
 
-        // Do not gate cleanup on ShouldPauseYesAlready (sticky handoff flags deadlock reset).
         if (HasVisibleOrActiveJumboUi() || IsCashierHandoffPending())
         {
             return;

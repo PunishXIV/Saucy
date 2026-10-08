@@ -168,7 +168,6 @@ internal static class TriadNpcQuestUi
 
         if (!QuestionableTriad.IsReadyToAccept(questId))
         {
-            // Finished quests are also not "ready to accept" in Questionable — don't blame prerequisites for that.
             if (TriadMemoryReads.IsQuestCompleteOrUnneeded(questId))
             {
                 return CompleteSnapshot(hasAutomationPath);

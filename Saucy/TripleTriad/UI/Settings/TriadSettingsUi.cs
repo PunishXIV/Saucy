@@ -65,8 +65,19 @@ internal static class TriadSettingsUi
             C.Save();
         }
 
+        ImGui.SameLine();
         ImGuiComponents.HelpMarker(
             Loc.T("Shows a searchable card list beside the Gold Saucer card UI, including Edit Deck (TriadBuddy-style [No.1] ordering). Also shows NPC search on the main card collection screen."));
+
+        var autoRegister = C.AutoRegisterTriadCards;
+        if (ImGui.Checkbox("Register won cards automatically", ref autoRegister))
+        {
+            C.AutoRegisterTriadCards = autoRegister;
+            C.Save();
+        }
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker(
+            "Uses Triple Triad card items in your inventory that aren't in your collection yet, once triad automation is idle.");
 
         ImGui.Dummy(new(0, 4));
 
@@ -454,6 +465,17 @@ internal static class TriadSettingsUi
                 SaucyTheme.TextErrorWrapped(Loc.T("Start a match with an NPC to see which cards are still missing."));
             }
         }
+
+        ImGui.Dummy(new(0, 4));
+        var logOutAfterRun = C.LogOutAfterTriadRun;
+        if (ImGui.Checkbox(Loc.T("Log out when run completes"), ref logOutAfterRun))
+        {
+            C.LogOutAfterTriadRun = logOutAfterRun;
+            C.Save();
+        }
+        ImGui.SameLine();
+        ImGuiComponents.HelpMarker(
+            Loc.T("Logs out of the game when a run finishes: fixed match count reaches zero, card drop mode triggers, or card farm completes."));
     }
 
     private static void CommitDraftMatchCount()
@@ -470,16 +492,6 @@ internal static class TriadSettingsUi
 
     private static void DrawNotificationsBody()
     {
-        var logOutAfterRun = C.LogOutAfterTriadRun;
-        if (ImGui.Checkbox(Loc.T("Log out when run completes"), ref logOutAfterRun))
-        {
-            C.LogOutAfterTriadRun = logOutAfterRun;
-            C.Save();
-        }
-        ImGui.SameLine();
-        ImGuiComponents.HelpMarker(
-            Loc.T("Logs out of the game when a run finishes: fixed match count reaches zero, card drop mode triggers, or card farm completes."));
-
         var playSound = C.PlaySound;
         if (ImGui.Checkbox(Loc.T("Play sound when run completes"), ref playSound))
         {

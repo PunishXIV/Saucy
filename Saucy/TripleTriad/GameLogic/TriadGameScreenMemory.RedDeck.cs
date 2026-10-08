@@ -112,9 +112,6 @@ public partial class TriadGameScreenMemory
                     }
                     else
                     {
-                        // face-down card: do NOT mark the slot playable (the placeholder card is 0/0/0/0)
-                        // and do NOT count it as unknown-on-hand; red's options stay modeled by the
-                        // real card pool (mask bits >= numVisibleCards), matching upstream FFTriadBuddy
                         numHidden++;
                     }
                 }

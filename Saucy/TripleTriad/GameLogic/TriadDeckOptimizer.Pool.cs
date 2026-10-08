@@ -115,26 +115,26 @@ public partial class TriadDeckOptimizer
         var modifiersCopy = new List<TriadGameModifier>();
         modifiersCopy.AddRange(modifiers);
 
-        var reverseModIdx = modifiersCopy.FindIndex(mod => mod.GetType() == typeof(TriadGameModifierReverse));
+        var reverseModIdx = modifiersCopy.FindIndex(mod => mod is TriadGameModifierReverse);
         var hasReverseMod = reverseModIdx >= 0;
 
-        var ascensionModIdx = modifiersCopy.FindIndex(mod => mod.GetType() == typeof(TriadGameModifierAscension));
+        var ascensionModIdx = modifiersCopy.FindIndex(mod => mod is TriadGameModifierAscension);
         var hasAscensionMod = ascensionModIdx >= 0;
 
-        var descensionModIdx = modifiersCopy.FindIndex(mod => mod.GetType() == typeof(TriadGameModifierDescension));
+        var descensionModIdx = modifiersCopy.FindIndex(mod => mod is TriadGameModifierDescension);
         var hasDescensionMod = descensionModIdx >= 0;
 
         if (hasReverseMod && hasAscensionMod)
         {
             hasAscensionMod = false;
             modifiersCopy.RemoveAt(ascensionModIdx);
-            modifiersCopy.Add(TriadGameModifierDB.Get().mods.Find(mod => mod.GetType() == typeof(TriadGameModifierDescension)));
+            modifiersCopy.Add(TriadGameModifierDB.Get().mods.Find(mod => mod is TriadGameModifierDescension));
         }
         else if (hasReverseMod && hasDescensionMod)
         {
             hasAscensionMod = true;
             modifiersCopy.RemoveAt(descensionModIdx);
-            modifiersCopy.Add(TriadGameModifierDB.Get().mods.Find(mod => mod.GetType() == typeof(TriadGameModifierAscension)));
+            modifiersCopy.Add(TriadGameModifierDB.Get().mods.Find(mod => mod is TriadGameModifierAscension));
         }
 
         List<ETriadCardRarity> priRarityThr = [];
