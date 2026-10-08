@@ -34,6 +34,7 @@ public partial class GameDataLoader
         }
 
         var mapTriadNpcData = new Dictionary<uint, NpcIds>();
+        var mapTriadNpcBaseIds = new Dictionary<uint, HashSet<uint>>();
         var sheetNpcNames = Svc.Data.GetExcelSheet<ENpcResident>();
         var sheetENpcBase = Svc.Data.GetExcelSheet<ENpcBase>();
         if (sheetNpcNames != null && sheetENpcBase != null)
@@ -41,15 +42,25 @@ public partial class GameDataLoader
             foreach (var rowData in sheetENpcBase)
             {
                 var triadId = rowData.ENpcData.FirstOrDefault(x => listTriadIds.Contains(x.RowId));
-                if (triadId.RowId != 0 && !mapTriadNpcData.ContainsKey(triadId.RowId))
+                if (triadId.RowId != 0)
                 {
-                    var rowName = sheetNpcNames.GetRowOrDefault(rowData.RowId);
-                    if (rowName != null)
+                    if (!mapTriadNpcBaseIds.TryGetValue(triadId.RowId, out var baseIds))
                     {
-                        mapTriadNpcData.Add(triadId.RowId, new()
+                        baseIds = [];
+                        mapTriadNpcBaseIds.Add(triadId.RowId, baseIds);
+                    }
+
+                    baseIds.Add(rowData.RowId);
+                    if (!mapTriadNpcData.ContainsKey(triadId.RowId))
+                    {
+                        var rowName = sheetNpcNames.GetRowOrDefault(rowData.RowId);
+                        if (rowName != null)
                         {
-                            ENpcId = rowData.RowId, TriadNpcId = triadId.RowId, Name = rowName.Value.Singular.ToString()
-                        });
+                            mapTriadNpcData.Add(triadId.RowId, new()
+                            {
+                                ENpcId = rowData.RowId, TriadNpcId = triadId.RowId, Name = rowName.Value.Singular.ToString()
+                            });
+                        }
                     }
                 }
             }
@@ -159,6 +170,7 @@ public partial class GameDataLoader
             {
                 Name = npcIdData.Name
             };
+            npcOb.BaseIDs.UnionWith(mapTriadNpcBaseIds[rowData.RowId]);
             npcOb.OnNameUpdated();
             nameLocId++;
 
