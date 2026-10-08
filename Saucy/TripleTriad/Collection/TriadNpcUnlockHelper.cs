@@ -84,13 +84,16 @@ internal static class TriadNpcUnlockHelper
         info != null && AreUnlockQuestsComplete(info, out var _);
 
     private static string FormatLockedMessage(string npcName, uint incompleteQuestId, string? incompleteQuestName) =>
-        $"[Saucy] {npcName}'s Triple Triad isn't unlocked yet — complete {FormatQuestLabel(incompleteQuestId, incompleteQuestName)} first.";
+        Loc.T(
+            "[Saucy] {0}'s Triple Triad isn't unlocked yet — complete {1} first.",
+            npcName,
+            FormatQuestLabel(incompleteQuestId, incompleteQuestName));
 
     private static string FormatLockedMessageAnyOf(string npcName, IReadOnlyList<(uint QuestId, string? QuestName)> quests)
     {
         if (quests.Count == 0)
         {
-            return $"[Saucy] {npcName}'s Triple Triad isn't unlocked yet.";
+            return Loc.T("[Saucy] {0}'s Triple Triad isn't unlocked yet.", npcName);
         }
 
         if (quests.Count == 1)
@@ -98,18 +101,23 @@ internal static class TriadNpcUnlockHelper
             return FormatLockedMessage(npcName, quests[0].QuestId, quests[0].QuestName);
         }
 
-        var labels = string.Join(", ", quests.Select(q => FormatQuestLabel(q.QuestId, q.QuestName)));
-        return $"[Saucy] {npcName}'s Triple Triad isn't unlocked yet — complete one of: {labels}.";
+        // The separator and the quote marks are keys of their own: CJK wants 、 and “”
+        // where English wants ", " and "". Their English values are the fallback, so the
+        // untranslated rendering is unchanged.
+        var labels = string.Join(Loc.T(", "), quests.Select(q => FormatQuestLabel(q.QuestId, q.QuestName)));
+        return Loc.T("[Saucy] {0}'s Triple Triad isn't unlocked yet — complete one of: {1}.", npcName, labels);
     }
 
     private static string FormatCouldNotVerifyMessage(string npcName) =>
-        $"[Saucy] Could not verify Triple Triad unlock for {npcName}.";
+        Loc.T("[Saucy] Could not verify Triple Triad unlock for {0}.", npcName);
 
     public static string FormatNavigationInteractAbortMessage(TriadNpc? npc) =>
-        $"[Saucy] Triple Triad is not available with {npc?.Name ?? "this NPC"} (unlocked yet?). Aborting.";
+        Loc.T(
+            "[Saucy] Triple Triad is not available with {0} (unlocked yet?). Aborting.",
+            npc?.Name ?? Loc.T("this NPC"));
 
     private static string FormatQuestLabel(uint questId, string? questName) =>
-        string.IsNullOrEmpty(questName) ? $"quest #{questId}" : $"\"{questName}\"";
+        string.IsNullOrEmpty(questName) ? Loc.T("quest #{0}", questId) : Loc.T("\"{0}\"", questName);
 
     private static bool TryResolveGameNpcInfo(TriadNpc npc, out GameNpcInfo info) =>
         GameNpcDB.Get().mapNpcs.TryGetValue(npc.Id, out info!);

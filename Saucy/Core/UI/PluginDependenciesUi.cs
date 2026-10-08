@@ -93,14 +93,14 @@ internal static class PluginDependenciesUi
 
         if (showAddRepo)
         {
-            if (ImGui.Button("Add repository"))
+            if (ImGui.Button(Loc.T("Add repository")))
             {
                 TryAddRepository(entry);
             }
 
             if (ImGui.IsItemHovered())
             {
-                ImGui.SetTooltip($"Add {entry.PrimaryRepositoryUrl} to Custom Plugin Repositories.");
+                ImGui.SetTooltip(Loc.T("Add {0} to Custom Plugin Repositories.", entry.PrimaryRepositoryUrl));
             }
 
             firstButton = false;
@@ -113,14 +113,14 @@ internal static class PluginDependenciesUi
                 ImGui.SameLine();
             }
 
-            if (ImGui.Button("Install plugin"))
+            if (ImGui.Button(Loc.T("Install plugin")))
             {
                 TryInstallPlugin(entry);
             }
 
             if (ImGui.IsItemHovered())
             {
-                ImGui.SetTooltip($"Install {entry.DisplayName} from its plugin repository.");
+                ImGui.SetTooltip(Loc.T("Install {0} from its plugin repository.", entry.DisplayName));
             }
         }
 
@@ -144,14 +144,14 @@ internal static class PluginDependenciesUi
     {
         if (DalamudReflector.HasRepo(entry.PrimaryRepositoryUrl))
         {
-            Svc.Chat.Print($"[Saucy] {entry.DisplayName} repository is already added.");
+            Svc.Chat.Print(Loc.T("[Saucy] {0} repository is already added.", entry.DisplayName));
             return;
         }
 
         DalamudReflector.AddRepo(entry.PrimaryRepositoryUrl, true);
         DalamudReflector.SaveDalamudConfig();
         DalamudReflector.ReloadPluginMasters();
-        Svc.Chat.Print($"[Saucy] Added {entry.DisplayName} repository.");
+        Svc.Chat.Print(Loc.T("[Saucy] Added {0} repository.", entry.DisplayName));
     }
 
     private static void TryInstallPlugin(DependencyEntry entry)
@@ -164,11 +164,11 @@ internal static class PluginDependenciesUi
     {
         if (await DalamudReflector.AddPlugin(repoUrl, entry.InternalName))
         {
-            Svc.Chat.Print($"[Saucy] Installed {entry.DisplayName}.");
+            Svc.Chat.Print(Loc.T("[Saucy] Installed {0}.", entry.DisplayName));
         }
         else
         {
-            Svc.Chat.PrintError($"[Saucy] Could not install {entry.DisplayName}. Check the plugin installer for details.");
+            Svc.Chat.PrintError(Loc.T("[Saucy] Could not install {0}. Check the plugin installer for details.", entry.DisplayName));
         }
     }
 
@@ -177,18 +177,18 @@ internal static class PluginDependenciesUi
         switch (state)
         {
             case DependencyState.Ready:
-                DrawStatusLine(FontAwesomeIcon.Check, ImGuiColors.HealerGreen, "Installed");
+                DrawStatusLine(FontAwesomeIcon.Check, ImGuiColors.HealerGreen, Loc.T("Installed"));
                 break;
             case DependencyState.InstalledNotLoaded:
-                DrawStatusLine(FontAwesomeIcon.ExclamationTriangle, ImGuiColors.DalamudYellow, "Installed but not loaded");
+                DrawStatusLine(FontAwesomeIcon.ExclamationTriangle, ImGuiColors.DalamudYellow, Loc.T("Installed but not loaded"));
                 ImGui.SameLine();
-                if (ImGui.Button("Open installer"))
+                if (ImGui.Button(Loc.T("Open installer")))
                 {
                     Svc.PluginInterface.OpenPluginInstallerTo(PluginInstallerOpenKind.InstalledPlugins, string.Empty);
                 }
                 break;
             default:
-                DrawStatusLine(FontAwesomeIcon.Times, ImGuiColors.DalamudRed, "Not installed");
+                DrawStatusLine(FontAwesomeIcon.Times, ImGuiColors.DalamudRed, Loc.T("Not installed"));
                 break;
         }
     }

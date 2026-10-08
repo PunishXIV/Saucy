@@ -60,23 +60,21 @@ internal static unsafe class MultiAreaRouteExecutor
 
             if (AetheryteHelper.IsPlayerInAetheryteTerritory(aetheryteId))
             {
-                beginMessage = $"[Saucy] Entering {route.Name}, then moving to the NPC.";
+                beginMessage = Loc.T("[Saucy] Entering {0}, then moving to the NPC.", route.Name);
                 return true;
             }
 
             if (!Lifestream.TryTeleport(aetheryteId))
             {
-                Svc.Chat.PrintError($"[Saucy] Lifestream could not teleport for {route.Name}.");
+                Svc.Chat.PrintError(Loc.T("[Saucy] Lifestream could not teleport for {0}.", route.Name));
                 return false;
             }
 
-            beginMessage =
-                $"[Saucy] Teleporting for {route.Name}, then moving to the NPC.";
+            beginMessage = Loc.T("[Saucy] Teleporting for {0}, then moving to the NPC.", route.Name);
             return true;
         }
 
-        beginMessage =
-            $"[Saucy] Entering {route.Name}, then moving to the NPC.";
+        beginMessage = Loc.T("[Saucy] Entering {0}, then moving to the NPC.", route.Name);
         return true;
     }
 
@@ -176,7 +174,8 @@ internal static unsafe class MultiAreaRouteExecutor
         var shardId = ResolveShardId(step);
         if (shardId == 0)
         {
-            Svc.Chat.PrintError($"[Saucy] Could not resolve aethernet shard \"{step.AethernetShardName}\".");
+            Svc.Chat.PrintError(Loc.T(
+                "[Saucy] Could not resolve aethernet shard \"{0}\".", step.AethernetShardName ?? string.Empty));
             execution.Failed = true;
             return false;
         }
@@ -197,7 +196,7 @@ internal static unsafe class MultiAreaRouteExecutor
             if (!Lifestream.TryAethernetViaLiCommand(
                 step.AethernetShardName ?? AetheryteHelper.GetAethernetShardName(shardId)))
             {
-                Svc.Chat.PrintError($"[Saucy] Lifestream could not aethernet for {execution.Route.Name}.");
+                Svc.Chat.PrintError(Loc.T("[Saucy] Lifestream could not aethernet for {0}.", execution.Route.Name));
                 execution.Failed = true;
                 return false;
             }
@@ -291,14 +290,14 @@ internal static unsafe class MultiAreaRouteExecutor
                 fly &&
                 !Vnavmesh.TryMoveTo(approachPoint, false, step.Range))
             {
-                Svc.Chat.PrintError("[Saucy] vnavmesh could not start movement for this route step.");
+                Svc.Chat.PrintError(Loc.T("[Saucy] vnavmesh could not start movement for this route step."));
                 execution.Failed = true;
                 return false;
             }
 
             if (!Vnavmesh.IsMoving() && !Vnavmesh.IsPathfindInProgress())
             {
-                Svc.Chat.PrintError("[Saucy] vnavmesh could not start movement for this route step.");
+                Svc.Chat.PrintError(Loc.T("[Saucy] vnavmesh could not start movement for this route step."));
                 execution.Failed = true;
                 return false;
             }
@@ -432,7 +431,8 @@ internal static unsafe class MultiAreaRouteExecutor
 
         if (DateTime.UtcNow - execution.StepStartedUtc > TimeSpan.FromSeconds(30))
         {
-            Svc.Chat.PrintError($"[Saucy] Did not arrive in {execution.Route.Name} after zone transition.");
+            Svc.Chat.PrintError(Loc.T(
+                "[Saucy] Did not arrive in {0} after zone transition.", execution.Route.Name));
             execution.Failed = true;
         }
 

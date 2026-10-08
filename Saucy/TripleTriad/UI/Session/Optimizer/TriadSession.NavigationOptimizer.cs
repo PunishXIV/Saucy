@@ -91,8 +91,11 @@ public partial class TriadSession
         }
 
         _navigationOptimizerRetryCount++;
-        PrintOptimizerChat(
-            $"[Saucy] Deck optimization interrupted for {result.Npc.Name}; retry {_navigationOptimizerRetryCount}/{MaxNavigationOptimizerRetries}…");
+        PrintOptimizerChat(LocText.Of(
+            "[Saucy] Deck optimization interrupted for {0}; retry {1}/{2}…",
+            result.Npc.Name,
+            _navigationOptimizerRetryCount,
+            MaxNavigationOptimizerRetries));
         _optimizerTimedOut = false;
         StartDeckOptimizer(result.Npc, ResolveRegionModsForNpc(result.Npc), navigationRequest: true);
         return true;

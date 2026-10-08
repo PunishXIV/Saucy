@@ -418,17 +418,18 @@ public partial class TriadSession
         return true;
     }
 
-    private string? DescribeMissingSimmableDecks()
+    // Never returns null: every path yields a sentence the caller can show verbatim.
+    private string DescribeMissingSimmableDecks()
     {
         if (profileGS == null || profileGS.HasErrors)
         {
-            return "No usable decks";
+            return Loc.T("No usable decks");
         }
 
         var profileDecks = profileGS.GetPlayerDecks();
         if (profileDecks == null)
         {
-            return "No usable decks";
+            return Loc.T("No usable decks");
         }
 
         var hasNamedDeck = false;
@@ -459,11 +460,11 @@ public partial class TriadSession
 
         if (!hasNamedDeck)
         {
-            return "No usable decks";
+            return Loc.T("No usable decks");
         }
 
         return hasCompleteCardIds
-            ? "Profile decks aren't simmable"
-            : "No complete profile decks";
+            ? Loc.T("Profile decks aren't simmable")
+            : Loc.T("No complete profile decks");
     }
 }

@@ -114,8 +114,8 @@ internal static unsafe partial class TriadDeckSelectAutomation
         {
             if (recommendedAttempts == MaxDeckSelectAttemptsPerScreen)
             {
-                Svc.Chat.PrintError(
-                    "[Saucy] Could not use game recommended deck. Pick a deck manually or try another option.");
+                Svc.Chat.PrintError(Loc.T(
+                    "[Saucy] Could not use game recommended deck. Pick a deck manually or try another option."));
                 recommendedAttempts++;
             }
 
@@ -159,7 +159,7 @@ internal static unsafe partial class TriadDeckSelectAutomation
     {
         if (TryClickBottomDeckSelectActionButton(addon, preferLeft: true))
         {
-            TriadDeckLog.Print("[Saucy] Using game recommended deck...");
+            TriadDeckLog.Print(LocText.Of("[Saucy] Using game recommended deck..."));
             return true;
         }
 
@@ -172,7 +172,7 @@ internal static unsafe partial class TriadDeckSelectAutomation
                 continue;
             }
 
-            TriadDeckLog.Print("[Saucy] Using game recommended deck...");
+            TriadDeckLog.Print(LocText.Of("[Saucy] Using game recommended deck..."));
             return true;
         }
 
@@ -328,7 +328,7 @@ internal static unsafe partial class TriadDeckSelectAutomation
 
     private static bool TryBlindDeckSelect(AtkUnitBase* addon)
     {
-        TriadDeckLog.Print("[Saucy] Selecting first deck...");
+        TriadDeckLog.Print(LocText.Of("[Saucy] Selecting first deck..."));
         foreach (var listIndex in new[]
         {
             0, 1, 2, 3, 4

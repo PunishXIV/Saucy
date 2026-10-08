@@ -14,12 +14,12 @@ public unsafe partial class PluginUI
 {
     private void DrawCuffPanel()
     {
-        DrawPanelHeader("Cuff-a-Cur", "punch the cactuar");
+        DrawPanelHeader(Loc.T("Cuff-a-Cur"), Loc.T("punch the cactuar"));
         if (C.ShowDebugUi)
         {
             ImGuiEx.EzTabBar("###Cuff",
-                ("Main", CuffACurAutomation.DrawSettings, null, false),
-                ("Debug", CuffACurAutomation.DrawDebug, null, false));
+                ($"{Loc.T("Main")}###SaucyCuffMain", CuffACurAutomation.DrawSettings, null, false),
+                ($"{Loc.T("Debug")}###SaucyCuffDebug", CuffACurAutomation.DrawDebug, null, false));
         }
         else
         {
@@ -29,12 +29,12 @@ public unsafe partial class PluginUI
 
     private void DrawLimbPanel()
     {
-        DrawPanelHeader("Out on a Limb", "swing the hatchet");
+        DrawPanelHeader(Loc.T("Out on a Limb"), Loc.T("swing the hatchet"));
         if (C.ShowDebugUi)
         {
             ImGuiEx.EzTabBar("###Limb",
-                ("Main", P.LimbManager.DrawSettings, null, false),
-                ("Debug", P.LimbManager.DrawDebug, null, false));
+                ($"{Loc.T("Main")}###SaucyLimbMain", P.LimbManager.DrawSettings, null, false),
+                ($"{Loc.T("Debug")}###SaucyLimbDebug", P.LimbManager.DrawDebug, null, false));
         }
         else
         {
@@ -44,21 +44,21 @@ public unsafe partial class PluginUI
 
     private static void DrawSliceIsRightPanel()
     {
-        DrawPanelHeader("Slice is Right", "dodge the falling slices");
+        DrawPanelHeader(Loc.T("Slice is Right"), Loc.T("dodge the falling slices"));
         var enabled = C.IsModuleEnabled(ModuleNames.SliceIsRight);
-        if (ImGui.Checkbox("Enable##Slice", ref enabled))
+        if (ImGui.Checkbox($"{Loc.T("Enable")}###SaucySliceEnable", ref enabled))
         {
             C.SetModuleEnabled(ModuleNames.SliceIsRight, enabled);
             C.Save();
         }
 
-        ImGui.TextWrapped("Draws slice and AoE markers during the GATE.");
+        ImGui.TextWrapped(Loc.T("Draws slice and AoE markers during the GATE."));
 
         if (enabled)
         {
             using var indent = ImRaii.PushIndent();
             var autoMove = C.GoldSaucerGates.SliceIsRightAutoMovement;
-            if (ImGui.Checkbox("Automatic movement (Boss Mod VBM AI)##SliceAuto", ref autoMove))
+            if (ImGui.Checkbox($"{Loc.T("Automatic movement (Boss Mod VBM AI)")}###SaucySliceAuto", ref autoMove))
             {
                 C.GoldSaucerGates.SliceIsRightAutoMovement = autoMove;
                 C.Save();
@@ -66,31 +66,31 @@ public unsafe partial class PluginUI
 
             if (autoMove)
             {
-                SaucyTheme.TextMuted("Activates the VBM AI preset so Boss Mod's Slice is Right module can path you out of hazards.");
+                SaucyTheme.TextMuted(Loc.T("Activates the VBM AI preset so Boss Mod's Slice is Right module can path you out of hazards."));
             }
         }
 
         ImGui.Dummy(new(0, 4));
-        SaucyTheme.DrawCard("Dependencies", "Optional integrations", DrawSliceIsRightDependencies);
+        SaucyTheme.DrawCard(Loc.T("Dependencies"), Loc.T("Optional integrations"), DrawSliceIsRightDependencies);
     }
 
     private static void DrawWindBlowsPanel()
     {
-        DrawPanelHeader("Any Way the Wind Blows", "statistical safe spot");
+        DrawPanelHeader(Loc.T("Any Way the Wind Blows"), Loc.T("statistical safe spot"));
         var enabled = C.IsModuleEnabled(ModuleNames.AnyWayTheWindBlows);
-        if (ImGui.Checkbox("Enable##Wind", ref enabled))
+        if (ImGui.Checkbox($"{Loc.T("Enable")}###SaucyWindEnable", ref enabled))
         {
             C.SetModuleEnabled(ModuleNames.AnyWayTheWindBlows, enabled);
             C.Save();
         }
 
-        ImGui.TextWrapped("Shows the statistical safe spot during the GATE.");
+        ImGui.TextWrapped(Loc.T("Shows the statistical safe spot during the GATE."));
 
         if (enabled)
         {
             using var indent = ImRaii.PushIndent();
             var autoMove = C.GoldSaucerGates.WindBlowsAutoMovement;
-            if (ImGui.Checkbox("Automatic movement (vnavmesh)##WindAuto", ref autoMove))
+            if (ImGui.Checkbox($"{Loc.T("Automatic movement (vnavmesh)")}###SaucyWindAuto", ref autoMove))
             {
                 C.GoldSaucerGates.WindBlowsAutoMovement = autoMove;
                 C.Save();
@@ -98,24 +98,24 @@ public unsafe partial class PluginUI
 
             if (autoMove)
             {
-                SaucyTheme.TextMuted("Pathfinds you onto the safe spot while you are off it.");
+                SaucyTheme.TextMuted(Loc.T("Pathfinds you onto the safe spot while you are off it."));
             }
         }
 
         ImGui.Dummy(new(0, 4));
-        SaucyTheme.DrawCard("Dependencies", "Optional integrations", DrawWindBlowsDependencies);
+        SaucyTheme.DrawCard(Loc.T("Dependencies"), Loc.T("Optional integrations"), DrawWindBlowsDependencies);
     }
 
     private static void DrawAirForcePanel()
     {
-        DrawPanelHeader("Air Force One", "ride shooting minigame");
+        DrawPanelHeader(Loc.T("Air Force One"), Loc.T("ride shooting minigame"));
         DrawAirForceMain();
     }
 
     private static void DrawAirForceMain()
     {
         var enabled = C.IsModuleEnabled(ModuleNames.AirForceOne);
-        if (ImGui.Checkbox("Enable##AirForce", ref enabled))
+        if (ImGui.Checkbox($"{Loc.T("Enable")}###SaucyAirForceEnable", ref enabled))
         {
             C.SetModuleEnabled(ModuleNames.AirForceOne, enabled);
             if (!enabled)
@@ -126,14 +126,14 @@ public unsafe partial class PluginUI
             C.Save();
         }
 
-        ImGui.TextWrapped("Runs automatically when enabled. Plays the Air Force One ride-shooting minigame for you.");
+        ImGui.TextWrapped(Loc.T("Runs automatically when enabled. Plays the Air Force One ride-shooting minigame for you."));
     }
 
     private static void DrawMiniCactpotPanel()
     {
-        DrawPanelHeader("Mini-Cactpot", "daily 3\u00d73 scratcher");
+        DrawPanelHeader(Loc.T("Mini-Cactpot"), Loc.T("daily 3\u00d73 scratcher"));
         var enabled = C.IsModuleEnabled(ModuleNames.MiniCactpot);
-        if (ImGui.Checkbox("Enable##Mini", ref enabled))
+        if (ImGui.Checkbox($"{Loc.T("Enable")}###SaucyMiniEnable", ref enabled))
         {
             C.SetModuleEnabled(ModuleNames.MiniCactpot, enabled);
             C.Save();
@@ -150,14 +150,14 @@ public unsafe partial class PluginUI
             }
         }
 
-        ImGui.TextWrapped("Plays Mini Cactpot automatically when you open the daily scratcher at the Gold Saucer.");
+        ImGui.TextWrapped(Loc.T("Plays Mini Cactpot automatically when you open the daily scratcher at the Gold Saucer."));
     }
 
     private static void DrawJumboCactpotPanel()
     {
-        DrawPanelHeader("Jumbo Cactpot", "weekly 4-digit raffle");
+        DrawPanelHeader(Loc.T("Jumbo Cactpot"), Loc.T("weekly 4-digit raffle"));
         var enabled = C.IsModuleEnabled(ModuleNames.JumboCactpot);
-        if (ImGui.Checkbox("Enable##Jumbo", ref enabled))
+        if (ImGui.Checkbox($"{Loc.T("Enable")}###SaucyJumboEnable", ref enabled))
         {
             C.SetModuleEnabled(ModuleNames.JumboCactpot, enabled);
             C.Save();
@@ -174,22 +174,22 @@ public unsafe partial class PluginUI
             }
         }
 
-        ImGui.TextWrapped(
+        ImGui.TextWrapped(Loc.T(
             "Collect prizes at the Cactpot cashier yourself. Saucy then paths you to the Jumbo " +
-            "broker and handles ticket purchase dialogue and confirms.");
+            "broker and handles ticket purchase dialogue and confirms."));
 
         ImGui.Spacing();
-        ImGui.TextUnformatted("Number selection");
+        ImGui.TextUnformatted(Loc.T("Number selection"));
         var numberMode = C.JumboCactpot.NumberMode;
         var save = false;
-        if (ImGui.RadioButton("Random##JumboNumbers", numberMode == JumboCactpotNumberMode.Random))
+        if (ImGui.RadioButton($"{Loc.T("Random")}###SaucyJumboNumbersRandom", numberMode == JumboCactpotNumberMode.Random))
         {
             numberMode = JumboCactpotNumberMode.Random;
             save = true;
         }
 
         ImGui.SameLine();
-        if (ImGui.RadioButton("Specific numbers##JumboNumbers", numberMode == JumboCactpotNumberMode.Specific))
+        if (ImGui.RadioButton($"{Loc.T("Specific numbers")}###SaucyJumboNumbersSpecific", numberMode == JumboCactpotNumberMode.Specific))
         {
             numberMode = JumboCactpotNumberMode.Specific;
             save = true;
@@ -210,9 +210,9 @@ public unsafe partial class PluginUI
         var ticket1 = C.JumboCactpot.Ticket1Number;
         var ticket2 = C.JumboCactpot.Ticket2Number;
         var ticket3 = C.JumboCactpot.Ticket3Number;
-        save |= DrawJumboTicketNumberField("Ticket 1 (100 MGP)", ref ticket1);
-        save |= DrawJumboTicketNumberField("Ticket 2 (150 MGP)", ref ticket2);
-        save |= DrawJumboTicketNumberField("Ticket 3 (200 MGP)", ref ticket3);
+        save |= DrawJumboTicketNumberField(Loc.T("Ticket 1 (100 MGP)"), ref ticket1);
+        save |= DrawJumboTicketNumberField(Loc.T("Ticket 2 (150 MGP)"), ref ticket2);
+        save |= DrawJumboTicketNumberField(Loc.T("Ticket 3 (200 MGP)"), ref ticket3);
         if (save)
         {
             C.JumboCactpot.Ticket1Number = ticket1;
@@ -232,7 +232,7 @@ public unsafe partial class PluginUI
 
         if (specificEnabled)
         {
-            ImGui.TextDisabled("Leave a ticket blank to randomize that purchase.");
+            ImGui.TextDisabled(Loc.T("Leave a ticket blank to randomize that purchase."));
         }
     }
 
@@ -261,7 +261,7 @@ public unsafe partial class PluginUI
 
     private static void DrawJumboCactpotDebugPanel()
     {
-        ImGuiLayout.DrawCollapsingSection("Jumbo Cactpot input", ImGuiTreeNodeFlags.DefaultOpen, () =>
+        ImGuiLayout.DrawCollapsingSection(Loc.T("Jumbo Cactpot input"), "SaucyJumboInputDebug", ImGuiTreeNodeFlags.DefaultOpen, () =>
         {
             if (!TryGetAddonByName<FFXIVClientStructs.FFXIV.Component.GUI.AtkUnitBase>(
                     "LotteryWeeklyInput",
@@ -269,7 +269,7 @@ public unsafe partial class PluginUI
                 !IsAddonReady(addon) ||
                 !addon->IsVisible)
             {
-                ImGui.TextDisabled("Open the Jumbo ticket purchase window to inspect addon nodes.");
+                ImGui.TextDisabled(Loc.T("Open the Jumbo ticket purchase window to inspect addon nodes."));
                 return;
             }
 
@@ -295,39 +295,39 @@ public unsafe partial class PluginUI
         string status;
         if (TriadRunSession.ModuleEnabled)
         {
-            status = "Triple Triad";
+            status = ModuleDisplayNames.TripleTriad;
         }
         else if (CuffACurAutomation.IsEnabled)
         {
-            status = "Cuff-a-Cur";
+            status = ModuleDisplayNames.CuffACur;
         }
         else if (GoldSaucerArcadeMachineHelper.IsEnabled(GoldSaucerArcadeMachine.Limb))
         {
-            status = "Out on a Limb";
+            status = ModuleDisplayNames.OutOnALimb;
         }
         else if (C.IsModuleEnabled(ModuleNames.SliceIsRight))
         {
-            status = "Slice is Right";
+            status = ModuleDisplayNames.SliceIsRight;
         }
         else if (C.IsModuleEnabled(ModuleNames.AnyWayTheWindBlows))
         {
-            status = "Any Way the Wind Blows";
+            status = ModuleDisplayNames.AnyWayTheWindBlows;
         }
         else if (C.IsModuleEnabled(ModuleNames.AirForceOne))
         {
-            status = "Air Force One";
+            status = ModuleDisplayNames.AirForceOne;
         }
         else if (C.IsModuleEnabled(ModuleNames.MiniCactpot))
         {
-            status = "Mini-Cactpot";
+            status = ModuleDisplayNames.MiniCactpot;
         }
         else if (C.IsModuleEnabled(ModuleNames.JumboCactpot))
         {
-            status = "Jumbo Cactpot";
+            status = ModuleDisplayNames.JumboCactpot;
         }
         else
         {
-            status = "Idle";
+            status = ModuleDisplayNames.Idle;
         }
 
         var sessionDelta = C.SessionStats.MGPWon + C.SessionStats.CuffMGP + C.SessionStats.LimbMGP +
@@ -341,18 +341,18 @@ public unsafe partial class PluginUI
 
     private static void DrawSliceIsRightDependencies() =>
         PluginDependenciesUi.Draw(
-            "Optional plugin for automatic dodging during the GATE. Overlays still work without it.",
+            Loc.T("Optional plugin for automatic dodging during the GATE. Overlays still work without it."),
             [
                 PluginDependenciesUi.BossModPlugin(
-                    "Provides the Slice is Right boss module (hazard zones) and the VBM AI preset Saucy activates during the GATE. " +
-                    "Keep the Gold Saucer Slice is Right module enabled in Boss Mod settings.")
+                    Loc.T("Provides the Slice is Right boss module (hazard zones) and the VBM AI preset Saucy activates during the GATE. " +
+                          "Keep the Gold Saucer Slice is Right module enabled in Boss Mod settings."))
             ]);
 
     private static void DrawWindBlowsDependencies() =>
         PluginDependenciesUi.Draw(
-            "Optional plugin for automatic movement to the safe spot. Overlays still work without it.",
+            Loc.T("Optional plugin for automatic movement to the safe spot. Overlays still work without it."),
             [
                 PluginDependenciesUi.Vnavmesh(
-                    "Pathfinds you onto the statistical safe spot during the GATE.")
+                    Loc.T("Pathfinds you onto the statistical safe spot during the GATE."))
             ]);
 }

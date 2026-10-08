@@ -76,7 +76,7 @@ internal static class TriadNpcMapUi
     {
         if (TriadBattleHall.ShouldBlockMapNavigation(npc, location))
         {
-            return $"{showOnMapTooltip}\nThe Battlehall is a Duty Finder instance.\nSaucy cannot path there.";
+            return $"{showOnMapTooltip}\n{Loc.T("The Battlehall is a Duty Finder instance.\nSaucy cannot path there.")}";
         }
 
         var unlockLine = TriadNpcUnlockHelper.TryGetTooltipLine(npc);
@@ -87,29 +87,29 @@ internal static class TriadNpcMapUi
 
         if (!Vnavmesh.IsInstalled)
         {
-            return $"{showOnMapTooltip}\nInstall vnavmesh to walk to this NPC.";
+            return $"{showOnMapTooltip}\n{Loc.T("Install vnavmesh to walk to this NPC.")}";
         }
 
-        var lines = $"{showOnMapTooltip}\nLeft-click: path there and farm missing cards.";
+        var lines = $"{showOnMapTooltip}\n{Loc.T("Left-click: path there and farm missing cards.")}";
         if (npc != null)
         {
-            lines += "\nRight-click: path there and farm MGP.";
-            lines += "\nEnables Triple Triad automation on arrival.";
-            lines += "\nLeft-click uses MGP farm if you already have every card from this NPC.";
-            lines += "\nLeft-click with missing cards builds an optimized deck even if that option is off.";
+            lines += "\n" + Loc.T("Right-click: path there and farm MGP.");
+            lines += "\n" + Loc.T("Enables Triple Triad automation on arrival.");
+            lines += "\n" + Loc.T("Left-click uses MGP farm if you already have every card from this NPC.");
+            lines += "\n" + Loc.T("Left-click with missing cards builds an optimized deck even if that option is off.");
         }
         else
         {
-            lines = $"{showOnMapTooltip}\nClick to path with vnavmesh.";
+            lines = $"{showOnMapTooltip}\n{Loc.T("Click to path with vnavmesh.")}";
         }
 
         if (Lifestream.IsInstalled)
         {
-            lines += "\nUses Lifestream for travel (aetheryte or aethernet shard).";
+            lines += "\n" + Loc.T("Uses Lifestream for travel (aetheryte or aethernet shard).");
             var route = MultiAreaRouteRegistry.FindRoute(location);
             if (route?.TooltipHint != null)
             {
-                lines += $"\n{route.TooltipHint}";
+                lines += $"\n{Loc.T(route.TooltipHint)}";
             }
         }
 

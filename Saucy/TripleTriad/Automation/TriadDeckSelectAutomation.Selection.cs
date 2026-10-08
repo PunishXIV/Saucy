@@ -71,7 +71,7 @@ internal static unsafe partial class TriadDeckSelectAutomation
                 continue;
             }
 
-            TriadDeckLog.Print($"[Saucy] Selecting \"{deck.name}\"...");
+            TriadDeckLog.Print(LocText.Of("[Saucy] Selecting \"{0}\"...", deck.name));
             var profileDeckId = TriadRun.HasOptimizedDeckApplied
                 ? TriadRun.OptimizedDeckSlotId
                 : deck.id;
@@ -164,10 +164,10 @@ internal static unsafe partial class TriadDeckSelectAutomation
 
     private static void PrintAttemptMessage(int deck, int listIndex)
     {
-        string message;
+        LocText message;
         if (attemptCount > 0 || AttemptedDeckIndices.Count > 0)
         {
-            message = $"[Saucy] Retrying with deck {deck + 1}...";
+            message = LocText.Of("[Saucy] Retrying with deck {0}...", deck + 1);
         }
         else if (C.UseSimmedDeck && TriadRun.HasOptimizedDeckApplied)
         {
@@ -178,8 +178,8 @@ internal static unsafe partial class TriadDeckSelectAutomation
             }
 
             message = !string.IsNullOrWhiteSpace(deckName)
-                ? $"[Saucy] Selecting \"{deckName}\" (slot {deck + 1})..."
-                : $"[Saucy] Selecting optimized deck {deck + 1}...";
+                ? LocText.Of("[Saucy] Selecting \"{0}\" (slot {1})...", deckName, deck + 1)
+                : LocText.Of("[Saucy] Selecting optimized deck {0}...", deck + 1);
         }
         else
         {
@@ -191,8 +191,8 @@ internal static unsafe partial class TriadDeckSelectAutomation
             }
 
             message = !string.IsNullOrWhiteSpace(deckName)
-                ? $"[Saucy] Selecting \"{deckName}\"..."
-                : $"[Saucy] Selecting deck {deck + 1}...";
+                ? LocText.Of("[Saucy] Selecting \"{0}\"...", deckName)
+                : LocText.Of("[Saucy] Selecting deck {0}...", deck + 1);
         }
 
         if (C.UseSimmedDeck)
@@ -201,7 +201,7 @@ internal static unsafe partial class TriadDeckSelectAutomation
         }
         else
         {
-            Svc.Log.Verbose(message);
+            Svc.Log.Verbose(message.English);
         }
     }
 

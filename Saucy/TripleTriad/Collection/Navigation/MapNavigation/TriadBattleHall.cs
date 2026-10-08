@@ -34,5 +34,5 @@ internal static class TriadBattleHall
         (npc != null && IsBattleHallNpc(npc)) ||
         (location != null && IsBattleHallLocation(location));
 
-    public static void PrintNavigationBlocked() => Svc.Chat.PrintError(NavigationBlockedMessage);
+    public static void PrintNavigationBlocked() => Svc.Chat.PrintError(Loc.T(NavigationBlockedMessage));
 }

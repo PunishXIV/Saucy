@@ -320,7 +320,7 @@ public partial class TriadSession
         !HasOptimizedDeckApplied &&
         Vnavmesh.ShouldDeferDeckOptimizerWork();
 
-    private static void PrintOptimizerChat(string message, bool force = false)
+    private static void PrintOptimizerChat(LocText message, bool force = false)
     {
         if (!force && !C.ShowOptimizerChatSpam)
         {
@@ -330,9 +330,9 @@ public partial class TriadSession
         TriadDeckLog.Print(message);
     }
 
-    private void AnnounceOptimizerSkipOnce(string skipKey, string message)
+    private void AnnounceOptimizerSkipOnce(string skipKey, LocText message)
     {
-        Svc.Log.Info(message);
+        Svc.Log.Info(message.English);
         if (_lastOptimizerSkipKey == skipKey)
         {
             return;

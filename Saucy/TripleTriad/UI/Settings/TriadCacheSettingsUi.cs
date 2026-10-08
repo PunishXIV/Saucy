@@ -13,11 +13,11 @@ internal static class TriadCacheSettingsUi
         {
             if (Svc.ClientState.IsLoggedIn)
             {
-                ImGui.TextDisabled("No cached decks yet.");
+                ImGui.TextDisabled(Loc.T("No cached decks yet."));
             }
             else
             {
-                ImGui.TextDisabled("Log in to view cached decks.");
+                ImGui.TextDisabled(Loc.T("Log in to view cached decks."));
             }
         }
         else
@@ -43,12 +43,14 @@ internal static class TriadCacheSettingsUi
         var deckCount = character.Entries.Count;
         var deckCountLabel = deckCount switch
         {
-            0 => "no cached decks",
-            1 => "1 cached deck",
-            var _ => $"{deckCount} cached decks"
+            0 => Loc.T("no cached decks"),
+            1 => Loc.T("1 cached deck"),
+            var _ => Loc.T("{0} cached decks", deckCount)
         };
 
-        var header = $"{character.DisplayName} — {deckCountLabel}";
+        // The visible label carries the deck count and the UI language; keep the persisted
+        // open/closed state keyed on the character instead.
+        var header = $"{character.DisplayName} — {deckCountLabel}###SaucyDeckCache{character.ContentId}";
         var flags = character.IsCurrentCharacter ? ImGuiTreeNodeFlags.DefaultOpen : ImGuiTreeNodeFlags.None;
         using var characterHeader = ImRaii.Header(header, flags);
         if (characterHeader)
@@ -61,7 +63,7 @@ internal static class TriadCacheSettingsUi
     {
         if (character.Entries.Count == 0)
         {
-            ImGui.TextDisabled("No optimized decks saved for this character yet.");
+            ImGui.TextDisabled(Loc.T("No optimized decks saved for this character yet."));
             return;
         }
 
@@ -74,16 +76,20 @@ internal static class TriadCacheSettingsUi
 
     private static string FormatCacheEntryLine(TriadOptimizedDeckCacheEntry entry)
     {
-        var npcLabel = string.IsNullOrWhiteSpace(entry.NpcName) ? $"NPC {entry.NpcId}" : entry.NpcName;
+        var npcLabel = string.IsNullOrWhiteSpace(entry.NpcName) ? Loc.T("NPC {0}", entry.NpcId) : entry.NpcName;
         var rulesLabel = FormatRulesLabel(entry.SessionKey);
         var builtLabel = entry.BuiltUtcTicks > 0
             ? new DateTime(entry.BuiltUtcTicks, DateTimeKind.Utc).ToLocalTime().ToString("g")
-            : "unknown time";
-        var winLabel = entry.EstWinChance > 0f ? $" · {entry.EstWinChance * 100f:F0}% opening" : string.Empty;
+            : Loc.T("unknown time");
+        var winLabel = entry.EstWinChance > 0f
+            ? Loc.T(" · {0}% opening", (entry.EstWinChance * 100f).ToString("F0"))
+            : string.Empty;
 
+        // One key per shape rather than an interpolated hull: the separator and the
+        // parentheses are the translator's to pick, and CJK wants （） over ASCII ().
         return string.IsNullOrEmpty(rulesLabel)
-            ? $"{npcLabel}{winLabel} · {builtLabel}"
-            : $"{npcLabel} ({rulesLabel}){winLabel} · {builtLabel}";
+            ? Loc.T("{0}{1} · {2}", npcLabel, winLabel, builtLabel)
+            : Loc.T("{0} ({1}){2} · {3}", npcLabel, rulesLabel, winLabel, builtLabel);
     }
 
     private static string FormatRulesLabel(string sessionKey)
@@ -106,7 +112,7 @@ internal static class TriadCacheSettingsUi
     {
         var ctrlHeld = ImGui.GetIO().KeyCtrl;
         using var clearDisabled = ImRaii.Disabled(!ctrlHeld);
-        if (ImGui.Button("Clear deck cache for this character"))
+        if (ImGui.Button(Loc.T("Clear deck cache for this character")))
         {
             TriadOptimizedDeckCacheStore.ClearActiveCharacter();
         }
@@ -115,8 +121,8 @@ internal static class TriadCacheSettingsUi
         {
             ImGui.SetTooltip(
                 ctrlHeld
-                    ? "Deletes OptimizedDeckCache.json for the logged-in character."
-                    : "Hold Ctrl while clicking to clear the cache for this character.");
+                    ? Loc.T("Deletes OptimizedDeckCache.json for the logged-in character.")
+                    : Loc.T("Hold Ctrl while clicking to clear the cache for this character."));
         }
     }
 }

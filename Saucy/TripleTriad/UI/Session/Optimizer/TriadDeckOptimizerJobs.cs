@@ -494,6 +494,14 @@ internal readonly struct TriadDeckOptimizerJobSnapshot
     public bool TimedOut { get; } = timedOut;
     public bool UserCancelled { get; } = userCancelled;
 
+    /// <summary>
+    /// Returned by <see cref="FormatBestWinChance"/> while the opening eval is still in flight.
+    /// Deliberately NOT localized: callers compare against it to decide whether a win chance is
+    /// worth showing, so translating it would silently break that branch in every non-English
+    /// language while still compiling and still passing <c>tools/loc_audit.py</c>.
+    /// </summary>
+    public const string PendingWinChance = "…";
+
     public string FormatBestWinChance()
     {
         var opening = TriadDeckEvalDisplay.FormatWinChanceLabel(BestOpeningChance);
@@ -504,7 +512,7 @@ internal readonly struct TriadDeckOptimizerJobSnapshot
 
         if (OpeningEvalInFlight)
         {
-            return "…";
+            return PendingWinChance;
         }
 
         return BestEstWinChance is float chance ? $"{chance * 100f:F0}%" : null;

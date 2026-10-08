@@ -1,9 +1,11 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Components;
+using Dalamud.Interface.Utility.Raii;
 using ECommons.Automation.UIInput;
 using ECommons.ImGuiMethods;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Saucy.Framework;
+using System;
 using System.Linq;
 using static ECommons.GenericHelpers;
 namespace Saucy.OutOnALimb;
@@ -15,11 +17,11 @@ public unsafe partial class LimbManager
         var save = false;
 
         var enabled = C.IsModuleEnabled(ModuleNames.OutOnALimb);
-        if (ImGui.Checkbox("Enable", ref enabled))
+        if (ImGui.Checkbox(Loc.T("Enable"), ref enabled))
         {
             if (enabled && !IsAnyLimbMachineInRange())
             {
-                DuoLog.Warning("No Out on a Limb machine nearby. Move closer to the machine.");
+                DuoLog.Warning(Loc.T("No Out on a Limb machine nearby. Move closer to the machine."));
             }
             else
             {
@@ -35,30 +37,30 @@ public unsafe partial class LimbManager
 
         ImGui.SameLine();
         ImGuiComponents.HelpMarker(
-            "Walk up to the Out on a Limb machine, set how many games to play, and Saucy runs them.");
+            Loc.T("Walk up to the Out on a Limb machine, set how many games to play, and Saucy runs them."));
 
         ImGui.Dummy(new(0, 4));
 
         GoldSaucerRunSettingsUi.Draw(
             GoldSaucerArcadeMachine.Limb,
-            "Runs automatically when enabled at the Out on a Limb machine.");
+            Loc.T("Runs automatically when enabled at the Out on a Limb machine."));
 
-        SaucyTheme.DrawCard("Options", null, () =>
+        SaucyTheme.DrawCard(Loc.T("Options"), null, () =>
         {
-            ImGui.Checkbox("Stop at next double-down", ref Exit);
-            ImGui.TextDisabled("Cashes out at the next double-down and disables automation after the reward.");
-            ImGui.TextDisabled("Duty Finder ready also cashes out but leaves automation enabled.");
+            ImGui.Checkbox(Loc.T("Stop at next double-down"), ref Exit);
+            ImGui.TextDisabled(Loc.T("Cashes out at the next double-down and disables automation after the reward."));
+            ImGui.TextDisabled(Loc.T("Duty Finder ready also cashes out but leaves automation enabled."));
         });
 
-        SaucyTheme.DrawCard("Tuning", null, () =>
+        SaucyTheme.DrawCard(Loc.T("Tuning"), null, () =>
         {
             ImGui.SetNextItemWidth(120f);
-            save |= ImGuiEx.EnumCombo("Difficulty", ref Cfg.LimbDifficulty);
+            save |= DrawDifficultyCombo();
 
             ImGui.SetNextItemWidth(120f);
-            save |= ImGui.DragInt("Step", ref Cfg.Step, 0.05f);
+            save |= ImGui.DragInt(Loc.T("Step"), ref Cfg.Step, 0.05f);
             ImGui.SameLine();
-            if (ImGui.Button("Default##step"))
+            if (ImGui.Button($"{Loc.T("Default")}###SaucyLimbStepDefault"))
             {
                 Cfg.Step = new LimbConfig().Step;
                 save = true;
@@ -66,20 +68,54 @@ public unsafe partial class LimbManager
 
             ImGui.SameLine();
             ImGuiComponents.HelpMarker(
-                "Spacing between probed cursor positions when searching for the sweet spot. " +
-                "Smaller = more precise but slower; the default works for most setups.");
+                Loc.T("Spacing between probed cursor positions when searching for the sweet spot. " +
+                      "Smaller = more precise but slower; the default works for most setups."));
 
             ImGui.SetNextItemWidth(120f);
-            save |= ImGui.DragInt("Min seconds for another round", ref Cfg.MinSecondsForAnotherRound, 0.5f);
+            save |= ImGui.DragInt(Loc.T("Min seconds for another round"), ref Cfg.MinSecondsForAnotherRound, 0.5f);
             ImGui.SameLine();
             ImGuiComponents.HelpMarker(
-                "Always double down while the minigame timer is above this. Cash out when there is not enough time left for another round.");
+                Loc.T("Always double down while the minigame timer is above this. Cash out when there is not enough time left for another round."));
         });
 
         if (save)
         {
             C.Save();
         }
+    }
+
+    private static string DifficultyLabel(LimbDifficulty difficulty) =>
+        difficulty switch
+        {
+            LimbDifficulty.Titan => Loc.T("Titan"),
+            LimbDifficulty.Morbol => Loc.T("Morbol"),
+            LimbDifficulty.Cactuar => Loc.T("Cactuar"),
+            var _ => difficulty.ToString()
+        };
+
+    private bool DrawDifficultyCombo()
+    {
+        using var combo = ImRaii.Combo(
+            $"{Loc.T("Difficulty")}###SaucyLimbDifficulty",
+            DifficultyLabel(Cfg.LimbDifficulty));
+        if (!combo)
+        {
+            return false;
+        }
+
+        var changed = false;
+        foreach (var difficulty in Enum.GetValues<LimbDifficulty>())
+        {
+            if (ImGui.Selectable(
+                    $"{DifficultyLabel(difficulty)}###SaucyLimbDifficulty{difficulty}",
+                    Cfg.LimbDifficulty == difficulty))
+            {
+                Cfg.LimbDifficulty = difficulty;
+                changed = true;
+            }
+        }
+
+        return changed;
     }
 
     public void DrawDebug()

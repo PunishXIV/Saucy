@@ -8,9 +8,13 @@ namespace Saucy;
 
 internal static class ImGuiLayout
 {
-    public static void DrawCollapsingSection(string title, ImGuiTreeNodeFlags flags, Action body)
+    /// <summary>
+    /// Draws a collapsing section. <paramref name="id"/> keeps the header's persisted
+    /// open/closed state stable when <paramref name="title"/> changes with the UI language.
+    /// </summary>
+    public static void DrawCollapsingSection(string title, string id, ImGuiTreeNodeFlags flags, Action body)
     {
-        using var header = ImRaii.Header(title, flags);
+        using var header = ImRaii.Header($"{title}###{id}", flags);
         if (!header)
         {
             return;
