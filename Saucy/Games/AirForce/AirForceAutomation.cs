@@ -52,6 +52,52 @@ public static unsafe class AirForceAutomation
 
     public static void ConsumeRewardTracking() => rewardWindowUntilUtc = null;
 
+    private static bool resultRecorded;
+    private static int lastResultMgp;
+
+    // Air Force One shows its own RideShootingResult window; the MGP is in the "Final Reward" text node
+    private static void TrackResultScreen()
+    {
+        if (!GenericHelpers.TryGetAddonByName("RideShootingResult", out AtkUnitBase* result) || !result->IsReady())
+        {
+            resultRecorded = false;
+            lastResultMgp = 0;
+            return;
+        }
+
+        if (resultRecorded)
+        {
+            return;
+        }
+
+        AtkResNode* n1 = result->UldManager.NodeListCount > 8 ? result->UldManager.NodeList[8] : null;
+        AtkComponentBase* c1 = n1 != null ? n1->GetComponent() : null;
+        AtkResNode* n2 = c1 != null && c1->UldManager.NodeListCount > 3 ? c1->UldManager.NodeList[3] : null;
+        AtkComponentBase* c2 = n2 != null ? n2->GetComponent() : null;
+        AtkResNode* text = c2 != null && c2->UldManager.NodeListCount > 1 ? c2->UldManager.NodeList[1] : null;
+
+        if (!GoldSaucerRewardMgpParser.TryParseMgpDigits(GUINodeUtils.GetNodeText(text), out var mgp))
+        {
+            return;
+        }
+
+        // only count once the number stops changing between frames (in case it counts up)
+        if (mgp != lastResultMgp)
+        {
+            lastResultMgp = mgp;
+            return;
+        }
+
+        resultRecorded = true;
+        StatsSessionClock.MarkAirForceActive();
+        C.UpdateStats(stats =>
+        {
+            stats.AirForceMGP += StatsBonusHelper.ApplyMgpBonus(mgp);
+            stats.AirForceGamesPlayed++;
+        });
+        C.Save();
+    }
+
     public static void OnUpdate()
     {
         if (!C.IsModuleEnabled(ModuleNames.AirForceOne))
@@ -59,6 +105,7 @@ public static unsafe class AirForceAutomation
             ClearRewardTracking();
             return;
         }
+        TrackResultScreen();
 
         var inDuty = Svc.Condition[ConditionFlag.BoundByDuty95] &&
                      GenericHelpers.TryGetAddonByName("RideShooting", out AtkUnitBase* addon) &&
