@@ -17,6 +17,7 @@ public partial class PluginUI
         DrawStatsCard(Loc.T("Cuff-a-Cur"), CuffHeadline(life), () => DrawCuffRows(life, sess));
         DrawStatsCard(Loc.T("Out on a Limb"), LimbHeadline(life), () => DrawLimbRows(life, sess));
         DrawStatsCard(Loc.T("Air Force One"), AirForceHeadline(life), () => DrawAirForceRows(life, sess));
+        DrawStatsCard(Loc.T(ModuleDisplayNames.KeyboundBrawler), BrawlerHeadline(life), () => DrawBrawlerRows(life, sess));
     }
 
     private static void DrawStatsToolbar()
@@ -68,6 +69,9 @@ public partial class PluginUI
 
     private static string AirForceHeadline(Stats s) =>
         s.AirForceGamesPlayed == 0 ? Loc.T("no games played") : Loc.T("{0} games", s.AirForceGamesPlayed.ToString("N0"));
+
+    private static string BrawlerHeadline(Stats s) =>
+        s.BrawlerGamesPlayed == 0 ? Loc.T("no games played") : Loc.T("{0} games", s.BrawlerGamesPlayed.ToString("N0"));
 
     private static void DrawTriadRows(Stats life, Stats sess)
     {
@@ -139,6 +143,20 @@ public partial class PluginUI
             perHour: SessionCountPerHour(sess.AirForceGamesPlayed, StatsSessionClock.GetAirForceElapsedHours()));
         StatsRow(Loc.T("MGP won"), $"{life.AirForceMGP:N0}", $"{sess.AirForceMGP:N0}", true,
             perHour: SessionMgpPerHour(sess.AirForceMGP, StatsSessionClock.GetAirForceElapsedHours()));
+    }
+
+    private static void DrawBrawlerRows(Stats life, Stats sess)
+    {
+        using var table = ImRaii.Table("##stats_brawler", 4, ImGuiTableFlags.NoBordersInBody | ImGuiTableFlags.SizingStretchProp);
+        if (!table) return;
+        StatsHeader();
+        var hours = StatsSessionClock.GetBrawlerElapsedHours();
+        StatsRow(Loc.T("Games"), life.BrawlerGamesPlayed, sess.BrawlerGamesPlayed,
+            perHour: SessionCountPerHour(sess.BrawlerGamesPlayed, hours));
+        StatsRow(Loc.T("MGP won"), life.BrawlerMGP, sess.BrawlerMGP, true,
+            perHour: SessionMgpPerHour(sess.BrawlerMGP, hours));
+        StatsRow(Loc.T("MGC won"), life.BrawlerMGC, sess.BrawlerMGC, true,
+            perHour: SessionCountPerHour(sess.BrawlerMGC, hours));
     }
 
     private static (string display, string? tooltip) TopNpcCell(Stats s)

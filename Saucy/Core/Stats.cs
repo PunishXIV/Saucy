@@ -8,6 +8,9 @@ public class Stats
     public int AirForceGamesPlayed = 0;
 
     public int AirForceMGP = 0;
+    public int BrawlerGamesPlayed = 0;
+    public int BrawlerMGP = 0;
+    public int BrawlerMGC = 0;
     public int CardsDroppedWithSaucy = 0;
 
     public Dictionary<uint, int> CardsWon = [];
@@ -70,6 +73,7 @@ internal static class StatsSessionClock
     private static DateTime? cuffSinceUtc;
     private static DateTime? limbSinceUtc;
     private static DateTime? airForceSinceUtc;
+    private static DateTime? brawlerSinceUtc;
 
     public static void MarkTriadActive() => Mark(ref triadSinceUtc);
 
@@ -78,6 +82,7 @@ internal static class StatsSessionClock
     public static void MarkLimbActive() => Mark(ref limbSinceUtc);
 
     public static void MarkAirForceActive() => Mark(ref airForceSinceUtc);
+    public static void MarkBrawlerActive() => Mark(ref brawlerSinceUtc);
 
     public static void ResetAll()
     {
@@ -85,6 +90,7 @@ internal static class StatsSessionClock
         cuffSinceUtc = null;
         limbSinceUtc = null;
         airForceSinceUtc = null;
+        brawlerSinceUtc = null;
     }
 
     public static double GetTriadElapsedHours() => GetElapsedHours(triadSinceUtc);
@@ -94,6 +100,7 @@ internal static class StatsSessionClock
     public static double GetLimbElapsedHours() => GetElapsedHours(limbSinceUtc);
 
     public static double GetAirForceElapsedHours() => GetElapsedHours(airForceSinceUtc);
+    public static double GetBrawlerElapsedHours() => GetElapsedHours(brawlerSinceUtc);
 
     private static void Mark(ref DateTime? sinceUtc) => sinceUtc ??= DateTime.UtcNow;
 

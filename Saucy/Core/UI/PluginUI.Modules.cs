@@ -4,6 +4,7 @@ using ECommons.ImGuiMethods;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using Saucy.AirForce;
 using Saucy.CuffACur;
+using Saucy.KeyboundBrawler;
 using Saucy.JumboCactpot;
 using System;
 using System.Collections.Generic;
@@ -110,6 +111,45 @@ public unsafe partial class PluginUI
     {
         DrawPanelHeader(Loc.T("Air Force One"), Loc.T("ride shooting minigame"));
         DrawAirForceMain();
+    }
+
+    private static void DrawKeyboundBrawlerPanel()
+    {
+        DrawPanelHeader(Loc.T(ModuleDisplayNames.KeyboundBrawler), Loc.T("word action minigame"));
+        var enabled = C.IsModuleEnabled(ModuleNames.KeyboundBrawler);
+        if (ImGui.Checkbox($"{Loc.T("Enable")}###SaucyBrawlerEnable", ref enabled))
+        {
+            C.SetModuleEnabled(ModuleNames.KeyboundBrawler, enabled);
+            C.Save();
+        }
+
+        var autoQueue = C.KeyboundBrawlerAutoQueue;
+        if (ImGui.Checkbox($"{Loc.T("Enable auto-queue")}###SaucyBrawlerAutoQueue", ref autoQueue))
+        {
+            C.KeyboundBrawlerAutoQueue = autoQueue;
+            C.Save();
+        }
+
+        if (autoQueue) ImGui.TextDisabled(Loc.T(KeyboundBrawlerAutomation.QueueStatus));
+
+        var min = C.KeyboundBrawlerMinMsPerCharacter;
+        if (ImGui.InputInt($"{Loc.T("Minimum typing time per character (ms)")}###SaucyBrawlerMinDelay", ref min))
+        {
+            C.KeyboundBrawlerMinMsPerCharacter = Math.Clamp(min, 100, 2000);
+            C.KeyboundBrawlerMaxMsPerCharacter = Math.Clamp(C.KeyboundBrawlerMaxMsPerCharacter, C.KeyboundBrawlerMinMsPerCharacter, 2000);
+            C.Save();
+        }
+
+        var max = C.KeyboundBrawlerMaxMsPerCharacter;
+        if (ImGui.InputInt($"{Loc.T("Maximum typing time per character (ms)")}###SaucyBrawlerMaxDelay", ref max))
+        {
+            C.KeyboundBrawlerMaxMsPerCharacter = Math.Clamp(max, C.KeyboundBrawlerMinMsPerCharacter, 2000);
+            C.Save();
+        }
+        if (KeyboundBrawlerAutomation.ScanFailed)
+        {
+            ImGui.TextDisabled(Loc.T("This game version is not supported by the current action signature."));
+        }
     }
 
     private static void DrawAirForceMain()
@@ -297,6 +337,10 @@ public unsafe partial class PluginUI
         {
             status = ModuleDisplayNames.TripleTriad;
         }
+        else if (GoldSaucerGameActivity.IsBrawlerSessionActive())
+        {
+            status = ModuleDisplayNames.KeyboundBrawler;
+        }
         else if (CuffACurAutomation.IsEnabled)
         {
             status = ModuleDisplayNames.CuffACur;
@@ -331,7 +375,7 @@ public unsafe partial class PluginUI
         }
 
         var sessionDelta = C.SessionStats.MGPWon + C.SessionStats.CuffMGP + C.SessionStats.LimbMGP +
-                           C.SessionStats.AirForceMGP;
+                           C.SessionStats.AirForceMGP + C.SessionStats.BrawlerMGP;
 
         return new()
         {
