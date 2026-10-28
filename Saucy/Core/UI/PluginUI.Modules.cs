@@ -132,6 +132,13 @@ public unsafe partial class PluginUI
 
         if (autoQueue) ImGui.TextDisabled(Loc.T(KeyboundBrawlerAutomation.QueueStatus));
 
+        var requeueDelay = C.KeyboundBrawlerRequeueDelaySeconds;
+        if (ImGui.InputInt($"{Loc.T("Delay before next queue (seconds)")}###SaucyBrawlerRequeueDelay", ref requeueDelay))
+        {
+            C.KeyboundBrawlerRequeueDelaySeconds = Math.Max(0, requeueDelay);
+            C.Save();
+        }
+
         var min = C.KeyboundBrawlerMinMsPerCharacter;
         if (ImGui.InputInt($"{Loc.T("Minimum typing time per character (ms)")}###SaucyBrawlerMinDelay", ref min))
         {
