@@ -57,7 +57,8 @@ internal static class GoldSaucerGameActivity
 
     internal static bool IsBrawlerSessionActive() =>
         C.IsModuleEnabled(ModuleNames.KeyboundBrawler) &&
-        KeyboundBrawlerAutomation.IsInActiveMinigame;
+        (KeyboundBrawlerAutomation.IsInActiveMinigame ||
+         C.KeyboundBrawlerAutoQueue && KeyboundBrawlerAutomation.IsAutoQueueFlowActive);
 
     private static bool IsGateAutoMovementActive()
     {

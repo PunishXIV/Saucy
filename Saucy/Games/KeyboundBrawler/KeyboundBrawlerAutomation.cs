@@ -1,10 +1,13 @@
 using Dalamud.Game.ClientState.Conditions;
 using ECommons.GameHelpers;
 using ECommons.Throttlers;
+using FFXIVClientStructs.FFXIV.Client.Enums;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Event;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Client.System.String;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using FFXIVClientStructs.STD;
@@ -44,15 +47,19 @@ internal static unsafe class KeyboundBrawlerAutomation
     private const  uint   SensoryJammerActionId    = 49532;
     private const  uint   SensoryJammerAltActionId = 49702;
     private const  int    ForbiddenCastWindowMs    = 500;
+    private const  int    PostCastDelayMs           = 3000;
     private static nint   useWordActionAddress;
     private static bool   scanAttempted;
     private static uint   pendingEntityId;
     private static string pendingWord      = "";
     private static string pendingAlternate = "";
     private static long   pendingReadyAt;
+    private static long   pendingTypingDurationMs;
+    private static long   wordEntryResumeAt = -1;
     private static long   forbiddenCastBlockUntil;
     private static long   lastInactivityResetAt;
     private static bool   awaitingQueueDialogue;
+    private static bool   queueFlowActive, queueRequested, queueObserved, queueAcceptClicked;
     private static bool   ownsQueuePath;
     private static long   queueDialogueDeadline;
     private static long   queueRetryAt;
@@ -65,6 +72,7 @@ internal static unsafe class KeyboundBrawlerAutomation
     internal static string QueueStatus { get; private set; } = "Looking for entry NPC";
 
     internal static bool IsInActiveMinigame => GetDirector() != 0;
+    internal static bool IsAutoQueueFlowActive => queueFlowActive;
 
     internal static void OnUpdate()
     {
@@ -76,11 +84,14 @@ internal static unsafe class KeyboundBrawlerAutomation
     internal static void Reset()
     {
         pendingEntityId       = 0;
+        pendingTypingDurationMs = 0;
+        wordEntryResumeAt      = -1;
         forbiddenCastBlockUntil = 0;
         lastInactivityResetAt = 0;
         wasInDuty             = roundTracked = resultRecorded = false;
         lastMgp               = lastMgc      = -1;
         awaitingQueueDialogue = false;
+        queueFlowActive = queueRequested = queueObserved = queueAcceptClicked = false;
         queueRetryAt          = nextQueueMoveAt = 0;
         StopQueuePath();
         QueueStatus = "Looking for entry NPC";
@@ -113,7 +124,7 @@ internal static unsafe class KeyboundBrawlerAutomation
         {
             var result = (AtkUnitBase*)Svc.GameGui.GetAddonByName("KTGResult")
                                           .Address;
-            if (result == null || !result->IsVisible || !AgentHelper.IsAddonOwnedBy(result, AgentId.KTGResult))
+            if (result == null || !result->IsReady || !result->IsVisible || !AgentHelper.IsAddonOwnedBy(result, AgentId.KTGResult))
             {
                 return;
             }
@@ -158,11 +169,16 @@ internal static unsafe class KeyboundBrawlerAutomation
         var director = GetDirector();
         if (director == 0 || *((byte*)director + 0x1FC0) == 0)
         {
+            wordEntryResumeAt = director == 0 ? -1 : 0;
             pendingEntityId       = 0;
-            forbiddenCastBlockUntil = 0;
+            if (director == 0) forbiddenCastBlockUntil = 0;
             lastInactivityResetAt = 0;
             return;
         }
+
+        var now = Environment.TickCount64;
+        if (wordEntryResumeAt == 0) wordEntryResumeAt = now + 2000;
+        if (now < wordEntryResumeAt) return;
 
         if (!scanAttempted)
         {
@@ -192,7 +208,6 @@ internal static unsafe class KeyboundBrawlerAutomation
             return;
         }
 
-        var now = Environment.TickCount64;
         if (lastInactivityResetAt == 0 || now - lastInactivityResetAt >= 20000)
         {
             lastInactivityResetAt = now;
@@ -252,8 +267,15 @@ internal static unsafe class KeyboundBrawlerAutomation
                 var remainingMs = (cast->TotalCastTime - cast->CurrentCastTime) * 1000f;
                 if (remainingMs <= ForbiddenCastWindowMs)
                 {
-                    forbiddenCastBlockUntil = Math.Max(forbiddenCastBlockUntil,
-                        now + (long)Math.Max(remainingMs, 0) + ForbiddenCastWindowMs);
+                    var blockUntil = now + (long)Math.Max(remainingMs, 0) + PostCastDelayMs;
+                    if (blockUntil > forbiddenCastBlockUntil)
+                    {
+                        forbiddenCastBlockUntil = blockUntil;
+                        if (pendingEntityId != 0)
+                        {
+                            pendingReadyAt = Math.Max(pendingReadyAt, blockUntil + pendingTypingDurationMs);
+                        }
+                    }
                 }
             }
 
@@ -317,7 +339,8 @@ internal static unsafe class KeyboundBrawlerAutomation
             pendingAlternate = bestAlternate;
             var min = Math.Clamp(C.KeyboundBrawlerMinMsPerCharacter, 100, 2000);
             var max = Math.Clamp(C.KeyboundBrawlerMaxMsPerCharacter, min, 2000);
-            pendingReadyAt = now + bestLength * Random.Shared.Next(min, max + 1);
+            pendingTypingDurationMs = bestLength * Random.Shared.Next(min, max + 1);
+            pendingReadyAt = Math.Max(now, forbiddenCastBlockUntil) + pendingTypingDurationMs;
             return;
         }
 
@@ -348,8 +371,14 @@ internal static unsafe class KeyboundBrawlerAutomation
     {
         var result = (AtkUnitBase*)Svc.GameGui.GetAddonByName("KTGResult")
                                       .Address;
-        if (result != null && result->IsVisible && AgentHelper.IsAddonOwnedBy(result, AgentId.KTGResult))
+        if (result != null && result->IsReady && result->IsVisible && AgentHelper.IsAddonOwnedBy(result, AgentId.KTGResult))
         {
+            if (C.KeyboundBrawlerAutoQueue)
+            {
+                queueFlowActive = true;
+                YesAlready.SyncForGameActivity(true);
+            }
+
             QueueStatus = AddonButton.TryClick(result, ResultCloseButtonId)
                                   ? "Closing Brawler result"
                                   : "Waiting for result close button";
@@ -358,18 +387,18 @@ internal static unsafe class KeyboundBrawlerAutomation
 
         if (!C.KeyboundBrawlerAutoQueue)
         {
+            queueFlowActive = queueRequested = queueObserved = queueAcceptClicked = false;
             awaitingQueueDialogue = false;
             queueRetryAt          = 0;
             StopQueuePath();
             return;
         }
 
-        if (GetDirector() != 0                                ||
-            Svc.Condition[ConditionFlag.WaitingForDuty]       ||
-            Svc.Condition[ConditionFlag.WaitingForDutyFinder] ||
-            Svc.Condition[ConditionFlag.BetweenAreas]         ||
+        if (GetDirector() != 0 ||
+            Svc.Condition[ConditionFlag.BetweenAreas] ||
             Svc.Condition[ConditionFlag.BoundByDuty95])
         {
+            queueFlowActive = queueRequested = queueObserved = queueAcceptClicked = false;
             awaitingQueueDialogue = false;
             StopQueuePath();
             QueueStatus = "Queued or entering Brawler";
@@ -377,6 +406,45 @@ internal static unsafe class KeyboundBrawlerAutomation
         }
 
         var now = Environment.TickCount64;
+        if (queueRequested)
+        {
+            var finder = ContentsFinder.Instance();
+            var state = finder == null ? ContentsFinderQueueState.None : finder->QueueInfo.QueueState;
+            if (state != ContentsFinderQueueState.None) queueObserved = true;
+            if (state == ContentsFinderQueueState.Ready)
+            {
+                var confirm = (AddonContentsFinderConfirm*)Svc.GameGui.GetAddonByName("ContentsFinderConfirm").Address;
+                if (!queueAcceptClicked && confirm != null && confirm->AtkUnitBase.IsVisible)
+                {
+                    queueAcceptClicked = AddonButton.TryClick(&confirm->AtkUnitBase, confirm->CommenceButton);
+                }
+
+                QueueStatus = queueAcceptClicked ? "Duty accepted - waiting to enter" : "Waiting for duty confirmation";
+                return;
+            }
+
+            if (state == ContentsFinderQueueState.None &&
+                (queueObserved || now >= queueRetryAt))
+            {
+                queueFlowActive = queueRequested = queueObserved = queueAcceptClicked = false;
+                queueRetryAt = now + 5000;
+                QueueStatus = "Queue ended - retrying";
+                return;
+            }
+
+            QueueStatus = "Queued or entering Brawler";
+            return;
+        }
+
+        if (Svc.Condition[ConditionFlag.WaitingForDuty] ||
+            Svc.Condition[ConditionFlag.WaitingForDutyFinder])
+        {
+            queueFlowActive = false;
+            awaitingQueueDialogue = false;
+            StopQueuePath();
+            QueueStatus = "Queued or entering Brawler";
+            return;
+        }
         if (awaitingQueueDialogue)
         {
             var addon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("KTGEnterDialogue")
@@ -388,8 +456,10 @@ internal static unsafe class KeyboundBrawlerAutomation
                 if (AddonButton.TryClick(addon, QueueAcceptButtonId))
                 {
                     awaitingQueueDialogue = false;
+                    queueRequested = true;
+                    queueObserved = queueAcceptClicked = false;
                     queueRetryAt          = now + 30000;
-                    QueueStatus           = "Entry accepted; waiting for queue";
+                    QueueStatus           = "Entry accepted - waiting for queue";
                 }
                 else
                 {
@@ -418,11 +488,14 @@ internal static unsafe class KeyboundBrawlerAutomation
         var npc = ObjectHelper.FindNearestByBaseId(QueueNpcBaseId);
         if (npc == null)
         {
+            queueFlowActive = false;
             StopQueuePath();
             QueueStatus = "Entry NPC is not loaded";
             return;
         }
 
+        queueFlowActive = true;
+        YesAlready.SyncForGameActivity(true);
         if (!Player.Interactable)
         {
             QueueStatus = "Waiting until player can interact";
