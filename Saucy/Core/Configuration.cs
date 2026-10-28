@@ -82,6 +82,8 @@ public class Configuration : IPluginConfiguration
 
     public JumboCactpotSettings JumboCactpot { get; set; } = new();
 
+    public KeyboundBrawler.KeyboundBrawlerSettings KeyboundBrawler { get; set; } = new();
+
     public bool PauseForAutoRetainer { get; set; }
 
     public int Version { get; set; }

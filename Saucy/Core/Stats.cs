@@ -36,6 +36,14 @@ public class Stats
     public int MGPWon = 0;
 
     public Dictionary<string, int> NPCsPlayed = [];
+
+    public int KeyboundGamesPlayed = 0;
+
+    public int KeyboundMGP = 0;
+
+    public int KeyboundMGC = 0;
+
+    public int KeyboundCoffers = 0;
 }
 
 public static class StatsBonusHelper
@@ -70,6 +78,7 @@ internal static class StatsSessionClock
     private static DateTime? cuffSinceUtc;
     private static DateTime? limbSinceUtc;
     private static DateTime? airForceSinceUtc;
+    private static DateTime? keyboundSinceUtc;
 
     public static void MarkTriadActive() => Mark(ref triadSinceUtc);
 
@@ -79,12 +88,15 @@ internal static class StatsSessionClock
 
     public static void MarkAirForceActive() => Mark(ref airForceSinceUtc);
 
+    public static void MarkKeyboundActive() => Mark(ref keyboundSinceUtc);
+
     public static void ResetAll()
     {
         triadSinceUtc = null;
         cuffSinceUtc = null;
         limbSinceUtc = null;
         airForceSinceUtc = null;
+        keyboundSinceUtc = null;
     }
 
     public static double GetTriadElapsedHours() => GetElapsedHours(triadSinceUtc);
@@ -94,6 +106,8 @@ internal static class StatsSessionClock
     public static double GetLimbElapsedHours() => GetElapsedHours(limbSinceUtc);
 
     public static double GetAirForceElapsedHours() => GetElapsedHours(airForceSinceUtc);
+
+    public static double GetKeyboundElapsedHours() => GetElapsedHours(keyboundSinceUtc);
 
     private static void Mark(ref DateTime? sinceUtc) => sinceUtc ??= DateTime.UtcNow;
 

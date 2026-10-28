@@ -17,6 +17,7 @@ public partial class PluginUI
         DrawStatsCard(Loc.T("Cuff-a-Cur"), CuffHeadline(life), () => DrawCuffRows(life, sess));
         DrawStatsCard(Loc.T("Out on a Limb"), LimbHeadline(life), () => DrawLimbRows(life, sess));
         DrawStatsCard(Loc.T("Air Force One"), AirForceHeadline(life), () => DrawAirForceRows(life, sess));
+        DrawKeyboundStatsCard(life, sess);
     }
 
     private static void DrawStatsToolbar()
