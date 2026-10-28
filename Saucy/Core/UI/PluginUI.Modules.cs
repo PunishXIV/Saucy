@@ -150,6 +150,13 @@ public unsafe partial class PluginUI
         {
             ImGui.TextDisabled(Loc.T("This game version is not supported by the current action signature."));
         }
+
+        if (KeyboundBrawlerAutomation.IsInActiveMinigame)
+        {
+            ImGui.TextDisabled(Loc.T(KeyboundBrawlerAutomation.InfoStatus));
+            ImGui.TextDisabled(Loc.T("Target:"));
+            ImGui.TextDisabled(KeyboundBrawlerAutomation.PendingWord);
+        }
     }
 
     private static void DrawAirForceMain()

@@ -48,6 +48,7 @@ internal static unsafe class KeyboundBrawlerAutomation
     private static bool   scanAttempted;
     private static uint   pendingEntityId;
     private static string pendingWord      = "";
+    public static string PendingWord => pendingWord;
     private static string pendingAlternate = "";
     private static long   pendingReadyAt;
     private static long   forbiddenCastBlockUntil;
@@ -63,6 +64,7 @@ internal static unsafe class KeyboundBrawlerAutomation
 
     internal static bool   ScanFailed  => scanAttempted && useWordActionAddress == 0;
     internal static string QueueStatus { get; private set; } = "Looking for entry NPC";
+    internal static string InfoStatus { get; private set; } = "Ready";
 
     internal static bool IsInActiveMinigame => GetDirector() != 0;
 
@@ -318,10 +320,17 @@ internal static unsafe class KeyboundBrawlerAutomation
             var min = Math.Clamp(C.KeyboundBrawlerMinMsPerCharacter, 100, 2000);
             var max = Math.Clamp(C.KeyboundBrawlerMaxMsPerCharacter, min, 2000);
             pendingReadyAt = now + bestLength * Random.Shared.Next(min, max + 1);
+            InfoStatus = "Waiting";
             return;
         }
 
-        if (now < pendingReadyAt || now < forbiddenCastBlockUntil)
+        if (now < pendingReadyAt)
+        {
+            InfoStatus = "Delaying";
+            return;
+        }
+
+        if (now < forbiddenCastBlockUntil)
         {
             return;
         }
@@ -329,10 +338,12 @@ internal static unsafe class KeyboundBrawlerAutomation
         if (!words->TryGetValuePointer(in bestEntityId, out var currentEntry) ||
             bestObject->IsDead() && currentEntry->BubbleType != 2)
         {
+            InfoStatus = "Defeated";
             pendingEntityId = 0;
             return;
         }
 
+        InfoStatus = "Shooting";
         var useWordAction = (delegate* unmanaged<nint, GameObject*, byte, byte>)useWordActionAddress;
         if (useWordAction(director, bestObject, 1) != 0)
         {
