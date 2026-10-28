@@ -16,16 +16,28 @@ public unsafe class KeyboundBrawlerModule : Framework.Module
     public override string InternalName => ModuleNames.KeyboundBrawler;
     public override string Name => ModuleDisplayNames.KeyboundBrawler;
 
-    // tankbuster isn't here on purpose: the boss casts it, the word to type is the green one
-    private static readonly string[] SpecialCasts = ["Self-destruct", "Burst", "Needles", "Big Bomber", "Germinate"];
+    // Action sheet ids. the cast bar only shows text, so they're turned into names in the client
+    // language on enable. tankbuster isn't here on purpose: the boss casts it, the word to type is
+    // the green one
+    private static readonly uint[] SpecialActionIds =
+    [
+        49526, 49527, 49528,               // Self-destruct
+        49552, 49706, 49707, 49708, 49709, // Burst
+        49524,                             // ??? Needles
+        49703,                             // Big Bomber
+        49542, 49543, 49544, 49545,        // Germinate
+    ];
 
     // typing while these resolve is punished. cast bars have no countdown, so the end is
     // first-seen + CastMs (measured from the cast start/end log lines)
-    private static readonly (string Name, int CastMs, int AfterMs)[] PauseCasts =
+    private static readonly (uint[] Ids, int CastMs, int AfterMs)[] PauseActions =
     [
-        ("Sensory Jammer", 4700, 4500),
-        ("Cursed Gaze", 4700, 4000),
+        ([49532, 49702], 4700, 4500), // Dynamic Sensory Jammer
+        ([49529], 4700, 4000),        // Cursed Gaze
     ];
+
+    private static HashSet<string> specialCasts = [];
+    private static Dictionary<string, (int CastMs, int AfterMs)> pauseCasts = [];
 
     // KTGEWord slot: word in node 8. KTGEnemyCastBar slot: name in node 5, stack counter (not a countdown) in node 4
     private const int WordNodeIndex = 8;
@@ -73,6 +85,18 @@ public unsafe class KeyboundBrawlerModule : Framework.Module
 
     public override void Enable()
     {
+        var actions = Svc.Data.GetExcelSheet<Lumina.Excel.Sheets.Action>();
+        string ActionName(uint id) => actions.GetRowOrDefault(id)?.Name.ToString() ?? "";
+        specialCasts = new(SpecialActionIds.Select(ActionName), StringComparer.OrdinalIgnoreCase);
+        pauseCasts = new(StringComparer.OrdinalIgnoreCase);
+        foreach (var (ids, castMs, afterMs) in PauseActions)
+        {
+            foreach (var id in ids)
+            {
+                pauseCasts[ActionName(id)] = (castMs, afterMs);
+            }
+        }
+
         Svc.Framework.Update += OnUpdate;
         Svc.PluginInterface.UiBuilder.Draw += DrawOverlay;
     }
@@ -249,7 +273,7 @@ public unsafe class KeyboundBrawlerModule : Framework.Module
                 boss && stacks > 0 ? 0 :
                 green ? 1 :
                 stacks > 0 ? 2 :
-                SpecialCasts.Any(s => CastMatches(castName, s)) ? 3 :
+                specialCasts.Contains(castName) ? 3 :
                 boss ? 5 : 4;
             result.Add(new(i, word, castName, stacks, cast.c == null ? -1 : cast.Px, npc, dist, rank));
         }
@@ -259,9 +283,6 @@ public unsafe class KeyboundBrawlerModule : Framework.Module
             .ThenBy(s => s.Rank == 2 ? s.Stacks : 0)
             .ThenBy(s => s.Distance)];
     }
-
-    // substring match so "Sensory Jammer" also catches "Dynamic Sensory Jammer"
-    private static bool CastMatches(string cast, string name) => cast.Contains(name, StringComparison.OrdinalIgnoreCase);
 
     private void UpdatePause(List<Cast> casts, long now)
     {
@@ -273,7 +294,7 @@ public unsafe class KeyboundBrawlerModule : Framework.Module
             }
         }
 
-        // the cast lengths in PauseCasts come from these lines
+        // the cast lengths in PauseActions come from these lines
         foreach (var (key, since) in castSeenAt)
         {
             if (!casts.Any(c => $"{c.Index}:{c.Name}" == key))
@@ -286,11 +307,10 @@ public unsafe class KeyboundBrawlerModule : Framework.Module
         // keep pushing the deadline while the cast is nearly done, then let it run out
         foreach (var c in casts)
         {
-            var entry = PauseCasts.FirstOrDefault(e => CastMatches(c.Name, e.Name));
-            if (entry.Name != null && entry.CastMs - (now - castSeenAt[$"{c.Index}:{c.Name}"]) <= PauseBeforeEndMs)
+            if (pauseCasts.TryGetValue(c.Name, out var timing) && timing.CastMs - (now - castSeenAt[$"{c.Index}:{c.Name}"]) <= PauseBeforeEndMs)
             {
                 pausedBy = c.Name;
-                pauseUntil = now + entry.AfterMs;
+                pauseUntil = now + timing.AfterMs;
                 break;
             }
         }
