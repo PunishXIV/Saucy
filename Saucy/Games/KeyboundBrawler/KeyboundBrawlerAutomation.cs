@@ -59,10 +59,11 @@ internal static unsafe class KeyboundBrawlerAutomation
     private static long   forbiddenCastBlockUntil;
     private static long   lastInactivityResetAt;
     private static bool   awaitingQueueDialogue;
-    private static bool   queueFlowActive, queueRequested, queueObserved, queueAcceptClicked;
+    private static bool   queueFlowActive, queueRequested, queueAcceptClicked;
     private static bool   ownsQueuePath;
     private static long   queueDialogueDeadline;
     private static long   queueRetryAt;
+    private static long   nextQueueAt;
     private static long   nextQueueMoveAt;
     private static bool   wasInDuty,    roundTracked, resultRecorded;
     private static int    lastMgp = -1, lastMgc = -1;
@@ -73,6 +74,7 @@ internal static unsafe class KeyboundBrawlerAutomation
 
     internal static bool IsInActiveMinigame => GetDirector() != 0;
     internal static bool IsAutoQueueFlowActive => queueFlowActive;
+    private static long RequeueDelayMs => (long)Math.Max(0, C.KeyboundBrawlerRequeueDelaySeconds) * 1000;
 
     internal static void OnUpdate()
     {
@@ -91,8 +93,8 @@ internal static unsafe class KeyboundBrawlerAutomation
         wasInDuty             = roundTracked = resultRecorded = false;
         lastMgp               = lastMgc      = -1;
         awaitingQueueDialogue = false;
-        queueFlowActive = queueRequested = queueObserved = queueAcceptClicked = false;
-        queueRetryAt          = nextQueueMoveAt = 0;
+        queueFlowActive = queueRequested = queueAcceptClicked = false;
+        queueRetryAt          = nextQueueAt = nextQueueMoveAt = 0;
         StopQueuePath();
         QueueStatus = "Looking for entry NPC";
     }
@@ -131,6 +133,7 @@ internal static unsafe class KeyboundBrawlerAutomation
 
             resultRecorded = true;
             rewardUntil    = Environment.TickCount64 + 15000;
+            nextQueueAt    = Environment.TickCount64 + RequeueDelayMs;
             StatsSessionClock.MarkBrawlerActive();
             C.UpdateStats(stats => stats.BrawlerGamesPlayed++);
             C.Save();
@@ -387,7 +390,7 @@ internal static unsafe class KeyboundBrawlerAutomation
 
         if (!C.KeyboundBrawlerAutoQueue)
         {
-            queueFlowActive = queueRequested = queueObserved = queueAcceptClicked = false;
+            queueFlowActive = queueRequested = queueAcceptClicked = false;
             awaitingQueueDialogue = false;
             queueRetryAt          = 0;
             StopQueuePath();
@@ -398,8 +401,9 @@ internal static unsafe class KeyboundBrawlerAutomation
             Svc.Condition[ConditionFlag.BetweenAreas] ||
             Svc.Condition[ConditionFlag.BoundByDuty95])
         {
-            queueFlowActive = queueRequested = queueObserved = queueAcceptClicked = false;
+            queueFlowActive = queueRequested = queueAcceptClicked = false;
             awaitingQueueDialogue = false;
+            queueRetryAt = 0;
             StopQueuePath();
             QueueStatus = "Queued or entering Brawler";
             return;
@@ -408,13 +412,11 @@ internal static unsafe class KeyboundBrawlerAutomation
         var now = Environment.TickCount64;
         if (queueRequested)
         {
-            var finder = ContentsFinder.Instance();
-            var state = finder == null ? ContentsFinderQueueState.None : finder->QueueInfo.QueueState;
-            if (state != ContentsFinderQueueState.None) queueObserved = true;
-            if (state == ContentsFinderQueueState.Ready)
+            var confirm = (AddonContentsFinderConfirm*)Svc.GameGui.GetAddonByName("ContentsFinderConfirm").Address;
+            if (confirm != null && confirm->AtkUnitBase.IsReady && confirm->AtkUnitBase.IsVisible)
             {
-                var confirm = (AddonContentsFinderConfirm*)Svc.GameGui.GetAddonByName("ContentsFinderConfirm").Address;
-                if (!queueAcceptClicked && confirm != null && confirm->AtkUnitBase.IsVisible)
+                queueRetryAt = now + 5000;
+                if (!queueAcceptClicked)
                 {
                     queueAcceptClicked = AddonButton.TryClick(&confirm->AtkUnitBase, confirm->CommenceButton);
                 }
@@ -423,11 +425,26 @@ internal static unsafe class KeyboundBrawlerAutomation
                 return;
             }
 
-            if (state == ContentsFinderQueueState.None &&
-                (queueObserved || now >= queueRetryAt))
+            queueAcceptClicked = false;
+            var finder = ContentsFinder.Instance();
+            var state = finder == null ? ContentsFinderQueueState.None : finder->QueueInfo.QueueState;
+            if (state != ContentsFinderQueueState.None ||
+                Svc.Condition[ConditionFlag.WaitingForDuty] ||
+                Svc.Condition[ConditionFlag.WaitingForDutyFinder])
             {
-                queueFlowActive = queueRequested = queueObserved = queueAcceptClicked = false;
                 queueRetryAt = now + 5000;
+            }
+
+            if (state == ContentsFinderQueueState.Ready)
+            {
+                QueueStatus = "Waiting for duty confirmation";
+                return;
+            }
+
+            if (state == ContentsFinderQueueState.None && now >= queueRetryAt)
+            {
+                queueFlowActive = queueRequested = queueAcceptClicked = false;
+                queueRetryAt = now + RequeueDelayMs;
                 QueueStatus = "Queue ended - retrying";
                 return;
             }
@@ -457,7 +474,7 @@ internal static unsafe class KeyboundBrawlerAutomation
                 {
                     awaitingQueueDialogue = false;
                     queueRequested = true;
-                    queueObserved = queueAcceptClicked = false;
+                    queueAcceptClicked = false;
                     queueRetryAt          = now + 30000;
                     QueueStatus           = "Entry accepted - waiting for queue";
                 }
@@ -476,12 +493,19 @@ internal static unsafe class KeyboundBrawlerAutomation
             }
 
             awaitingQueueDialogue = false;
-            queueRetryAt          = now + 5000;
+            queueRetryAt          = now + RequeueDelayMs;
         }
 
         if (now < queueRetryAt)
         {
             QueueStatus = "Waiting before queue retry";
+            return;
+        }
+
+        if (now < nextQueueAt)
+        {
+            queueFlowActive = false;
+            QueueStatus = "Waiting before next Brawler queue";
             return;
         }
 

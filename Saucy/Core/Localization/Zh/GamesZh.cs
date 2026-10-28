@@ -69,6 +69,7 @@ internal static class GamesZh
         // Keybound Brawler
         ["word action minigame"] = "文字战斗小游戏",
         ["Enable auto-queue"] = "启用自动排队",
+        ["Delay before next queue (seconds)"] = "下一次排队前等待时间（秒）",
         ["Minimum typing time per character (ms)"] = "每字符最短输入时间（毫秒）",
         ["Maximum typing time per character (ms)"] = "每字符最长输入时间（毫秒）",
         ["This game version is not supported by the current action signature."] = "当前游戏版本不支持此动作特征码。",
