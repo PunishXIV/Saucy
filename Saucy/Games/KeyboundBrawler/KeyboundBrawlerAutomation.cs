@@ -43,12 +43,14 @@ internal static unsafe class KeyboundBrawlerAutomation
     private const  uint   CursedGazeActionId       = 49529;
     private const  uint   SensoryJammerActionId    = 49532;
     private const  uint   SensoryJammerAltActionId = 49702;
+    private const  int    ForbiddenCastWindowMs    = 500;
     private static nint   useWordActionAddress;
     private static bool   scanAttempted;
     private static uint   pendingEntityId;
     private static string pendingWord      = "";
     private static string pendingAlternate = "";
     private static long   pendingReadyAt;
+    private static long   forbiddenCastBlockUntil;
     private static long   lastInactivityResetAt;
     private static bool   awaitingQueueDialogue;
     private static bool   ownsQueuePath;
@@ -74,6 +76,7 @@ internal static unsafe class KeyboundBrawlerAutomation
     internal static void Reset()
     {
         pendingEntityId       = 0;
+        forbiddenCastBlockUntil = 0;
         lastInactivityResetAt = 0;
         wasInDuty             = roundTracked = resultRecorded = false;
         lastMgp               = lastMgc      = -1;
@@ -156,6 +159,7 @@ internal static unsafe class KeyboundBrawlerAutomation
         if (director == 0 || *((byte*)director + 0x1FC0) == 0)
         {
             pendingEntityId       = 0;
+            forbiddenCastBlockUntil = 0;
             lastInactivityResetAt = 0;
             return;
         }
@@ -219,7 +223,6 @@ internal static unsafe class KeyboundBrawlerAutomation
         var         bestAlternate       = "";
         GameObject* pendingObject       = null;
         var         pendingPriority     = -1;
-        var         forbiddenCastActive = false;
         var         player              = Svc.Objects.LocalPlayer;
         var         objectManager       = GameObjectManager.Instance();
         if (objectManager == null)
@@ -246,7 +249,12 @@ internal static unsafe class KeyboundBrawlerAutomation
                 cast->IsCasting &&
                 cast->ActionId is CursedGazeActionId or SensoryJammerActionId or SensoryJammerAltActionId)
             {
-                forbiddenCastActive = true;
+                var remainingMs = (cast->TotalCastTime - cast->CurrentCastTime) * 1000f;
+                if (remainingMs <= ForbiddenCastWindowMs)
+                {
+                    forbiddenCastBlockUntil = Math.Max(forbiddenCastBlockUntil,
+                        now + (long)Math.Max(remainingMs, 0) + ForbiddenCastWindowMs);
+                }
             }
 
             if (gameObject->IsDead() && entry->BubbleType != 2)
@@ -313,7 +321,7 @@ internal static unsafe class KeyboundBrawlerAutomation
             return;
         }
 
-        if (now < pendingReadyAt || forbiddenCastActive)
+        if (now < pendingReadyAt || now < forbiddenCastBlockUntil)
         {
             return;
         }
