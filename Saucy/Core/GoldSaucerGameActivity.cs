@@ -2,6 +2,7 @@ using Dalamud.Game.ClientState.Conditions;
 using Saucy.AirForce;
 using Saucy.Cactpot;
 using Saucy.Framework;
+using Saucy.KeyboundBrawler;
 using Saucy.OtherGames;
 
 namespace Saucy;
@@ -16,6 +17,7 @@ internal static class GoldSaucerGameActivity
             IsMiniCactpotSessionActive() ||
             IsJumboCactpotSessionActive() ||
             IsAirForceSessionActive() ||
+            IsBrawlerSessionActive() ||
             IsGateAutoMovementActive())
         {
             return true;
@@ -52,6 +54,10 @@ internal static class GoldSaucerGameActivity
     private static bool IsAirForceSessionActive() =>
         C.IsModuleEnabled(ModuleNames.AirForceOne) &&
         (Svc.Condition[ConditionFlag.BoundByDuty95] || AirForceAutomation.ShouldTrackReward);
+
+    internal static bool IsBrawlerSessionActive() =>
+        C.IsModuleEnabled(ModuleNames.KeyboundBrawler) &&
+        KeyboundBrawlerAutomation.IsInActiveMinigame;
 
     private static bool IsGateAutoMovementActive()
     {

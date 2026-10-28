@@ -9,4 +9,5 @@ public static class ModuleNames
     public const string OutOnALimb = "OutOnALimbModule";
     public const string CuffACur = "CuffACurModule";
     public const string AirForceOne = "AirForceOne";
+    public const string KeyboundBrawler = "KeyboundBrawler";
 }

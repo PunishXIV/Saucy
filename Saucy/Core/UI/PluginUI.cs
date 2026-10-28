@@ -27,6 +27,7 @@ public unsafe partial class PluginUI : Window
         ModuleDisplayNames.WindBlows,
         ModuleDisplayNames.AirForceOne,
         ModuleDisplayNames.TripleTriad,
+        ModuleDisplayNames.KeyboundBrawler,
         ModuleDisplayNames.MiniCactpot,
         ModuleDisplayNames.JumboCactpot,
         "Stats",
@@ -166,6 +167,7 @@ public unsafe partial class PluginUI : Window
         ImGui.Dummy(new(0, 6));
         DrawSidebarHeader(Loc.T("OTHER GAMES"));
         NavSelectable(Loc.T("Triple Triad"), NavItem.TripleTriad);
+        NavSelectable(Loc.T(ModuleDisplayNames.KeyboundBrawler), NavItem.KeyboundBrawler);
         NavSelectable(Loc.T("Mini-Cactpot"), NavItem.MiniCactpot);
         NavSelectable(Loc.T("Jumbo Cactpot"), NavItem.JumboCactpot);
 
@@ -244,6 +246,7 @@ public unsafe partial class PluginUI : Window
         switch (_selectedNav)
         {
             case NavItem.TripleTriad: DrawTriadPanel(); break;
+            case NavItem.KeyboundBrawler: DrawKeyboundBrawlerPanel(); break;
             case NavItem.CuffACur: DrawCuffPanel(); break;
             case NavItem.OutOnALimb: DrawLimbPanel(); break;
             case NavItem.SliceIsRight: DrawSliceIsRightPanel(); break;
@@ -316,6 +319,7 @@ public unsafe partial class PluginUI : Window
     private enum NavItem
     {
         TripleTriad,
+        KeyboundBrawler,
         CuffACur,
         OutOnALimb,
         SliceIsRight,

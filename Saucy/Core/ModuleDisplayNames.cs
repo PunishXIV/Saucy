@@ -23,6 +23,7 @@ public static class ModuleDisplayNames
     public const string AnyWayTheWindBlows = "Any Way the Wind Blows";
     public const string AirForceOne = "Air Force One";
     public const string TripleTriad = "Triple Triad";
+    public const string KeyboundBrawler = "Keybound Brawler";
     public const string MiniCactpot = "Mini-Cactpot";
     public const string JumboCactpot = "Jumbo Cactpot";
 

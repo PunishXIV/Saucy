@@ -19,6 +19,7 @@ internal static class CoreZh
         ["Wind Blows"] = "喷风中的幸存者",
         ["Air Force One"] = "空军装甲驾驶员",
         ["Triple Triad"] = "九宫幻卡",
+        ["Keybound Brawler"] = "Keybound Brawler",
         ["Mini-Cactpot"] = "仙人微彩",
         ["Jumbo Cactpot"] = "仙人彩",
         ["Stats"] = "统计",

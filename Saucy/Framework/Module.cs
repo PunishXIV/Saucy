@@ -1,4 +1,4 @@
-﻿using ECommons;
+using ECommons;
 using ECommons.Automation.NeoTaskManager;
 using System;
 using System.Collections.Generic;
@@ -117,6 +117,7 @@ public class ModuleManager : IDisposable
             () => new OutOnALimb.OutOnALimbModule(),
             () => new CuffACur.CuffACurModule(),
             () => new AirForce.AirForceOne(),
+            () => new KeyboundBrawler.KeyboundBrawlerModule(),
         ];
         foreach (var factory in factories)
         {

@@ -66,6 +66,13 @@ internal static class GamesZh
         // Air Force One
         ["Runs automatically when enabled. Plays the Air Force One ride-shooting minigame for you."] = "启用后自动运行，代你完成空军装甲驾驶员飞行射击小游戏。",
 
+        // Keybound Brawler
+        ["word action minigame"] = "文字战斗小游戏",
+        ["Enable auto-queue"] = "启用自动排队",
+        ["Minimum typing time per character (ms)"] = "每字符最短输入时间（毫秒）",
+        ["Maximum typing time per character (ms)"] = "每字符最长输入时间（毫秒）",
+        ["This game version is not supported by the current action signature."] = "当前游戏版本不支持此动作特征码。",
+
         // Mini-Cactpot
         ["Plays Mini Cactpot automatically when you open the daily scratcher at the Gold Saucer."] = "在金碟游乐场打开每日刮刮乐时自动完成仙人微彩。",
 

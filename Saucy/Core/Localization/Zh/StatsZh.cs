@@ -25,6 +25,7 @@ internal static class StatsZh
 
         // Shared rows
         ["Games"] = "局数",
+        ["MGC won"] = "获得 MGC",
         ["MGP won"] = "获得 MGP",
 
         // Triple Triad rows
