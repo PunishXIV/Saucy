@@ -401,7 +401,11 @@ internal static class TriadSettingsUi
 
         if (TriadRunSession.NoRunModeSelected)
         {
-            ImGui.TextDisabled(Loc.T("No stop condition — runs until automation is disabled."));
+            if (!C.TriadMgpStop.Enabled)
+            {
+                ImGui.TextDisabled(Loc.T("No stop condition — runs until automation is disabled."));
+            }
+
             ImGui.TextDisabled(Loc.T("Stops rematching while Duty Finder is ready."));
         }
 
@@ -467,6 +471,7 @@ internal static class TriadSettingsUi
         }
 
         ImGui.Dummy(new(0, 4));
+        GoldSaucerRunSettingsUi.DrawMgpStop(C.TriadMgpStop, "SaucyTriad");
         var logOutAfterRun = C.LogOutAfterTriadRun;
         if (ImGui.Checkbox(Loc.T("Log out when run completes"), ref logOutAfterRun))
         {

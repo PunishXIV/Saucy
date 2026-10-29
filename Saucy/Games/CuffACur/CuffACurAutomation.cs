@@ -157,7 +157,7 @@ public unsafe class CuffACurAutomation
 
             if (!GoldSaucerArcadeRunSession.ShouldContinue(Machine))
             {
-                if (GoldSaucerArcadeRunSession.PlayXTimes(Machine))
+                if (GoldSaucerArcadeRunSession.HasStopCondition(Machine))
                 {
                     ArcadeMachineSession.RequestShutdown(Machine);
                 }

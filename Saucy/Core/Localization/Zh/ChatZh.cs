@@ -95,6 +95,23 @@ internal static class ChatZh
         [", "] = "、",
         ["\"{0}\""] = "“{0}”",
 
+        // GATE runner
+        ["[Saucy] Start the GATE runner in the Gold Saucer with vnavmesh installed."] = "[Saucy] 请在金碟游乐场内并安装 vnavmesh 后再启动自动机遇任务。",
+        ["[Saucy] Stop the other game automation before starting the GATE runner."] = "[Saucy] 启动自动机遇任务前，请先停止其他游戏的自动化。",
+        ["[Saucy] Enable Air Force One or automatic movement for an enabled GATE before starting."] = "[Saucy] 启动前请启用空军装甲驾驶员，或为已启用的机遇任务开启自动移动。",
+        ["[Saucy] GATE runner started."] = "[Saucy] 自动机遇任务已启动。",
+        ["[Saucy] GATE runner stopped."] = "[Saucy] 自动机遇任务已停止。",
+        ["[Saucy] GATE runner timed out during a game. Stopping."] = "[Saucy] 自动机遇任务在游戏中超时，正在停止。",
+        ["[Saucy] Could not enter this GATE. Waiting for the next one."] = "[Saucy] 无法进入本场机遇任务，等待下一场。",
+        ["[Saucy] {0} GATE is starting. Travelling there after the current round."] = "[Saucy] 机遇任务「{0}」即将开始。将在本局结束后前往。",
+
+        // Keybound Brawler
+        ["[Saucy] Keybound Brawler played {0} matches. Auto-queue disabled."] = "[Saucy] Keybound Brawler 已完成 {0} 场对局。自动排队已关闭。",
+        ["[Saucy] MGC cap reached. Keybound Brawler auto-queue disabled."] = "[Saucy] MGC 已达上限。Keybound Brawler 自动排队已关闭。",
+
+        // GATE timeline
+        ["[Saucy] {0} entry is open for {1} minutes. {2}."] = "[Saucy] {0} 现已开放报名，持续 {1} 分钟。{2}。",
+
         // Arcade module conflicts
         ["Disabled {0} to enable {1}."] = "已关闭「{0}」以启用「{1}」。",
         ["Disabled {0} and {1} to enable {2}."] = "已关闭「{0}」和「{1}」以启用「{2}」。"

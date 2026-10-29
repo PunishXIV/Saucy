@@ -10,6 +10,9 @@ internal static class DependenciesZh
         // Arcade run settings
         ["Stops queuing new games while Duty Finder is ready."] = "任务搜索器就绪时暂停开始新对局。",
 
+        // MGP stop
+        ["Stop when MGP reaches"] = "MGP 达到以下数值时停止",
+
         // Fake break
         ["Take a break"] = "休息一下",
         ["After playing for a while, pause starting new games for a short break. Current games can still finish."] = "游玩一段时间后，暂停开始新对局以稍作休息。进行中的对局仍会打完。",

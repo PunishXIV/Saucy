@@ -96,6 +96,7 @@ public static unsafe class AirForceAutomation
             stats.AirForceGamesPlayed++;
         });
         C.Save();
+        result->FireCallbackInt(-1);
     }
 
     public static void OnUpdate()

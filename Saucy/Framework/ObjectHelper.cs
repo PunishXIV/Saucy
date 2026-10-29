@@ -2,6 +2,7 @@ using Dalamud.Game.ClientState.Objects.Types;
 using ECommons.GameHelpers;
 using ECommons.Throttlers;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
+using FFXIVClientStructs.FFXIV.Client.Game.Event;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using Saucy.IPC;
 using System;
@@ -197,6 +198,16 @@ public static unsafe class ObjectHelper
         }
 
         return null;
+    }
+
+    public static bool HasNamePlateIcon(IGameObject obj) => ((GameObject*)obj.Address)->NamePlateIconId != 0;
+
+    public static bool IsInInteractRange(IGameObject obj)
+    {
+        var player = Svc.Objects.LocalPlayer;
+        var eventFramework = EventFramework.Instance();
+        return player != null && eventFramework != null &&
+               eventFramework->CheckInteractRange((GameObject*)player.Address, (GameObject*)obj.Address, 1, false);
     }
 
     public static bool TryInteractWithObject(

@@ -40,6 +40,7 @@ internal static unsafe class KeyboundBrawlerAutomation
     private const  string UseWordActionSignature   = "48 89 5C 24 18 56 57 41 56 48 83 EC 40 48 8B 1D ?? ?? ?? ?? 4C 8B F2 48 8B F1";
     private const  uint   MgpItemId                = 29;
     private const  uint   MgcItemId                = 52322;
+    internal const int    MgcCap                   = 10000;
     private const  uint   QueueNpcBaseId           = 1058751;
     private const  uint   QueueAcceptButtonId      = 9;
     private const  uint   ResultCloseButtonId      = 48;
@@ -67,6 +68,7 @@ internal static unsafe class KeyboundBrawlerAutomation
     private static long   nextQueueMoveAt;
     private static bool   wasInDuty,    roundTracked, resultRecorded;
     private static int    lastMgp = -1, lastMgc = -1;
+    private static int    matchesPlayed;
     private static long   rewardUntil;
 
     internal static bool   ScanFailed  => scanAttempted && useWordActionAddress == 0;
@@ -74,6 +76,7 @@ internal static unsafe class KeyboundBrawlerAutomation
 
     internal static bool IsInActiveMinigame => GetDirector() != 0;
     internal static bool IsAutoQueueFlowActive => queueFlowActive;
+    internal static int RemainingMatches => Math.Max(0, Math.Max(1, C.KeyboundBrawlerMatchCount) - matchesPlayed);
     private static long RequeueDelayMs => (long)Math.Max(0, C.KeyboundBrawlerRequeueDelaySeconds) * 1000;
 
     internal static void OnUpdate()
@@ -133,7 +136,11 @@ internal static unsafe class KeyboundBrawlerAutomation
 
             resultRecorded = true;
             rewardUntil    = Environment.TickCount64 + 15000;
-            nextQueueAt    = Environment.TickCount64 + RequeueDelayMs;
+            if (C.KeyboundBrawlerAutoQueue)
+            {
+                matchesPlayed++;
+            }
+
             StatsSessionClock.MarkBrawlerActive();
             C.UpdateStats(stats => stats.BrawlerGamesPlayed++);
             C.Save();
@@ -165,6 +172,23 @@ internal static unsafe class KeyboundBrawlerAutomation
                           stats.BrawlerMGC += gainedMgc;
                       });
         C.Save();
+    }
+
+    private static string? GetAutoQueueStopMessage()
+    {
+        if (C.KeyboundBrawlerPlayXTimes && RemainingMatches == 0)
+        {
+            return Loc.T("[Saucy] Keybound Brawler played {0} matches. Auto-queue disabled.", matchesPlayed);
+        }
+
+        var inventory = InventoryManager.Instance();
+        if (C.KeyboundBrawlerStopAtMgcCap && inventory != null &&
+            inventory->GetInventoryItemCount(MgcItemId, false, false, false) >= MgcCap)
+        {
+            return Loc.T("[Saucy] MGC cap reached. Keybound Brawler auto-queue disabled.");
+        }
+
+        return null;
     }
 
     private static void TickGameplay()
@@ -393,6 +417,7 @@ internal static unsafe class KeyboundBrawlerAutomation
             queueFlowActive = queueRequested = queueAcceptClicked = false;
             awaitingQueueDialogue = false;
             queueRetryAt          = 0;
+            matchesPlayed         = 0;
             StopQueuePath();
             return;
         }
@@ -404,21 +429,43 @@ internal static unsafe class KeyboundBrawlerAutomation
             queueFlowActive = queueRequested = queueAcceptClicked = false;
             awaitingQueueDialogue = false;
             queueRetryAt = 0;
+            nextQueueAt = Environment.TickCount64 + RequeueDelayMs;
             StopQueuePath();
             QueueStatus = "Queued or entering Brawler";
+            return;
+        }
+
+        if (!queueRequested && GetAutoQueueStopMessage() is { } stopMessage)
+        {
+            C.KeyboundBrawlerAutoQueue = false;
+            C.Save();
+            Svc.Chat.Print(stopMessage);
             return;
         }
 
         var now = Environment.TickCount64;
         if (queueRequested)
         {
-            var confirm = (AddonContentsFinderConfirm*)Svc.GameGui.GetAddonByName("ContentsFinderConfirm").Address;
-            if (confirm != null && confirm->AtkUnitBase.IsReady && confirm->AtkUnitBase.IsVisible)
+            if (SelectYesnoHelper.TryGetVisible(out var yesno) &&
+                !SelectYesnoHelper.IsBlockedSystemPrompt(yesno) &&
+                SelectYesnoHelper.HasYesnoButtons(yesno))
+            {
+                queueRetryAt = now + 5000;
+                if (EzThrottler.Throttle("Saucy.KeyboundBrawler.QueueYesno", 1000))
+                {
+                    SelectYesnoHelper.PressYes(yesno);
+                }
+
+                QueueStatus = "Confirming queue prompt";
+                return;
+            }
+
+            if (DutyConfirmHelper.IsVisible())
             {
                 queueRetryAt = now + 5000;
                 if (!queueAcceptClicked)
                 {
-                    queueAcceptClicked = AddonButton.TryClick(&confirm->AtkUnitBase, confirm->CommenceButton);
+                    queueAcceptClicked = DutyConfirmHelper.TryCommence();
                 }
 
                 QueueStatus = queueAcceptClicked ? "Duty accepted - waiting to enter" : "Waiting for duty confirmation";
@@ -504,6 +551,11 @@ internal static unsafe class KeyboundBrawlerAutomation
 
         if (now < nextQueueAt)
         {
+            if (!Player.Interactable)
+            {
+                nextQueueAt = now + RequeueDelayMs;
+            }
+
             queueFlowActive = false;
             QueueStatus = "Waiting before next Brawler queue";
             return;

@@ -30,6 +30,8 @@ public unsafe partial class PluginUI : Window
         ModuleDisplayNames.KeyboundBrawler,
         ModuleDisplayNames.MiniCactpot,
         ModuleDisplayNames.JumboCactpot,
+        ModuleDisplayNames.GateRunner,
+        "Timeline",
         "Stats",
         "About",
         "Debug",
@@ -160,6 +162,8 @@ public unsafe partial class PluginUI : Window
 
         ImGui.Dummy(new(0, 6));
         DrawSidebarHeader(Loc.T("GATES"));
+        NavSelectable(Loc.T("Timeline"), NavItem.Timeline);
+        NavSelectable(Loc.T(ModuleDisplayNames.GateRunner), NavItem.GateRunner);
         NavSelectable(Loc.T("Slice is Right"), NavItem.SliceIsRight);
         NavSelectable(Loc.T("Wind Blows"), NavItem.AnyWayTheWindBlows);
         NavSelectable(Loc.T("Air Force One"), NavItem.AirForceOne);
@@ -249,6 +253,8 @@ public unsafe partial class PluginUI : Window
             case NavItem.KeyboundBrawler: DrawKeyboundBrawlerPanel(); break;
             case NavItem.CuffACur: DrawCuffPanel(); break;
             case NavItem.OutOnALimb: DrawLimbPanel(); break;
+            case NavItem.GateRunner: DrawGateRunnerPanel(); break;
+            case NavItem.Timeline: DrawTimelinePanel(); break;
             case NavItem.SliceIsRight: DrawSliceIsRightPanel(); break;
             case NavItem.AnyWayTheWindBlows: DrawWindBlowsPanel(); break;
             case NavItem.AirForceOne: DrawAirForcePanel(); break;
@@ -322,6 +328,8 @@ public unsafe partial class PluginUI : Window
         KeyboundBrawler,
         CuffACur,
         OutOnALimb,
+        GateRunner,
+        Timeline,
         SliceIsRight,
         AnyWayTheWindBlows,
         AirForceOne,
