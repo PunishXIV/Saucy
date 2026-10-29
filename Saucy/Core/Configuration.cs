@@ -87,8 +87,9 @@ public class Configuration : IPluginConfiguration
     public bool KeyboundBrawlerStopAtMgcCap { get; set; }
     public bool KeyboundBrawlerPlayXTimes { get; set; }
     public int KeyboundBrawlerMatchCount { get; set; } = 1;
-    public int KeyboundBrawlerMinMsPerCharacter { get; set; } = 100;
-    public int KeyboundBrawlerMaxMsPerCharacter { get; set; } = 300;
+    public float KeyboundBrawlerSpeedScale { get; set; } = 0.8f;
+    public float KeyboundBrawlerNormalization { get; set; } = 0.35f;
+    public int KeyboundBrawlerJitterMs { get; set; } = 30;
 
     public JumboCactpotSettings JumboCactpot { get; set; } = new();
 

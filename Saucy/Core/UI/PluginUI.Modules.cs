@@ -178,24 +178,32 @@ public unsafe partial class PluginUI
         var requeueDelay = C.KeyboundBrawlerRequeueDelaySeconds;
         if (ImGui.InputInt($"{Loc.T("Delay before next queue (seconds)")}###SaucyBrawlerRequeueDelay", ref requeueDelay))
         {
-            C.KeyboundBrawlerRequeueDelaySeconds = Math.Max(0, requeueDelay);
+            C.KeyboundBrawlerRequeueDelaySeconds = Math.Clamp(requeueDelay, 0, 86400);
             C.Save();
         }
 
-        var min = C.KeyboundBrawlerMinMsPerCharacter;
-        if (ImGui.InputInt($"{Loc.T("Minimum typing time per character (ms)")}###SaucyBrawlerMinDelay", ref min))
+        var minimumSpeedScale = (float)TypingDelayCalculator.MinimumSpeedScale(C.KeyboundBrawlerNormalization);
+        var speedPercent = (int)Math.Round((1f - Math.Clamp(C.KeyboundBrawlerSpeedScale, minimumSpeedScale, 1f)) / (1f - minimumSpeedScale) * 100f);
+        if (ImGui.SliderInt($"{Loc.T("Typing speed")}###SaucyBrawlerSpeed", ref speedPercent, 0, 100, "%d%%"))
         {
-            C.KeyboundBrawlerMinMsPerCharacter = Math.Clamp(min, 100, 2000);
-            C.KeyboundBrawlerMaxMsPerCharacter = Math.Clamp(C.KeyboundBrawlerMaxMsPerCharacter, C.KeyboundBrawlerMinMsPerCharacter, 2000);
+            C.KeyboundBrawlerSpeedScale = 1f - speedPercent / 100f * (1f - minimumSpeedScale);
             C.Save();
         }
 
-        var max = C.KeyboundBrawlerMaxMsPerCharacter;
-        if (ImGui.InputInt($"{Loc.T("Maximum typing time per character (ms)")}###SaucyBrawlerMaxDelay", ref max))
+        var normalizationPercent = C.KeyboundBrawlerNormalization * 100f;
+        if (ImGui.SliderFloat($"{Loc.T("Normalize typing delay")}###SaucyBrawlerNormalization", ref normalizationPercent, 0f, 100f, "%.0f%%"))
         {
-            C.KeyboundBrawlerMaxMsPerCharacter = Math.Clamp(max, C.KeyboundBrawlerMinMsPerCharacter, 2000);
+            C.KeyboundBrawlerNormalization = normalizationPercent / 100f;
             C.Save();
         }
+
+        var jitter = C.KeyboundBrawlerJitterMs;
+        if (ImGui.InputInt($"{Loc.T("Typing jitter (ms)")}###SaucyBrawlerJitter", ref jitter))
+        {
+            C.KeyboundBrawlerJitterMs = Math.Clamp(jitter, 0, 100);
+            C.Save();
+        }
+
         if (KeyboundBrawlerAutomation.ScanFailed)
         {
             ImGui.TextDisabled(Loc.T("This game version is not supported by the current action signature."));

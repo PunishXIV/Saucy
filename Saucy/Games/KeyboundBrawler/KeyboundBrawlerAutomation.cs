@@ -364,9 +364,12 @@ internal static unsafe class KeyboundBrawlerAutomation
             pendingEntityId  = bestEntityId;
             pendingWord      = bestWord;
             pendingAlternate = bestAlternate;
-            var min = Math.Clamp(C.KeyboundBrawlerMinMsPerCharacter, 100, 2000);
-            var max = Math.Clamp(C.KeyboundBrawlerMaxMsPerCharacter, min, 2000);
-            pendingTypingDurationMs = bestLength * Random.Shared.Next(min, max + 1);
+            var typingWord = bestWord.Length == 0 || bestAlternate.Length > 0 && bestAlternate.Length < bestWord.Length
+                                 ? bestAlternate
+                                 : bestWord;
+            var typingDelay = new TypingDelayCalculator(C.KeyboundBrawlerSpeedScale, C.KeyboundBrawlerNormalization, C.KeyboundBrawlerJitterMs);
+            pendingTypingDurationMs = 0;
+            foreach (var character in typingWord) pendingTypingDurationMs += typingDelay.GetDelay(character);
             pendingReadyAt = Math.Max(now, forbiddenCastBlockUntil) + pendingTypingDurationMs;
             return;
         }
