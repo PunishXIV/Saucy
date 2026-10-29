@@ -22,6 +22,8 @@ internal static class CoreZh
         ["Keybound Brawler"] = "Keybound Brawler",
         ["Mini-Cactpot"] = "仙人微彩",
         ["Jumbo Cactpot"] = "仙人彩",
+        ["GATE runner"] = "自动机遇任务",
+        ["Timeline"] = "时间表",
         ["Stats"] = "统计",
         ["About"] = "关于",
         ["Debug"] = "调试",

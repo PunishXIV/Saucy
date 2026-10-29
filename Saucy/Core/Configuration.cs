@@ -39,6 +39,8 @@ public class Configuration : IPluginConfiguration
 
     public int TriadMatchCount { get; set; } = 1;
 
+    public MgpStopSettings TriadMgpStop { get; set; } = new();
+
     public bool LogOutAfterTriadRun { get; set; }
 
     public Stats Stats { get; set; } = new();
@@ -82,6 +84,9 @@ public class Configuration : IPluginConfiguration
 
     public bool KeyboundBrawlerAutoQueue { get; set; }
     public int KeyboundBrawlerRequeueDelaySeconds { get; set; }
+    public bool KeyboundBrawlerStopAtMgcCap { get; set; }
+    public bool KeyboundBrawlerPlayXTimes { get; set; }
+    public int KeyboundBrawlerMatchCount { get; set; } = 1;
     public int KeyboundBrawlerMinMsPerCharacter { get; set; } = 100;
     public int KeyboundBrawlerMaxMsPerCharacter { get; set; } = 300;
 
@@ -144,10 +149,23 @@ public class Configuration : IPluginConfiguration
     public void Save() => EzConfig.Save();
 }
 
+public enum BetweenGatesActivity
+{
+    Idle,
+    CuffACur,
+    OutOnALimb
+}
+
 [Serializable]
 public class GoldSaucerGateSettings
 {
+    public BetweenGatesActivity BetweenGates { get; set; } = BetweenGatesActivity.CuffACur;
+
     public bool SliceIsRightAutoMovement { get; set; }
 
     public bool WindBlowsAutoMovement { get; set; }
+
+    public int TimelineGateFilter { get; set; } = GoldSaucerGateTimeline.AllGateMask;
+
+    public bool TimelineNotifyOnEntry { get; set; }
 }

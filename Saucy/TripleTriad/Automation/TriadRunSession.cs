@@ -335,7 +335,7 @@ internal static class TriadRunSession
 
     public static bool ShouldContinue()
     {
-        if (stopAfterCurrentForDutyFinder)
+        if (stopAfterCurrentForDutyFinder || C.TriadMgpStop.IsReached())
         {
             return false;
         }

@@ -75,6 +75,47 @@ public unsafe partial class PluginUI
         SaucyTheme.DrawCard(Loc.T("Dependencies"), Loc.T("Optional integrations"), DrawSliceIsRightDependencies);
     }
 
+    private static void DrawGateRunnerPanel()
+    {
+        DrawPanelHeader(Loc.T(ModuleDisplayNames.GateRunner), Loc.T("travel to and play supported GATEs"));
+        ImGui.TextWrapped(Loc.T(
+            "Cycles through enabled GATEs: Air Force One, Slice is Right, and Any Way the Wind Blows. " +
+            "Requires vnavmesh. Slice also needs Boss Mod and automatic movement. Wind needs automatic movement."));
+
+        var activity = C.GoldSaucerGates.BetweenGates;
+        if (ImGui.RadioButton($"{Loc.T("Cuff-a-Cur between GATEs")}###SaucyGateRunnerCuff", activity == BetweenGatesActivity.CuffACur))
+        {
+            C.GoldSaucerGates.BetweenGates = BetweenGatesActivity.CuffACur;
+            C.Save();
+        }
+
+        if (ImGui.RadioButton($"{Loc.T("Out on a Limb between GATEs")}###SaucyGateRunnerLimb", activity == BetweenGatesActivity.OutOnALimb))
+        {
+            C.GoldSaucerGates.BetweenGates = BetweenGatesActivity.OutOnALimb;
+            C.Save();
+        }
+
+        if (ImGui.RadioButton($"{Loc.T("Wait between GATEs")}###SaucyGateRunnerIdle", activity == BetweenGatesActivity.Idle))
+        {
+            C.GoldSaucerGates.BetweenGates = BetweenGatesActivity.Idle;
+            C.Save();
+        }
+
+        if (GoldSaucerGateRunner.IsRunning)
+        {
+            if (ImGui.Button($"{Loc.T("Stop runner")}###SaucyGateRunnerStop"))
+            {
+                GoldSaucerGateRunner.Stop();
+            }
+        }
+        else if (ImGui.Button($"{Loc.T("Start runner")}###SaucyGateRunnerStart"))
+        {
+            GoldSaucerGateRunner.Start();
+        }
+
+        ImGui.TextDisabled(GoldSaucerGateRunner.Status);
+    }
+
     private static void DrawWindBlowsPanel()
     {
         DrawPanelHeader(Loc.T("Any Way the Wind Blows"), Loc.T("statistical safe spot"));
@@ -132,6 +173,8 @@ public unsafe partial class PluginUI
 
         if (autoQueue) ImGui.TextDisabled(Loc.T(KeyboundBrawlerAutomation.QueueStatus));
 
+        DrawKeyboundBrawlerStopConditions();
+
         var requeueDelay = C.KeyboundBrawlerRequeueDelaySeconds;
         if (ImGui.InputInt($"{Loc.T("Delay before next queue (seconds)")}###SaucyBrawlerRequeueDelay", ref requeueDelay))
         {
@@ -157,6 +200,40 @@ public unsafe partial class PluginUI
         {
             ImGui.TextDisabled(Loc.T("This game version is not supported by the current action signature."));
         }
+    }
+
+    private static void DrawKeyboundBrawlerStopConditions()
+    {
+        var stopAtCap = C.KeyboundBrawlerStopAtMgcCap;
+        if (ImGui.Checkbox($"{Loc.T("Stop at the MGC cap of {0}", KeyboundBrawlerAutomation.MgcCap)}###SaucyBrawlerStopAtCap", ref stopAtCap))
+        {
+            C.KeyboundBrawlerStopAtMgcCap = stopAtCap;
+            C.Save();
+        }
+
+        var playXTimes = C.KeyboundBrawlerPlayXTimes;
+        if (ImGui.Checkbox($"{Loc.T("Fixed match count")}###SaucyBrawlerFixedCount", ref playXTimes))
+        {
+            C.KeyboundBrawlerPlayXTimes = playXTimes;
+            C.Save();
+        }
+
+        if (!playXTimes)
+        {
+            return;
+        }
+
+        ImGui.Text(Loc.T("How many times:"));
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(GoldSaucerRunSettingsUi.CompactCountInputWidth * ImGuiHelpers.GlobalScale);
+        var count = Math.Max(1, C.KeyboundBrawlerMatchCount);
+        if (ImGui.InputInt("###SaucyBrawlerPlayCount", ref count))
+        {
+            C.KeyboundBrawlerMatchCount = Math.Max(1, count);
+            C.Save();
+        }
+
+        ImGui.TextDisabled(Loc.T("Matches left this session: {0}", KeyboundBrawlerAutomation.RemainingMatches));
     }
 
     private static void DrawAirForceMain()
@@ -340,7 +417,11 @@ public unsafe partial class PluginUI
         var mgp = im != null ? im->GetInventoryItemCount(MgpItemId, false, false, false) : 0;
 
         string status;
-        if (TriadRunSession.ModuleEnabled)
+        if (GoldSaucerGateRunner.IsRunning)
+        {
+            status = ModuleDisplayNames.GateRunner;
+        }
+        else if (TriadRunSession.ModuleEnabled)
         {
             status = ModuleDisplayNames.TripleTriad;
         }

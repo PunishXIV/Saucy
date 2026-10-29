@@ -1,3 +1,4 @@
+using FFXIVClientStructs.FFXIV.Client.Game;
 using Saucy.CuffACur;
 using Saucy.Localization;
 using Saucy.OutOnALimb;
@@ -23,6 +24,30 @@ public class GoldSaucerArcadeRunSettings
     public int FakeBreakPlayMinutes { get; set; } = 60;
 
     public int FakeBreakMinutes { get; set; } = 5;
+
+    public MgpStopSettings MgpStop { get; set; } = new();
+}
+
+[Serializable]
+public class MgpStopSettings
+{
+    public const int MaxMgp = 9999999;
+    private const uint MgpItemId = 29;
+
+    public bool Enabled { get; set; }
+
+    public int Target { get; set; } = MaxMgp;
+
+    public unsafe bool IsReached()
+    {
+        if (!Enabled)
+        {
+            return false;
+        }
+
+        var inventory = InventoryManager.Instance();
+        return inventory != null && inventory->GetInventoryItemCount(MgpItemId, false, false, false) >= Target;
+    }
 }
 
 internal static class GoldSaucerArcadeLifecycle
@@ -74,6 +99,9 @@ internal static class GoldSaucerArcadeRunSession
 
     public static bool PlayXTimes(GoldSaucerArcadeMachine machine) => GetSettings(machine).PlayXTimes;
 
+    public static bool HasStopCondition(GoldSaucerArcadeMachine machine) =>
+        PlayXTimes(machine) || GetSettings(machine).MgpStop.Enabled;
+
     public static void BeginSession(GoldSaucerArcadeMachine machine)
     {
         GoldSaucerArcadeFakeBreak.ResetPlayWindow(machine);
@@ -105,7 +133,7 @@ internal static class GoldSaucerArcadeRunSession
 
     public static bool ShouldContinue(GoldSaucerArcadeMachine machine)
     {
-        if (GetState(machine).StopForDutyFinder)
+        if (GetState(machine).StopForDutyFinder || GetSettings(machine).MgpStop.IsReached())
         {
             return false;
         }

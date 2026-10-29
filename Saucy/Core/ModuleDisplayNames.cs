@@ -26,6 +26,7 @@ public static class ModuleDisplayNames
     public const string KeyboundBrawler = "Keybound Brawler";
     public const string MiniCactpot = "Mini-Cactpot";
     public const string JumboCactpot = "Jumbo Cactpot";
+    public const string GateRunner = "GATE runner";
 
     /// <summary>Banner status shown when no module is running.</summary>
     public const string Idle = "Idle";

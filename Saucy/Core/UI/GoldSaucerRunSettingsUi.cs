@@ -41,7 +41,11 @@ internal static class GoldSaucerRunSettingsUi
 
         if (!settings.PlayXTimes)
         {
-            ImGui.TextDisabled(Loc.T("No stop condition — runs until automation is disabled."));
+            if (!settings.MgpStop.Enabled)
+            {
+                ImGui.TextDisabled(Loc.T("No stop condition — runs until automation is disabled."));
+            }
+
             ImGui.TextDisabled(Loc.T("Stops queuing new games while Duty Finder is ready."));
         }
         else
@@ -64,11 +68,37 @@ internal static class GoldSaucerRunSettingsUi
             ImGui.TextDisabled(Loc.T("Matches left this session: {0}", remaining));
         }
 
+        DrawMgpStop(settings.MgpStop, $"GoldSaucer{(int)machine}");
+
         ImGui.Dummy(new(0, 4));
         DrawFakeBreakSettings(machine, settings);
 
         ImGui.Dummy(new(0, 4));
         SaucyTheme.DrawCard("AutoRetainer", Loc.T("Placed bell must be in range"), DrawAutoRetainerIntegration);
+    }
+
+    public static void DrawMgpStop(MgpStopSettings settings, string id)
+    {
+        var enabled = settings.Enabled;
+        if (ImGui.Checkbox($"{Loc.T("Stop when MGP reaches")}###{id}MgpStop", ref enabled))
+        {
+            settings.Enabled = enabled;
+            C.Save();
+        }
+
+        if (!settings.Enabled)
+        {
+            return;
+        }
+
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(CompactCountInputWidth * 2 * ImGuiHelpers.GlobalScale);
+        var target = settings.Target;
+        if (ImGui.InputInt($"###{id}MgpTarget", ref target, 0, 0))
+        {
+            settings.Target = Math.Clamp(target, 1, MgpStopSettings.MaxMgp);
+            C.Save();
+        }
     }
 
     private static void DrawAutoRetainerIntegration()

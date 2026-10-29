@@ -1,4 +1,7 @@
+using Dalamud.Game.ClientState.Conditions;
 using ECommons.Automation.UIInput;
+using FFXIVClientStructs.FFXIV.Client.Enums;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -24,6 +27,28 @@ public static unsafe class AgentHelper
 
         var agent = AgentModule.Instance()->GetAgentByInternalId(agentId);
         return agent == callbackEntry.AgentInterface;
+    }
+}
+
+public static unsafe class DutyConfirmHelper
+{
+    public static bool IsVisible() => TryGet(out _);
+
+    public static bool IsQueued()
+    {
+        var finder = ContentsFinder.Instance();
+        return (finder != null && finder->QueueInfo.QueueState != ContentsFinderQueueState.None) ||
+               Svc.Condition[ConditionFlag.WaitingForDuty] ||
+               Svc.Condition[ConditionFlag.WaitingForDutyFinder];
+    }
+
+    public static bool TryCommence() =>
+        TryGet(out var confirm) && AddonButton.TryClick(&confirm->AtkUnitBase, confirm->CommenceButton);
+
+    private static bool TryGet(out AddonContentsFinderConfirm* confirm)
+    {
+        confirm = (AddonContentsFinderConfirm*)Svc.GameGui.GetAddonByName("ContentsFinderConfirm").Address;
+        return confirm != null && confirm->AtkUnitBase.IsReady && confirm->AtkUnitBase.IsVisible;
     }
 }
 

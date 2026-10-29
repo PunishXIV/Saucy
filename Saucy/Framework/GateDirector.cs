@@ -5,6 +5,8 @@ internal static unsafe class GateDirector
 {
     public static bool InSaucer => Svc.ClientState.TerritoryType is 144;
 
+    public static bool InChocoboSquare => Svc.ClientState.TerritoryType is 388;
+
     public static bool TryGetDirector(out GFateDirector* director)
     {
         director = null;
