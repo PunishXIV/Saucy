@@ -4,8 +4,8 @@ using ECommons.ImGuiMethods;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using Saucy.AirForce;
 using Saucy.CuffACur;
-using Saucy.KeyboundBrawler;
 using Saucy.JumboCactpot;
+using Saucy.KeyboundBrawler;
 using System;
 using System.Collections.Generic;
 using static ECommons.GenericHelpers;
@@ -209,6 +209,12 @@ public unsafe partial class PluginUI
         {
             C.KeyboundBrawlerStopAtMgcCap = stopAtCap;
             C.Save();
+        }
+
+        if (stopAtCap)
+        {
+            var currentMgc = InventoryManager.Instance()->GetInventoryItemCount(KeyboundBrawlerAutomation.MgcItemId, false, false, false);
+            ImGui.TextDisabled($"{currentMgc}/{KeyboundBrawlerAutomation.MgcCap}");
         }
 
         var playXTimes = C.KeyboundBrawlerPlayXTimes;
