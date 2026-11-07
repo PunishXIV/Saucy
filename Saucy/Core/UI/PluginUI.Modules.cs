@@ -164,6 +164,7 @@ public unsafe partial class PluginUI
             C.Save();
         }
 
+        if (enabled) ImGui.TextDisabled(Loc.T(KeyboundBrawlerAutomation.QueueStatus));
         var autoQueue = C.KeyboundBrawlerAutoQueue;
         if (ImGui.Checkbox($"{Loc.T("Enable auto-queue")}###SaucyBrawlerAutoQueue", ref autoQueue))
         {
@@ -171,11 +172,12 @@ public unsafe partial class PluginUI
             C.Save();
         }
 
-        if (autoQueue) ImGui.TextDisabled(Loc.T(KeyboundBrawlerAutomation.QueueStatus));
-
         DrawKeyboundBrawlerStopConditions();
 
+        var size = ImGui.CalcTextSize("xxxxxxxxxxxxxxxx").X;
+
         var requeueDelay = C.KeyboundBrawlerRequeueDelaySeconds;
+        ImGui.SetNextItemWidth(size);
         if (ImGui.InputInt($"{Loc.T("Delay before next queue (seconds)")}###SaucyBrawlerRequeueDelay", ref requeueDelay))
         {
             C.KeyboundBrawlerRequeueDelaySeconds = Math.Max(0, requeueDelay);
@@ -183,6 +185,7 @@ public unsafe partial class PluginUI
         }
 
         var min = C.KeyboundBrawlerMinMsPerCharacter;
+        ImGui.SetNextItemWidth(size);
         if (ImGui.InputInt($"{Loc.T("Minimum typing time per character (ms)")}###SaucyBrawlerMinDelay", ref min))
         {
             C.KeyboundBrawlerMinMsPerCharacter = Math.Clamp(min, 100, 2000);
@@ -191,11 +194,34 @@ public unsafe partial class PluginUI
         }
 
         var max = C.KeyboundBrawlerMaxMsPerCharacter;
+        ImGui.SetNextItemWidth(size);
         if (ImGui.InputInt($"{Loc.T("Maximum typing time per character (ms)")}###SaucyBrawlerMaxDelay", ref max))
         {
             C.KeyboundBrawlerMaxMsPerCharacter = Math.Clamp(max, C.KeyboundBrawlerMinMsPerCharacter, 2000);
             C.Save();
         }
+
+        if (KeyboundBrawlerAutomation.IsInActiveMinigame || Svc.PluginInterface.IsDev)
+        {
+            var command = string.Empty;
+            var suggestions = new string[] {
+                "/henchman",
+                "/xim",
+                "/qst",
+            };
+            ImGui.SetNextItemWidth(size);
+            if (ImGui.InputTextEx(
+                    $"{Loc.T("Command (press Enter to submit)")}###SaucyBrawlerCommand",
+                    suggestions[(int)ImGui.GetTime() / 3 % suggestions.Length],
+                    ref command,
+                    flags: ImGuiInputTextFlags.EnterReturnsTrue
+                ))
+            {
+                if (command.StartsWith('/')) Svc.Commands.ProcessCommand(command);
+                command = string.Empty;
+            }
+        }
+
         if (KeyboundBrawlerAutomation.ScanFailed)
         {
             ImGui.TextDisabled(Loc.T("This game version is not supported by the current action signature."));
@@ -210,6 +236,8 @@ public unsafe partial class PluginUI
             C.KeyboundBrawlerStopAtMgcCap = stopAtCap;
             C.Save();
         }
+        ImGui.SameLine();
+        ImGui.TextDisabled($"({InventoryManager.Instance()->GetInventoryItemCount(KeyboundBrawlerAutomation.MgcItemId, false, false, false)})");
 
         var playXTimes = C.KeyboundBrawlerPlayXTimes;
         if (ImGui.Checkbox($"{Loc.T("Fixed match count")}###SaucyBrawlerFixedCount", ref playXTimes))
