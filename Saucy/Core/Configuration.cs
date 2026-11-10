@@ -82,7 +82,6 @@ public class Configuration : IPluginConfiguration
 
     public GoldSaucerGateSettings GoldSaucerGates { get; set; } = new();
 
-    public bool KeyboundBrawlerAutoQueue { get; set; }
     public int KeyboundBrawlerRequeueDelaySeconds { get; set; }
     public bool KeyboundBrawlerStopAtMgcCap { get; set; }
     public bool KeyboundBrawlerPlayXTimes { get; set; }

@@ -74,6 +74,7 @@ internal static unsafe class KeyboundBrawlerAutomation
     internal static bool   ScanFailed  => scanAttempted && useWordActionAddress == 0;
     internal static string QueueStatus { get; private set; } = "Looking for entry NPC";
 
+    internal static bool KeyboundBrawlerAutoQueue = false;
     internal static bool IsInActiveMinigame => GetDirector() != 0;
     internal static bool IsAutoQueueFlowActive => queueFlowActive;
     internal static int RemainingMatches => Math.Max(0, Math.Max(1, C.KeyboundBrawlerMatchCount) - matchesPlayed);
@@ -136,7 +137,7 @@ internal static unsafe class KeyboundBrawlerAutomation
 
             resultRecorded = true;
             rewardUntil    = Environment.TickCount64 + 15000;
-            if (C.KeyboundBrawlerAutoQueue)
+            if (KeyboundBrawlerAutoQueue)
             {
                 matchesPlayed++;
             }
@@ -400,7 +401,7 @@ internal static unsafe class KeyboundBrawlerAutomation
                                       .Address;
         if (result != null && result->IsReady && result->IsVisible && AgentHelper.IsAddonOwnedBy(result, AgentId.KTGResult))
         {
-            if (C.KeyboundBrawlerAutoQueue)
+            if (KeyboundBrawlerAutoQueue)
             {
                 queueFlowActive = true;
                 YesAlready.SyncForGameActivity(true);
@@ -412,7 +413,7 @@ internal static unsafe class KeyboundBrawlerAutomation
             return;
         }
 
-        if (!C.KeyboundBrawlerAutoQueue)
+        if (!KeyboundBrawlerAutoQueue)
         {
             queueFlowActive = queueRequested = queueAcceptClicked = false;
             awaitingQueueDialogue = false;
@@ -437,8 +438,7 @@ internal static unsafe class KeyboundBrawlerAutomation
 
         if (!queueRequested && GetAutoQueueStopMessage() is { } stopMessage)
         {
-            C.KeyboundBrawlerAutoQueue = false;
-            C.Save();
+            KeyboundBrawlerAutoQueue = false;
             Svc.Chat.Print(stopMessage);
             return;
         }

@@ -4,8 +4,8 @@ using ECommons.ImGuiMethods;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using Saucy.AirForce;
 using Saucy.CuffACur;
-using Saucy.KeyboundBrawler;
 using Saucy.JumboCactpot;
+using Saucy.KeyboundBrawler;
 using System;
 using System.Collections.Generic;
 using static ECommons.GenericHelpers;
@@ -165,11 +165,10 @@ public unsafe partial class PluginUI
         }
 
         if (enabled) ImGui.TextDisabled(Loc.T(KeyboundBrawlerAutomation.QueueStatus));
-        var autoQueue = C.KeyboundBrawlerAutoQueue;
+        var autoQueue = KeyboundBrawlerAutomation.KeyboundBrawlerAutoQueue;
         if (ImGui.Checkbox($"{Loc.T("Enable auto-queue")}###SaucyBrawlerAutoQueue", ref autoQueue))
         {
-            C.KeyboundBrawlerAutoQueue = autoQueue;
-            C.Save();
+            KeyboundBrawlerAutomation.KeyboundBrawlerAutoQueue = autoQueue;
         }
 
         DrawKeyboundBrawlerStopConditions();
@@ -199,27 +198,6 @@ public unsafe partial class PluginUI
         {
             C.KeyboundBrawlerMaxMsPerCharacter = Math.Clamp(max, C.KeyboundBrawlerMinMsPerCharacter, 2000);
             C.Save();
-        }
-
-        if (KeyboundBrawlerAutomation.IsInActiveMinigame || Svc.PluginInterface.IsDev)
-        {
-            var command = string.Empty;
-            var suggestions = new string[] {
-                "/henchman",
-                "/xim",
-                "/qst",
-            };
-            ImGui.SetNextItemWidth(size);
-            if (ImGui.InputTextEx(
-                    $"{Loc.T("Command (press Enter to submit)")}###SaucyBrawlerCommand",
-                    suggestions[(int)ImGui.GetTime() / 3 % suggestions.Length],
-                    ref command,
-                    flags: ImGuiInputTextFlags.EnterReturnsTrue
-                ))
-            {
-                if (command.StartsWith('/')) Svc.Commands.ProcessCommand(command);
-                command = string.Empty;
-            }
         }
 
         if (KeyboundBrawlerAutomation.ScanFailed)
