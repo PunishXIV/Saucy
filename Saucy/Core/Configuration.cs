@@ -2,6 +2,7 @@ using Dalamud.Configuration;
 using ECommons.Configuration;
 using Newtonsoft.Json;
 using Saucy.JumboCactpot;
+using Saucy.KeyboundBrawler;
 using Saucy.OutOnALimb;
 using System;
 using System.Collections.Generic;
@@ -82,6 +83,8 @@ public class Configuration : IPluginConfiguration
 
     public GoldSaucerGateSettings GoldSaucerGates { get; set; } = new();
 
+    [JsonIgnore, Obsolete("Field is no longer persisted in config")]
+    public bool KeyboundBrawlerAutoQueue => KeyboundBrawlerAutomation.KeyboundBrawlerAutoQueue;
     public int KeyboundBrawlerRequeueDelaySeconds { get; set; }
     public bool KeyboundBrawlerStopAtMgcCap { get; set; }
     public bool KeyboundBrawlerPlayXTimes { get; set; }
