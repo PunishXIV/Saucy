@@ -173,10 +173,14 @@ public unsafe partial class PluginUI
 
         DrawKeyboundBrawlerStopConditions();
 
-        var size = ImGui.CalcTextSize("xxxxxxxxxxxxxxxx").X;
+        var style = ImGui.GetStyle();
+        var inputWidth =
+            ImGui.CalcTextSize("000000").X +
+            style.FramePadding.X * 2 +
+            ImGui.GetFrameHeight() * 2;
 
         var requeueDelay = C.KeyboundBrawlerRequeueDelaySeconds;
-        ImGui.SetNextItemWidth(size);
+        ImGui.SetNextItemWidth(inputWidth);
         if (ImGui.InputInt($"{Loc.T("Delay before next queue (seconds)")}###SaucyBrawlerRequeueDelay", ref requeueDelay))
         {
             C.KeyboundBrawlerRequeueDelaySeconds = Math.Max(0, requeueDelay);
@@ -184,7 +188,7 @@ public unsafe partial class PluginUI
         }
 
         var min = C.KeyboundBrawlerMinMsPerCharacter;
-        ImGui.SetNextItemWidth(size);
+        ImGui.SetNextItemWidth(inputWidth);
         if (ImGui.InputInt($"{Loc.T("Minimum typing time per character (ms)")}###SaucyBrawlerMinDelay", ref min))
         {
             C.KeyboundBrawlerMinMsPerCharacter = Math.Clamp(min, 100, 2000);
@@ -193,7 +197,7 @@ public unsafe partial class PluginUI
         }
 
         var max = C.KeyboundBrawlerMaxMsPerCharacter;
-        ImGui.SetNextItemWidth(size);
+        ImGui.SetNextItemWidth(inputWidth);
         if (ImGui.InputInt($"{Loc.T("Maximum typing time per character (ms)")}###SaucyBrawlerMaxDelay", ref max))
         {
             C.KeyboundBrawlerMaxMsPerCharacter = Math.Clamp(max, C.KeyboundBrawlerMinMsPerCharacter, 2000);
