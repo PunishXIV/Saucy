@@ -56,7 +56,7 @@ public class Configuration : IPluginConfiguration
     public string SelectedSound { get; set; } = "Moogle";
     public bool OnlyUnobtainedCards { get; set; } = false;
     public bool AutoRegisterTriadCards { get; set; } = false;
-    public bool OpenAutomatically { get; set; } = false;
+    public bool TriadOpenAutomatically { get; set; } = false;
 
     public LimbConfig LimbConfig { get; set; } = new();
 
@@ -86,6 +86,7 @@ public class Configuration : IPluginConfiguration
     [JsonIgnore, Obsolete("Field is no longer persisted in config")]
     public bool KeyboundBrawlerAutoQueue => KeyboundBrawlerAutomation.KeyboundBrawlerAutoQueue;
     public int KeyboundBrawlerRequeueDelaySeconds { get; set; }
+    public bool KeyboundBrawlerOpenAutomatically { get; set; } = true;
     public bool KeyboundBrawlerStopAtMgcCap { get; set; }
     public bool KeyboundBrawlerPlayXTimes { get; set; }
     public int KeyboundBrawlerMatchCount { get; set; } = 1;

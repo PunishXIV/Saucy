@@ -2,6 +2,7 @@ using Dalamud.Game.ClientState.Conditions;
 using Saucy.CuffACur;
 using Saucy.Framework;
 using Saucy.IPC;
+using Saucy.KeyboundBrawler;
 using System;
 namespace Saucy;
 
@@ -30,6 +31,7 @@ public sealed partial class Saucy
             }
 
             UpdateTriadAutoOpen();
+            UpdateKeyboundAutoOpen();
             TickDutyFinderDefer();
             AutoRetainerPause.Tick();
             GoldSaucerGateRunner.Tick();
@@ -127,7 +129,7 @@ public sealed partial class Saucy
 
     private void UpdateTriadAutoOpen()
     {
-        if (!C.OpenAutomatically)
+        if (!C.TriadOpenAutomatically)
         {
             _autoOpenedForTriadFlow = false;
             return;
@@ -146,6 +148,29 @@ public sealed partial class Saucy
 
         _pluginUi.OpenForTriad();
         _autoOpenedForTriadFlow = true;
+    }
+
+    private void UpdateKeyboundAutoOpen()
+    {
+        if (!C.KeyboundBrawlerOpenAutomatically || !C.IsModuleEnabled(ModuleNames.KeyboundBrawler))
+        {
+            _autoOpenedForKeyboundFlow = false;
+            return;
+        }
+
+        if (!KeyboundBrawlerAutomation.IsInActiveMinigame)
+        {
+            _autoOpenedForKeyboundFlow = false;
+            return;
+        }
+
+        if (_autoOpenedForKeyboundFlow)
+        {
+            return;
+        }
+
+        _pluginUi.OpenForKeybound();
+        _autoOpenedForKeyboundFlow = true;
     }
 
     private static unsafe bool IsTriadFlowActive()

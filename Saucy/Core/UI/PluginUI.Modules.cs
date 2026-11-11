@@ -164,7 +164,7 @@ public unsafe partial class PluginUI
             C.Save();
         }
 
-        if (enabled) ImGui.TextDisabled(Loc.T(KeyboundBrawlerAutomation.QueueStatus));
+        if (enabled) ImGui.TextDisabled(Loc.T(KeyboundBrawlerAutomation.BrawlerStatus));
         var autoQueue = KeyboundBrawlerAutomation.KeyboundBrawlerAutoQueue;
         if (ImGui.Checkbox($"{Loc.T("Enable auto-queue")}###SaucyBrawlerAutoQueue", ref autoQueue))
         {

@@ -72,7 +72,7 @@ internal static unsafe class KeyboundBrawlerAutomation
     private static long   rewardUntil;
 
     internal static bool   ScanFailed  => scanAttempted && useWordActionAddress == 0;
-    internal static string QueueStatus { get; private set; } = "Looking for entry NPC";
+    internal static string BrawlerStatus { get; private set; } = "Looking for entry NPC";
 
     internal static bool KeyboundBrawlerAutoQueue = false;
     internal static bool IsInActiveMinigame => GetDirector() != 0;
@@ -100,7 +100,7 @@ internal static unsafe class KeyboundBrawlerAutomation
         queueFlowActive = queueRequested = queueAcceptClicked = false;
         queueRetryAt          = nextQueueAt = nextQueueMoveAt = 0;
         StopQueuePath();
-        QueueStatus = "Looking for entry NPC";
+        BrawlerStatus = "Looking for entry NPC";
     }
 
     private static void TickRewards()
@@ -407,7 +407,7 @@ internal static unsafe class KeyboundBrawlerAutomation
                 YesAlready.SyncForGameActivity(true);
             }
 
-            QueueStatus = AddonButton.TryClick(result, ResultCloseButtonId)
+            BrawlerStatus = AddonButton.TryClick(result, ResultCloseButtonId)
                                   ? "Closing Brawler result"
                                   : "Waiting for result close button";
             return;
@@ -432,7 +432,7 @@ internal static unsafe class KeyboundBrawlerAutomation
             queueRetryAt = 0;
             nextQueueAt = Environment.TickCount64 + RequeueDelayMs;
             StopQueuePath();
-            QueueStatus = "Queued or entering Brawler";
+            BrawlerStatus = "Queued or entering Brawler";
             return;
         }
 
@@ -456,7 +456,7 @@ internal static unsafe class KeyboundBrawlerAutomation
                     SelectYesnoHelper.PressYes(yesno);
                 }
 
-                QueueStatus = "Confirming queue prompt";
+                BrawlerStatus = "Confirming queue prompt";
                 return;
             }
 
@@ -468,7 +468,7 @@ internal static unsafe class KeyboundBrawlerAutomation
                     queueAcceptClicked = DutyConfirmHelper.TryCommence();
                 }
 
-                QueueStatus = queueAcceptClicked ? "Duty accepted - waiting to enter" : "Waiting for duty confirmation";
+                BrawlerStatus = queueAcceptClicked ? "Duty accepted - waiting to enter" : "Waiting for duty confirmation";
                 return;
             }
 
@@ -484,7 +484,7 @@ internal static unsafe class KeyboundBrawlerAutomation
 
             if (state == ContentsFinderQueueState.Ready)
             {
-                QueueStatus = "Waiting for duty confirmation";
+                BrawlerStatus = "Waiting for duty confirmation";
                 return;
             }
 
@@ -492,11 +492,11 @@ internal static unsafe class KeyboundBrawlerAutomation
             {
                 queueFlowActive = queueRequested = queueAcceptClicked = false;
                 queueRetryAt = now + RequeueDelayMs;
-                QueueStatus = "Queue ended - retrying";
+                BrawlerStatus = "Queue ended - retrying";
                 return;
             }
 
-            QueueStatus = "Queued or entering Brawler";
+            BrawlerStatus = "Queued or entering Brawler";
             return;
         }
 
@@ -506,7 +506,7 @@ internal static unsafe class KeyboundBrawlerAutomation
             queueFlowActive = false;
             awaitingQueueDialogue = false;
             StopQueuePath();
-            QueueStatus = "Queued or entering Brawler";
+            BrawlerStatus = "Queued or entering Brawler";
             return;
         }
         if (awaitingQueueDialogue)
@@ -523,11 +523,11 @@ internal static unsafe class KeyboundBrawlerAutomation
                     queueRequested = true;
                     queueAcceptClicked = false;
                     queueRetryAt          = now + 30000;
-                    QueueStatus           = "Entry accepted - waiting for queue";
+                    BrawlerStatus           = "Entry accepted - waiting for queue";
                 }
                 else
                 {
-                    QueueStatus = "Entry button unavailable";
+                    BrawlerStatus = "Entry button unavailable";
                 }
 
                 return;
@@ -535,7 +535,7 @@ internal static unsafe class KeyboundBrawlerAutomation
 
             if (now < queueDialogueDeadline)
             {
-                QueueStatus = "Waiting for entry dialogue";
+                BrawlerStatus = "Waiting for entry dialogue";
                 return;
             }
 
@@ -545,7 +545,7 @@ internal static unsafe class KeyboundBrawlerAutomation
 
         if (now < queueRetryAt)
         {
-            QueueStatus = "Waiting before queue retry";
+            BrawlerStatus = "Waiting before queue retry";
             return;
         }
 
@@ -557,7 +557,7 @@ internal static unsafe class KeyboundBrawlerAutomation
             }
 
             queueFlowActive = false;
-            QueueStatus = "Waiting before next Brawler queue";
+            BrawlerStatus = "Waiting before next Brawler queue";
             return;
         }
 
@@ -566,7 +566,7 @@ internal static unsafe class KeyboundBrawlerAutomation
         {
             queueFlowActive = false;
             StopQueuePath();
-            QueueStatus = "Entry NPC is not loaded";
+            BrawlerStatus = "Entry NPC is not loaded";
             return;
         }
 
@@ -574,7 +574,7 @@ internal static unsafe class KeyboundBrawlerAutomation
         YesAlready.SyncForGameActivity(true);
         if (!Player.Interactable)
         {
-            QueueStatus = "Waiting until player can interact";
+            BrawlerStatus = "Waiting until player can interact";
             return;
         }
 
@@ -585,7 +585,7 @@ internal static unsafe class KeyboundBrawlerAutomation
                 Svc.Targets.Target = npc;
             }
 
-            QueueStatus = "Targeting entry NPC";
+            BrawlerStatus = "Targeting entry NPC";
             return;
         }
 
@@ -593,13 +593,13 @@ internal static unsafe class KeyboundBrawlerAutomation
         {
             if (!Vnavmesh.IsInstalled)
             {
-                QueueStatus = "Move closer to entry NPC (vnavmesh unavailable)";
+                BrawlerStatus = "Move closer to entry NPC (vnavmesh unavailable)";
                 return;
             }
 
             if (Vnavmesh.IsMoving())
             {
-                QueueStatus = ownsQueuePath
+                BrawlerStatus = ownsQueuePath
                                       ? "Moving to entry NPC"
                                       : "Waiting for current navigation";
                 return;
@@ -614,12 +614,12 @@ internal static unsafe class KeyboundBrawlerAutomation
             if (!Vnavmesh.CanStartPathfind())
             {
                 Vnavmesh.TryEnsureNavMeshLoading();
-                QueueStatus = "Waiting for navigation mesh";
+                BrawlerStatus = "Waiting for navigation mesh";
                 return;
             }
 
             ownsQueuePath = Vnavmesh.TryMoveTo(npc.Position, false, 1f);
-            QueueStatus = ownsQueuePath
+            BrawlerStatus = ownsQueuePath
                                   ? "Moving to entry NPC"
                                   : "Could not path to entry NPC";
             return;
@@ -630,11 +630,11 @@ internal static unsafe class KeyboundBrawlerAutomation
         {
             awaitingQueueDialogue = true;
             queueDialogueDeadline = now + 8000;
-            QueueStatus           = "Waiting for entry dialogue";
+            BrawlerStatus           = "Waiting for entry dialogue";
         }
         else
         {
-            QueueStatus = "Interacting with entry NPC";
+            BrawlerStatus = "Interacting with entry NPC";
         }
     }
 

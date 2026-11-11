@@ -51,10 +51,10 @@ internal static class TriadSettingsUi
         ImGuiComponents.HelpMarker(
             Loc.T("Accepts match invites, selects a deck, and plays through rematches. Turn on before or during match prep."));
 
-        var autoOpen = C.OpenAutomatically;
+        var autoOpen = C.TriadOpenAutomatically;
         if (ImGui.Checkbox(Loc.T("Open window when challenging an NPC"), ref autoOpen))
         {
-            C.OpenAutomatically = autoOpen;
+            C.TriadOpenAutomatically = autoOpen;
             C.Save();
         }
 

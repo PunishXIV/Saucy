@@ -34,6 +34,7 @@ public sealed partial class Saucy(IDalamudPluginInterface pluginInterface) : IAs
     private readonly object _lockObj = new();
     private readonly PluginUI _pluginUi = new();
     private bool _autoOpenedForTriadFlow;
+    private bool _autoOpenedForKeyboundFlow;
     private Mp3FileReader? _currentReader;
     private WaveOutEvent? _currentWaveOut;
     private bool _ecommonsReady;
