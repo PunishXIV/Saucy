@@ -4,8 +4,8 @@ using ECommons.ImGuiMethods;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using Saucy.AirForce;
 using Saucy.CuffACur;
-using Saucy.KeyboundBrawler;
 using Saucy.JumboCactpot;
+using Saucy.KeyboundBrawler;
 using System;
 using System.Collections.Generic;
 using static ECommons.GenericHelpers;
@@ -164,18 +164,23 @@ public unsafe partial class PluginUI
             C.Save();
         }
 
-        var autoQueue = C.KeyboundBrawlerAutoQueue;
+        if (enabled) ImGui.TextDisabled(Loc.T(KeyboundBrawlerAutomation.BrawlerStatus));
+        var autoQueue = KeyboundBrawlerAutomation.KeyboundBrawlerAutoQueue;
         if (ImGui.Checkbox($"{Loc.T("Enable auto-queue")}###SaucyBrawlerAutoQueue", ref autoQueue))
         {
-            C.KeyboundBrawlerAutoQueue = autoQueue;
-            C.Save();
+            KeyboundBrawlerAutomation.KeyboundBrawlerAutoQueue = autoQueue;
         }
-
-        if (autoQueue) ImGui.TextDisabled(Loc.T(KeyboundBrawlerAutomation.QueueStatus));
 
         DrawKeyboundBrawlerStopConditions();
 
+        var style = ImGui.GetStyle();
+        var inputWidth =
+            ImGui.CalcTextSize("000000").X +
+            style.FramePadding.X * 2 +
+            ImGui.GetFrameHeight() * 2;
+
         var requeueDelay = C.KeyboundBrawlerRequeueDelaySeconds;
+        ImGui.SetNextItemWidth(inputWidth);
         if (ImGui.InputInt($"{Loc.T("Delay before next queue (seconds)")}###SaucyBrawlerRequeueDelay", ref requeueDelay))
         {
             C.KeyboundBrawlerRequeueDelaySeconds = Math.Max(0, requeueDelay);
@@ -183,6 +188,7 @@ public unsafe partial class PluginUI
         }
 
         var min = C.KeyboundBrawlerMinMsPerCharacter;
+        ImGui.SetNextItemWidth(inputWidth);
         if (ImGui.InputInt($"{Loc.T("Minimum typing time per character (ms)")}###SaucyBrawlerMinDelay", ref min))
         {
             C.KeyboundBrawlerMinMsPerCharacter = Math.Clamp(min, 100, 2000);
@@ -191,11 +197,13 @@ public unsafe partial class PluginUI
         }
 
         var max = C.KeyboundBrawlerMaxMsPerCharacter;
+        ImGui.SetNextItemWidth(inputWidth);
         if (ImGui.InputInt($"{Loc.T("Maximum typing time per character (ms)")}###SaucyBrawlerMaxDelay", ref max))
         {
             C.KeyboundBrawlerMaxMsPerCharacter = Math.Clamp(max, C.KeyboundBrawlerMinMsPerCharacter, 2000);
             C.Save();
         }
+
         if (KeyboundBrawlerAutomation.ScanFailed)
         {
             ImGui.TextDisabled(Loc.T("This game version is not supported by the current action signature."));
@@ -210,6 +218,8 @@ public unsafe partial class PluginUI
             C.KeyboundBrawlerStopAtMgcCap = stopAtCap;
             C.Save();
         }
+        ImGui.SameLine();
+        ImGui.TextDisabled($"({InventoryManager.Instance()->GetInventoryItemCount(KeyboundBrawlerAutomation.MgcItemId, false, false, false)})");
 
         var playXTimes = C.KeyboundBrawlerPlayXTimes;
         if (ImGui.Checkbox($"{Loc.T("Fixed match count")}###SaucyBrawlerFixedCount", ref playXTimes))

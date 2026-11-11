@@ -70,6 +70,12 @@ public unsafe partial class PluginUI : Window
         IsOpen = true;
     }
 
+    public void OpenForKeybound()
+    {
+        _selectedNav = NavItem.KeyboundBrawler;
+        IsOpen = true;
+    }
+
     public void ToggleDebug()
     {
         C.ShowDebugUi = !C.ShowDebugUi;
