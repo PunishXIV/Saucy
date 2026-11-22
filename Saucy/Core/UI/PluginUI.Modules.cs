@@ -200,6 +200,8 @@ public unsafe partial class PluginUI
         {
             ImGui.TextDisabled(Loc.T("This game version is not supported by the current action signature."));
         }
+
+        ImGui.TextDisabled(Loc.T("With your current settings, typing out the phrase \"An Unforgettable Night\" will take between {0} and {1} seconds.", (C.KeyboundBrawlerMinMsPerCharacter*22)/1000, (C.KeyboundBrawlerMaxMsPerCharacter*22)/1000));
     }
 
     private static void DrawKeyboundBrawlerStopConditions()
